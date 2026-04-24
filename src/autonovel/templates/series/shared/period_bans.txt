@@ -1,0 +1,3 @@
+# One banned word per line. Used by /autonovel:check-anachronism.
+# Seed this file with period-specific bans (vocabulary that did not exist
+# in the book's era, modern idioms, etc.) once /autonovel:gen-world runs.

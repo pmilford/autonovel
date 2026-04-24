@@ -1,0 +1,7 @@
+.autonovel/in-progress.lock
+typeset/*.pdf
+typeset/chapters_content.tex
+*.pyc
+__pycache__/
+.env
+.venv/

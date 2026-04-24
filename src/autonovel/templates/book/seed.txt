@@ -1,0 +1,3 @@
+One to three paragraphs describing what this book is about: who the POV
+character is, what they want, what stands in their way, and what changes by
+the end. Edit freely before running /autonovel:gen-outline.
