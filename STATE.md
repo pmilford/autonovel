@@ -43,27 +43,41 @@
   only; word-count window widened to [1800, 5000]; retry-once policy live
   via `tests/conftest.py` + `pytest-rerunfailures`. Pattern for PR 3+:
   future smoke tests just add `@pytest.mark.smoke` to inherit the retry.
+- 2026-04-24 (auth policy, project-wide): **subscription auth is primary.**
+  The smoke test subprocess strips `ANTHROPIC_API_KEY` from the env before
+  invoking `claude -p` (because Claude Code prefers API-key billing when
+  both modes are present, which would defeat the "free against my
+  subscription" goal). Escape hatch: `AUTONOVEL_SMOKE_USE_API_KEY=1` on
+  the developer's env preserves the key. New runtime commands don't need
+  to do anything — they run inside the user's Claude Code session, which
+  is subscription-auth automatically. Legacy Python scripts
+  (`gen_world.py`, `evaluate.py`, `review.py`, …) still call
+  `api.anthropic.com` directly with `ANTHROPIC_API_KEY` — that's the
+  pre-rewrite path, tracked for deletion in §18 across PRs 3-7.
 
 ## Tests last known green
 - Tier 1 (deterministic): 2026-04-24 — 72 passing (`pytest tests/deterministic`)
 - Tier 2 (command contracts): 2026-04-24 — 13 passing (`pytest tests/contracts`)
 - Tier 3 (smoke): 2026-04-24 — skeleton + historical fixture; **requires
-  `claude` on $PATH**. Uses whatever auth `claude` already has (OAuth
-  subscription via `claude login`, or `ANTHROPIC_API_KEY` if the user set
-  one). Skips cleanly if `claude` is absent. Word-count tolerance on draft
-  smoke widened to [1800, 5000]. §12 item 1 retry-once policy is live —
-  any `@pytest.mark.smoke` test that fails is rerun once automatically via
-  the `tests/conftest.py` flakiness hook (pytest-rerunfailures).
+  `claude` on $PATH**. Subscription auth (via `claude login`) is primary;
+  the subprocess strips `ANTHROPIC_API_KEY` unless
+  `AUTONOVEL_SMOKE_USE_API_KEY=1` opts in. Skips cleanly if `claude` is
+  absent. Word-count tolerance on draft smoke is [1800, 5000]. §12 item 1
+  retry-once policy is live via the `tests/conftest.py` flakiness hook.
 - Tier 4 (Bells regression): n/a — introduced in PR 4
 
 ## Running the smoke test manually
 
 ```bash
-# First time only — use whichever auth mode you prefer.
-claude login                         # subscription auth (Max / Team / Pro)
-# or: export ANTHROPIC_API_KEY=...   # pay-per-token API auth
+# One-time: log in once on your subscription (Claude Max / Team / Pro).
+claude login
 
+# Run smoke. This uses your subscription auth — "free" against your plan.
 pytest tests/smoke -q -m smoke
+
+# Optional: exercise the API-key path instead (pay-per-token).
+AUTONOVEL_SMOKE_USE_API_KEY=1 ANTHROPIC_API_KEY=sk-ant-... \
+  pytest tests/smoke -q -m smoke
 ```
 
 The test copies `tests/fixtures/tiny-series-historical/` to a temp dir,
