@@ -1,0 +1,7 @@
+sources:
+  - url: https://www.britannica.com/place/Venice/History
+    title: Britannica — Venice, History
+    weight: primary
+  - url: https://en.wikipedia.org/wiki/Zecca_of_Venice
+    title: Wikipedia — Zecca of Venice
+    weight: secondary

@@ -1,0 +1,22 @@
+series_name: tiny-historical
+genre: historical-fiction
+period:
+  start: 1519
+  end: 1523
+  region: venice
+llm:
+  heavy: claude-opus-4-7
+  standard: claude-sonnet-4-6
+  light: claude-haiku-4-5-20251001
+  thinking:
+    heavy: true
+    standard: false
+books:
+  - name: tiny-inquisitor
+    pov: Tommaso
+    story_time_range: [1519, 1523]
+    status: outlined
+defaults:
+  chapter_target_words: 2200
+  foundation_threshold: 7.5
+  chapter_threshold: 6.0

@@ -1,8 +1,8 @@
 """`autonovel` command-line entry point.
 
-This CLI does housekeeping only — it never calls an LLM. Installing the
-`/autonovel:*` runtime commands is handled by the `install` subcommand, which
-is stubbed for PR 1 and implemented in PR 2.
+This CLI does housekeeping only — it never calls an LLM. The `install`
+subcommand renders the generic `commands/*.md` files through a runtime-
+specific adapter and writes them into the runtime's expected location.
 """
 
 from __future__ import annotations
@@ -12,7 +12,9 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .housekeeping import doctor, rollback, scaffold, status
+from .adapters import detect as detect_mod
+from .adapters import installer as installer_mod
+from .housekeeping import doctor, lifecycle, rollback, scaffold, status
 from .paths import SeriesNotFound, load_series
 
 
@@ -66,12 +68,29 @@ def _build_parser() -> argparse.ArgumentParser:
     ver = sub.add_parser("version", help="Print version and exit.")
     ver.set_defaults(func=lambda _args: (print(__version__), 0)[1])
 
-    inst = sub.add_parser("install", help="(stub) Install /autonovel:* commands into a CLI runtime.")
+    inst = sub.add_parser("install", help="Install /autonovel:* commands into a CLI runtime.")
     inst.add_argument("--only", default=None, choices=["claude", "codex", "gemini"])
-    inst.set_defaults(func=_cmd_install_stub)
+    inst.add_argument("--path", default=None,
+                      help="Override the install root (default: the adapter's default).")
+    inst.set_defaults(func=_cmd_install)
 
-    uninst = sub.add_parser("uninstall", help="(stub) Uninstall /autonovel:* commands.")
-    uninst.set_defaults(func=_cmd_install_stub)
+    uninst = sub.add_parser("uninstall", help="Uninstall /autonovel:* commands.")
+    uninst.add_argument("--only", default=None, choices=["claude", "codex", "gemini"])
+    uninst.add_argument("--path", default=None)
+    uninst.set_defaults(func=_cmd_uninstall)
+
+    _begin = sub.add_parser("_begin", help=argparse.SUPPRESS)
+    _begin.add_argument("--command", required=True)
+    _begin.add_argument("--args", default="")
+    _begin.add_argument("--runtime", default="claude")
+    _begin.set_defaults(func=_cmd_begin)
+
+    _end = sub.add_parser("_end", help=argparse.SUPPRESS)
+    _end.add_argument("--command", required=True)
+    _end.add_argument("--args", default="")
+    _end.add_argument("--status", default="ok")
+    _end.add_argument("--wrote", action="append", default=[])
+    _end.set_defaults(func=_cmd_end)
 
     return p
 
@@ -184,13 +203,82 @@ def _cmd_rollback(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_install_stub(args: argparse.Namespace) -> int:
-    print(
-        "install/uninstall land in PR 2. For now, the autonovel housekeeping\n"
-        "CLI (new-series, new-book, status, doctor, rollback, version) is all\n"
-        "that's wired up."
-    )
+def _cmd_install(args: argparse.Namespace) -> int:
+    adapters = _select_adapters(args.only)
+    if not adapters:
+        print(
+            "error: no known runtimes found on $PATH. Install one of:\n"
+            "  - Claude Code (`claude`)\n"
+            "Or pass `--only <runtime> --path <dir>` to install anyway.",
+            file=sys.stderr,
+        )
+        return 2
+    path = Path(args.path).resolve() if args.path else None
+    for adapter in adapters:
+        result = installer_mod.install(adapter, install_root=path)
+        print(f"installed [{result.adapter_name}] → {result.install_root}")
+        for w in result.written:
+            print(f"  + {w.relative_to(result.install_root)}")
     return 0
+
+
+def _cmd_uninstall(args: argparse.Namespace) -> int:
+    adapters = _select_adapters(args.only)
+    if not adapters:
+        print("error: no runtime selected; pass --only <runtime>", file=sys.stderr)
+        return 2
+    path = Path(args.path).resolve() if args.path else None
+    for adapter in adapters:
+        result = installer_mod.uninstall(adapter, install_root=path)
+        print(f"uninstalled [{result.adapter_name}] from {result.install_root}")
+        for r in result.removed:
+            print(f"  - {r.name}")
+    return 0
+
+
+def _cmd_begin(args: argparse.Namespace) -> int:
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    try:
+        result = lifecycle.begin(args.command, args.args, runtime=args.runtime, series=series)
+    except lifecycle.BeginError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    except Exception as e:  # noqa: BLE001 — surface a clean message for the model
+        print(f"error: {type(e).__name__}: {e}", file=sys.stderr)
+        return 2
+    print(f"_begin ok: locked as PID {result.lock_info.pid}; "
+          f"checkpoint {result.checkpoint.timestamp if result.checkpoint else '(none)'}")
+    return 0
+
+
+def _cmd_end(args: argparse.Namespace) -> int:
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    result = lifecycle.end(
+        args.command, args.args, status=args.status, wrote=list(args.wrote), series=series
+    )
+    if args.status == "ok" and result.footer:
+        print(result.footer)
+    else:
+        print(f"_end: status={args.status}; log updated")
+    return 0
+
+
+def _select_adapters(only: str | None):
+    if only is not None:
+        try:
+            return [installer_mod.load_adapter(only)]
+        except KeyError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return []
+    return [dr.adapter for dr in detect_mod.detect_all() if dr.available]
 
 
 def _resolve_series(arg: str | None):
