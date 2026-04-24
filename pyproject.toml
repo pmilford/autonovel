@@ -9,6 +9,15 @@ dependencies = [
     "pyyaml>=6.0.2",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8",
+    # For the §12 item 1 "retry failed smoke tests once" policy. Used by the
+    # tests/conftest.py flakiness hook; harmless if absent (hook skips the
+    # auto-retry gracefully).
+    "pytest-rerunfailures>=14",
+]
+
 [project.scripts]
 autonovel = "autonovel.cli:main"
 

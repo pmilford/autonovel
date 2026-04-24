@@ -39,6 +39,10 @@
 - 2026-04-24 (PR 2): `draft_chapter.py` deleted (§18). `run_pipeline.py` and
   `run_drafts.py` still reference it by subprocess, which is accepted — both
   delete in PR 6.
+- 2026-04-24 (PR 2 polish): smoke test gate relaxed to `claude`-on-PATH
+  only; word-count window widened to [1800, 5000]; retry-once policy live
+  via `tests/conftest.py` + `pytest-rerunfailures`. Pattern for PR 3+:
+  future smoke tests just add `@pytest.mark.smoke` to inherit the retry.
 
 ## Tests last known green
 - Tier 1 (deterministic): 2026-04-24 — 72 passing (`pytest tests/deterministic`)
@@ -46,7 +50,10 @@
 - Tier 3 (smoke): 2026-04-24 — skeleton + historical fixture; **requires
   `claude` on $PATH**. Uses whatever auth `claude` already has (OAuth
   subscription via `claude login`, or `ANTHROPIC_API_KEY` if the user set
-  one). Skips cleanly if `claude` is absent.
+  one). Skips cleanly if `claude` is absent. Word-count tolerance on draft
+  smoke widened to [1800, 5000]. §12 item 1 retry-once policy is live —
+  any `@pytest.mark.smoke` test that fails is rerun once automatically via
+  the `tests/conftest.py` flakiness hook (pytest-rerunfailures).
 - Tier 4 (Bells regression): n/a — introduced in PR 4
 
 ## Running the smoke test manually

@@ -1,8 +1,12 @@
 """Tier-3 smoke: `/autonovel:draft 1 --book tiny-inquisitor` on Claude Code.
 
-Opt-in. Skips when `claude` is not on $PATH or `ANTHROPIC_API_KEY` is unset.
-Runs the real runtime against tests/fixtures/tiny-series-historical/.
-Asserts the acceptance block from commands/draft.md.
+Opt-in. Skips when `claude` is not on $PATH. Uses whatever auth `claude`
+already has (subscription OAuth or `ANTHROPIC_API_KEY`). Runs the real
+runtime against tests/fixtures/tiny-series-historical/. Asserts the
+acceptance block from commands/draft.md.
+
+Retried once on failure by the top-level tests/conftest.py flakiness hook
+(§12 item 1); only a double-failure is treated as a real signal.
 """
 
 from __future__ import annotations
@@ -44,10 +48,12 @@ def test_draft_chapter_one(tmp_runtime_series) -> None:
     assert fm.status == "drafted"
     assert fm.story_time.startswith("15")  # 16th century
 
-    # Word count between 2000 (draft floor) and 4500 (upper bound from §12).
+    # Word count between 1800 (§13 PR 4 "do not go below 1800w") and 5000
+    # (headroom above gen_revision's ~+30% overshoot). Tighter ranges are
+    # caught by the mechanical evaluator in later PRs, not the smoke test.
     body = re.sub(r"\A---\s*\n.*?\n---\s*\n", "", text, count=1, flags=re.DOTALL)
     words = len(body.split())
-    assert 2000 <= words <= 4500, f"word count {words} outside [2000, 4500]"
+    assert 1800 <= words <= 5000, f"word count {words} outside [1800, 5000]"
 
     # At least one line appended to pending_canon.md.
     pending = series.path / "books" / "tiny-inquisitor" / "pending_canon.md"
