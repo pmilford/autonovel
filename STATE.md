@@ -1,11 +1,11 @@
 # autonovel rewrite state
 
-**Last updated:** 2026-04-24 by PR 2
+**Last updated:** 2026-04-24 by PR 3
 
 ## Completed
 - [x] PR 1: layout + housekeeping
 - [x] PR 2: first command + Claude adapter
-- [ ] PR 3: foundation commands
+- [x] PR 3: foundation commands
 - [ ] PR 4: evaluation + revision commands
 - [ ] PR 5: research + period guardrails
 - [ ] PR 6: orchestrator + multi-book wiring
@@ -14,7 +14,7 @@
 - [ ] PR 9: docs + full genre fixtures + publish
 
 ## In progress
-- none — PR 2 landed, awaiting human gate before PR 3.
+- none — PR 3 landed, auto-merge on green per §13 PR 3 (optional human gate).
 
 ## Blockers
 - none
@@ -51,20 +51,40 @@
   the developer's env preserves the key. New runtime commands don't need
   to do anything — they run inside the user's Claude Code session, which
   is subscription-auth automatically. Legacy Python scripts
-  (`gen_world.py`, `evaluate.py`, `review.py`, …) still call
-  `api.anthropic.com` directly with `ANTHROPIC_API_KEY` — that's the
-  pre-rewrite path, tracked for deletion in §18 across PRs 3-7.
+  (`evaluate.py`, `review.py`, …) still call `api.anthropic.com` directly
+  with `ANTHROPIC_API_KEY` — that's the pre-rewrite path, tracked for
+  deletion in §18 across PRs 4-7.
+- 2026-04-24 (PR 3): five foundation commands shipped — `gen-world`,
+  `gen-characters`, `gen-outline`, `voice-discovery`, `gen-canon`. Each
+  uses the PR 2 preamble/postamble contract unmodified; no new adapter
+  work required. Model tiers: `gen-world`, `gen-characters`,
+  `voice-discovery` → heavy (Opus-class creative drafting); `gen-outline`,
+  `gen-canon` → standard (structured extraction from already-written
+  Layer-4/3 material).
+- 2026-04-24 (PR 3): `/autonovel:sidequest` dispatcher shipped as a
+  read-only menu that points at real commands rather than invoking them
+  (§21.7). Routing via a separate slash-command invocation preserves the
+  target's own lock/checkpoint guarantees; menu grows per §21.10 as later
+  PRs land revision/research sidequests.
+- 2026-04-24 (PR 3): nine Python generators deleted per §18 — `seed.py`,
+  `gen_world.py`, `gen_characters.py`, `gen_outline.py`,
+  `gen_outline_part2.py`, `voice_fingerprint.py`, `gen_canon.py`,
+  `build_outline.py`, `build_arc_summary.py`. `run_pipeline.py` still
+  shells out to the first six by name; those references are accepted as
+  dangling and delete with `run_pipeline.py` itself in PR 6.
 
 ## Tests last known green
-- Tier 1 (deterministic): 2026-04-24 — 72 passing (`pytest tests/deterministic`)
-- Tier 2 (command contracts): 2026-04-24 — 13 passing (`pytest tests/contracts`)
-- Tier 3 (smoke): 2026-04-24 — skeleton + historical fixture; **requires
-  `claude` on $PATH**. Subscription auth (via `claude login`) is primary;
-  the subprocess strips `ANTHROPIC_API_KEY` unless
-  `AUTONOVEL_SMOKE_USE_API_KEY=1` opts in. Skips cleanly if `claude` is
-  absent. Word-count tolerance on draft smoke is [1800, 5000]. §12 item 1
-  retry-once policy is live via the `tests/conftest.py` flakiness hook.
-- Tier 4 (Bells regression): n/a — introduced in PR 4
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — 124 passing
+  (`pytest tests/deterministic tests/contracts`). The new foundation
+  commands are auto-picked up by the parametrized contract tests in
+  `tests/contracts/test_command_contract.py`, so no per-command test
+  code was needed at that tier.
+- Tier 3 (smoke): 2026-04-24 — `tests/smoke/test_foundation_smoke.py`
+  adds six new smoke tests (`gen_world`, `gen_characters`, `gen_outline`,
+  `voice_discovery`, `gen_canon`, `sidequest_menu_is_read_only`). All
+  gated on `claude` on PATH; subscription auth is primary. Not yet
+  exercised end-to-end in CI; manual run recommended once before PR 4.
+- Tier 4 (Bells regression): n/a — introduced in PR 4.
 
 ## Running the smoke test manually
 
@@ -72,32 +92,44 @@
 # One-time: log in once on your subscription (Claude Max / Team / Pro).
 claude login
 
-# Run smoke. This uses your subscription auth — "free" against your plan.
+# Run all smoke tests. Uses your subscription auth — "free" against your plan.
 pytest tests/smoke -q -m smoke
+
+# Run just one (cheap iteration).
+pytest tests/smoke -q -m smoke -k gen_world
 
 # Optional: exercise the API-key path instead (pay-per-token).
 AUTONOVEL_SMOKE_USE_API_KEY=1 ANTHROPIC_API_KEY=sk-ant-... \
   pytest tests/smoke -q -m smoke
 ```
 
-The test copies `tests/fixtures/tiny-series-historical/` to a temp dir,
-installs the commands into `.claude/commands/` under that copy, and invokes
-`claude -p "/autonovel:draft 1 --book tiny-inquisitor" --allowed-tools
-Read,Write,Bash,Task`. Pass/fail keys are in `commands/draft.md`'s
-`<acceptance>` block.
+Each smoke test copies `tests/fixtures/tiny-series-historical/` to a
+temp dir, installs the commands into `.claude/commands/` under that copy,
+resets the relevant write target to the template placeholder, and invokes
+`claude -p "/autonovel:<command> ..."`. Acceptance keys live in the
+`<acceptance>` block of each command file.
 
 ## Open questions
-- none at the PR 2 level.
+- none at the PR 3 level.
 
-## Resume pointer for PR 3
-1. Read `REWRITE-PLAN.md` §13 PR 3 and §18 (deletion table).
-2. Write `commands/gen-world.md`, `gen-characters.md`, `gen-outline.md`,
-   `voice-discovery.md`, `gen-canon.md`. Each reuses the adapter's
-   preamble/postamble automatically.
-3. Add a `/autonovel:sidequest` dispatcher command (§21.10 PR 3 gain),
-   populated with whatever sidequest commands already exist.
-4. Add Tier-2 contracts + Tier-3 smoke tests for each new command. Pick
-   appropriate fixtures from `tests/fixtures/tiny-series-*`.
-5. Delete `seed.py`, `gen_world.py`, `gen_characters.py`, `gen_outline.py`,
-   `gen_outline_part2.py`, `voice_fingerprint.py`, `gen_canon.py`,
-   `build_outline.py`, `build_arc_summary.py` per §18.
+## Resume pointer for PR 4
+1. Read `REWRITE-PLAN.md` §13 PR 4 and §18 (deletion table).
+2. Extract mechanical-only regex logic from `evaluate.py` into
+   `src/autonovel/mechanical/` as a pure Python module, with its own
+   Tier-1 deterministic tests. The LLM-powered parts become the
+   `/autonovel:evaluate` command.
+3. Write `commands/evaluate.md`, `adversarial-edit.md`, `apply-cuts.md`,
+   `reader-panel.md`, `review.md`, `brief.md`, `revise.md`,
+   `compare-chapters.md`.
+4. Add the §21.10 PR 4 sidequest commands: `shorten`, `lengthen`,
+   `split-chapter`, `merge-chapters`, `revoice`. Update
+   `commands/sidequest.md` to surface the new entries.
+5. Add the Tier-4 "Bells regression" harness (§12 item 4) — compare
+   `/autonovel:evaluate` scores against frozen reference scores from the
+   Bells production run; fail if any chapter drifts more than 0.5 points.
+6. Add Tier-2 contracts + Tier-3 smoke tests for each new command; reuse
+   the `tests/smoke/test_foundation_smoke.py` pattern (reset target,
+   run command, assert acceptance block).
+7. Delete `evaluate.py`, `adversarial_edit.py`, `apply_cuts.py`,
+   `reader_panel.py`, `review.py`, `gen_brief.py`, `gen_revision.py`,
+   `compare_chapters.py` per §18.
