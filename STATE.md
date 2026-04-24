@@ -82,8 +82,8 @@
 - Tier 3 (smoke): 2026-04-24 — `tests/smoke/test_foundation_smoke.py`
   adds six new smoke tests (`gen_world`, `gen_characters`, `gen_outline`,
   `voice_discovery`, `gen_canon`, `sidequest_menu_is_read_only`). All
-  gated on `claude` on PATH; subscription auth is primary. Not yet
-  exercised end-to-end in CI; manual run recommended once before PR 4.
+  six green on Claude Code under subscription auth (4m41s total).
+  Gated on `claude` on PATH; subscription auth is primary.
 - Tier 4 (Bells regression): n/a — introduced in PR 4.
 
 ## Running the smoke test manually
