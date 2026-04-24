@@ -1,6 +1,6 @@
 # autonovel rewrite state
 
-**Last updated:** 2026-04-24 by PR 5
+**Last updated:** 2026-04-24 by PR 6
 
 ## Completed
 - [x] PR 1: layout + housekeeping
@@ -8,14 +8,13 @@
 - [x] PR 3: foundation commands
 - [x] PR 4: evaluation + revision commands
 - [x] PR 5: research + period guardrails
-- [ ] PR 6: orchestrator + multi-book wiring
+- [x] PR 6: orchestrator + multi-book wiring
 - [ ] PR 7: art, covers, audiobook, typeset, landing
 - [ ] PR 8: Codex + Gemini adapters
 - [ ] PR 9: docs + full genre fixtures + publish
 
 ## In progress
-- none — PR 5 landed. All tiers green: Tier 1+2 248/248, Tier-3
-  historical-research smoke 1/1 (2m21s).
+- none — PR 6 landed. Tier 1+2 280/280 green.
 
 ## Blockers
 - none
@@ -150,6 +149,48 @@
   `Anatolia`) to prevent silent mangling.
 - 2026-04-24 (PR 5): sidequest dispatcher grew from 23 to 32 entries,
   adding the PR-5 research + cast/thread section.
+- 2026-04-24 (PR 6): `src/autonovel/context_loader.py` is the
+  multi-book context resolver. Given `(book, chapter)` it returns a
+  typed `ContextBundle` with `shared`, `book_files`,
+  `sibling_chapters`, `events`, and `excluded_spoilers`. Spoiler rule:
+  a sibling chapter is readable only if its `story_time` upper bound
+  is ≤ the target chapter's `story_time` lower bound. Event rendering
+  (a chapter appearing under `rendered_in` for one of this chapter's
+  events) surfaces *additional* sibling chapters, but spoiler gating
+  still dominates — a chapter that fails the story_time check stays
+  excluded even if it renders the same event. Also exposed as a CLI
+  (`python -m autonovel.context_loader --book X --chapter N
+  --series-root …`) so `/autonovel:run-pipeline` can shell out for
+  a JSON manifest before routing to `/autonovel:draft`.
+- 2026-04-24 (PR 6): `src/autonovel/validators/events.py` parses
+  `shared/events.md` into typed `Event` records (§8: id, title,
+  date, location, present, canonical, rendered_in, book_constraints).
+  The parser is forgiving (it returns every event it could
+  identify) and emits a problems list rather than raising — the
+  validator's job is to surface issues in a single report, not to
+  fail-fast on the first bad line. `check_cross_consistency(events,
+  project_books)` flags `rendered_in` rows that name books missing
+  from `project.yaml`.
+- 2026-04-24 (PR 6): three commands shipped — `run-pipeline`,
+  `reorder`, `remove-chapter`. `/autonovel:run-pipeline` is an
+  advisory orchestrator (model_tier: light, context_mode: series);
+  every content mutation still goes through a sibling `/autonovel:*`
+  command that owns its own lock + checkpoint + footer. Snapshot
+  before/after `/autonovel:run-pipeline` must be byte-identical
+  apart from `.autonovel/` bookkeeping — that is the contract. The
+  reorder + remove-chapter sidequests follow the §21.8 discipline:
+  chapter renumber runs via `bash` + `mv` in collision-safe order,
+  never an LLM rename loop. Sidequest dispatcher grew from 32 to 35
+  entries.
+- 2026-04-24 (PR 6): deleted `run_pipeline.py` and `run_drafts.py`
+  per §18. Dangling references from PR 3 and PR 4 (gen_world,
+  gen_characters, evaluate, adversarial_edit, apply_cuts, reader_panel,
+  review, gen_brief, gen_revision, compare_chapters) were to these
+  two orchestrators and now resolve. Legacy doc references in
+  README.md, WORKFLOW.md, PIPELINE.md, and CLAUDE.md are left
+  untouched on purpose — REWRITE-PLAN §18 parks PIPELINE.md for PR 8
+  and the README/CLAUDE rewrite for PR 9; editing them in PR 6 would
+  sprawl the diff.
 - 2026-04-24 (PR 4): Tier-4 Bells regression harness scaffolded at
   `tests/fixtures/bells-reference/` (empty chapters dir + empty
   scores.json + populate-instructions README) and
@@ -162,14 +203,22 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — 248 passing
-  (`pytest tests/deterministic tests/contracts`). The PR-5 commands
-  (`research`, `check-anachronism`, `promote-canon`, plus six PR-5
-  sidequests) are auto-picked up by
-  `tests/contracts/test_command_contract.py`; no new Tier-1 tests
-  needed in PR 5 because the deterministic surface it touches
-  (`period-bans`) already had dedicated tests in
-  `tests/deterministic/test_mechanical_slop.py` from PR 4.
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — 280 passing
+  (`pytest tests/deterministic tests/contracts`). PR 6 added 17 new
+  Tier-1 tests: 8 for the events validator
+  (`tests/deterministic/test_events_validator.py` — good ledger parse,
+  duplicate id detection, missing required fields, bad ISO date,
+  malformed `rendered_in` row, cross-consistency against project
+  books, empty document, Path accepted) and 9 for the context loader
+  (`tests/deterministic/test_context_loader.py` — shared+book path
+  inclusion, sibling spoiler gating, event-rendering surfacing with
+  spoiler dominance, unknown book/chapter errors, missing story_time
+  error, CLI success + error paths). PR 6's three new commands
+  (`run-pipeline`, `reorder`, `remove-chapter`) are auto-picked up by
+  the contract test. `context_loader.py` lives at
+  `src/autonovel/` top level (not under `validators/`) because it
+  composes shared files, book files, outline parsing, and events —
+  it is a context builder, not a pure validator.
 - Tier 3 (smoke): 2026-04-24 — Claude Code under subscription auth.
   - `tests/smoke/test_foundation_smoke.py` — 6/6 green (4m41s from PR 3).
   - `tests/smoke/test_revision_smoke.py` — **6/6 green (10m32s)** on
@@ -206,6 +255,23 @@
   flakiness policy says this test is allowed to flake; retry-once
   policy in `tests/conftest.py` covers ordinary drift but did not
   trigger this run.
+- Tier 3 (PR-6 multi-book smoke): 2026-04-24 — **1/1 green (8m16s)**
+  on the first clean PR-6 run under subscription auth.
+  `tests/smoke/test_multi_book_smoke.py` seeds a second book
+  (`tiny-apothecary`) alongside the fixture's `tiny-inquisitor`, adds
+  a legal-earlier sibling chapter (1521-12-01) and an illegal-future
+  sibling (1521-12-08) carrying a distinctive "SPOILER_MARKER"
+  phrase, then runs `/autonovel:draft 1 --book tiny-inquisitor`
+  (story_time 1521-12-04). Assertions: draft is valid, drafted
+  chapter does NOT contain the SPOILER_MARKER phrase (exclusion
+  honoured), and the chapter never names Tommaso or Lucia as the
+  arsonist (E-001 canonical consistency). The sanity layer shells
+  out to `python -m autonovel.context_loader` first and fail-fasts
+  if the loader itself returns the wrong gating. Runs on subscription
+  auth under `@pytest.mark.smoke`. The real drafter did honour the
+  exclusion — "Giraldo's burns smelled of saltpeter" did not leak
+  from `tiny-apothecary/ch_02` (1521-12-08) into
+  `tiny-inquisitor/ch_01` (1521-12-04).
 - Tier 4 (Bells regression): 2026-04-24 — harness added and passing in
   "skip" mode. Activates once a human populates
   `tests/fixtures/bells-reference/` from the `autonovel/bells` branch.
@@ -245,7 +311,7 @@ pre-written cuts file, a minimal brief), and invokes
   on Bells-parity.
 
 ## Resume pointer
-See `ROADMAP.md` at project root — forward-looking todos and the PR-5
+See `ROADMAP.md` at project root — forward-looking todos and the PR-7
 resume pointer live there. STATE.md keeps the append-only decisions
 log and the "Tests last known green" line. Keeping them separate means
 a `/clear` leaves the roadmap intact without the decisions-log

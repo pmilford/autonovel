@@ -20,8 +20,9 @@ each own their own lock / checkpoint / footer.
 
 The menu grows with the project. This version includes the PR 3
 foundation + drafting sidequests, the PR 4 evaluation, revision,
-and structural-edit sidequests, and the PR 5 research, period-guardrail,
-canon-promotion, and character/subplot/foreshadowing entries.
+and structural-edit sidequests, the PR 5 research, period-guardrail,
+canon-promotion, and character/subplot/foreshadowing entries, and the
+PR 6 orchestrator + reorder/remove-chapter entries.
 </purpose>
 
 <workflow>
@@ -67,36 +68,39 @@ canon-promotion, and character/subplot/foreshadowing entries.
      16. Split a chapter in two            → /autonovel:split-chapter --chapter <N> --book <name>
      17. Merge two adjacent chapters       → /autonovel:merge-chapters --chapters <N>,<M> --book <name>
      18. Revoice one chapter               → /autonovel:revoice <N> --book <name> --pov <name>
+     19. Reorder a chapter                 → /autonovel:reorder --from <A> --to <B> --book <name>
+     20. Remove a chapter                  → /autonovel:remove-chapter <N> --book <name>
 
    Research and period guardrails:
-     19. Research a real-world topic       → /autonovel:research "<topic>"
-     20. Check period anachronisms         → /autonovel:check-anachronism <N> --book <name>
-     21. Promote pending canon             → /autonovel:promote-canon
-     22. Register a new research source    → /autonovel:add-source <url-or-doi>
+     21. Research a real-world topic       → /autonovel:research "<topic>"
+     22. Check period anachronisms         → /autonovel:check-anachronism <N> --book <name>
+     23. Promote pending canon             → /autonovel:promote-canon
+     24. Register a new research source    → /autonovel:add-source <url-or-doi>
 
    Cast and threads:
-     23. Add a character                   → /autonovel:add-character --name <name>
-     24. Deepen a character                → /autonovel:deepen-character <name> --book <name>
-     25. Rename a character (global)       → /autonovel:rename-character --old <X> --new <Y>
-     26. Add a two-beat subplot            → /autonovel:add-subplot --thread "<desc>" --plant <N> --payoff <M> --book <name>
-     27. Foreshadow a plant+payoff         → /autonovel:foreshadow --plant <N> --payoff <M> --thread "<desc>" --book <name>
+     25. Add a character                   → /autonovel:add-character --name <name>
+     26. Deepen a character                → /autonovel:deepen-character <name> --book <name>
+     27. Rename a character (global)       → /autonovel:rename-character --old <X> --new <Y>
+     28. Add a two-beat subplot            → /autonovel:add-subplot --thread "<desc>" --plant <N> --payoff <M> --book <name>
+     29. Foreshadow a plant+payoff         → /autonovel:foreshadow --plant <N> --payoff <M> --thread "<desc>" --book <name>
+
+   Orchestration:
+     30. Run the pipeline                  → /autonovel:run-pipeline --books <name[,name...]>
 
    Navigation:
-     28. Where am I?                       → /autonovel:next
-     29. Resume an interrupted command     → /autonovel:resume
+     31. Where am I?                       → /autonovel:next
+     32. Resume an interrupted command     → /autonovel:resume
 
    Maintenance:
-     30. Roll back recent changes          → autonovel rollback
-     31. Reconcile state                   → autonovel doctor
-     32. Show status                       → autonovel status
+     33. Roll back recent changes          → autonovel rollback
+     34. Reconcile state                   → autonovel doctor
+     35. Show status                       → autonovel status
 
-   (More sidequests unlock in later PRs: reorder, remove-chapter.)
-
-   Select [1-32, 0=exit]:
+   Select [1-35, 0=exit]:
    ```
 
 4. Wait for the user's selection. On `0` or empty input, print "exiting"
-   and stop. On a valid number, print the corresponding command line and
+   and stop. Valid range is `0-35`. On a valid number, print the corresponding command line and
    a one-line instruction: "Run that command now, or press Enter to stay
    in the menu." Do not invoke the command on the user's behalf — routing
    via a separate slash-command invocation preserves the lock / checkpoint
@@ -110,7 +114,7 @@ canon-promotion, and character/subplot/foreshadowing entries.
 
 <acceptance>
 - No files are written.
-- The printed menu contains exactly the thirty-two options listed
+- The printed menu contains exactly the thirty-five options listed
   above (in that order).
 - The command does not invoke any other slash command or CLI tool
   automatically — routing is advisory only.
