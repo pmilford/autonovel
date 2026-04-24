@@ -108,4 +108,4 @@ def test_install_twice_overwrites(tmp_path: Path) -> None:
 def test_load_adapter_rejects_unknown() -> None:
     import pytest
     with pytest.raises(KeyError):
-        installer.load_adapter("codex")
+        installer.load_adapter("emacs-org-mode")

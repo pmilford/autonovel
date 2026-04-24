@@ -8,6 +8,8 @@ from pathlib import Path
 
 from .base import RuntimeAdapter
 from .claude_code import ClaudeCodeAdapter
+from .codex import CodexAdapter
+from .gemini import GeminiAdapter
 
 
 @dataclass
@@ -44,8 +46,11 @@ def detect(name: str) -> DetectedRuntime:
 
 
 def _candidates() -> list[tuple[str, RuntimeAdapter, str]]:
-    # Codex + Gemini adapters land in PR 8; until then only claude is real.
-    return [("claude", ClaudeCodeAdapter(), "claude")]
+    return [
+        ("claude", ClaudeCodeAdapter(), "claude"),
+        ("codex", CodexAdapter(), "codex"),
+        ("gemini", GeminiAdapter(), "gemini"),
+    ]
 
 
 def _which(binary: str) -> Path | None:

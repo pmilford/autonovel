@@ -9,6 +9,8 @@ from pathlib import Path
 
 from .base import CommandDef, RuntimeAdapter, discover_commands
 from .claude_code import ClaudeCodeAdapter
+from .codex import CodexAdapter
+from .gemini import GeminiAdapter
 
 
 @dataclass
@@ -85,4 +87,8 @@ def uninstall(
 def load_adapter(name: str) -> RuntimeAdapter:
     if name == "claude":
         return ClaudeCodeAdapter()
-    raise KeyError(f"adapter not available yet: {name!r} (Codex + Gemini ship in PR 8)")
+    if name == "codex":
+        return CodexAdapter()
+    if name == "gemini":
+        return GeminiAdapter()
+    raise KeyError(f"unknown adapter: {name!r}")

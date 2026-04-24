@@ -1,6 +1,6 @@
 # autonovel rewrite state
 
-**Last updated:** 2026-04-24 by PR 7
+**Last updated:** 2026-04-24 by PR 8
 
 ## Completed
 - [x] PR 1: layout + housekeeping
@@ -10,11 +10,11 @@
 - [x] PR 5: research + period guardrails
 - [x] PR 6: orchestrator + multi-book wiring
 - [x] PR 7: art, covers, audiobook, typeset, landing
-- [ ] PR 8: Codex + Gemini adapters
+- [x] PR 8: Codex + Gemini adapters
 - [ ] PR 9: docs + full genre fixtures + publish
 
 ## In progress
-- none — PR 7 landed. Tier 1+2 416/416 green.
+- none — PR 8 landed. Tier 1+2 440/440 green.
 
 ## Blockers
 - none
@@ -260,6 +260,52 @@
   `novel.pdf` is ≥ 4 KB. Art / cover / audiobook commands need paid
   APIs (fal.ai, ElevenLabs) and are left as manual-invoke only; PR 9
   will document the manual path.
+- 2026-04-24 (PR 8): two new adapters shipped — `CodexAdapter` and
+  `GeminiAdapter`. `installer.load_adapter` now dispatches on
+  `claude` / `codex` / `gemini`; `detect._candidates()` surfaces all
+  three for the auto-install path. Tier 1 added 24 golden-file tests
+  (`tests/deterministic/test_adapter_codex.py`,
+  `test_adapter_gemini.py`); Tier 2 contract tests parametrise over
+  every command unchanged. Total Tier 1+2: **440 passing**.
+- 2026-04-24 (PR 8): REWRITE-PLAN §11 went stale between writing and
+  implementation. Codex CLI 0.125 retired the `~/.codex/prompts/`
+  slash-command convention and now uses skills
+  (`~/.codex/skills/<name>/SKILL.md` with YAML frontmatter, same
+  shape as Claude skills). The adapter installs to
+  `~/.codex/skills/autonovel/<stem>/SKILL.md` so a single install
+  marker (`autonovel/`) cleanly covers uninstall. Skill name is
+  prefixed `autonovel-<stem>` to avoid collisions with user-installed
+  skills sharing a stem. Per-skill model pinning is not yet supported
+  by Codex — the intended tier and a suggested model name go into
+  the SKILL.md `metadata` block as documentation.
+- 2026-04-24 (PR 8): Gemini adapter targets
+  `~/.gemini/commands/autonovel/<stem>.toml` per §11. Prompt body
+  uses TOML literal triple-quoted strings (`'''…'''`) rather than
+  basic strings, because command bodies contain LaTeX backslashes
+  (e.g. art-vectorize) that would otherwise need escaping. The
+  adapter raises if a body ever contains `'''` so the literal-string
+  delimiter stays unambiguous; nothing in the current 48 commands
+  trips it. `description` and `arg_hint` go through a single-line
+  basic-string escaper (`\\` and `"` only).
+- 2026-04-24 (PR 8): tool-name translation in body is intentionally
+  scoped to backticked tokens only (`` `task` `` → `` `spawn` `` for
+  Codex, `` `task` `` → `` `run_agent` `` for Gemini, etc.). Word-
+  boundary substitution would mangle prose like "is a creative task"
+  or "bash your seed.txt"; the fixture commands contain both
+  patterns so this matters. Generic names that already match the
+  target runtime's verb (`file_read` for Codex) are kept as identity.
+- 2026-04-24 (PR 8): Tier-3 spot-check smoke tests added —
+  `tests/smoke/test_codex_smoke.py` and `tests/smoke/test_gemini_smoke.py`.
+  Each runs a `gen-canon`-shaped invocation against the
+  `tiny-series-historical` fixture. Both auto-skip when the runtime
+  binary is absent. The Codex test redirects `CODEX_HOME` into the
+  test's `tmp_path` and copies the user's real `auth.json` over so
+  subscription auth survives without polluting the global install.
+  Gemini test installs project-local under `<series>/.gemini/commands/`.
+- 2026-04-24 (PR 8): `PIPELINE.md` moved to `docs/pipeline-history.md`
+  per §18. Stale references in README.md / WORKFLOW.md / CLAUDE.md
+  are left untouched on purpose — REWRITE-PLAN §18 parks the
+  README/CLAUDE rewrite for PR 9 to keep diffs small.
 - 2026-04-24 (PR 7): external-tool dependency check folded into
   `autonovel doctor`. New `EXPORT_TOOLS` table maps each command's
   external CLI dependency (tectonic, pandoc, potrace, ffmpeg,
@@ -286,8 +332,16 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — **416
-  passing** (`pytest tests/deterministic tests/contracts`). PR 7
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — **440
+  passing** (`pytest tests/deterministic tests/contracts`). PR 8
+  added 24 new Tier-1 tests (12 in `test_adapter_codex.py`,
+  12 in `test_adapter_gemini.py`) covering render, frontmatter
+  shape, backticked tool-name translation, custom model maps,
+  install round-trip, install-twice idempotency, and a
+  `tomllib.loads` round-trip on every emitted Gemini `.toml`.
+  Earlier PR-7 line:
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — 416
+  passing (`pytest tests/deterministic tests/contracts`). PR 7
   added 61 new Tier-1 tests and ~75 contract-test parametrisations
   (15 new commands × 5 parametrised checks per command):
   - `test_mechanical_spine.py` (14): spine-width by paper stock,
@@ -370,6 +424,26 @@
   exclusion — "Giraldo's burns smelled of saltpeter" did not leak
   from `tiny-apothecary/ch_02` (1521-12-08) into
   `tiny-inquisitor/ch_01` (1521-12-04).
+- Tier 3 (PR-8 codex spot-check): 2026-04-24 — **1/1 green (52.11s)**
+  on the first clean PR-8 run. `tests/smoke/test_codex_smoke.py` ran
+  under subscription auth via Codex CLI 0.125 against the
+  `tiny-series-historical` fixture. The test redirects
+  `CODEX_HOME=<tmp>/.codex`, copies the user's real
+  `~/.codex/auth.json` into the redirected home so subscription auth
+  survives, installs the autonovel skills under
+  `<tmp>/.codex/skills/autonovel/<stem>/SKILL.md`, then asks
+  `codex exec --full-auto -C <fixture>` to invoke the
+  `autonovel-gen-canon` skill end-to-end. Codex discovered the
+  skill, ran the autonovel preamble (`autonovel _begin`), wrote
+  `shared/canon.md` (≥3 bullets, ≥80 words), and ran the postamble
+  (`autonovel _end --status ok`). End-to-end on the first attempt;
+  no adapter changes required.
+- Tier 3 (PR-8 gemini spot-check): not run — `gemini` CLI is not on
+  PATH on this box. `tests/smoke/test_gemini_smoke.py` skips
+  cleanly. The adapter ships with full Tier-1 coverage including a
+  `tomllib.loads` round-trip on every emitted `.toml`; Tier-3
+  validation is parked for whenever a Gemini-CLI box is available
+  (PR 9 release polish is a natural pairing).
 - Tier 3 (PR-7 typeset smoke): 2026-04-24 — **1/1 green (72.65s)**
   on the first clean PR-7 run under subscription auth. `tectonic`
   was not installed on the test box, so the optional PDF assertion

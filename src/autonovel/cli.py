@@ -209,6 +209,8 @@ def _cmd_install(args: argparse.Namespace) -> int:
         print(
             "error: no known runtimes found on $PATH. Install one of:\n"
             "  - Claude Code (`claude`)\n"
+            "  - OpenAI Codex (`codex`)\n"
+            "  - Gemini CLI (`gemini`)\n"
             "Or pass `--only <runtime> --path <dir>` to install anyway.",
             file=sys.stderr,
         )
