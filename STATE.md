@@ -44,13 +44,18 @@
 - Tier 1 (deterministic): 2026-04-24 — 72 passing (`pytest tests/deterministic`)
 - Tier 2 (command contracts): 2026-04-24 — 13 passing (`pytest tests/contracts`)
 - Tier 3 (smoke): 2026-04-24 — skeleton + historical fixture; **requires
-  `claude` on $PATH and `ANTHROPIC_API_KEY` set** to run. Skips otherwise.
+  `claude` on $PATH**. Uses whatever auth `claude` already has (OAuth
+  subscription via `claude login`, or `ANTHROPIC_API_KEY` if the user set
+  one). Skips cleanly if `claude` is absent.
 - Tier 4 (Bells regression): n/a — introduced in PR 4
 
 ## Running the smoke test manually
 
 ```bash
-export ANTHROPIC_API_KEY=...
+# First time only — use whichever auth mode you prefer.
+claude login                         # subscription auth (Max / Team / Pro)
+# or: export ANTHROPIC_API_KEY=...   # pay-per-token API auth
+
 pytest tests/smoke -q -m smoke
 ```
 

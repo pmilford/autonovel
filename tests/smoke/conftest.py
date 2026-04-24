@@ -1,14 +1,18 @@
 """Shared fixtures for Tier-3 smoke tests.
 
 Smoke tests invoke a real AI CLI runtime against a copy of a fixture series.
-They cost money and depend on network + API key, so the whole module is
-opt-in under `@pytest.mark.smoke` and skips cleanly when prerequisites are
-missing.
+They cost money and depend on network, so the whole module is opt-in under
+`@pytest.mark.smoke` and skips cleanly when `claude` is not on `$PATH`.
+
+Authentication: `claude -p` uses whatever auth the Claude Code CLI already
+has — typically an OAuth login via `claude login` (Claude Max / Team / Pro
+subscription), or an API key if the user explicitly set
+`ANTHROPIC_API_KEY`. We deliberately do **not** require an API key,
+because most users are on subscription auth.
 """
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -38,15 +42,22 @@ def _claude_binary() -> Path | None:
 def tmp_runtime_series(tmp_path: Path):
     """Yield a factory that copies a named fixture series into tmp_path,
     installs /autonovel:* commands into a project-local .claude/commands,
-    and returns a LiveSeries bundle. Skips the test if `claude` is not on
-    $PATH or ANTHROPIC_API_KEY is unset.
+    and returns a LiveSeries bundle.
+
+    Skips cleanly if `claude` is not on `$PATH`. Does not check for an API
+    key: `claude -p` uses the subscription OAuth auth established by
+    `claude login`, and requiring `ANTHROPIC_API_KEY` here would either
+    skip legitimate runs or silently route billing through the wrong
+    account when both auth modes are present.
     """
 
     claude = _claude_binary()
     if claude is None:
-        pytest.skip("`claude` CLI not on $PATH; smoke tests require Claude Code.")
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        pytest.skip("ANTHROPIC_API_KEY is not set; smoke tests cost money and need it.")
+        pytest.skip(
+            "`claude` CLI not on $PATH. Install Claude Code "
+            "(https://docs.claude.com/en/docs/claude-code) and run `claude login` "
+            "(or set `ANTHROPIC_API_KEY`) before running smoke tests."
+        )
 
     def factory(fixture_name: str) -> LiveSeries:
         src = FIXTURES / fixture_name
