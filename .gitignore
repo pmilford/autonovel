@@ -9,3 +9,4 @@ __pycache__/
 typeset/*.pdf
 typeset/chapters_content.tex
 *.pdf
+.claude/

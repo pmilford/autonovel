@@ -1,0 +1,85 @@
+---
+name: autonovel:brief
+description: Generate a revision brief for one chapter from cuts, eval, or panel feedback.
+argument-hint: "<chapter-number> --book <short-name> [--from cuts|eval|panel|auto]"
+model_tier: standard
+allowed-tools:
+  - file_read
+  - file_write
+reads:
+  - project.yaml
+  - books/{book}/voice.md
+  - books/{book}/chapters/ch_{chapter}.md
+  - books/{book}/edit_logs/ch{chapter:02d}_cuts.json
+  - books/{book}/edit_logs/reader_panel.json
+  - books/{book}/eval_logs/*.json
+writes:
+  - books/{book}/briefs/ch{chapter:02d}.md
+context_mode: book
+---
+
+<purpose>
+Produce `books/{book}/briefs/ch{chapter:02d}.md` — the targeted revision
+instructions the next `/autonovel:revise` run will follow literally.
+Default source is `auto`: detect the weakest chapter and assemble a
+brief from whatever artifacts are newest (eval log, cuts file, reader
+panel). Successor to `gen_brief.py`.
+
+A good brief names specific passages to change, not vague moods.
+</purpose>
+
+<workflow>
+1. Parse `$ARGUMENTS`. Expect `<chapter-number> --book <short-name>`.
+   `--from` is one of `cuts`, `eval`, `panel`, or `auto` (default
+   `auto`). Missing required args are a usage error — print a one-line
+   reminder and stop.
+
+2. Use `file_read` on `project.yaml` and `books/{book}/voice.md` for
+   voice guardrails the brief must preserve (body-first emotion, no
+   telling after showing, no triadic sensory lists, 70%+ in-scene,
+   etc. — pull these from the voice.md Part 2 body, don't invent them).
+
+3. Use `file_read` on `books/{book}/chapters/ch_{chapter}.md`. If
+   missing, surface the gap and stop.
+
+4. Load source artifacts per `--from`:
+   - `cuts`: read
+     `books/{book}/edit_logs/ch{chapter:02d}_cuts.json` (run
+     `/autonovel:adversarial-edit` first if missing).
+   - `eval`: read the most recent
+     `books/{book}/eval_logs/ch{chapter:02d}_*.json` file.
+   - `panel`: read `books/{book}/edit_logs/reader_panel.json` and
+     isolate the entries that name this chapter number.
+   - `auto`: read whichever of the above exist, preferring the most
+     recent. If two or more exist, merge signals (cuts weighted highest
+     because they're the most concrete).
+
+5. Draft the revision brief. Required sections, as Markdown H2s:
+   - `## Chapter {chapter} — revision target` (one-line goal)
+   - `## What works` (two or three sentences from the source material)
+   - `## What drags` (concrete, quote-level, ordered by impact)
+   - `## Specific cuts` (quoted passages to remove, carried over from
+     the cuts JSON if present)
+   - `## Specific rewrites` (before → after snippets where the source
+     suggested them)
+   - `## Voice guardrails` (bulleted — preserve from voice.md Part 2)
+   - `## Target length` (in words — the Bells learning is that
+     `gen_revision` overshoots ~30%, so brief for `target × 0.77` if a
+     final target applies)
+
+6. Use `file_write` to save to
+   `books/{book}/briefs/ch{chapter:02d}.md`. Overwrite any prior brief
+   for this chapter — briefs are disposable working documents, not
+   canonical artifacts.
+
+7. Print the target length and the count of specific cuts / rewrites
+   collected.
+</workflow>
+
+<acceptance>
+- `books/{book}/briefs/ch{chapter:02d}.md` exists and contains every
+  required H2 section from step 5.
+- The brief quotes at least one passage from the chapter (no brief can
+  be voice-only hand-waving; specificity is the point).
+- `## Target length` names a word-count number, not a vague target.
+</acceptance>
