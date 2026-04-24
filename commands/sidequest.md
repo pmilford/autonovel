@@ -21,8 +21,9 @@ each own their own lock / checkpoint / footer.
 The menu grows with the project. This version includes the PR 3
 foundation + drafting sidequests, the PR 4 evaluation, revision,
 and structural-edit sidequests, the PR 5 research, period-guardrail,
-canon-promotion, and character/subplot/foreshadowing entries, and the
-PR 6 orchestrator + reorder/remove-chapter entries.
+canon-promotion, and character/subplot/foreshadowing entries, the
+PR 6 orchestrator + reorder/remove-chapter entries, and the PR 7
+export commands (art, covers, audiobook, typeset, landing, package).
 </purpose>
 
 <workflow>
@@ -87,20 +88,41 @@ PR 6 orchestrator + reorder/remove-chapter entries.
    Orchestration:
      30. Run the pipeline                  → /autonovel:run-pipeline --books <name[,name...]>
 
+   Art and cover:
+     31. Derive a visual style             → /autonovel:art-style --book <name>
+     32. Generate art-direction variants   → /autonovel:art-directions --book <name> --surface <surface>
+     33. Generate image variants           → /autonovel:art-curate --book <name> --surface <surface>
+     34. Pick one variant as the final     → /autonovel:art-pick --book <name> --surface <surface> --variant <N>
+     35. Generate per-chapter ornaments    → /autonovel:art-ornaments-all --book <name>
+     36. Vectorise ornaments to SVG        → /autonovel:art-vectorize --book <name>
+     37. Composite e-book cover text       → /autonovel:cover-composite --book <name>
+     38. Compose print-ready wraparound    → /autonovel:cover-print --book <name> --pages <N>
+
+   Audiobook:
+     39. Parse chapters into scripts       → /autonovel:audiobook-script --book <name>
+     40. Configure / list voices           → /autonovel:audiobook-voices --book <name> --list
+     41. Generate one chapter's audio      → /autonovel:audiobook-generate --book <name> --chapter <N>
+     42. Assemble the full audiobook       → /autonovel:audiobook-assemble --book <name>
+
+   Typeset and release:
+     43. Build PDF + ePub                  → /autonovel:typeset --book <name>
+     44. Render the landing page           → /autonovel:landing --book <name>
+     45. Package the full release zip      → /autonovel:package --book <name>
+
    Navigation:
-     31. Where am I?                       → /autonovel:next
-     32. Resume an interrupted command     → /autonovel:resume
+     46. Where am I?                       → /autonovel:next
+     47. Resume an interrupted command     → /autonovel:resume
 
    Maintenance:
-     33. Roll back recent changes          → autonovel rollback
-     34. Reconcile state                   → autonovel doctor
-     35. Show status                       → autonovel status
+     48. Roll back recent changes          → autonovel rollback
+     49. Reconcile state                   → autonovel doctor
+     50. Show status                       → autonovel status
 
-   Select [1-35, 0=exit]:
+   Select [1-50, 0=exit]:
    ```
 
 4. Wait for the user's selection. On `0` or empty input, print "exiting"
-   and stop. Valid range is `0-35`. On a valid number, print the corresponding command line and
+   and stop. Valid range is `0-50`. On a valid number, print the corresponding command line and
    a one-line instruction: "Run that command now, or press Enter to stay
    in the menu." Do not invoke the command on the user's behalf — routing
    via a separate slash-command invocation preserves the lock / checkpoint
@@ -114,7 +136,7 @@ PR 6 orchestrator + reorder/remove-chapter entries.
 
 <acceptance>
 - No files are written.
-- The printed menu contains exactly the thirty-five options listed
+- The printed menu contains exactly the fifty options listed
   above (in that order).
 - The command does not invoke any other slash command or CLI tool
   automatically — routing is advisory only.

@@ -1,3 +1,8 @@
+% Shared typesetting template. `/autonovel:typeset` copies this file
+% into `books/<name>/typeset/novel.tex` and substitutes the three
+% placeholders @TITLE@, @AUTHOR@, @SERIES_NAME@ at build time. Hand-
+% edit the copy, never this template, for per-book tweaks.
+
 \documentclass[11pt, openany]{book}
 
 % === GEOMETRY: Trade paperback (5.5 x 8.5 inches) ===
@@ -37,7 +42,7 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\small\textsc{the second son of the house of bells}}
+\fancyhead[LE]{\small\textsc{@TITLE@}}
 \fancyhead[RO]{\small\textit{\leftmark}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0pt}
@@ -51,14 +56,6 @@
 % === CHAPTER STYLE ===
 \usepackage{titlesec}
 
-% Ornamental bell motif (using dingbats)
-\newcommand{\bellornament}{%
-  \par\noindent\vspace{6pt}%
-  \hfill{\large\symbol{"2756}}\hfill\null%
-  \vspace{6pt}\par%
-}
-
-% Scene break ornament
 \newcommand{\scenebreak}{%
   \par\vspace{0.6\baselineskip}%
   \noindent\hfil%
@@ -92,38 +89,15 @@
   \thispagestyle{empty}
   \begin{center}
   \vspace*{2in}
-  
-  {\small\textsc{the}}\\[0.15in]
-  
-  {\Huge\textsc{Second Son}}\\[0.1in]
-  
-  {\small\textsc{of the}}\\[0.15in]
-  
-  {\Huge\textsc{House of Bells}}\\[0.4in]
-  
-  {\small------\quad$\diamond$\quad------}\\[0.5in]
-  
-  {\large\textit{A Novel}}\\[1in]
-  
-  {\Large\textsc{Claude Hermes}}\\[1.5in]
-  
-  \end{center}
-  \clearpage
-}
 
-% === EPIGRAPH ===
-\newcommand{\makeepigraph}{%
-  \thispagestyle{empty}
-  \vspace*{2.5in}
-  \begin{center}
-  \begin{minipage}{3in}
-  \begin{center}
-  \itshape
-  You're not listening to the bell.\\
-  You're listening for what the bell\\
-  is trying to tell you it is.\\[12pt]
-  \end{center}
-  \end{minipage}
+  {\Huge\textsc{@TITLE@}}\\[0.4in]
+
+  {\small------\quad$\diamond$\quad------}\\[0.5in]
+
+  {\large\textit{A Novel}}\\[1in]
+
+  {\Large\textsc{@AUTHOR@}}\\[1.5in]
+
   \end{center}
   \clearpage
 }
@@ -133,7 +107,7 @@
   \thispagestyle{empty}
   \vspace*{3in}
   \begin{center}
-  {\large\textsc{The Second Son of the House of Bells}}
+  {\large\textsc{@TITLE@}}
   \end{center}
   \clearpage
 }
@@ -141,9 +115,9 @@
 % === PDF METADATA ===
 \usepackage{hyperref}
 \hypersetup{
-  pdftitle={The Second Son of the House of Bells},
-  pdfauthor={Claude Hermes},
-  pdfsubject={Fantasy Novel},
+  pdftitle={@TITLE@},
+  pdfauthor={@AUTHOR@},
+  pdfsubject={@SERIES_NAME@},
   hidelinks
 }
 
@@ -177,34 +151,12 @@
 \vspace*{\fill}
 \begin{center}
 
-{\small This is a work of fiction}\\[4pt]
-{\small created by Hermes Agent.}\\[18pt]
+{\small This is a work of fiction.}\\[18pt]
 
-{\small For full reproduction code and alternate formats}\\[2pt]
-{\small (ePub, audiobook) please visit:}\\[8pt]
-
-{\small\texttt{https://nousresearch.com/bells}}\\[16pt]
-
-\IfFileExists{../art/qr_bells.png}{%
-  \includegraphics[width=1in]{../art/qr_bells.png}
-}{}
+{\small Typeset by autonovel.}
 
 \end{center}
 \vspace*{\fill}
-\begin{center}
-\IfFileExists{../art/pdf/nous_logo.pdf}{%
-  \includegraphics[width=0.8in]{../art/pdf/nous_logo.pdf}
-}{}
-\end{center}
-\vspace{0.3in}
-\clearpage
-
-% Epigraph
-\makeepigraph
-
-% Blank verso before main text
-\thispagestyle{empty}
-\mbox{}
 \clearpage
 
 \mainmatter
@@ -218,8 +170,7 @@
 \thispagestyle{empty}
 \vspace*{3in}
 \begin{center}
-{\small------\quad$\diamond$\quad------}\\[0.3in]
-{\small\textit{The bells rang on.}}
+{\small------\quad$\diamond$\quad------}
 \end{center}
 
 \end{document}

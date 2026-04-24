@@ -1,9 +1,14 @@
 """`python -m autonovel.mechanical <subcmd>` — deterministic helpers for commands.
 
 Subcommands:
-  slop <path>                 JSON slop-score of a prose file.
-  period-bans <path> <bans>   JSON hits of bans list against a prose file.
-  apply-cuts <chapter> <cuts> Apply a cuts.json file to a chapter in place.
+  slop <path>                      JSON slop-score of a prose file.
+  period-bans <path> <bans>        JSON hits of bans list against a prose file.
+  apply-cuts <chapter> <cuts>      Apply a cuts.json file to a chapter in place.
+  spine-width --pages N [...]      Cover canvas spec (spine + canvas + px).
+  audio-validate <script> [<v>]    Validate a parsed audiobook script.
+  audio-chunk <script> <voices>    Pack segments into TTS-budget chunks.
+  audio-marks <rows> [--pause S]   Compute cumulative chapter marks.
+  build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -16,8 +21,17 @@ import json
 import sys
 from pathlib import Path
 
+from .audio import (
+    chapter_marks,
+    chunk_segments,
+    format_chapter_marks_mp4chaps,
+    load_script,
+    validate_script,
+)
 from .cuts import VALID_TYPES, apply_cuts
+from .latex import build_chapters_tex
 from .slop import period_ban_hits, slop_score
+from .spine import cover_spec
 
 
 def _cmd_slop(args: argparse.Namespace) -> int:
@@ -61,6 +75,96 @@ def _cmd_apply_cuts(args: argparse.Namespace) -> int:
     return 0 if stats.failed == 0 else 3
 
 
+def _cmd_spine_width(args: argparse.Namespace) -> int:
+    spec = cover_spec(
+        trim_w=args.trim_w,
+        trim_h=args.trim_h,
+        pages=args.pages,
+        paper=args.paper,
+        bleed=args.bleed,
+        dpi=args.dpi,
+        spine_override=args.spine_override,
+    )
+    json.dump(spec.to_dict(), sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_audio_validate(args: argparse.Namespace) -> int:
+    script = load_script(Path(args.script_path))
+    voices = None
+    if args.voices_path:
+        voices = json.loads(Path(args.voices_path).read_text(encoding="utf-8"))
+    problems = validate_script(script, voices)
+    json.dump(problems.to_dict(), sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0 if problems.ok else 4
+
+
+def _cmd_audio_chunk(args: argparse.Namespace) -> int:
+    script = load_script(Path(args.script_path))
+    voices = json.loads(Path(args.voices_path).read_text(encoding="utf-8"))
+    chunks = chunk_segments(
+        script["segments"],
+        voices,
+        max_chars=args.max_chars,
+    )
+    json.dump(
+        {
+            "chapter": script.get("chapter"),
+            "total_chunks": len(chunks),
+            "total_chars": sum(c.chars for c in chunks),
+            "chunks": [c.to_dict() for c in chunks],
+        },
+        sys.stdout,
+        indent=2,
+    )
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_audio_marks(args: argparse.Namespace) -> int:
+    rows_data = json.loads(Path(args.rows_path).read_text(encoding="utf-8"))
+    rows = [(int(r["chapter"]), str(r["title"]), float(r["duration"])) for r in rows_data]
+    marks = chapter_marks(rows, pause=args.pause)
+    payload: dict = {"marks": [m.to_dict() for m in marks]}
+    if args.format == "ffmetadata":
+        payload["ffmetadata"] = format_chapter_marks_mp4chaps(marks)
+    json.dump(payload, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_build_tex(args: argparse.Namespace) -> int:
+    chapters_dir = Path(args.chapters_dir)
+    art_dir = Path(args.art_dir) if args.art_dir else None
+    output = Path(args.output) if args.output else None
+    content, reports = build_chapters_tex(
+        chapters_dir,
+        art_dir=art_dir,
+        output=output,
+    )
+    json.dump(
+        {
+            "chapters": len(reports),
+            "bytes": len(content),
+            "output": str(output) if output else None,
+            "reports": [
+                {
+                    "chapter": r.chapter,
+                    "title": r.title,
+                    "ornament": str(r.ornament) if r.ornament else None,
+                }
+                for r in reports
+            ],
+        },
+        sys.stdout,
+        indent=2,
+    )
+    sys.stdout.write("\n")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m autonovel.mechanical")
     sub = p.add_subparsers(dest="subcmd")
@@ -81,6 +185,39 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--min-fat", type=int, default=0)
     a.add_argument("--dry-run", action="store_true")
     a.set_defaults(func=_cmd_apply_cuts)
+
+    sw = sub.add_parser("spine-width", help="Cover spine + canvas calculator.")
+    sw.add_argument("--trim-w", dest="trim_w", type=float, default=5.5)
+    sw.add_argument("--trim-h", dest="trim_h", type=float, default=8.5)
+    sw.add_argument("--pages", type=int, required=True)
+    sw.add_argument("--paper", default="cream")
+    sw.add_argument("--bleed", type=float, default=0.125)
+    sw.add_argument("--dpi", type=int, default=300)
+    sw.add_argument("--spine-override", dest="spine_override", type=float, default=None)
+    sw.set_defaults(func=_cmd_spine_width)
+
+    av = sub.add_parser("audio-validate", help="Validate a chapter script JSON.")
+    av.add_argument("script_path")
+    av.add_argument("voices_path", nargs="?", default=None)
+    av.set_defaults(func=_cmd_audio_validate)
+
+    ac = sub.add_parser("audio-chunk", help="Pack script segments into TTS-budget chunks.")
+    ac.add_argument("script_path")
+    ac.add_argument("voices_path")
+    ac.add_argument("--max-chars", dest="max_chars", type=int, default=4500)
+    ac.set_defaults(func=_cmd_audio_chunk)
+
+    am = sub.add_parser("audio-marks", help="Compute chapter timestamps.")
+    am.add_argument("rows_path")
+    am.add_argument("--pause", type=float, default=2.0)
+    am.add_argument("--format", choices=["json", "ffmetadata"], default="json")
+    am.set_defaults(func=_cmd_audio_marks)
+
+    bt = sub.add_parser("build-tex", help="Build chapters_content.tex from a chapters dir.")
+    bt.add_argument("chapters_dir")
+    bt.add_argument("--art-dir", dest="art_dir", default=None)
+    bt.add_argument("--output", default=None)
+    bt.set_defaults(func=_cmd_build_tex)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

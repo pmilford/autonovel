@@ -6,11 +6,45 @@ does safe mkdirs).
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .. import lock, project as project_mod
 from ..paths import SERIES_MARKER, SeriesLayout
+
+
+# Map of external tool name → (doc string, install hint). Used by
+# `check_export_tools` so the user sees *why* a tool matters and how to
+# get it. Every entry surfaces as a WARNING (not a PROBLEM) because
+# each tool is only needed by a subset of commands — a user who never
+# calls `/autonovel:typeset` doesn't need `tectonic` installed.
+EXPORT_TOOLS: dict[str, tuple[str, str]] = {
+    "tectonic": (
+        "PDF typesetting (/autonovel:typeset)",
+        "cargo install tectonic  OR  brew install tectonic  OR  see https://tectonic-typesetting.github.io/",
+    ),
+    "pandoc": (
+        "ePub generation (/autonovel:typeset)",
+        "apt install pandoc  OR  brew install pandoc",
+    ),
+    "potrace": (
+        "SVG vectorisation (/autonovel:art-vectorize)",
+        "apt install potrace  OR  brew install potrace",
+    ),
+    "ffmpeg": (
+        "m4b audiobook output (/autonovel:audiobook-assemble --format m4b)",
+        "apt install ffmpeg  OR  brew install ffmpeg",
+    ),
+    "rsvg-convert": (
+        "SVG→PDF conversion for print-quality vector ornaments (/autonovel:typeset --convert-vectors)",
+        "apt install librsvg2-bin  OR  brew install librsvg",
+    ),
+    "fc-match": (
+        "Font lookup for EB Garamond / Bebas Neue covers (/autonovel:cover-composite, cover-print)",
+        "apt install fontconfig  OR  brew install fontconfig",
+    ),
+}
 
 
 @dataclass
@@ -48,7 +82,22 @@ REQUIRED_SHARED_FILES = (
 )
 
 
-def run(series_root: Path, *, fix: bool = False) -> DoctorReport:
+def check_export_tools() -> list[str]:
+    """Return one `<tool>: missing — <purpose>; install: <hint>` line per absent tool.
+
+    Empty list means every known export tool is on `$PATH`. Callers
+    surface the lines as WARNINGS — they are never fatal; the
+    corresponding command will complain at invocation time if the
+    user ever runs it.
+    """
+    out: list[str] = []
+    for tool, (purpose, install_hint) in EXPORT_TOOLS.items():
+        if shutil.which(tool) is None:
+            out.append(f"{tool}: missing — needed for {purpose}; install: {install_hint}")
+    return out
+
+
+def run(series_root: Path, *, fix: bool = False, export_tools: bool = True) -> DoctorReport:
     report = DoctorReport()
     if not (series_root / SERIES_MARKER).is_file():
         report.problems.append(f"missing {SERIES_MARKER} in {series_root}")
@@ -98,6 +147,10 @@ def run(series_root: Path, *, fix: bool = False) -> DoctorReport:
         report.warnings.append(
             f"stale lock from PID {info.pid} ({info.command}); `autonovel resume` to recover"
         )
+
+    if export_tools:
+        for line in check_export_tools():
+            report.warnings.append(f"export tool {line}")
 
     return report
 

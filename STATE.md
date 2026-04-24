@@ -1,6 +1,6 @@
 # autonovel rewrite state
 
-**Last updated:** 2026-04-24 by PR 6
+**Last updated:** 2026-04-24 by PR 7
 
 ## Completed
 - [x] PR 1: layout + housekeeping
@@ -9,12 +9,12 @@
 - [x] PR 4: evaluation + revision commands
 - [x] PR 5: research + period guardrails
 - [x] PR 6: orchestrator + multi-book wiring
-- [ ] PR 7: art, covers, audiobook, typeset, landing
+- [x] PR 7: art, covers, audiobook, typeset, landing
 - [ ] PR 8: Codex + Gemini adapters
 - [ ] PR 9: docs + full genre fixtures + publish
 
 ## In progress
-- none — PR 6 landed. Tier 1+2 280/280 green.
+- none — PR 7 landed. Tier 1+2 416/416 green.
 
 ## Blockers
 - none
@@ -191,6 +191,89 @@
   untouched on purpose — REWRITE-PLAN §18 parks PIPELINE.md for PR 8
   and the README/CLAUDE rewrite for PR 9; editing them in PR 6 would
   sprawl the diff.
+- 2026-04-24 (PR 7): fifteen export commands shipped —
+  `art-style`, `art-directions`, `art-curate`, `art-pick`,
+  `art-ornaments-all`, `art-vectorize`, `cover-composite`,
+  `cover-print`, `audiobook-script`, `audiobook-voices`,
+  `audiobook-generate`, `audiobook-assemble`, `typeset`, `landing`,
+  `package`. Model tiers: creative briefs (`art-style`,
+  `art-directions`) → heavy; structured / judgement prose
+  (`art-curate`, `art-ornaments-all`, `audiobook-script`,
+  `audiobook-generate`, `landing`) → standard; mechanical / PIL-only
+  (`art-pick`, `art-vectorize`, `cover-composite`, `cover-print`,
+  `audiobook-voices`, `audiobook-assemble`, `typeset`, `package`) →
+  light. Sidequest dispatcher grew from 35 to 50 entries.
+- 2026-04-24 (PR 7): four new `python -m autonovel.mechanical`
+  subcommands exported — `spine-width` (cover canvas + spine calc
+  from pages + paper stock + trim + bleed), `audio-validate` (shape
+  + speaker-coverage check on parsed chapter scripts), `audio-chunk`
+  (pack script segments into ElevenLabs-budget chunks with fallback
+  voice resolution), `audio-marks` (cumulative chapter timestamps;
+  optional `ffmetadata` output for m4b embedding), and `build-tex`
+  (chapters_content.tex builder ported verbatim from
+  `typeset/build_tex.py`). Each is pure-Python, writes JSON on
+  stdout, and is Tier-1 tested (61 new tests across
+  `test_mechanical_spine.py`, `_audio.py`, `_latex.py`).
+- 2026-04-24 (PR 7): PIL-heavy cover rendering factored into
+  `src/autonovel/export/cover.py` — `composite_cover` (e-book text
+  overlay), `print_cover` (KDP/Lulu/IngramSpark wraparound with
+  spine from `mechanical.spine.cover_spec`), and `thumbnail_matrix`
+  (Amazon full-size, 800×1200 web, 400×600 social, 800×800 square).
+  Commands shell out via `python3 -c "from autonovel.export.cover
+  import ..."` rather than inlining the ~200-line PIL script into
+  command bodies. The landing HTML renderer lives alongside at
+  `src/autonovel/export/landing.py` with `@KEY@` substitution so the
+  template survives being inside CSS and JSON-LD blocks.
+- 2026-04-24 (PR 7): typeset templates genericised. The pre-rewrite
+  `typeset/novel.tex` (Bells-specific) now uses `@TITLE@`,
+  `@AUTHOR@`, `@SERIES_NAME@`, `@YEAR@` placeholders; `epub_*`
+  templates likewise. Moved from repo root to
+  `src/autonovel/templates/series/typeset/` so every new series gets
+  a local copy at scaffold time. `landing/index.html` gave up its
+  Bells content and moved to
+  `src/autonovel/templates/series/landing/template.html`. The
+  `new-series` scaffolder picks them up via the existing `_copy_tree`
+  path — no new code.
+- 2026-04-24 (PR 7): deleted `gen_art.py`, `gen_art_directions.py`,
+  `gen_cover_composite.py`, `gen_cover_print.py`,
+  `gen_audiobook_script.py`, `gen_audiobook.py`,
+  `typeset/build_tex.py`, and `landing/index.html` per §18. The
+  `typeset/` and `landing/` directories at repo root are now empty
+  and have been removed; their content lives under
+  `src/autonovel/templates/series/`. Legacy doc references in
+  README.md, WORKFLOW.md, PIPELINE.md, CLAUDE.md that still mention
+  the deleted scripts are left untouched on purpose — REWRITE-PLAN
+  §18 parks the README/CLAUDE rewrite for PR 9.
+- 2026-04-24 (PR 7): `audiobook_voices.json` at repo root kept as
+  the example voice map (the same file the Bells production used).
+  It's not read by any new command — `/autonovel:audiobook-voices`
+  writes per-book voices at `books/{book}/audiobook/voices.yaml`.
+  The root file can be deleted in PR 9 along with the README rewrite;
+  leaving it in place for now so tooling users have a reference
+  shape to compare against.
+- 2026-04-24 (PR 7): Tier-3 smoke coverage is intentionally
+  **one test**, not fifteen. `tests/smoke/test_typeset_smoke.py`
+  exercises `/autonovel:typeset --book tiny-inquisitor --pdf-only`
+  and asserts `chapters_content.tex` exists with drop caps + every
+  chapter title, the copied `novel.tex` has placeholders
+  substituted, and (only if `tectonic` is installed) the produced
+  `novel.pdf` is ≥ 4 KB. Art / cover / audiobook commands need paid
+  APIs (fal.ai, ElevenLabs) and are left as manual-invoke only; PR 9
+  will document the manual path.
+- 2026-04-24 (PR 7): external-tool dependency check folded into
+  `autonovel doctor`. New `EXPORT_TOOLS` table maps each command's
+  external CLI dependency (tectonic, pandoc, potrace, ffmpeg,
+  rsvg-convert, fontconfig) to the slash-command that needs it and
+  the OS install hint. Surfaces as WARNINGS (never PROBLEMS) so a
+  user who only drafts and revises is never told their setup is
+  broken because they don't have tectonic. Three new tests in
+  `tests/deterministic/test_doctor.py` lock the contract: every
+  reported line includes purpose + install hint, missing tools are
+  warnings not problems, and the `export_tools=False` flag silences
+  the whole pass for callers that don't care. Python image/audio
+  deps (Pillow, pydub) move to a new `[export]` extras-require
+  group; `.env.example` documents both keys (FAL_KEY,
+  ELEVENLABS_API_KEY) and the OS install hints (apt + brew).
 - 2026-04-24 (PR 4): Tier-4 Bells regression harness scaffolded at
   `tests/fixtures/bells-reference/` (empty chapters dir + empty
   scores.json + populate-instructions README) and
@@ -203,6 +286,21 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — **416
+  passing** (`pytest tests/deterministic tests/contracts`). PR 7
+  added 61 new Tier-1 tests and ~75 contract-test parametrisations
+  (15 new commands × 5 parametrised checks per command):
+  - `test_mechanical_spine.py` (14): spine-width by paper stock,
+    cover-canvas arithmetic, pixel conversions, override precedence,
+    CLI emits JSON.
+  - `test_mechanical_audio.py` (24): `validate_script` shape rules,
+    `chunk_segments` packing + tag-drop + fallback voice, overage
+    split on sentence boundary, chapter marks cumulative + no
+    trailing pause + ffmetadata format.
+  - `test_mechanical_latex.py` (23): escape of the five LaTeX
+    specials, scene-break / italic / dash / smart-quote conversion,
+    drop-cap wrapping, multi-chapter build, ornament PDF-preferred-
+    over-PNG wiring, CLI round-trip.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — 280 passing
   (`pytest tests/deterministic tests/contracts`). PR 6 added 17 new
   Tier-1 tests: 8 for the events validator
@@ -272,6 +370,16 @@
   exclusion — "Giraldo's burns smelled of saltpeter" did not leak
   from `tiny-apothecary/ch_02` (1521-12-08) into
   `tiny-inquisitor/ch_01` (1521-12-04).
+- Tier 3 (PR-7 typeset smoke): 2026-04-24 — **1/1 green (72.65s)**
+  on the first clean PR-7 run under subscription auth. `tectonic`
+  was not installed on the test box, so the optional PDF assertion
+  was skipped per the conditional in
+  `tests/smoke/test_typeset_smoke.py`; the
+  `chapters_content.tex` build (mechanical.latex inside a real
+  Claude Code session) and the `@TITLE@` / `@AUTHOR@` substitution
+  in the per-book `novel.tex` were both exercised end-to-end.
+  Re-run with `tectonic` on PATH to extend coverage to the
+  produced PDF: `pytest tests/smoke -q -m smoke -k typeset`.
 - Tier 4 (Bells regression): 2026-04-24 — harness added and passing in
   "skip" mode. Activates once a human populates
   `tests/fixtures/bells-reference/` from the `autonovel/bells` branch.

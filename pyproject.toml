@@ -17,6 +17,25 @@ test = [
     # auto-retry gracefully).
     "pytest-rerunfailures>=14",
 ]
+# PR 7 export commands that touch images and audio. Users who only draft
+# and revise do not need these; `autonovel doctor` reports any that are
+# missing as warnings (not problems) when the corresponding external CLI
+# tool is also absent.
+#   cover-composite, cover-print       → Pillow
+#   audiobook-assemble                 → pydub (plus ffmpeg on PATH)
+#   landing                            → (no extra Python — stdlib only)
+# External CLI tools the commands shell out to (install via OS package
+# manager; `autonovel doctor` enumerates what's missing):
+#   tectonic     — PDF (typeset)
+#   pandoc       — ePub (typeset)
+#   potrace      — SVG vectorisation (art-vectorize)
+#   ffmpeg       — m4b audiobook output (audiobook-assemble --format m4b)
+#   rsvg-convert — SVG → PDF for print-quality ornaments (typeset --convert-vectors)
+#   fontconfig   — EB Garamond / Bebas Neue lookup (cover-composite, cover-print)
+export = [
+    "Pillow>=10.0",
+    "pydub>=0.25",
+]
 
 [project.scripts]
 autonovel = "autonovel.cli:main"
