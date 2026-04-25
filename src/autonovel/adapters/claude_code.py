@@ -95,7 +95,13 @@ Writes this command will perform (for context):
 
 def _postamble(cmd: CommandDef) -> str:
     return f"""<autonovel-postamble>
-After the <workflow> succeeds, run the autonovel postamble:
+**Mandatory** — run this even if the workflow felt anticlimactic. The
+postamble releases the lock, records the next step, and prints the
+"what do I do next" footer. Skipping it leaves the series locked and
+the user without guidance — the most common failure mode in autonovel.
+
+After the <workflow> succeeds, do BOTH of these — in order, do not
+stop after step 1:
 
 1. Use the `Bash` tool to run:
    `autonovel _end --command {cmd.name} --args "$ARGUMENTS" --status ok`
@@ -104,13 +110,30 @@ After the <workflow> succeeds, run the autonovel postamble:
    standard next step, and appends a JSON line to
    `.autonovel/command-log.jsonl`.
 
-2. Print the user-facing footer exactly as emitted by `_end` (it includes
-   the next standard step and a few sidequest alternatives). That footer is
-   the primary UX for "what do I do next"; always show it.
+   The bash output of this call IS the user-facing footer. It looks
+   roughly like:
+
+       ---
+       **Done:** /{cmd.name} <args>
+       **Wrote:** <path>, ...
+       **Next:** /autonovel:<command> <args>
+         *(rationale)*
+
+       Other options (see `/autonovel:sidequest` for the full list):
+       - /autonovel:<sidequest> <args>
+           *<why>*
+
+2. Reproduce that footer verbatim in your reply to the user as the
+   final visible block. The Bash tool's stdout captures it, but you
+   must echo it back as the closing message — that is the user's only
+   "what do I do next" signal. **Do not summarise; do not skip; do not
+   end your turn before it.** If you reply "Done!" without the footer,
+   the user cannot continue.
 
 If the <workflow> fails partway through:
 - Run `autonovel _end --command {cmd.name} --args "$ARGUMENTS" --status error`
   (no `--wrote` paths). That leaves the lock marked `interrupted` so
   `/autonovel:resume` can offer recovery, and records the error in the
-  command log without overwriting `last-action.json`.
+  command log without overwriting `last-action.json`. Then describe
+  what failed to the user.
 </autonovel-postamble>"""

@@ -189,15 +189,34 @@ terminal is open with `git` and `pipx` available.
    drops the `/autonovel:*` command files into each one. You can pin
    a single runtime with `--only claude` (or `codex` / `gemini`).
 
-6. **(Claude Code only) Pick a standard-context model.** Launch
-   `claude` once and run `/model`. Pick a model **without** the
-   `[1m]` suffix — for example `claude-sonnet-4-6`, not
-   `claude-sonnet-4-6[1m]`. The 1M-context variants require a
-   separate paid usage tier; the autonovel commands all fit
-   comfortably inside the 200k standard context, and the runtime
-   will otherwise fail mid-pipeline with `API Error: Extra usage is
-   required for 1M context`. (This is a Claude Code default
-   choice, not an autonovel choice.)
+6. **(Claude Code only — heads up) The 1M-context billing gate.**
+   autonovel benefits from 1M context — `/autonovel:reader-panel` and
+   `/autonovel:review` read whole manuscripts, and a 1M-capable
+   model lets cross-book review work without context-budget
+   trickery. If your default Claude Code model is a `[1m]`-suffixed
+   variant (e.g. `claude-opus-4-7[1m]`), you may hit this error
+   mid-pipeline:
+
+   ```
+   API Error: Extra usage is required for 1M context - run
+   /extra-usage to enable or /model to switch to standard context
+   ```
+
+   Two paths:
+
+   - **Recommended — enable 1M.** Inside Claude Code run
+     `/extra-usage` to opt into the 1M billing surface. On a Max
+     $200/month plan this is the right default: 1M context is
+     genuinely useful in autonovel's review and multi-book phases.
+   - **Workaround — drop `[1m]`.** If `/extra-usage` doesn't unlock
+     1M for you, run `/model` and pick a non-`[1m]` variant
+     (Sonnet 4.6 is the default tier autonovel's standard commands
+     target). Foundation, drafting, and per-chapter eval all fit in
+     200k; you only feel the loss in whole-book review.
+
+   See [`docs/troubleshooting.md`](docs/troubleshooting.md) for the
+   full diagnosis and the open question this raises about
+   per-command model overrides on Claude Max plans.
 
 You're done with installation. The next section is for using it.
 
@@ -402,6 +421,7 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 - [`docs/writing-a-historical-series.md`](docs/writing-a-historical-series.md) — end-to-end walkthrough.
 - [`docs/series-layout.md`](docs/series-layout.md) — `shared/` vs `books/`.
 - [`docs/chapter-frontmatter.md`](docs/chapter-frontmatter.md) — chapter file frontmatter schema.
+- [`docs/troubleshooting.md`](docs/troubleshooting.md) — common errors and fixes.
 
 ### Optional API keys (for export only)
 

@@ -96,3 +96,79 @@ def test_argument_parsing_produces_book_and_chapter() -> None:
     assert ctx["book"] == "inquisitor"
     assert ctx["chapter"] == "07"
     assert ctx["prev"] == "06"
+
+
+# ---------------------------------------------------------------------------
+# next-step phase inference (PR-9 fixup) — STATE.md decisions log.
+#
+# Bug being prevented: book.status in project.yaml is set to "seed" at
+# scaffold time and is not advanced by every command. The earlier
+# implementation read book.status directly, so a series that had run
+# gen-world/characters/canon/voice-discovery/gen-outline still got
+# /autonovel:gen-world recommended as "next". The fixed implementation
+# infers phase from filesystem artefacts.
+
+
+def test_next_step_after_gen_outline_is_not_gen_world(demo_series: SeriesLayout) -> None:
+    """After /autonovel:gen-outline writes a populated outline.md, the
+    next-step recommendation must move past the seed-phase suggestion of
+    /autonovel:gen-world."""
+    book_root = demo_series.books / "one"
+    outline = book_root / "outline.md"
+    outline.write_text(
+        "# Outline\n\n"
+        "## Chapter 1 — Arrival\n"
+        "- story_time: 1521-04-12\n"
+        "- events: []\n"
+        "- beats:\n"
+        "  - Tommaso lands at the Rialto.\n"
+        "  - The witness fails to appear.\n"
+        "  - The fire ledger goes missing.\n",
+        encoding="utf-8",
+    )
+    lifecycle.begin("autonovel:gen-outline", "--book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:gen-outline",
+        "--book one",
+        status="ok",
+        wrote=["books/one/outline.md"],
+        series=demo_series,
+    )
+    assert result.last_action is not None
+    assert result.last_action.next_standard_step is not None
+    # The bug: this used to be "/autonovel:gen-world" because phase was
+    # always "seed". After the fixup it should be anything OTHER than
+    # gen-world — evaluate-phase-foundation or draft-1 are acceptable.
+    assert "gen-world" not in result.last_action.next_standard_step, (
+        f"next-step regressed to gen-world after gen-outline; got "
+        f"{result.last_action.next_standard_step!r}"
+    )
+    assert "**Next:**" in result.footer
+
+
+def test_next_step_after_drafting_advances_chapter(demo_series: SeriesLayout) -> None:
+    """When chapters/ already has a drafted file, next-step must be a
+    drafting-phase recommendation, not a foundation-phase one."""
+    book_root = demo_series.books / "one"
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    (chapters / "ch_01.md").write_text(
+        "---\nbook: one\nchapter: 1\npov: Ana\nstory_time: 2020-01-01\n"
+        "events: []\nstatus: draft\n---\n\nProse goes here.\n",
+        encoding="utf-8",
+    )
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft",
+        "1 --book one",
+        status="ok",
+        wrote=["books/one/chapters/ch_01.md"],
+        series=demo_series,
+    )
+    next_cmd = result.last_action.next_standard_step
+    assert next_cmd is not None
+    # Drafting-phase suggestions: draft N+1, revise N, or adversarial-edit all.
+    # All start with /autonovel: and are NOT foundation-phase commands.
+    assert "gen-world" not in next_cmd
+    assert "gen-characters" not in next_cmd
+    assert "gen-canon" not in next_cmd

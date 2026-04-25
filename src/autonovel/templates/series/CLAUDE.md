@@ -100,6 +100,24 @@ each of these and the workaround is in the codebase:
 - Run `/autonovel:sidequest` for the menu of non-standard operations
   (rename character, split chapter, deepen character, etc.).
 
+## If you (the agent) hit `API Error: Extra usage is required for 1M context`
+
+This is a Claude Code billing-gate, not an autonovel bug. Surface
+this to the user verbatim and stop, do not retry:
+
+> Your Claude Code session model is a 1M-context variant (e.g.
+> `claude-opus-4-7[1m]`) and 1M billing is not yet enabled on your
+> account. autonovel benefits from 1M context, especially in
+> reader-panel and review. Two paths:
+>
+> 1. **Recommended:** run `/extra-usage` to enable 1M billing —
+>    this is the path the error message itself suggests.
+> 2. **Mechanical workaround:** run `/model` and pick a non-`[1m]`
+>    variant (Sonnet 4.6 is the default tier for standard-tier
+>    autonovel commands).
+>
+> Then re-run the command that just failed.
+
 ## Where to find more
 
 - README at the series-template repo (autonovel project) — install
