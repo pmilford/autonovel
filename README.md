@@ -455,6 +455,7 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 
 ### User-relevant docs
 
+- [`docs/operating-guide.md`](docs/operating-guide.md) — **start here after install:** where human input matters, time costs, common workflows (first-pass / minor revision / factual fix / major change / adding a plot point), updating tools, restarting after a crash, starting new books or series, installing PDF/ePub/audiobook tools step-by-step.
 - [`docs/commands.md`](docs/commands.md) — every `/autonovel:*` command.
 - [`docs/multi-book.md`](docs/multi-book.md) — coordinating multiple books in one series.
 - [`docs/writing-a-historical-series.md`](docs/writing-a-historical-series.md) — end-to-end walkthrough.

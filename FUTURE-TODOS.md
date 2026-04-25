@@ -11,6 +11,21 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Read-only TUI / web dashboard for series state.** Author noted
+  2026-04-25 that NousResearch's earlier autonovel had a richer
+  read-only console showing file artifacts and live progress; the
+  rewrite ships only `autonovel status` (one-shot CLI),
+  `autonovel statusline` (Claude Code status bar), and
+  `.autonovel/command-log.jsonl` (append-only JSON log). A
+  long-running TUI (e.g. via `textual`) or a tiny web server (FastAPI
+  + websockets) that streams the lock state, last-action, recent
+  command-log entries, per-book phase + chapter scores, and the
+  `pending_canon.md` queue would be a real onboarding win for
+  authors not at home in `cat .autonovel/*.json`. Roughly 1–2 days
+  of work for a TUI; a basic web dashboard ~3 days. Hold for now —
+  current tools cover the same data, just less prettily.
+
+
 - **Research-from-seed auto-merges into canon (no manual editing).**
   ~~Open~~ **Fixed 2026-04-25.** `/autonovel:research --from-seed`
   now appends every research-derived candidate to the active book's
