@@ -14,7 +14,7 @@ from pathlib import Path
 from . import __version__
 from .adapters import detect as detect_mod
 from .adapters import installer as installer_mod
-from .housekeeping import doctor, lifecycle, rollback, scaffold, status, statusline as statusline_mod, statusline_setup, test_fixture
+from .housekeeping import doctor, lifecycle, plates as plates_mod, rollback, scaffold, status, statusline as statusline_mod, statusline_setup, test_fixture
 from .paths import SeriesNotFound, load_series
 
 
@@ -78,6 +78,25 @@ def _build_parser() -> argparse.ArgumentParser:
     uninst.add_argument("--only", default=None, choices=["claude", "codex", "gemini"])
     uninst.add_argument("--path", default=None)
     uninst.set_defaults(func=_cmd_uninstall)
+
+    ai = sub.add_parser(
+        "art-import",
+        help="Import a user-supplied image as a typeset plate or chapter ornament.",
+    )
+    ai.add_argument("--file", required=True, help="Source image path (PNG/JPG/PDF/SVG/TIFF).")
+    ai.add_argument("--book", default=None, help="Book short-name (defaults to inferred book).")
+    ai.add_argument("--chapter", type=int, required=True, help="Anchor chapter (1-indexed).")
+    ai.add_argument("--as", dest="kind", default="plate", choices=["plate", "ornament"],
+                    help="`plate`: full-page captioned image (historical maps, paintings). "
+                         "`ornament`: replaces the AI-generated chapter ornament.")
+    ai.add_argument("--placement", default="before-chapter",
+                    choices=["before-chapter", "chapter-start", "after-chapter"],
+                    help="Where the plate goes relative to its chapter (plate mode only).")
+    ai.add_argument("--slug", default=None, help="Slug for the registered plate (default: derived from filename).")
+    ai.add_argument("--caption", default="", help="Italic caption under the plate (e.g. \"Map of Venice, c. 1500\").")
+    ai.add_argument("--attribution", default="", help="Small-print credit line under the caption.")
+    ai.add_argument("--force", action="store_true", help="Overwrite an existing import with the same slug or chapter.")
+    ai.set_defaults(func=_cmd_art_import)
 
     sl = sub.add_parser("statusline", help="Print one-line status for Claude Code's status bar.")
     sl.set_defaults(func=_cmd_statusline)
@@ -291,6 +310,59 @@ def _cmd_uninstall(args: argparse.Namespace) -> int:
         print(f"uninstalled [{result.adapter_name}] from {result.install_root}")
         for r in result.removed:
             print(f"  - {r.name}")
+    return 0
+
+
+def _cmd_art_import(args: argparse.Namespace) -> int:
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    book_name = args.book
+    if book_name is None:
+        # Walk the same inference path /autonovel:* commands use.
+        from .housekeeping.lifecycle import _infer_book
+        ctx = _infer_book({}, series)
+        book_name = ctx.get("book")
+    if book_name is None:
+        print("error: --book not provided and could not be inferred. "
+              "Pass --book <name> or run from a series with exactly one book.",
+              file=sys.stderr)
+        return 2
+    book_root = series.books / book_name
+    if not book_root.is_dir():
+        print(f"error: book {book_name!r} not found at {book_root}", file=sys.stderr)
+        return 2
+    source = Path(args.file).expanduser().resolve()
+    try:
+        result = plates_mod.import_image(
+            book_root, source,
+            chapter=args.chapter,
+            kind=args.kind,
+            placement=args.placement,
+            slug=args.slug,
+            caption=args.caption,
+            attribution=args.attribution,
+            force=args.force,
+        )
+    except plates_mod.ImportError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    rel = result.installed_path.relative_to(series.root)
+    verb = "Replaced" if result.overwrote else "Imported"
+    print(f"{verb} {result.kind} → {rel}")
+    if result.plate is not None:
+        print(f"  slug: {result.plate.slug}")
+        print(f"  placement: {result.plate.placement} (chapter {result.plate.chapter})")
+        if result.plate.caption:
+            print(f"  caption: {result.plate.caption}")
+        if result.plate.attribution:
+            print(f"  attribution: {result.plate.attribution}")
+        manifest = book_root / "typeset" / "plates.yaml"
+        print(f"  manifest: {manifest.relative_to(series.root)}")
+    print("")
+    print(f"Next: run /autonovel:typeset --book {book_name} to rebuild the PDF.")
     return 0
 
 

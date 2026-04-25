@@ -61,9 +61,16 @@ Light tier — mechanical. No LLM call.
 3. Build `chapters_content.tex` via `bash`:
    `autonovel mechanical build-tex books/{book}/chapters
    --art-dir books/{book}/art --output
-   books/{book}/typeset/chapters_content.tex`.
-   Parse its JSON output — print the per-chapter titles + which
-   ornaments were wired in as part of the summary.
+   books/{book}/typeset/chapters_content.tex
+   --plates-manifest books/{book}/typeset/plates.yaml`.
+   The `--plates-manifest` flag is best-effort — if the file
+   doesn't exist (no user-imported plates), the build still
+   succeeds. If it does exist, every entry's image gets woven into
+   the LaTeX at its declared `placement` (`before-chapter`,
+   `chapter-start`, or `after-chapter`) with caption + attribution.
+   Parse the JSON output — print the per-chapter titles + which
+   ornaments + which user plates were wired in as part of the
+   summary.
 
 4. PDF path (unless `--epub-only`):
    a. Use `bash: cp typeset/novel.tex books/{book}/typeset/novel.tex`.

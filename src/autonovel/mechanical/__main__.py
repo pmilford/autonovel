@@ -139,10 +139,14 @@ def _cmd_build_tex(args: argparse.Namespace) -> int:
     chapters_dir = Path(args.chapters_dir)
     art_dir = Path(args.art_dir) if args.art_dir else None
     output = Path(args.output) if args.output else None
+    plates_manifest = Path(args.plates_manifest) if args.plates_manifest else None
+    plates_root = Path(args.plates_root) if args.plates_root else None
     content, reports = build_chapters_tex(
         chapters_dir,
         art_dir=art_dir,
         output=output,
+        plates_manifest=plates_manifest,
+        plates_root=plates_root,
     )
     json.dump(
         {
@@ -217,6 +221,11 @@ def main(argv: list[str] | None = None) -> int:
     bt.add_argument("chapters_dir")
     bt.add_argument("--art-dir", dest="art_dir", default=None)
     bt.add_argument("--output", default=None)
+    bt.add_argument("--plates-manifest", dest="plates_manifest", default=None,
+                    help="Path to plates.yaml; user-supplied images get woven in.")
+    bt.add_argument("--plates-root", dest="plates_root", default=None,
+                    help="Base directory plate `file:` paths are resolved against "
+                         "(default: parent of --plates-manifest).")
     bt.set_defaults(func=_cmd_build_tex)
 
     args = p.parse_args(argv)

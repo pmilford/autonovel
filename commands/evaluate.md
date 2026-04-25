@@ -119,8 +119,37 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
     is `YYYYMMDD_HHMMSS` and `<mode>` is one of `foundation`,
     `ch{chapter:02d}`, `full`, `compare_{N}_vs_{M}`.
 
-12. Print a one-screen summary to stdout: the headline score, the
-    weakest dimension, and top suggestions.
+12. Print a one-screen summary to stdout. **Render the per-dimension
+    scores as a real markdown table** so the user gets a visually
+    aligned grid, not a wall of `dimension: 6.5` text. The exact
+    shape varies by mode but the table format is mandatory:
+
+    For `--chapter` mode:
+
+    ```markdown
+    | Dimension | Score | Weakest moment / Note |
+    |---|---|---|
+    | voice_adherence | 7.2 | "She felt the chill" — telling not showing |
+    | beat_coverage | 6.5 | midpoint reversal landed flat |
+    | character_voice | 7.8 | — |
+    | prose_quality | 6.9 | three "she did not" patterns in 2400w |
+    | engagement | 7.0 | — |
+    | internal_consistency | 8.0 | — |
+
+    **Overall:** 7.1 (raw 7.4 − slop 0.3)
+    **Weakest:** beat_coverage (6.5)
+    **Top fixes:** … (one bullet each)
+    ```
+
+    For `--phase foundation` and `--full` use the same table shape
+    with the dimensions appropriate to the mode (lore /
+    character / structure / craft for foundation;
+    arc_completion / pacing_curve / etc. for full).
+
+    Render every dimension on its own row. Missing values get an
+    em-dash, never a blank cell. Do not skip the table because the
+    text list "felt enough"; per author testing 2026-04-25 the
+    table is what makes the score block scannable.
 </workflow>
 
 <scoring-calibration>

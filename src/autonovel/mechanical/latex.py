@@ -150,16 +150,26 @@ def build_chapters_tex(
     *,
     art_dir: Path | None = None,
     output: Path | None = None,
+    plates_manifest: Path | None = None,
+    plates_root: Path | None = None,
 ) -> tuple[str, list[ChapterBuildReport]]:
     """Build `chapters_content.tex` from every `ch_*.md` in `chapters_dir`.
 
     Returns the generated TeX text and a per-chapter report. Writing to
     disk is optional — if `output` is given the text is also written.
+
+    User-supplied plates (registered via `/autonovel:art-import`) are
+    woven in when `plates_manifest` points at a `plates.yaml`. Plate
+    paths inside the manifest are interpreted relative to
+    `plates_root` (defaults to the manifest's parent directory).
     """
     from ..paths import iter_chapter_files
     chapter_files = iter_chapter_files(chapters_dir)
     if not chapter_files:
         raise FileNotFoundError(f"no ch_*.md under {chapters_dir}")
+
+    plates_by_chapter = _load_plates_index(plates_manifest, plates_root)
+
     pieces: list[str] = []
     reports: list[ChapterBuildReport] = []
     for ch_path in chapter_files:
@@ -185,9 +195,18 @@ def build_chapters_tex(
                 "\\end{center}\n"
                 "\\vspace{0.15in}\n"
             )
-        pieces.append(
-            f"\\chapter{{{latex_escape(title)}}}\n\n{ornament_tex}{latex_body}\n"
+
+        before_tex = _plates_at(plates_by_chapter, num, "before-chapter")
+        start_tex = _plates_at(plates_by_chapter, num, "chapter-start")
+        after_tex = _plates_at(plates_by_chapter, num, "after-chapter")
+
+        chapter_block = (
+            f"{before_tex}"
+            f"\\chapter{{{latex_escape(title)}}}\n\n"
+            f"{ornament_tex}{start_tex}{latex_body}\n"
+            f"{after_tex}"
         )
+        pieces.append(chapter_block)
         reports.append(ChapterBuildReport(
             path=ch_path,
             chapter=num,
@@ -199,3 +218,92 @@ def build_chapters_tex(
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(content, encoding="utf-8")
     return content, reports
+
+
+def _load_plates_index(
+    manifest: Path | None, plates_root: Path | None,
+) -> dict[tuple[int, str], list[tuple[str, str, str]]]:
+    """Return {(chapter, placement): [(file_abs_path, caption, attribution)]}.
+
+    Reading the manifest is intentionally tolerant — a missing or
+    malformed manifest is treated as "no plates" rather than failing
+    the build. Concrete failures show up as files not on disk in the
+    LaTeX render itself, where they're easy to spot.
+    """
+    out: dict[tuple[int, str], list[tuple[str, str, str]]] = {}
+    if manifest is None or not manifest.is_file():
+        return out
+    try:
+        import yaml as _yaml
+        data = _yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+    except Exception:  # noqa: BLE001
+        return out
+    plates = data.get("plates") or []
+    if not isinstance(plates, list):
+        return out
+    base = plates_root or manifest.parent
+    for entry in plates:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            chapter = int(entry["chapter"])
+            file_rel = str(entry["file"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        placement = str(entry.get("placement", "before-chapter"))
+        caption = str(entry.get("caption", "") or "")
+        attribution = str(entry.get("attribution", "") or "")
+        file_abs = (base / file_rel).resolve()
+        out.setdefault((chapter, placement), []).append(
+            (file_abs.as_posix(), caption, attribution)
+        )
+    return out
+
+
+def _plates_at(
+    index: dict[tuple[int, str], list[tuple[str, str, str]]],
+    chapter: int, placement: str,
+) -> str:
+    plates = index.get((chapter, placement))
+    if not plates:
+        return ""
+    blocks = []
+    for file_abs, caption, attribution in plates:
+        blocks.append(_render_plate_block(file_abs, caption, attribution, placement))
+    return "\n".join(blocks) + "\n"
+
+
+def _render_plate_block(file_abs: str, caption: str, attribution: str, placement: str) -> str:
+    """Emit a centered, captioned plate. `before-chapter` and
+    `after-chapter` produce a dedicated full-page plate;
+    `chapter-start` produces a centered block inside the chapter
+    flow (no page break)."""
+    caption_tex = ""
+    if caption:
+        caption_tex = f"\\\\\n\\vspace{{0.6em}}\n\\textit{{{latex_escape(caption)}}}"
+    attribution_tex = ""
+    if attribution:
+        attribution_tex = (
+            f"\\\\\n\\vspace{{0.3em}}\n"
+            f"{{\\footnotesize {latex_escape(attribution)}}}"
+        )
+    if placement in ("before-chapter", "after-chapter"):
+        return (
+            "\\cleardoublepage\n"
+            "\\thispagestyle{empty}\n"
+            "\\vspace*{\\fill}\n"
+            "\\begin{center}\n"
+            f"\\includegraphics[width=0.85\\textwidth,height=0.7\\textheight,keepaspectratio]{{{file_abs}}}"
+            f"{caption_tex}{attribution_tex}\n"
+            "\\end{center}\n"
+            "\\vspace*{\\fill}\n"
+            "\\cleardoublepage\n"
+        )
+    # chapter-start: inline, smaller
+    return (
+        "\\begin{center}\n"
+        f"\\includegraphics[width=0.6\\textwidth,keepaspectratio]{{{file_abs}}}"
+        f"{caption_tex}{attribution_tex}\n"
+        "\\end{center}\n"
+        "\\vspace{0.4em}\n"
+    )

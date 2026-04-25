@@ -206,3 +206,20 @@ def test_no_command_uses_python_m_autonovel_mechanical():
         f"replace with `autonovel mechanical`. Offenders:\n"
         + "\n".join(f"  {n}:{i}: {l}" for n, i, l in offenders)
     )
+
+
+# ---------------------------------------------------------------------------
+# Evaluate output must render scores as a real markdown table, not as
+# free-text "dimension: N" lines. Author 2026-04-25: text-only output
+# was hard to scan against the prior chapter's eval. Locking the
+# wording so a future refactor can't strip it.
+
+def test_evaluate_summary_requires_markdown_table():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "evaluate.md").read_text(encoding="utf-8")
+    assert "markdown table" in body.lower()
+    # The example table shape — rows separated by `|` characters and a
+    # `|---|---|` header rule — must be present.
+    assert "| Dimension | Score |" in body
+    assert "|---|---|---|" in body or "|---|---|" in body

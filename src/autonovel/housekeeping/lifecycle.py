@@ -309,9 +309,43 @@ def _next_step_for(series: SeriesLayout, book: str) -> object:
         foundation_threshold=cfg.defaults.get("foundation_threshold", 7.5),
         chapter_threshold=cfg.defaults.get("chapter_threshold", 6.0),
     )
+
+    # Read the latest chapter's eval score from eval_logs/ if any
+    # exists. Without this, /autonovel:next loops on "evaluate
+    # --chapter N" because next_step's drafting branch can't decide
+    # between "advance" and "revise" without a score, and falls back
+    # to recommending evaluate. Author hit this 2026-04-25.
+    if chapters_drafted > 0:
+        last_n = chapters_drafted
+        score = _last_eval_score(book_root, last_n)
+        state.last_chapter_number = last_n
+        state.last_chapter_score = score
+
     if entry is not None and _phase_rank(entry.status) > _phase_rank(state.phase):
         state.phase = entry.status
     return next_step(state)
+
+
+def _last_eval_score(book_root: Path, chapter: int) -> float | None:
+    """Return the most recent `overall_score` recorded for `chapter` in
+    `books/<book>/eval_logs/`, or None if no eval has run yet."""
+    eval_dir = book_root / "eval_logs"
+    if not eval_dir.is_dir():
+        return None
+    candidates = sorted(eval_dir.glob(f"ch{chapter:02d}*.json"))
+    if not candidates:
+        return None
+    import json
+    latest = max(candidates, key=lambda p: p.stat().st_mtime)
+    try:
+        data = json.loads(latest.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+    score = data.get("overall_score")
+    try:
+        return float(score) if score is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass
