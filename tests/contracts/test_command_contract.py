@@ -270,3 +270,21 @@ def test_evaluate_chapter_1_scores_first_page_hook():
             / "commands" / "evaluate.md").read_text(encoding="utf-8")
     assert "hook_strength" in body
     assert "first 250 words" in body.lower()
+
+
+# ---------------------------------------------------------------------------
+# draft-pass must promote canon BETWEEN chapters, not only at sweep end.
+# Author 2026-04-25: chapter 11 was inventing facts that chapter 8 had
+# already established because canon promotion was deferred to end-of-
+# sweep. The fix moves promote-canon into step (e) of the per-chapter
+# loop so chapter N+1 sees N's discoveries.
+
+def test_draft_pass_promotes_canon_per_chapter():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "draft-pass.md").read_text(encoding="utf-8")
+    # The per-chapter promote-canon step must be present in the
+    # workflow (step e), not just in the end-of-sweep step (4).
+    assert "Promote pending canon for this chapter" in body
+    # Rationale must explain why per-chapter timing matters.
+    assert "BEFORE chapter N+1" in body or "before chapter N+1" in body.lower()

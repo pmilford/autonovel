@@ -56,14 +56,25 @@ Per chapter, in ascending chapter-number order, sequentially:
      c. `evaluate N` again      — re-score
      d. keep whichever version scored higher; the other is in the
         checkpoint and recoverable via autonovel rollback
+  5. **`promote-canon`** (skip via --no-promote)  — fold the new
+                              pending_canon entries from this chapter
+                              into shared/canon.md *before* moving on
+                              to chapter N+1. Critical: chapter N+1's
+                              draft must see the canonical facts
+                              chapter N just established, otherwise
+                              N+1 invents conflicting versions of the
+                              same fact (e.g. chapter N establishes
+                              Tommaso's age in 1521; chapter N+1
+                              gives a different age). Research-tagged
+                              entries still win contradictions per
+                              the standard promote-canon discipline.
 
 After every chapter in the range completes:
 
-  5. **`promote-canon`**     — fold accumulated pending_canon entries
-                              into shared/canon.md (skip via
-                              --no-promote). Research-tagged entries
-                              still win contradictions per the standard
-                              promote-canon discipline.
+  6. **Final promote-canon sweep** (skip via --no-promote) — catch
+     anything still pending (typically from the last chapter's
+     revise loop). Idempotent: if the per-chapter promotes already
+     consumed everything, this is a no-op.
 
 Sequential only — drafts cannot run in parallel because chapter N+1's
 draft reads chapter N's prose and summary. Same per-chapter
@@ -166,27 +177,41 @@ When TO use this:
            is recoverable via the preamble's checkpoint
            (`autonovel rollback`).
 
-   e. **Critical: do NOT call `autonovel _begin` or `autonovel
+   e. **Promote pending canon for this chapter** (skip if
+      `--no-promote`). Reproduce `/autonovel:promote-canon`'s
+      workflow inline against
+      `books/{book}/pending_canon.md`. The new entries chapter N's
+      draft (and revise, if it ran) appended must be merged into
+      `shared/canon.md` BEFORE chapter N+1 starts drafting —
+      otherwise N+1 invents alternative versions of the facts N
+      just established. Conflicts (rare per chapter) get parked
+      under `# Conflicts` and do NOT abort the sweep; the summary
+      in step (6) flags them.
+
+   f. **Critical: do NOT call `autonovel _begin` or `autonovel
       _end` for any sub-step.** This command holds the series lock
       for the entire sweep; sub-steps that tried to acquire the
       lock would deadlock.
 
-   f. After each chapter finishes, print one progress line:
+   g. After each chapter finishes, print one progress line:
 
       ```
       [ch N] draft <words>w · anachronism <hits> · eval <s1>
-                 [→ revise → eval <s2>] · final <best>
+                 [→ revise → eval <s2>] · final <best> · canon +<P>
       ```
 
-      so the user has live progress. If a chapter errors, log the
-      failure and continue — do not abort the whole sweep.
+      where `+P` is the count of pending entries promoted in step
+      (e). The user has live progress, and per-chapter canon
+      promotion is visible.
 
-4. **After the loop completes, promote canon** (skip if
-   `--no-promote`). Reproduce `/autonovel:promote-canon`'s workflow
-   inline against `books/{book}/pending_canon.md` and any other
-   books' pending files. Conflicts are parked under a `# Conflicts`
-   header — they do not abort the sweep, but the summary in step
-   (6) flags them so the user knows.
+4. **Final promote-canon sweep** (skip if `--no-promote`). After
+   the loop completes, run promote-canon one last time to catch
+   anything pending that didn't get promoted in the per-chapter
+   step (typically: revise-loop additions in the very last
+   chapter, or any other book's pending file if this series has
+   multiple books). This is idempotent — if the per-chapter
+   promotes already consumed everything, the call is a no-op
+   summary line.
 
 5. **Deep whole-book review** (only if `--deep`):
 
