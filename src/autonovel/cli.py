@@ -14,7 +14,7 @@ from pathlib import Path
 from . import __version__
 from .adapters import detect as detect_mod
 from .adapters import installer as installer_mod
-from .housekeeping import doctor, lifecycle, rollback, scaffold, status, test_fixture
+from .housekeeping import doctor, lifecycle, rollback, scaffold, status, statusline as statusline_mod, statusline_setup, test_fixture
 from .paths import SeriesNotFound, load_series
 
 
@@ -78,6 +78,17 @@ def _build_parser() -> argparse.ArgumentParser:
     uninst.add_argument("--only", default=None, choices=["claude", "codex", "gemini"])
     uninst.add_argument("--path", default=None)
     uninst.set_defaults(func=_cmd_uninstall)
+
+    sl = sub.add_parser("statusline", help="Print one-line status for Claude Code's status bar.")
+    sl.set_defaults(func=_cmd_statusline)
+
+    sl_setup = sub.add_parser("statusline-setup",
+                              help="Wire the statusline + permissions into a series's .claude/settings.json.")
+    sl_setup.add_argument("--series", default=None,
+                          help="Path to the series root (default: walk up from cwd).")
+    sl_setup.add_argument("--force", action="store_true",
+                          help="Overwrite an existing statusLine config and skip the malformed-file guard.")
+    sl_setup.set_defaults(func=_cmd_statusline_setup)
 
     tf = sub.add_parser("test-fixture", help="Manage genre-fixture series under tests/fixtures/.")
     tf_sub = tf.add_subparsers(dest="action", required=True)
@@ -257,6 +268,42 @@ def _cmd_uninstall(args: argparse.Namespace) -> int:
         print(f"uninstalled [{result.adapter_name}] from {result.install_root}")
         for r in result.removed:
             print(f"  - {r.name}")
+    return 0
+
+
+def _cmd_statusline(args: argparse.Namespace) -> int:
+    return statusline_mod.main()
+
+
+def _cmd_statusline_setup(args: argparse.Namespace) -> int:
+    try:
+        series = _resolve_series(args.series)
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    try:
+        result = statusline_setup.setup(series, force=args.force)
+    except statusline_setup.SetupError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+
+    rel = result.settings_path
+    verb = "Created" if result.created else "Updated"
+    print(f"{verb} {rel}")
+    if result.statusline_added:
+        print("  + statusLine: autonovel statusline")
+    else:
+        print("  · statusLine already configured (use --force to overwrite)")
+    if result.permissions_added:
+        print(f"  + {result.permissions_added} permissions added "
+              f"(scoped Bash + Read/Write/Task/WebSearch/WebFetch)")
+    if result.permissions_already_present:
+        print(f"  · {result.permissions_already_present} already present")
+    print("")
+    print("Next: restart Claude Code to pick up the new settings. After")
+    print("that, autonovel commands stop prompting for tool approval, and")
+    print("the status bar shows series · book · phase · lock | model · "
+          "context% · cost.")
     return 0
 
 

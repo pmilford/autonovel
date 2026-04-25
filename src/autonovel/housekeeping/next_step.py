@@ -67,25 +67,38 @@ def next_step(state: PipelineState) -> NextStep:
         )
 
     if s.phase == "drafting":
-        n = s.last_chapter_number
-        if n is not None and s.last_chapter_score is not None:
-            if s.last_chapter_score >= s.chapter_threshold:
-                if s.chapters_total and n >= s.chapters_total:
-                    return NextStep(
-                        command=f"/autonovel:adversarial-edit all --book {b}",
-                        rationale="all chapters drafted; begin revision",
-                    )
+        # Prefer an explicit last_chapter_number; otherwise fall back to
+        # chapters_drafted (the count of chapter files on disk). Either
+        # tells us which chapter was most recently touched.
+        n = s.last_chapter_number if s.last_chapter_number is not None else (
+            s.chapters_drafted if s.chapters_drafted else None
+        )
+        if n is None:
+            return NextStep(
+                command=f"/autonovel:draft 1 --book {b}",
+                rationale="no chapter drafted yet",
+            )
+        # Chapter exists but hasn't been evaluated → evaluate before
+        # advancing. Without a score we can't decide between "draft
+        # next" and "revise this one", so the eval is the next move.
+        if s.last_chapter_score is None:
+            return NextStep(
+                command=f"/autonovel:evaluate --chapter {n} --book {b}",
+                rationale=f"chapter {n} drafted; evaluate before advancing",
+            )
+        if s.last_chapter_score >= s.chapter_threshold:
+            if s.chapters_total and n >= s.chapters_total:
                 return NextStep(
-                    command=f"/autonovel:draft {n + 1} --book {b}",
-                    rationale="previous chapter met threshold; advance",
+                    command=f"/autonovel:adversarial-edit all --book {b}",
+                    rationale="all chapters drafted; begin revision",
                 )
             return NextStep(
-                command=f"/autonovel:revise {n} --book {b}",
-                rationale="previous chapter below threshold; revise",
+                command=f"/autonovel:draft {n + 1} --book {b}",
+                rationale="previous chapter met threshold; advance",
             )
         return NextStep(
-            command=f"/autonovel:draft 1 --book {b}",
-            rationale="no chapter drafted yet",
+            command=f"/autonovel:revise {n} --book {b}",
+            rationale="previous chapter below threshold; revise",
         )
 
     if s.phase == "revision":
