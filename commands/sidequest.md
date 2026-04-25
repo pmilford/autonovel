@@ -64,6 +64,7 @@ export commands (art, covers, audiobook, typeset, landing, package).
      11. Apply cuts deterministically      → /autonovel:apply-cuts <N> --book <name>
      12. Generate a revision brief         → /autonovel:brief <N> --book <name>
      13. Rewrite a chapter from brief      → /autonovel:revise <N> --book <name>
+     13a. Sweep multiple chapters end-to-end → /autonovel:revision-pass --chapters <range>
 
    Structural edits (one checkpoint each):
      14. Shorten a chapter                 → /autonovel:shorten --chapter <N> --book <name> --target-words <W>
