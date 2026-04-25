@@ -109,23 +109,25 @@ def test_argument_parsing_produces_book_and_chapter() -> None:
 # infers phase from filesystem artefacts.
 
 
+def _populate_foundation(demo_series: SeriesLayout, book_root: Path) -> None:
+    """Write enough content to every foundation artefact that
+    `_is_populated` accepts them. Used by next-step tests that want to
+    exercise post-foundation behaviour without running the actual LLM
+    foundation commands."""
+    long = "Real content. " * 30  # > 120 chars, no template markers
+    (demo_series.shared / "world.md").write_text(f"# World\n\n{long}\n", encoding="utf-8")
+    (demo_series.shared / "characters.md").write_text(f"# Characters\n\n{long}\n", encoding="utf-8")
+    (demo_series.shared / "canon.md").write_text(f"# Canon\n\n{long}\n", encoding="utf-8")
+    (book_root / "voice.md").write_text(f"# Voice\n\n{long}\n", encoding="utf-8")
+    (book_root / "outline.md").write_text(f"# Outline\n\n{long}\n", encoding="utf-8")
+
+
 def test_next_step_after_gen_outline_is_not_gen_world(demo_series: SeriesLayout) -> None:
-    """After /autonovel:gen-outline writes a populated outline.md, the
-    next-step recommendation must move past the seed-phase suggestion of
+    """After every foundation artefact is populated, the next-step
+    recommendation must move past the seed-phase suggestion of
     /autonovel:gen-world."""
     book_root = demo_series.books / "one"
-    outline = book_root / "outline.md"
-    outline.write_text(
-        "# Outline\n\n"
-        "## Chapter 1 — Arrival\n"
-        "- story_time: 1521-04-12\n"
-        "- events: []\n"
-        "- beats:\n"
-        "  - Tommaso lands at the Rialto.\n"
-        "  - The witness fails to appear.\n"
-        "  - The fire ledger goes missing.\n",
-        encoding="utf-8",
-    )
+    _populate_foundation(demo_series, book_root)
     lifecycle.begin("autonovel:gen-outline", "--book one", series=demo_series)
     result = lifecycle.end(
         "autonovel:gen-outline",
@@ -136,9 +138,6 @@ def test_next_step_after_gen_outline_is_not_gen_world(demo_series: SeriesLayout)
     )
     assert result.last_action is not None
     assert result.last_action.next_standard_step is not None
-    # The bug: this used to be "/autonovel:gen-world" because phase was
-    # always "seed". After the fixup it should be anything OTHER than
-    # gen-world — evaluate-phase-foundation or draft-1 are acceptable.
     assert "gen-world" not in result.last_action.next_standard_step, (
         f"next-step regressed to gen-world after gen-outline; got "
         f"{result.last_action.next_standard_step!r}"
@@ -147,9 +146,10 @@ def test_next_step_after_gen_outline_is_not_gen_world(demo_series: SeriesLayout)
 
 
 def test_next_step_after_drafting_advances_chapter(demo_series: SeriesLayout) -> None:
-    """When chapters/ already has a drafted file, next-step must be a
-    drafting-phase recommendation, not a foundation-phase one."""
+    """When chapters/ has a drafted file and foundation is populated,
+    next-step must be a drafting-phase recommendation."""
     book_root = demo_series.books / "one"
+    _populate_foundation(demo_series, book_root)
     chapters = book_root / "chapters"
     chapters.mkdir(exist_ok=True)
     (chapters / "ch_01.md").write_text(
@@ -167,8 +167,63 @@ def test_next_step_after_drafting_advances_chapter(demo_series: SeriesLayout) ->
     )
     next_cmd = result.last_action.next_standard_step
     assert next_cmd is not None
-    # Drafting-phase suggestions: draft N+1, revise N, or adversarial-edit all.
-    # All start with /autonovel: and are NOT foundation-phase commands.
     assert "gen-world" not in next_cmd
     assert "gen-characters" not in next_cmd
     assert "gen-canon" not in next_cmd
+
+
+def test_next_step_chains_foundation_in_order(demo_series: SeriesLayout) -> None:
+    """A user running /autonovel:next after each foundation command
+    should walk through the canonical sequence world → characters →
+    voice → canon → outline. We assert the first missing link is
+    surfaced rather than a generic foundation-evaluate suggestion."""
+    book_root = demo_series.books / "one"
+    long = "Real content. " * 30
+
+    # Nothing populated → expect gen-world.
+    lifecycle.begin("autonovel:gen-world", "", series=demo_series)
+    r = lifecycle.end("autonovel:gen-world", "", status="ok", wrote=[],
+                      series=demo_series)
+    # gen-world has no --book, so book is None and next_step is skipped.
+    # We assert chaining via /autonovel:draft (book-aware) instead.
+
+    # Populate world; expect characters next.
+    (demo_series.shared / "world.md").write_text(f"# World\n\n{long}\n", encoding="utf-8")
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    r = lifecycle.end("autonovel:draft", "1 --book one", status="ok", wrote=[],
+                      series=demo_series)
+    assert "gen-characters" in r.last_action.next_standard_step
+
+    # Populate characters; expect voice-discovery.
+    (demo_series.shared / "characters.md").write_text(f"# Characters\n\n{long}\n", encoding="utf-8")
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    r = lifecycle.end("autonovel:draft", "1 --book one", status="ok", wrote=[],
+                      series=demo_series)
+    assert "voice-discovery" in r.last_action.next_standard_step
+
+    # Populate voice; expect gen-canon.
+    (book_root / "voice.md").write_text(f"# Voice\n\n{long}\n", encoding="utf-8")
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    r = lifecycle.end("autonovel:draft", "1 --book one", status="ok", wrote=[],
+                      series=demo_series)
+    assert "gen-canon" in r.last_action.next_standard_step
+
+    # Populate canon; expect gen-outline.
+    (demo_series.shared / "canon.md").write_text(f"# Canon\n\n{long}\n", encoding="utf-8")
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    r = lifecycle.end("autonovel:draft", "1 --book one", status="ok", wrote=[],
+                      series=demo_series)
+    assert "gen-outline" in r.last_action.next_standard_step
+
+    # Populate outline; foundation gap is closed; expect a non-foundation
+    # next step (evaluate or draft).
+    (book_root / "outline.md").write_text(f"# Outline\n\n{long}\n", encoding="utf-8")
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    r = lifecycle.end("autonovel:draft", "1 --book one", status="ok", wrote=[],
+                      series=demo_series)
+    nxt = r.last_action.next_standard_step
+    assert "gen-world" not in nxt
+    assert "gen-characters" not in nxt
+    assert "voice-discovery" not in nxt
+    assert "gen-canon" not in nxt
+    assert "gen-outline" not in nxt

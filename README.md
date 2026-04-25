@@ -326,25 +326,40 @@ Then launch your runtime:
 claude            # or `codex`, or `gemini`
 ```
 
-Inside the runtime, type these commands one at a time (each takes
-seconds to minutes depending on tier):
+#### How to drive the pipeline
 
-```text
-/autonovel:gen-world
-/autonovel:gen-characters
-/autonovel:gen-canon
-/autonovel:voice-discovery --book the-inquisitor
-/autonovel:gen-outline --book the-inquisitor
-/autonovel:draft 1 --book the-inquisitor
-/autonovel:evaluate --chapter 1 --book the-inquisitor
-```
+The simplest pattern: **run one command, then ask `/autonovel:next`
+what to run next.** Repeat until you reach drafting, then revision,
+then export. `/autonovel:next` inspects what's on disk and tells you
+the canonical next command — you do not have to memorise the order.
 
-Or run the full pipeline end-to-end (foundation → drafting →
-revision → export):
+For a fresh series, `/autonovel:next` will walk you through the
+foundation in this order:
+
+1. `/autonovel:gen-world` — series-level world bible.
+2. `/autonovel:gen-characters` — cast registry.
+3. `/autonovel:voice-discovery --book <book>` — voice fingerprint.
+4. `/autonovel:gen-canon` — hard-fact database.
+5. `/autonovel:gen-outline --book <book>` — chapter plan.
+6. `/autonovel:evaluate --phase foundation --book <book>` — score the foundation.
+7. `/autonovel:draft 1 --book <book>` — first chapter when foundation is solid.
+
+Each command's footer prints the next step automatically. **All five
+foundation commands are required before drafting** — `gen-canon`
+needs voice and characters; the chapter draft needs all of them. Skip
+one and the eval score will surface the gap, but it's faster to just
+run them in order.
+
+If you'd rather drive the whole thing end-to-end without typing
+commands one at a time:
 
 ```text
 /autonovel:run-pipeline --books the-inquisitor
 ```
+
+This is the orchestrator. It walks foundation → drafting → revision
+→ export and stops only when you need to make a real decision (e.g.
+which voice trial to keep, whether to merge two chapters).
 
 ### 5. Read the worked example
 
