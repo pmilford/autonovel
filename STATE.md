@@ -360,12 +360,22 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-24 (PR 9 fixup): `audiobook_voices.json` had a second job
+  beyond being a deletion target — it was the **shape reference** a
+  user comparing against `voices.yaml` would consult. Restored as
+  `src/autonovel/templates/book/audiobook/voices.yaml.example` so
+  `autonovel new-book` ships an example next to where
+  `/autonovel:audiobook-voices` writes the live file. The Bells voice
+  metadata (`description`, `why` audit fields) is preserved verbatim;
+  only the format changed JSON → YAML. `commands/audiobook-voices.md`
+  now declares the example file under `reads:` and the body explains
+  the shape contract for round-tripping.
 - 2026-04-24 (PR 9): legacy root files deleted —
   `WORKFLOW.md` (replaced by `docs/writing-a-historical-series.md`),
-  `audiobook_voices.json` (the example moved to
-  `commands/audiobook-voices.md`'s docs;
-  `/autonovel:audiobook-voices` writes per-book at
-  `books/{book}/audiobook/voices.yaml`),
+  `audiobook_voices.json` (functional replacement: per-book
+  `books/{book}/audiobook/voices.yaml` written by
+  `/autonovel:audiobook-voices`; reference shape: see fixup entry
+  above for `voices.yaml.example`),
   `main.py`, repo-root `world.md` / `characters.md` / `outline.md` /
   `canon.md` / `voice.md` / `MYSTERY.md` / `state.json` /
   `results.tsv` / `chapters/.gitkeep` (all pre-rewrite per-novel

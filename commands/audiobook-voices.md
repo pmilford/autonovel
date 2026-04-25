@@ -10,6 +10,7 @@ allowed-tools:
 reads:
   - shared/characters.md
   - books/{book}/audiobook/voices.yaml
+  - books/{book}/audiobook/voices.yaml.example
 writes:
   - books/{book}/audiobook/voices.yaml
 context_mode: book
@@ -47,7 +48,12 @@ Light tier — no LLM, just an ElevenLabs API call and YAML file edit.
       `books/{book}/audiobook/voices.yaml` (it is an existence-check —
       if missing, seed from `shared/characters.md` so every named
       character gets an unconfigured entry with
-      `voice_id: REPLACE_WITH_VOICE_ID`).
+      `voice_id: REPLACE_WITH_VOICE_ID`). The shape to write matches
+      `books/{book}/audiobook/voices.yaml.example` (shipped by
+      `autonovel new-book`): an uppercase speaker key per character,
+      plus a `NARRATOR` entry, each with `voice_id`, optional
+      `description`, optional `why`. Preserve the optional metadata
+      keys when round-tripping.
    b. For each `SPEAKER=id` pair in the arguments, update
       `voices[SPEAKER].voice_id`. If the speaker name is not in the
       current map, reject with a single-line message listing valid
