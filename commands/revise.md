@@ -51,10 +51,18 @@ target, not a mental "safe" overshoot.
    voice fingerprint is the most important input after the brief.
 
 6. Use `file_read` on `books/{book}/chapters/ch_{chapter}.md` (the
-   current draft — the raw material the rewrite carves from) and, if
-   the file exists, `books/{book}/chapters/ch_{prev}.md` (where
-   `{prev}` = chapter - 1, zero-padded). Keep only the last ~2000
-   words of the previous chapter for continuity.
+   current draft — the raw material the rewrite carves from). This
+   read IS load-bearing; if it fails, stop with a one-line message
+   ("cannot read current chapter; check books/{book}/chapters/").
+
+   Then, **best-effort (do not retry on failure)**, attempt one
+   `file_read` of `books/{book}/chapters/ch_{prev}.md` and keep
+   only the last ~2000 words of the previous chapter for continuity.
+   If the prior-chapter read fails for any reason (missing, empty,
+   tool error), do NOT retry — note the gap as a one-line
+   observation in the eval log and proceed without it. The brief is
+   the load-bearing input here; the prior-chapter quote is a
+   flavour assist.
 
 7. Draft the rewrite. Follow the brief exactly. Honor the anti-pattern
    rules:

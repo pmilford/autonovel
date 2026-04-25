@@ -123,3 +123,29 @@ def _collect_placeholders(paths: list[str]) -> set[str]:
         for m in _PATH_PLACEHOLDER_RE.finditer(p):
             found.add(m.group(1))
     return found
+
+
+# ---------------------------------------------------------------------------
+# Best-effort prior-chapter reads must stay best-effort. The 2026-04-25
+# author-testing stall was a draft 3 looping on Read retries for ch_02.
+# The fix is wording in the command body — lock it so a future refactor
+# of draft.md/revise.md can't silently regress.
+
+def test_draft_marks_prior_chapter_read_as_best_effort():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "draft.md").read_text(encoding="utf-8")
+    # The exact wording is part of the contract — if you reword it,
+    # update this test deliberately, do not just edit the body.
+    assert "Best-effort" in body
+    assert "do not retry" in body.lower()
+    # Per-chapter summaries are explicitly the load-bearing surface.
+    assert "load-bearing continuity" in body
+
+
+def test_revise_marks_prior_chapter_read_as_best_effort():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "revise.md").read_text(encoding="utf-8")
+    assert "best-effort" in body.lower()
+    assert "do not retry" in body.lower()

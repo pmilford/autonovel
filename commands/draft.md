@@ -56,20 +56,32 @@ off-limits.
 6. Use `file_read` on `books/{book}/voice.md`. Both Part 1 (series voice) and
    Part 2 (book fingerprint) are in scope.
 
-7. If `books/{book}/chapters/ch_{prev}.md` exists (where `{prev}` = chapter - 1,
-   zero-padded to two digits), read it and keep only the last ~1000 words as
-   immediate continuity.
+7. **Best-effort prior-chapter quote (do not retry on failure).** If
+   `books/{book}/chapters/ch_{prev}.md` exists (where `{prev}` =
+   chapter - 1, zero-padded to two digits), attempt one
+   `file_read`. Use the last ~1000 words as immediate continuity
+   flavour. If the read fails for any reason (file missing, file
+   empty, file unreadable, tool error, the read returning fewer
+   bytes than expected): **do not retry**. Note the gap as a
+   one-line observation you'll repeat in the postamble's eval-log
+   write, and proceed to step 8. Step 8 (per-chapter summaries) is
+   the *load-bearing* continuity surface; this last-1000-words
+   quote is a flavour assist that the chapter can be drafted
+   without. Do not loop on Read retries — autonovel author testing
+   2026-04-25 hit a stall here on a prior chapter that was readable
+   for `summarize-chapter` but tripped Claude Code's `Read` tool's
+   retry logic on the targeted line range.
 
 8. **Read every prior summary** for narrative continuity. Use `file_read`
    on `books/{book}/chapters/ch_*.summary.md` for chapters 1 through
    `{prev}` (any that exist). Each file is ~150-250 words and contains
    the chapter's plot, character moves, threads opened, threads
-   resolved. Together with the last-1000-words quote from step 7,
-   these summaries are the load-bearing context that prevents chapter
-   N from forgetting what chapter 1 set up. If a summary is missing
-   for a drafted chapter — likely a chapter drafted before this
-   summarization step shipped — note the gap but do not regenerate it
-   inline; the user can backfill via `/autonovel:summarize-chapter`.
+   resolved. **These summaries are the load-bearing continuity
+   context** that prevents chapter N from forgetting what chapter 1
+   set up — much more important than the step-7 quote. If a summary
+   is missing for a drafted chapter — likely a chapter drafted before
+   this step shipped — note the gap but do not regenerate it inline;
+   the user can backfill via `/autonovel:summarize-chapter`.
 
 9. Use `task` to fan out loading of sibling-book chapters whose `story_time`
    is less than or equal to this chapter's `story_time`. Budget the loader —
