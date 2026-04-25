@@ -44,7 +44,8 @@ class StatusContext:
     phase: str | None = None
     last_chapter_n: int | None = None
     last_chapter_score: float | None = None
-    lock_status: str = "idle"  # idle | live | interrupted | abandoned
+    lock_status: str = "idle"  # idle | live | interrupted | abandoned | running
+    lock_command: str | None = None  # name of the in-flight /autonovel:* command, if any
 
     model: str | None = None
     context_pct: int | None = None
@@ -98,6 +99,12 @@ def _read_series(ctx: StatusContext, series: SeriesLayout) -> None:
         info = lock_mod.read(series.lock_file)
         if info is not None:
             ctx.lock_status = info.status or "live"
+            # Surface the active command so a "stuck-looking"
+            # statusline (Claude Code refreshes on user input only,
+            # so during a long sweep the chapter count appears
+            # frozen) at least tells the user WHAT is in flight.
+            if info.command:
+                ctx.lock_command = info.command
     except Exception:  # noqa: BLE001
         pass
 
@@ -190,7 +197,14 @@ def render(ctx: StatusContext) -> str:
     # Outside a series the lock state is meaningless; rendering "idle"
     # alongside Claude session info would be confusing.
     if autonovel_parts:
-        autonovel_parts.append(_lock_label(ctx.lock_status))
+        label = _lock_label(ctx.lock_status)
+        # When a sweep / long command holds the lock, show its name
+        # so a frozen-looking statusline (Claude Code refreshes on
+        # user input only) at least tells the user what is running.
+        if ctx.lock_command and label not in ("idle",):
+            short = ctx.lock_command.replace("autonovel:", "")
+            label = f"◍ {short}"
+        autonovel_parts.append(label)
 
     claude_parts: list[str] = []
     if ctx.model:
@@ -214,7 +228,7 @@ def _lock_label(status: str) -> str:
     """Translate the lock's internal status string to a one-word label."""
     if status in ("idle", "released", "", None):
         return "idle"
-    if status == "live":
+    if status in ("live", "running"):
         return "in-flight"
     if status == "interrupted":
         return "INTERRUPTED"

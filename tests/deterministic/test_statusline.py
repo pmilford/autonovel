@@ -254,3 +254,41 @@ def test_setup_force_recovers_from_invalid_json(tmp_path: Path) -> None:
     assert result.statusline_added is True
     data = json.loads(settings.read_text(encoding="utf-8"))
     assert data["statusLine"]["command"] == "autonovel statusline"
+
+
+def test_render_shows_active_command_during_sweep() -> None:
+    """When a sweep command holds the lock, the statusline shows
+    `◍ <command>` instead of just `in-flight` so the user knows
+    *what* is running even when Claude Code's statusline refresh
+    cadence makes the chapter count appear frozen."""
+    ctx = statusline.StatusContext(
+        book="b",
+        phase="drafting",
+        last_chapter_n=3,
+        lock_status="running",
+        lock_command="autonovel:draft-pass",
+    )
+    line = statusline.render(ctx)
+    assert "◍ draft-pass" in line
+
+
+def test_render_no_command_label_when_idle() -> None:
+    """If the lock is idle, the active-command marker doesn't render
+    (there's nothing to show)."""
+    ctx = statusline.StatusContext(
+        book="b",
+        phase="drafting",
+        last_chapter_n=3,
+        lock_status="idle",
+        lock_command="autonovel:draft-pass",   # stale, should not surface
+    )
+    line = statusline.render(ctx)
+    assert "◍" not in line
+    assert "idle" in line
+
+
+def test_running_status_maps_to_in_flight_when_no_command() -> None:
+    """LockInfo.status defaults to 'running'; the label should
+    normalise to 'in-flight' when no command name is present."""
+    ctx = statusline.StatusContext(book="b", lock_status="running")
+    assert "in-flight" in statusline.render(ctx)
