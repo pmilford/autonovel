@@ -1,7 +1,7 @@
 ---
 name: autonovel:revision-pass
 description: Sweep check-anachronism + brief + revise + evaluate across a range of chapters in one invocation.
-argument-hint: "--chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval]"
+argument-hint: "--chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--parallel [N]]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -45,12 +45,22 @@ one go" command. Author preference 2026-04-25: minimise required
 typing for the standard end-to-end flow while keeping the option to
 skip individual stages.
 
-Sequential within a book (later chapters' revisions read earlier
-chapters' refreshed summaries). One single lock + checkpoint covers
-the whole sweep — sub-steps do NOT run their own
-`autonovel _begin`/`_end`, so there's exactly one preamble/postamble
-across the run. Rollback restores every chapter the sweep touched
-in one shot.
+Sequential by default within a book — later chapters' revisions read
+earlier chapters' refreshed summaries. **Parallel via `--parallel
+[N]`** (opt-in, default off): fan up to N chapters across `Task`
+subagents simultaneously. Trade-off: parallel is ~Nx faster, but
+each chapter's revise reads the *pre-sweep* version of its
+neighbours' summaries (chapter 5's revise won't see chapter 4's
+fresh post-revise summary in the same pass), so continuity drift
+stays one revision-pass behind. A second
+`/autonovel:revision-pass` picks up the propagation. Default
+parallelism when `--parallel` is given without a number is **3**
+(matches typical rate-limit headroom on standard accounts).
+
+One single lock + checkpoint covers the whole sweep — sub-steps do
+NOT run their own `autonovel _begin`/`_end`, so there's exactly
+one preamble/postamble across the run. Rollback restores every
+chapter the sweep touched in one shot.
 </purpose>
 
 <workflow>
@@ -67,9 +77,23 @@ in one shot.
    chapter numbers; resolve `all` to the full list and validate that
    every requested chapter exists.
 
-3. For each chapter N in the resolved range, **in chapter-number
-   order** (ascending — sequential, not parallel, so each revise
-   sees the previous chapter's refreshed summary):
+3. **Choose execution mode.**
+
+   - Default (no `--parallel`): iterate chapters in ascending
+     chapter-number order. Each chapter's full sequence completes
+     before the next chapter starts. Maximum continuity fidelity.
+   - `--parallel [N]`: spawn up to N chapters' sequences across
+     `Task` subagents simultaneously (default N=3). Each Task
+     receives the same context bundle the sequential path would
+     have built and runs the four-step sequence (a)→(d) for one
+     chapter. Results return when all complete; merge the
+     per-chapter progress lines and the summary table afterwards.
+     Continuity-cost note: each Task reads the *pre-sweep*
+     versions of every other chapter's summary, so the rolling
+     summary context is one revision-pass stale within the run.
+     Re-run `/autonovel:revision-pass` once more to propagate.
+
+   For each chapter N (sequential or as a parallel Task body):
 
    a. **check-anachronism** *(skippable via --skip-anachronism)*:
       Use `Bash` to run

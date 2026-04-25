@@ -37,6 +37,8 @@ argument is required when more than one book exists in the series.
 | `/autonovel:gen-outline --book <short-name>` | standard | Generate the outline from seed, world, and characters. |
 | `/autonovel:voice-discovery --book <short-name>` | heavy | Fill the book-specific fingerprint in Part 2 of `voice.md`. |
 | `/autonovel:draft <chapter-number> --book <short-name>` | standard | Draft one chapter as full prose. |
+| `/autonovel:draft-pass --chapters <range> [--book <name>] [--skip-eval] [--retry-below <score>]` | standard | Draft a range of chapters end-to-end (sequential, must be — chapter N+1 reads N's prose and summary). Same prose quality as repeated `/autonovel:draft`; one rollback covers the sweep. |
+| `/autonovel:summarize-chapter <chapter> [--book <short-name>] [--force]` | standard | Backfill the 150–250-word continuity summary for a chapter drafted before summaries shipped. |
 
 ### Evaluation and revision
 
@@ -52,6 +54,8 @@ argument is required when more than one book exists in the series.
 | `/autonovel:review --book <short-name>` | heavy | Deep dual-persona manuscript review — literary critic + professor of fiction. |
 | `/autonovel:brief <chapter> --book <short-name> [--from cuts|eval|panel|auto]` | standard | Generate a revision brief from cuts, eval, or panel feedback. |
 | `/autonovel:revise <chapter> --book <short-name>` | heavy | Rewrite one chapter from a brief, preserving voice and continuity. |
+| `/autonovel:revision-pass --chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--parallel [N]]` | heavy | Sweep check-anachronism + brief + revise + evaluate across a range of chapters. Sequential by default; `--parallel [N]` (default N=3) fans out via `Task` subagents at the cost of one revision-pass of summary-staleness. |
+| `/autonovel:compare-models --chapter <N> [--book <name>] [--models <a>,<b>]` | heavy | A/B-draft the same chapter with two models in parallel, judge head-to-head, write verdict + both candidate drafts to `eval_logs/`. Live chapter file is unchanged. |
 
 ### Period guardrails (historical / period fantasy)
 

@@ -361,6 +361,30 @@ This is the orchestrator. It walks foundation → drafting → revision
 → export and stops only when you need to make a real decision (e.g.
 which voice trial to keep, whether to merge two chapters).
 
+#### Automation patterns for power users
+
+Three commands that batch the per-chapter loop so you don't type the
+same command N times:
+
+| Command | What it batches |
+|---|---|
+| `/autonovel:draft-pass --chapters 1-10` | Draft chapters 1–10 in one go (sequential — chapter N+1 reads N's prose). Same prose quality as `/autonovel:draft` repeated. |
+| `/autonovel:revision-pass --chapters 1-10` | Sweep `check-anachronism → brief → revise → evaluate` across chapters 1–10. Add `--parallel [N]` (default 3) to fan out via subagents. |
+| `/autonovel:compare-models --chapter 5 --models claude-opus-4-7,claude-sonnet-4-6` | A/B-draft the same chapter with two models in parallel, judge head-to-head, write verdict to `eval_logs/`. |
+
+When to use the sweeps vs per-chapter typing:
+
+- **Per-chapter** when you're calibrating (early chapters, voice
+  shake-out). Lets you stop and fix before drift compounds.
+- **Sweep** when the foundation is solid and you want forward
+  progress. Quality of each chapter is identical; the only thing
+  you give up is the human inspection point between chapters.
+
+You can also chain commands by **asking the agent in plain English**.
+*"Run check-anachronism, brief --from auto, then revise on chapters
+1, 2, and 3"* will invoke each command in sequence — no chained
+`/`-syntax needed.
+
 ### 5. Read the worked example
 
 For a 12-step end-to-end walkthrough on a 3-book historical series

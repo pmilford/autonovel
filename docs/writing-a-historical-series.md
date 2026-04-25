@@ -148,7 +148,7 @@ multi-book context loader gates spoilers (`multi-book.md`).
 
 ## 8. Revision loop
 
-Per chapter:
+**Per chapter** (when you're calibrating early in the book):
 
 ```text
 /autonovel:evaluate --chapter 5 --book the-inquisitor
@@ -158,7 +158,30 @@ Per chapter:
 /autonovel:revise 5 --book the-inquisitor
 ```
 
-Per book (after all chapters drafted):
+**Sweep across chapters** (when the foundation is solid and you want
+forward progress on the whole book):
+
+```text
+/autonovel:revision-pass --chapters all
+```
+
+That sweeps `check-anachronism → brief --from auto → revise → evaluate`
+across every drafted chapter, sequentially. Add `--parallel 3` to fan
+out across three subagents at once (faster but each chapter's revise
+sees one-pass-stale neighbour summaries; a second sweep propagates).
+
+**For the initial drafting too** there's a sweep:
+
+```text
+/autonovel:draft-pass --chapters 1-19
+```
+
+Drafts every chapter in the outline range in ascending order, with
+optional one-shot retry per chapter if the eval scores below
+`chapter_threshold`. Same per-chapter quality as
+`/autonovel:draft N`, just one rollback point for the whole sweep.
+
+**Per book (after all chapters drafted):**
 
 ```text
 /autonovel:reader-panel --book the-inquisitor
