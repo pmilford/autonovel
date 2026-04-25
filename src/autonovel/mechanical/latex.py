@@ -156,7 +156,8 @@ def build_chapters_tex(
     Returns the generated TeX text and a per-chapter report. Writing to
     disk is optional — if `output` is given the text is also written.
     """
-    chapter_files = sorted(chapters_dir.glob("ch_*.md"))
+    from ..paths import iter_chapter_files
+    chapter_files = iter_chapter_files(chapters_dir)
     if not chapter_files:
         raise FileNotFoundError(f"no ch_*.md under {chapters_dir}")
     pieces: list[str] = []

@@ -470,3 +470,38 @@ def test_foundation_gap_skips_research_when_notes_exist(demo_series: SeriesLayou
     # Research populated → next gap is gen-world.
     assert "research" not in result.last_action.next_standard_step
     assert "gen-world" in result.last_action.next_standard_step
+
+
+# ---------------------------------------------------------------------------
+# Chapter-counting must NOT count ch_NN.summary.md alongside ch_NN.md.
+# Author hit this 2026-04-25 after the per-chapter-summary commit shipped:
+# 3 chapters drafted + 3 summary files = 6 chapter-count, statusline and
+# next-step both reported chapter 6.
+
+def test_chapter_count_excludes_summary_files(demo_series: SeriesLayout) -> None:
+    book_root = demo_series.books / "one"
+    _populate_foundation(demo_series, book_root)
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    # Three drafted chapters with paired summaries (the 2026-04-25 case).
+    for n in (1, 2, 3):
+        (chapters / f"ch_{n:02d}.md").write_text(
+            f"---\nbook: one\nchapter: {n}\npov: Ana\nstory_time: 2020-01-{n:02d}\n"
+            f"events: []\nstatus: drafted\n---\n\nProse for chapter {n}.\n",
+            encoding="utf-8",
+        )
+        (chapters / f"ch_{n:02d}.summary.md").write_text(
+            f"Summary of chapter {n}: things happened.", encoding="utf-8",
+        )
+    lifecycle.begin("autonovel:draft", "3 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft", "3 --book one", status="ok",
+        wrote=["books/one/chapters/ch_03.md"], series=demo_series,
+    )
+    next_cmd = result.last_action.next_standard_step
+    # The bug: with summary files counted, this would be `evaluate
+    # --chapter 6` or `draft 7`. With the fix, it's chapter 3.
+    assert "chapter 3" in next_cmd or "ch_03" in next_cmd or "--chapter 3" in next_cmd, (
+        f"chapter count regressed (saw summary files as chapters?): "
+        f"next_step recommended {next_cmd!r}"
+    )

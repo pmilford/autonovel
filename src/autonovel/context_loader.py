@@ -230,7 +230,8 @@ def _sibling_chapters(
         chapters_dir = series.book(book.name).chapters
         if not chapters_dir.is_dir():
             continue
-        for ch_path in sorted(chapters_dir.glob("ch_*.md")):
+        from .paths import iter_chapter_files
+        for ch_path in iter_chapter_files(chapters_dir):
             sibling_time = _chapter_story_time(ch_path)
             rel = str(ch_path.relative_to(series.root))
             if sibling_time is None:

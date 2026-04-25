@@ -333,10 +333,11 @@ def _pending_canon_gate(series: SeriesLayout, book_root: Path) -> "_FoundationGa
     Returning None means "no gate" — fall through to the generic
     next_step decision tree.
     """
+    from ..paths import iter_chapter_files
     chapters_dir = book_root / "chapters"
     if not chapters_dir.is_dir():
         return None
-    drafted = any(p.is_file() for p in chapters_dir.glob("ch_*.md"))
+    drafted = bool(iter_chapter_files(chapters_dir))
     if not drafted:
         return None
 
@@ -493,10 +494,9 @@ def _infer_phase(series: SeriesLayout, book_root: Path) -> tuple[str, int]:
     and reviewed should not regress to "outlined" because outline.md
     still exists.
     """
+    from ..paths import iter_chapter_files
     chapters_dir = book_root / "chapters"
-    chapter_files: list[Path] = []
-    if chapters_dir.is_dir():
-        chapter_files = sorted(p for p in chapters_dir.glob("ch_*.md") if p.is_file())
+    chapter_files = iter_chapter_files(chapters_dir)
     n_chapters = len(chapter_files)
 
     # Drafting / revision: chapters exist.

@@ -59,9 +59,8 @@ def gather(series: SeriesLayout) -> SeriesStatus:
 
 
 def _count_chapters(chapters_dir: Path) -> int:
-    if not chapters_dir.exists():
-        return 0
-    return sum(1 for p in chapters_dir.glob("ch_*.md") if p.is_file())
+    from ..paths import iter_chapter_files
+    return len(iter_chapter_files(chapters_dir))
 
 
 def _chapters_total(state_file: Path) -> int:

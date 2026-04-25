@@ -14,12 +14,31 @@ touch disk beyond existence checks.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 
 SERIES_MARKER = "project.yaml"
 AUTONOVEL_DIR = ".autonovel"
+
+
+# Match exactly `ch_NN.md` — NOT `ch_NN.summary.md` or any other
+# adjunct file alongside the prose. Introduced 2026-04-25 after the
+# per-chapter-summary commit caused chapter-counts to double.
+CHAPTER_FILENAME_RE = re.compile(r"^ch_\d+\.md$")
+
+
+def iter_chapter_files(chapters_dir: Path) -> list[Path]:
+    """Return every `ch_NN.md` chapter file under `chapters_dir`,
+    sorted by name. Excludes `ch_NN.summary.md` and any other adjunct
+    files. Caller can iterate or count the result."""
+    if not chapters_dir.is_dir():
+        return []
+    return sorted(
+        p for p in chapters_dir.iterdir()
+        if p.is_file() and CHAPTER_FILENAME_RE.match(p.name)
+    )
 
 
 @dataclass(frozen=True)
