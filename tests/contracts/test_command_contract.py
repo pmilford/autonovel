@@ -223,3 +223,50 @@ def test_evaluate_summary_requires_markdown_table():
     # `|---|---|` header rule — must be present.
     assert "| Dimension | Score |" in body
     assert "|---|---|---|" in body or "|---|---|" in body
+
+
+# ---------------------------------------------------------------------------
+# evaluate.md gained four reader-interest / writing-quality signals
+# 2026-04-25. Lock the wording so future refactors can't strip them
+# silently.
+
+def test_evaluate_runs_cliche_scanner():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "evaluate.md").read_text(encoding="utf-8")
+    assert "autonovel mechanical cliches" in body
+    # Must feed the slop_penalty pipeline.
+    assert "density_per_1000_words" in body or "cliche" in body.lower()
+
+
+def test_evaluate_runs_sensory_scanner():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "evaluate.md").read_text(encoding="utf-8")
+    assert "autonovel mechanical sensory" in body
+    assert "dominant_channel" in body
+
+
+def test_evaluate_full_emits_pacing_curve_table():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "evaluate.md").read_text(encoding="utf-8")
+    assert "pacing-curve" in body.lower() or "pacing curve" in body.lower()
+    # The exact column shape — rows separated by `|` characters.
+    assert "| Ch | Words | Score |" in body
+
+
+def test_evaluate_full_surfaces_tension_drop_alarm():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "evaluate.md").read_text(encoding="utf-8")
+    assert "Tension-drop" in body or "Tension drop" in body
+    assert "three or more consecutive" in body.lower() or "consecutive chapters" in body.lower()
+
+
+def test_evaluate_chapter_1_scores_first_page_hook():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "evaluate.md").read_text(encoding="utf-8")
+    assert "hook_strength" in body
+    assert "first 250 words" in body.lower()

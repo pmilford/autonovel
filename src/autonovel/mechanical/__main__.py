@@ -28,8 +28,10 @@ from .audio import (
     load_script,
     validate_script,
 )
+from .cliches import cliche_density, cliche_hits
 from .cuts import VALID_TYPES, apply_cuts
 from .latex import build_chapters_tex
+from .sensory import channel_balance
 from .slop import period_ban_hits, slop_score
 from .spine import cover_spec
 
@@ -135,6 +137,28 @@ def _cmd_audio_marks(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_cliches(args: argparse.Namespace) -> int:
+    text = Path(args.path).read_text(encoding="utf-8")
+    hits = cliche_hits(text)
+    payload = {
+        "hits": [h.to_dict() for h in hits],
+        "total": sum(h.count for h in hits),
+        "density_per_1000_words": round(cliche_density(text), 3),
+        "word_count": len(text.split()),
+    }
+    json.dump(payload, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_sensory(args: argparse.Namespace) -> int:
+    text = Path(args.path).read_text(encoding="utf-8")
+    report = channel_balance(text, dominance_threshold=args.dominance_threshold)
+    json.dump(report.to_dict(), sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_build_tex(args: argparse.Namespace) -> int:
     chapters_dir = Path(args.chapters_dir)
     art_dir = Path(args.art_dir) if args.art_dir else None
@@ -216,6 +240,16 @@ def main(argv: list[str] | None = None) -> int:
     am.add_argument("--pause", type=float, default=2.0)
     am.add_argument("--format", choices=["json", "ffmetadata"], default="json")
     am.set_defaults(func=_cmd_audio_marks)
+
+    cl = sub.add_parser("cliches", help="Bigram-cliche scan; complements slop.")
+    cl.add_argument("path")
+    cl.set_defaults(func=_cmd_cliches)
+
+    sens = sub.add_parser("sensory", help="Per-channel keyword balance (visual/auditory/...).")
+    sens.add_argument("path")
+    sens.add_argument("--dominance-threshold", type=float, default=0.70,
+                      help="Single-channel fraction above which the channel is flagged dominant (default 0.70).")
+    sens.set_defaults(func=_cmd_sensory)
 
     bt = sub.add_parser("build-tex", help="Build chapters_content.tex from a chapters dir.")
     bt.add_argument("chapters_dir")

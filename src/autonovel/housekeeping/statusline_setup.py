@@ -56,6 +56,8 @@ DEFAULT_ALLOW = [
     "Bash(autonovel mechanical audio-chunk:*)",
     "Bash(autonovel mechanical audio-marks:*)",
     "Bash(autonovel mechanical build-tex:*)",
+    "Bash(autonovel mechanical cliches:*)",
+    "Bash(autonovel mechanical sensory:*)",
     "Bash(python:*)",
     "Bash(python3:*)",
     "Bash(uv:*)",

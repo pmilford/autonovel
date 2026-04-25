@@ -114,6 +114,38 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
     A single period-ban violation caps `canon_compliance` at 6; three or
     more caps it at 4.
 
+10a. Bigram cliché scan. For `--chapter` and `--full`, run
+    `bash: autonovel mechanical cliches <chapter-path>` for each
+    chapter and parse its JSON. Record under
+    `result["cliches"]` (for single-chapter) or
+    `result["cliches_per_chapter"][N]` (for full). The scanner's
+    `density_per_1000_words` field adds to the slop penalty:
+    every full unit of density above 2.0 subtracts 0.1 from
+    `overall_score`, capped at 0.5 total. (Empirically, well-edited
+    prose runs <2 cliché-bigram hits per 1000 words; >5 reads
+    AI-tinged.)
+
+10b. Sensory-channel balance. For `--chapter` and `--full`, run
+    `bash: autonovel mechanical sensory <chapter-path>` for each
+    chapter and parse its JSON. Record under
+    `result["sensory"]` / `result["sensory_per_chapter"][N]`. If a
+    chapter has a `dominant_channel` (one channel >70% of all
+    sensory hits), call it out in the `weakest_moment` field for
+    that chapter — visual dominance is the most common AI tell;
+    it reads as a film-script camera move rather than a scene with
+    a body in it. Do not subtract from the score automatically; the
+    judge weighs it as one signal among many.
+
+10c. First-page hook (for `--chapter 1` only). Read the first
+    250 words of the chapter and score them on a separate
+    `hook_strength` dimension (0–10) covering: specific image in
+    line 1, stakes implied by line 3, voice signature visible
+    early, no info-dump preamble. Record the score under
+    `result["hook_strength"]` alongside the regular dimensions.
+    Don't subtract from the overall score; it surfaces as its own
+    line in the summary table so the user can see whether chapter
+    1 is doing the work it needs to.
+
 11. Use `file_write` to save the eval log to
     `books/{book}/eval_logs/<timestamp>_<mode>.json` where `<timestamp>`
     is `YYYYMMDD_HHMMSS` and `<mode>` is one of `foundation`,
@@ -150,6 +182,57 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
     em-dash, never a blank cell. Do not skip the table because the
     text list "felt enough"; per author testing 2026-04-25 the
     table is what makes the score block scannable.
+
+    **For `--full` mode, also emit a pacing-curve table** showing
+    the shape of the book chapter-by-chapter. This is the
+    reader-interest signal — flat curves bore, curves with a
+    consistent rise into the climax engage. The shape:
+
+    ```markdown
+    | Ch | Words | Score | Tension | Dialogue % | Scenes | Beats hit |
+    |---|---|---|---|---|---|---|
+    |  1 | 3100  | 7.4 | 6.5 | 22% | 2 | 4/4 |
+    |  2 | 2950  | 6.8 | 7.0 | 35% | 3 | 3/4 |
+    |  3 | 3200  | 7.1 | 7.5 | 18% | 2 | 4/4 |
+    | …  | …     | …   | …   | …   | … | …   |
+    ```
+
+    Pull `Words` from each chapter's frontmatter or recompute,
+    `Score` from the latest eval log, `Tension` from the per-chapter
+    judge pass (1-10 scale; how taut the chapter feels), `Dialogue %`
+    by counting lines between paragraph breaks that begin with `"`,
+    `Scenes` by `***` or scene-break markers, `Beats hit` against
+    the outline entry's beats list.
+
+    **Tension-drop alarm for `--full`.** After the table, scan the
+    Tension column for any window of three or more consecutive
+    chapters where each chapter's tension is lower than the
+    previous one's. Surface each such window:
+
+    ```
+    ⚠️  Tension drop detected: chapters 7→8→9 trend down (7.5 → 6.8 → 6.0).
+        Recommend /autonovel:revision-pass --chapters 7-9 with
+        focus on stakes-escalation.
+    ```
+
+    These warnings are reader-interest signals — a 3-chapter
+    decline is the kind of mid-book sag readers DNF on. Even when
+    individual chapter scores are above threshold, the *trend*
+    matters.
+
+    **First-page hook line for `--chapter 1` mode.** When the
+    invoked chapter is chapter 1, also surface the
+    `hook_strength` score from step 10c on its own line under
+    the dimension table:
+
+    ```
+    **First-page hook (first 250 words):** 7.0
+    ```
+
+    Below 6.0 is a real concern — chapter 1's opening is what
+    decides whether a reader continues. Suggest
+    `/autonovel:revise 1 --from auto` and call out the hook
+    weakness in the brief.
 </workflow>
 
 <scoring-calibration>

@@ -189,12 +189,16 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   consequence) and surface scenes that are missing two or more.
   Catches the "drifting middle" failure mode the reader-panel test
   flagged in Bells.
-- **Cliché bigram/trigram scanner.** Current TIER1/2/3 are unigrams.
-  Bigrams (`pale moonlight`, `gentle breeze`, `inexorable march`)
-  carry more signal per regex hit.
-- **Sensory-channel balance scanner.** A scene that's 90% visual is
-  a known LLM tell. Score the per-scene channel mix
-  (sight/sound/smell/touch/taste) and warn when one channel is >70%.
+- ~~**Cliché bigram/trigram scanner.**~~ **Shipped 2026-04-25** —
+  `autonovel mechanical cliches <path>` returns a curated bigram
+  scan; `evaluate.md` invokes it for `--chapter` and `--full`,
+  feeding `density_per_1000_words` into the slop penalty (every
+  full unit above 2.0 subtracts 0.1, capped at 0.5).
+- ~~**Sensory-channel balance scanner.**~~ **Shipped 2026-04-25** —
+  `autonovel mechanical sensory <path>` returns per-channel
+  fractions (visual/auditory/olfactory/gustatory/tactile) and a
+  `dominant_channel` flag when one channel >70%. `evaluate.md`
+  surfaces dominance as a chapter `weakest_moment` callout.
 - **Period register lock.** For period fiction, surface every
   sentence whose Flesch-Kincaid grade or syllable-per-word average
   drifts above the seed's 95th percentile — catches the "anachronistic
@@ -218,16 +222,19 @@ prose ≈ 8 / 10, with investigation-heavy plots).
 
 ## Reader interest / reading experience
 
-- **Pacing curve graph in `/autonovel:evaluate --full`.** Plot the
-  per-chapter words / scenes / beats / dialogue ratio so the user can
-  see the shape of the book. Today the only output is a number.
-- **Tension-drop alarms.** Detect three-or-more consecutive chapters
-  whose evaluator tension score moves down. Investigation-heavy plots
-  like Bells often have one of these in act 2; the alarm prompts a
-  sidequest before a full revision cycle is needed.
-- **First-page hook check.** `/autonovel:evaluate --chapter 1` should
-  separately score the first 250 words against an LLM judge tuned for
-  hook strength (specific-image-in-line-1, stakes-implied-in-line-3).
+- ~~**Pacing curve graph in `/autonovel:evaluate --full`.**~~
+  **Shipped 2026-04-25** — `--full` mode emits a markdown table
+  with per-chapter words / score / tension / dialogue% / scenes /
+  beats-hit so the user sees the shape of the book at a glance.
+- ~~**Tension-drop alarms.**~~ **Shipped 2026-04-25** — `--full`
+  scans the tension column for any window of three+ consecutive
+  chapters trending down and surfaces a "⚠️  Tension drop
+  detected: chapters X→Y→Z" callout with the recommended
+  revision-pass invocation.
+- ~~**First-page hook check.**~~ **Shipped 2026-04-25** —
+  `/autonovel:evaluate --chapter 1` adds a separate
+  `hook_strength` score over the first 250 words; surfaces it on
+  its own line in the summary; flags below 6.0 as a real concern.
 - **Series-arc score.** When `project.yaml` declares ≥2 books, score
   cross-book arcs (does the series have a question that resolves in
   the final book? do early-book setups pay off in late books?). Today
