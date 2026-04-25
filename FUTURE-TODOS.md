@@ -9,6 +9,32 @@ The list is rough on purpose — each entry is a one-line reminder, not
 a spec. Promote to `ROADMAP.md` (or a fresh PR plan) when one is ready
 to start.
 
+## Near-term — pull into the next PR
+
+- **Research belongs at the front of the foundation, not as a manual
+  step.** A historical / period-fantasy / alternate-history project
+  needs research *before* gen-world, gen-characters, and gen-canon
+  generate from the LLM's general knowledge — otherwise you get
+  invented dates that contradict each other (Fugger 1473 in canon,
+  1471 in outline; surfaced during 2026-04-25 author testing).
+  Concrete fix:
+    1. Add `--from-seed` mode to `/autonovel:research` that reads
+       `seed.txt` + `project.yaml :: period` and auto-derives 2–4
+       research topics (period overview, specific people / places /
+       events the seed names, period vocabulary). Each topic gets a
+       sourced notes file in `shared/research/notes/`.
+    2. Add a `_foundation_gap` check in `lifecycle.py` that
+       recommends `/autonovel:research --book <book> --from-seed`
+       *before* gen-world, but only when `project.yaml :: period.start`
+       is set. Contemporary-literary projects skip cleanly.
+    3. Wire `/autonovel:gen-world` and `/autonovel:gen-canon` to read
+       any populated `shared/research/notes/*.md` files as context so
+       the foundation is built on cited dates rather than memory.
+  Cost: ~30 min of work; adds 1 command-mode + foundation-gap check
+  + Tier-1 tests + README/lessons-doc updates. Shifts the foundation
+  order, so anyone with an in-flight series will see `/autonovel:next`
+  start recommending the new step.
+
 ## From live author testing (post-PR-9)
 
 These surfaced during a real first-run on a Chromebook + WSL on Claude
