@@ -149,3 +149,32 @@ def test_revise_marks_prior_chapter_read_as_best_effort():
             / "commands" / "revise.md").read_text(encoding="utf-8")
     assert "best-effort" in body.lower()
     assert "do not retry" in body.lower()
+
+
+# ---------------------------------------------------------------------------
+# Research --from-seed → promote-canon must be a fully-automatic update
+# path. Author preference 2026-04-25: no manual editing of canon when
+# research changes a date. The contract is encoded in the bodies of
+# research.md (auto-pipe candidates into pending_canon) and
+# promote-canon.md (research-tagged entries win contradictions).
+
+def test_research_from_seed_auto_pipes_into_pending_canon():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "research.md").read_text(encoding="utf-8")
+    assert "[research:" in body, (
+        "research.md must spell out the research-tag suffix that "
+        "promote-canon keys on for citation-wins-conflicts behaviour"
+    )
+    assert "pending_canon.md" in body
+    assert "Auto-pipe research candidates" in body or "auto-pipe" in body.lower()
+
+
+def test_promote_canon_prefers_research_tagged_entries():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "promote-canon.md").read_text(encoding="utf-8")
+    # The exception clause + supersede mechanism must be present.
+    assert "[research:" in body
+    assert "Superseded" in body
+    assert "research-tagged" in body.lower() or "research entry" in body.lower()

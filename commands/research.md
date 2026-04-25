@@ -18,6 +18,7 @@ reads:
 writes:
   - shared/research/notes/{topic}.md
   - shared/sources.bib
+  - books/{book}/pending_canon.md
 context_mode: series
 ---
 
@@ -175,6 +176,34 @@ Design rules:
     resolvable from `shared/sources.bib` — append if missing, leave
     alone if already there. Skip this step if every citation was
     already in the bib.
+
+11. **Auto-pipe research candidates into the canon-promotion queue.**
+    For every line in this notes file's `## Candidate Canon Entries`
+    section, append it to `books/{book}/pending_canon.md` with a
+    `[research:<slug>]` tag at the end of the line, so the next
+    `/autonovel:promote-canon` run picks them up. Format:
+
+    ```
+    - <fact> [shortname] [research:<slug>]
+    ```
+
+    This makes research-from-seed truly automatic — the user runs
+    `/autonovel:research --from-seed` once, then
+    `/autonovel:promote-canon` once, and `shared/canon.md` reflects
+    the cited primary-source facts without manual editing. The
+    `[research:<slug>]` tag is what `/autonovel:promote-canon` keys
+    on to resolve conflicts in research's favour (cited > guessed)
+    while preserving the citation in the canonical entry.
+
+    Skip this step in mode (a) — explicit-topic mode is for
+    on-demand research where the user is reading the notes
+    themselves; auto-piping there would surprise them. Mode (b)
+    --from-seed is the auto-piping mode by design.
+
+    If `--book` is unknown (because mode-b is being run series-wide
+    without a specific book), append to *every* book's
+    `pending_canon.md` listed in `project.yaml`. Each book's
+    `/autonovel:promote-canon` run then picks them up at its leisure.
 </workflow>
 
 <acceptance>

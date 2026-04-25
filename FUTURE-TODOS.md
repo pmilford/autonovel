@@ -11,6 +11,20 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Research-from-seed auto-merges into canon (no manual editing).**
+  ~~Open~~ **Fixed 2026-04-25.** `/autonovel:research --from-seed`
+  now appends every research-derived candidate to the active book's
+  `pending_canon.md` with a `[research:<slug>]` tag.
+  `/autonovel:promote-canon` honours that tag: research-tagged
+  entries win contradictions against the prior canon, and the
+  supersedure is recorded in a `## Superseded <UTC-date>` block in
+  `shared/canon.md` with the citation. Net effect: a user runs
+  research-from-seed, then promote-canon, and `shared/canon.md`
+  reflects cited primary-source facts without hand edits — date
+  corrections like "Fugger arrived 1478 not 1473" propagate
+  automatically and visibly.
+
+
 - **Drafter must degrade gracefully when reading prior chapter
   context fails.** ~~Open~~ **Fixed 2026-04-25.** `commands/draft.md`
   step 7 and `commands/revise.md` step 6 now mark the prior-chapter

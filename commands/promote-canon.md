@@ -64,10 +64,26 @@ pending files, so `autonovel rollback` undoes the whole promotion.
      Discard silently; record it under the per-book discard list
      for the summary.
    - **Contradiction**: an entry that contradicts `shared/canon.md`,
-     `shared/world.md`, or `shared/characters.md`. Discard, but
-     record the contradiction under the per-book conflict list so
-     the user can fix it. Contradictions BLOCK promotion for that
-     entry — they do not get merged optimistically.
+     `shared/world.md`, or `shared/characters.md`. Default-discard
+     and record under the per-book conflict list — but with one
+     exception below.
+
+     **Exception — research-tagged entries win contradictions.** A
+     pending entry carrying a `[research:<slug>]` tag was written
+     by `/autonovel:research --from-seed` and is backed by a cited
+     primary source (the `[shortname]` next to it resolves in
+     `shared/sources.bib`). When such an entry contradicts existing
+     canon, prefer the research entry: promote it, AND additionally
+     emit a `## Superseded <UTC-date>` block in `shared/canon.md`
+     listing the prior canonical line and a one-sentence rationale
+     ("research note `<slug>` cites [<shortname>] for <new value>;
+     prior value was <old value>"). The user reviewing
+     `shared/canon.md` then sees both the new fact and the old one
+     with a clear paper trail. This is what makes
+     `/autonovel:research --from-seed` → `/autonovel:promote-canon`
+     a fully automatic update path: research's citations beat the
+     LLM's general-knowledge guesses, and the supersedure is
+     visible.
    - **Survivor**: neither duplicate nor contradiction. Promote.
 
 5. For each surviving entry, rewrite it into the canonical form:
@@ -76,9 +92,17 @@ pending files, so `autonovel rollback` undoes the whole promotion.
    - <fact> (from {book} ch_{chapter:02d})
    ```
 
-   The `(from …)` provenance lets future audits trace every canon
-   fact back to the chapter that established it. If the pending
-   entry already carries a provenance tail, keep it verbatim.
+   For research-tagged entries, use:
+
+   ```
+   - <fact> [shortname] (from research note <slug>)
+   ```
+
+   so the citation makes it into the canonical entry. The
+   `(from …)` provenance lets future audits trace every canon
+   fact back to the chapter or research note that established it.
+   If the pending entry already carries a provenance tail, keep it
+   verbatim.
 
 6. If `--dry-run`, print a per-book report and stop — do NOT write
    anything. Format:
