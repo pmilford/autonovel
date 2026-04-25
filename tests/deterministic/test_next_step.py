@@ -24,11 +24,14 @@ def test_foundation_above_threshold_starts_drafting() -> None:
 
 
 def test_drafting_good_chapter_advances() -> None:
+    # Default chapter_threshold went 6.0 → 7.0 on 2026-04-25; previous
+    # test used 6.8 which now sits below threshold. Bump to 7.5 so
+    # this test stays a clean "above threshold → advance" assertion.
     s = PipelineState(
         book="a",
         phase="drafting",
         last_chapter_number=3,
-        last_chapter_score=6.8,
+        last_chapter_score=7.5,
         chapters_total=20,
     )
     assert next_step(s).command == "/autonovel:draft 4 --book a"

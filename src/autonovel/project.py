@@ -70,7 +70,7 @@ class ProjectConfig:
             defaults={
                 "chapter_target_words": 3200,
                 "foundation_threshold": 7.5,
-                "chapter_threshold": 6.0,
+                "chapter_threshold": 7.0,
             },
         )
 

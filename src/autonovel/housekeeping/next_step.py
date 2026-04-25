@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 # Defaults from REWRITE-PLAN.md §6 `defaults` block.
 DEFAULT_FOUNDATION_THRESHOLD = 7.5
-DEFAULT_CHAPTER_THRESHOLD = 6.0
+DEFAULT_CHAPTER_THRESHOLD = 7.0
 
 
 @dataclass

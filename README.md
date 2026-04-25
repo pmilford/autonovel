@@ -368,7 +368,7 @@ same command N times:
 
 | Command | What it batches |
 |---|---|
-| `/autonovel:draft-pass --chapters 1-10` | "Write the rest of the book." Per chapter: draft → anachronism check → evaluate → if score < threshold, brief + revise + re-eval (keep best). At sweep end: promote pending canon into `shared/canon.md`. Sequential. The single command for letting the pipeline run unattended and getting back a coherent first-pass-plus-immediate-fix book. |
+| `/autonovel:draft-pass --chapters 1-10` | "Write the rest of the book." Per chapter: draft → anachronism check → evaluate → if score < threshold (default 7.0; tunable via `project.yaml::defaults.chapter_threshold` or per-call `--retry-below`), brief + revise + re-eval (keep best). At sweep end: promote pending canon into `shared/canon.md`. Add `--deep` to also run reader-panel + Opus review at the end and surface the resulting flagged-chapter list. Sequential. |
 | `/autonovel:revision-pass --chapters 1-10` | The deeper revision pass. Sweeps `check-anachronism → brief → revise → evaluate` across the range; add `--parallel [N]` (default 3) for speed. Use after `draft-pass` (or after any change that needs deepening). |
 | `/autonovel:compare-models --chapter 5 --models claude-opus-4-7,claude-sonnet-4-6` | A/B-draft the same chapter with two models in parallel, judge head-to-head, write verdict to `eval_logs/`. |
 

@@ -307,7 +307,7 @@ def _next_step_for(series: SeriesLayout, book: str) -> object:
         phase=phase,
         chapters_drafted=chapters_drafted,
         foundation_threshold=cfg.defaults.get("foundation_threshold", 7.5),
-        chapter_threshold=cfg.defaults.get("chapter_threshold", 6.0),
+        chapter_threshold=cfg.defaults.get("chapter_threshold", 7.0),
     )
 
     # Read the latest chapter's eval score from eval_logs/ if any

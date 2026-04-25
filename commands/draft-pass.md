@@ -1,7 +1,7 @@
 ---
 name: autonovel:draft-pass
 description: Draft a range of chapters end-to-end with per-chapter eval + revise-on-low-score + canon promotion. Single-button "write the rest of the book."
-argument-hint: "--chapters <range> [--book <name>] [--retry-below <score>] [--no-revise-low] [--no-anachronism] [--no-promote] [--skip-eval]"
+argument-hint: "--chapters <range> [--book <name>] [--retry-below <score>] [--no-revise-low] [--no-anachronism] [--no-promote] [--skip-eval] [--deep]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -104,6 +104,14 @@ When TO use this:
      - `--no-anachronism` (skip step 2)
      - `--no-promote` (skip step 5)
      - `--skip-eval` (skip steps 3 and 4 entirely; pure drafting)
+     - `--deep` (after promote-canon, also run the whole-book
+       reader-panel + Opus dual-persona review; produces reports
+       at `books/{book}/edit_logs/reader_panel.md` and
+       `books/{book}/edit_logs/opus_review.md`. Does NOT
+       auto-revise from those reports — the user reviews them and
+       decides whether to run a follow-up `/autonovel:revision-pass
+       --chapters <list>`. ~10-25 extra minutes of compute on a
+       70k-word book.)
    Missing `--chapters` → stop with usage hint.
 
 2. Use `file_read` on `project.yaml`. Resolve the book entry, `pov`,
@@ -178,9 +186,27 @@ When TO use this:
    inline against `books/{book}/pending_canon.md` and any other
    books' pending files. Conflicts are parked under a `# Conflicts`
    header — they do not abort the sweep, but the summary in step
-   (5) flags them so the user knows.
+   (6) flags them so the user knows.
 
-5. **Print a summary table** in the postamble footer:
+5. **Deep whole-book review** (only if `--deep`):
+
+   a. Reproduce `/autonovel:reader-panel --book {book}`'s workflow
+      inline. Four-persona pass over the full manuscript; writes
+      `books/{book}/edit_logs/reader_panel.md`.
+   b. Reproduce `/autonovel:review --book {book}`'s workflow
+      inline. Opus dual-persona (literary critic + professor of
+      fiction) pass; writes `books/{book}/edit_logs/opus_review.md`.
+
+   Both produce REPORTS, not chapter changes. The summary table in
+   step (6) names which chapters each report flags so the user can
+   pick what to act on. The natural next step is
+   `/autonovel:revision-pass --chapters <list>` against the flagged
+   chapters, or `/autonovel:revise <N>` per chapter for the deepest
+   issues. We do NOT auto-revise from these reports because (a)
+   they often disagree with each other, and (b) a structural
+   recommendation (e.g. "cut chapter 12") needs human judgement.
+
+6. **Print a summary table** in the postamble footer:
 
    ```
    chapter | draft (words) | anach | eval v1 | eval v2 | final | revised?
@@ -191,15 +217,22 @@ When TO use this:
    ```
 
    Plus a one-paragraph headline ("Drafted 3 chapters; 1 revised
-   on low score; 4 candidate canon entries promoted; 0 conflicts.
-   Recommend `/autonovel:reader-panel --book {book}` for the
-   whole-book pass.").
+   on low score; 4 candidate canon entries promoted; 0 conflicts.").
 
-6. The postamble's standard footer recommends the next step.
+   With `--deep`: append a second block showing reader-panel and
+   review highlights — top 3 panel concerns, top 3 review items —
+   plus the chapter list each one flags. This is the user's
+   shopping list for the next revision-pass.
+
+7. The postamble's standard footer recommends the next step.
    Common cases:
-     - All chapters ≥ threshold and no conflicts →
-       `/autonovel:reader-panel --book {book}` for whole-book
-       depth review.
+     - With `--deep`, panel + review surfaced specific chapters →
+       `/autonovel:revision-pass --chapters <those>` is the natural
+       next move (acts on those reports).
+     - Without `--deep`, all chapters ≥ threshold and no conflicts →
+       `/autonovel:reader-panel --book {book}` then
+       `/autonovel:review --book {book}` for whole-book depth (or
+       re-run `draft-pass --deep` to do both at once next time).
      - One or more chapters still below threshold →
        `/autonovel:revision-pass --chapters <those>` for the
        multi-pass deepener.
