@@ -59,8 +59,10 @@ chapter, so specificity now saves revision later.
    - `- beats:` followed by 3–6 concrete beat lines. A beat names what
      changes in the scene; a theme is not a beat.
    Structure across chapters: stable rising action, a midpoint reversal,
-   a costly climax. Never end on a round-edged resolution (see
-   `program.md` on the Stability Trap).
+   a costly climax. Never end on a round-edged resolution — the
+   "Stability Trap" is an AI tell where the ending neutralises every
+   posed threat. Push toward irreversible change, real cost, and one
+   unanswered mystery the next chapter can pull on.
 
 8. Use `file_write` to replace `books/{book}/outline.md`. Start with
    `# Outline`. No frontmatter.

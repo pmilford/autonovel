@@ -1,0 +1,17 @@
+series_name: tiny-series-scifi
+genre: scifi
+period: {}
+llm:
+  heavy: claude-opus-4-7
+  standard: claude-sonnet-4-6
+  light: claude-haiku-4-5-20251001
+  thinking:
+    heavy: true
+    standard: false
+books:
+- name: book-one
+  status: seed
+defaults:
+  chapter_target_words: 3200
+  foundation_threshold: 7.5
+  chapter_threshold: 6.0

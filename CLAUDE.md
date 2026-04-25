@@ -1,103 +1,202 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI CLI agents (Claude Code, OpenAI
+Codex, Gemini CLI) when working *on this repo* — the autonovel
+codebase itself, not a series produced with it. `AGENTS.md` and
+`GEMINI.md` symlink here so all three runtimes read the same conventions.
+
+> If you opened a series folder in your runtime by mistake and you
+> want to write a novel, this is the wrong file. The series-side
+> conventions live in the series's own `CLAUDE.md` (added by
+> `autonovel new-series`); your runtime's `/autonovel:*` commands are
+> the entry point.
 
 ## What this repo is
 
-`autonovel` is an autonomous pipeline that turns a seed concept into a finished novel (manuscript, typeset PDF, ePub, cover art, audiobook, landing page). It is inspired by `karpathy/autoresearch`: a modify → evaluate → keep/discard loop applied to fiction. All 27 scripts are standalone Python tools orchestrated by `run_pipeline.py`; the agent's job is to call tools and steer the loop, not to write prose inline.
+`autonovel` ships an autonomous novel-writing pipeline as a set of
+markdown commands installed into an AI CLI runtime, plus a small
+Python housekeeping CLI. The runtime owns the model, auth, and tool
+calls; Python does scaffolding, validation, and mechanical regex
+scoring only.
 
-Canonical specs — read these before making non-trivial changes:
-- `PIPELINE.md` — full technical spec for phases, thresholds, learned patterns from the "Bells" production run.
-- `program.md` — per-phase agent instructions, propagation rules, the Stability Trap.
-- `WORKFLOW.md` — user-facing step-by-step.
-- `CRAFT.md`, `ANTI-SLOP.md`, `ANTI-PATTERNS.md` — craft reference and AI-tell detection; consumed by writer/judge prompts.
+Authoritative specs:
+
+- [`REWRITE-PLAN.md`](REWRITE-PLAN.md) — architecture and PR sequence.
+- [`STATE.md`](STATE.md) — append-only decisions log + current Tier-1+2
+  green count.
+- [`ROADMAP.md`](ROADMAP.md) — forward-looking todos.
+- [`docs/`](docs/) — user-facing documentation (commands, multi-book,
+  testing, fixture authoring, the historical-series walkthrough).
+- [`docs/pipeline-history.md`](docs/pipeline-history.md) — archived
+  pre-rewrite spec from the Bells production run.
+
+Reference docs consumed by writer/judge prompts (do not edit lightly —
+they are the *prompt material*, not project documentation):
+
+- [`CRAFT.md`](CRAFT.md), [`ANTI-SLOP.md`](ANTI-SLOP.md),
+  [`ANTI-PATTERNS.md`](ANTI-PATTERNS.md).
+
+## Layout
+
+```
+autonovel/
+  package.json              # npm shim entry — bin/autonovel.js → python -m autonovel.cli
+  pyproject.toml            # Python package — `pipx install autonovel`
+  bin/autonovel.js          # node wrapper that forwards to the Python CLI
+  commands/                 # /autonovel:* command source — one md per command
+  src/autonovel/            # housekeeping Python (CLI, adapters, validators, mechanical, templates)
+  docs/                     # user-facing docs
+  tests/
+    deterministic/          # Tier 1 — frontmatter, mechanical, adapters, CLI
+    contracts/              # Tier 2 — every reads:/writes: backed by command body
+    smoke/                  # Tier 3 — opt-in, real runtime invocation
+    fixtures/
+      tiny-series-historical/    # the original
+      tiny-series-{scifi,literary,mystery,thriller,romance,fantasy,horror}/
+      bells-reference/           # Tier-4 regression — populates from autonovel/bells branch
+  CRAFT.md, ANTI-SLOP.md, ANTI-PATTERNS.md
+  CLAUDE.md, AGENTS.md, GEMINI.md   # AGENTS/GEMINI are symlinks to CLAUDE.md
+```
 
 ## Common commands
 
-Dependency management is `uv` (see `pyproject.toml`, Python ≥3.12). Always prefix Python invocations with `uv run`:
+Python dependency management uses standard pip/pipx. From a clone:
 
 ```bash
-uv sync                                   # install deps
-uv run python run_pipeline.py --from-scratch   # full pipeline from seed.txt
-uv run python run_pipeline.py --phase foundation|drafting|revision|export
-uv run python run_pipeline.py --max-cycles 5   # cap revision cycles
-
-# Evaluation (tune what "good" means here)
-uv run python evaluate.py --phase=foundation
-uv run python evaluate.py --chapter=5
-uv run python evaluate.py --full
-
-# Manual revision tools
-uv run python adversarial_edit.py all
-uv run python apply_cuts.py all --types OVER-EXPLAIN REDUNDANT
-uv run python reader_panel.py
-uv run python review.py                        # Opus dual-persona review (Phase 3b)
-uv run python gen_brief.py --auto
-uv run python gen_revision.py 5 briefs/ch05.md
-
-# Typeset to PDF
-uv run python typeset/build_tex.py && (cd typeset && tectonic novel.tex)
+pip install -e .[test,export]            # editable + test + export deps
+pytest tests/deterministic tests/contracts -q   # Tier 1 + 2 — fast, free, every commit
+pytest tests/smoke -q -m smoke           # Tier 3 — costs money / subscription auth
+autonovel test-fixture run <genre>       # one fixture's smoke test
 ```
 
-There is no test suite, linter, or build system beyond `uv sync`. Correctness is judged by `evaluate.py` scores and git history (every keep/discard is a commit + a row in `results.tsv`).
+Running the housekeeping CLI:
 
-## Architecture
-
-### Branch model (important)
-
-- **`master`** holds the reusable framework: tools, docs, and *empty* template shells (`world.md`, `characters.md`, `outline.md`, `canon.md`, `voice.md` Part 2, `MYSTERY.md`, `state.json`).
-- **`autonovel/<tag>`** branches hold one novel's filled-in artifacts (`seed.txt`, populated templates, `chapters/ch_NN.md`, `edit_logs/`, `eval_logs/`, `briefs/`, `results.tsv`, `typeset/novel.pdf`). Do not commit novel-specific content to `master`.
-
-### The five co-evolving layers
-
-```
-Layer 5:  voice.md          HOW we write
-Layer 4:  world.md          WHAT exists
-Layer 3:  characters.md     WHO acts
-Layer 2:  outline.md        WHAT HAPPENS
-Layer 1:  chapters/ch_NN.md THE ACTUAL PROSE
-Cross-cut: canon.md         WHAT IS TRUE (hard-fact DB)
+```bash
+python -m autonovel.cli <subcommand>
+# or, from npm:
+npx autonovel <subcommand>
+# or, after `pipx install autonovel`:
+autonovel <subcommand>
 ```
 
-Changes propagate both downward (lore change → outline → chapter rewrite) and upward (a chapter reveals a gap → update lore → check downstream). `state.json` tracks phase, scores, iteration count, and pending propagation debts.
+Three are idempotent across the rewrite:
 
-### Pipeline phases (driven by `run_pipeline.py`)
+- `autonovel install` writes `/autonovel:*` command files into every
+  detected runtime's expected path.
+- `autonovel doctor` warns on missing external tools (tectonic,
+  pandoc, potrace, ffmpeg, rsvg-convert, fontconfig); does not error.
+- `autonovel test-fixture new <name>` scaffolds a new genre fixture +
+  paired smoke-test stub (see `docs/adding-a-genre-fixture.md`).
 
-1. **Foundation** — loop `gen_world` → `gen_characters` → `gen_outline`(+`_part2`) → voice discovery → `gen_canon` → `evaluate.py --phase=foundation`. Keep if score improved (git commit), else `git reset --hard HEAD~1`. Exits when `foundation_score > 7.5 AND lore_score > 7.0`.
-2. **Drafting** — for each chapter in outline order, `draft_chapter.py` then `evaluate.py --chapter=N`; keep if `> 6.0`, up to 5 retries. New facts get appended to `canon.md`. Forward progress over perfection.
-3. **Revision** — cycles of `adversarial_edit.py` → `apply_cuts.py` (OVER-EXPLAIN + REDUNDANT dominate) → `reader_panel.py` (4 personas) → briefs → `gen_revision.py`. Stop when score delta `< 0.3` across two consecutive cycles (`PLATEAU_DELTA` in `run_pipeline.py`), capped at `MAX_REVISION_CYCLES = 6`.
-4. **Phase 3b — Opus review loop** — `review.py` sends the whole manuscript to Opus for a literary-critic + professor-of-fiction pass, parses actionable items, iterates until items are mostly qualified hedges.
-5. **Export** — `build_outline.py`/`build_arc_summary.py` rebuild docs from chapters, `typeset/build_tex.py` emits `chapters_content.tex`, `tectonic` produces the PDF; ePub uses the `typeset/epub_*` files; landing page is `landing/index.html`.
+## Architecture (one paragraph)
 
-### Two immune systems in `evaluate.py`
+A `commands/<stem>.md` file is the source of truth for one
+`/autonovel:<stem>` command. The file's YAML frontmatter declares its
+model tier, its required generic tools, and the files it reads /
+writes. An *adapter* (`src/autonovel/adapters/{claude_code,codex,gemini}.py`)
+translates that frontmatter into the runtime's native shape and writes
+the rendered file into the runtime's expected install path. The runtime
+then handles the model, the auth, and the tool calls. A small Python
+housekeeping CLI (`autonovel`) owns scaffolding, install/uninstall,
+status/doctor, and rollback. No Python code calls an LLM.
 
-- **Mechanical** — regex scanners for tier-1 banned words (`delve`, `tapestry`, …), em-dash overuse, sentence-length uniformity, fiction clichés. No LLM.
-- **LLM judge** — a separate model from the writer (`AUTONOVEL_JUDGE_MODEL` vs `AUTONOVEL_WRITER_MODEL`) to avoid self-congratulation bias. Uses the `context-1m-2025-08-07` beta header for 1M-token context.
+## Conventions
 
-`evaluate.py` is treated as **read-only during autonomous runs** — the human tunes it to change what "good" means; the agent treats it as a black box.
+### Generic tool names
 
-### Models and API
+Commands use generic tool names in their `allowed-tools` frontmatter
+and in the body. Adapters translate to runtime-specific names:
 
-Configured via `.env` (see `.env.example`):
-- `AUTONOVEL_WRITER_MODEL` — drafting/revision (default Sonnet)
-- `AUTONOVEL_JUDGE_MODEL` — evaluation (default Opus; must differ from writer)
-- `AUTONOVEL_REVIEW_MODEL` — Phase 3b Opus review
-- `ANTHROPIC_API_KEY` required; `FAL_KEY` (art) and `ELEVENLABS_API_KEY` (audiobook) are optional.
+| Generic | Claude Code | Codex CLI | Gemini CLI |
+|---|---|---|---|
+| `file_read` | `Read` | (identity) | `read_file` |
+| `file_write` | `Write` | `write_file` | `write_file` |
+| `bash` | `Bash` | `shell` | `run_shell_command` |
+| `task` | `Task` | `spawn` | `run_agent` |
+| `web_search` | `WebSearch` | `web_search` | `google_web_search` |
+| `web_fetch` | `WebFetch` | `web_fetch` | `web_fetch` |
 
-Tools talk to the API via `httpx` directly — there is no Anthropic SDK dependency.
+Tool-name translation in the body is **scoped to backticked tokens
+only** (`` `task` `` → `` `spawn` ``, etc.). Word-boundary
+substitution would mangle prose like *"is a creative task"* or
+*"bash your seed.txt"*. Test fixtures contain both patterns.
 
-### Orchestrator conventions (`run_pipeline.py`)
+### Preamble / postamble
 
-- Tools are invoked as subprocesses (`uv run python <script>`); do not import them as modules.
-- Every keep/discard is a git commit; `results.tsv` mirrors commits with columns `commit / phase / score / word_count / status / description`.
-- Thresholds and caps live as module constants at the top: `FOUNDATION_THRESHOLD`, `CHAPTER_THRESHOLD`, `MAX_FOUNDATION_ITERS`, `MAX_CHAPTER_ATTEMPTS`, `MIN_REVISION_CYCLES`, `MAX_REVISION_CYCLES`, `PLATEAU_DELTA`. Tune there, not inline.
-- State lives in `state.json`; `load_state()` / `save_state()` / `default_state()` are the only correct entry points.
+Every command body opens with a hidden preamble and closes with a
+hidden postamble that invoke `autonovel _begin` and `autonovel _end`.
+These two hidden subcommands own:
+
+- `.autonovel/in-progress.lock` (PID-locked; cross-book race
+  mitigation).
+- `.autonovel/checkpoints/<timestamp>/` (rollback target).
+- `.autonovel/last-action.json` (input to `/autonovel:resume`).
+- `.autonovel/command-log.jsonl` (one line per command run).
+
+Command authors **never reimplement** lock / checkpoint / log logic —
+this is the one-place-to-change contract for the whole pipeline.
+PR-2 decisions log in `STATE.md` is the canonical reference.
+
+### Auth policy
+
+Subscription auth is primary. The smoke-test conftest strips
+`ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` from the subprocess env
+before invoking `claude -p`, because Claude Code prefers API-key
+billing when both modes are present and that defeats the *"free
+against my subscription"* goal. Escape hatch:
+`AUTONOVEL_SMOKE_USE_API_KEY=1`. New runtime commands don't need to
+do anything — they run inside the user's subscription session.
+
+### Model tiers
+
+Every command file declares `model_tier: heavy | standard | light`.
+Each adapter maps to the runtime's closest equivalent model.
+Defaults on Claude Code: Opus 4.7 (heavy), Sonnet 4.6 (standard),
+Haiku 4.5 (light). `project.yaml` overrides per-series. See
+`REWRITE-PLAN.md` §17 for the full mapping table.
+
+### Chapter renumbering, character renames
+
+Chapter renumbering after `merge-chapters` / `remove-chapter` /
+`reorder` runs **by script** (collision-safe `mv` / `git mv`),
+never as an LLM rename loop. Same discipline for
+`/autonovel:rename-character` (word-boundary `sed` with overlap
+refusal — refuses `Ana` if `Anatolia` exists).
+
+### Two flake-tolerant policies
+
+- Live web search smoke tests are permitted to flake and auto-retry
+  once (`tests/conftest.py`). A test that flips fail→pass logs to
+  `tests/flakiness.jsonl`. See `REWRITE-PLAN.md` §12.4.
+- Genre keyword lists in smoke tests are *intentionally generous*
+  (≥2 hits out of 7+) so ordinary search/LLM drift does not fail
+  them. Tests exist to catch *gross* failure.
 
 ## Gotchas (learned in the Bells production)
 
-- **Don't over-compress.** Any chapter below ~1800 words becomes the new weakest. Sweet spot for compressed chapters is 2200–3000w.
-- **`gen_revision.py` overshoots** by ~30% — brief 3200w, expect 3800–4200w.
-- **Pacing ≈ 7 is a likely ceiling** for investigation-heavy plots; fixing one stretch just exposes the next. Stop after two rotations of "weakest chapter."
-- **OVER-EXPLAIN (~32%) and REDUNDANT (~26%)** dominate adversarial cuts — prioritize these filters in `apply_cuts.py`.
-- **Chapter renumbering** after merges/deletes must be done by script, never hand-edited.
-- **The Stability Trap** (see `program.md`) — AI defaults to safe, round-edged endings; revisions should actively push toward irreversible change, cost, and mystery.
+- **Don't over-compress.** Any chapter below ~1800 words becomes the
+  new weakest. Sweet spot for compressed chapters is 2200–3000w.
+- **`/autonovel:revise` overshoots** by ~30% — brief 3200w, expect
+  3800–4200w.
+- **Pacing ≈ 7 is a likely ceiling** for investigation-heavy plots;
+  fixing one stretch just exposes the next. Stop after two rotations
+  of "weakest chapter."
+- **OVER-EXPLAIN (~32%) and REDUNDANT (~26%)** dominate adversarial
+  cuts — prioritise these filters in `/autonovel:apply-cuts`.
+- **The Stability Trap.** AI defaults to safe, round-edged endings;
+  revisions should actively push toward irreversible change, cost,
+  and mystery.
+
+## Working in this repo
+
+1. Read `REWRITE-PLAN.md` + `STATE.md` first. The decisions log in
+   STATE.md is the project's working memory across sessions.
+2. Don't re-read files already covered by a PR spec's acceptance
+   criteria — trust the spec.
+3. Commands and tests share a contract: every `reads:` / `writes:`
+   path declared in frontmatter must appear in the body. Tier-2
+   contract tests catch violations on every commit.
+4. New commands inherit lock / checkpoint / log behaviour by following
+   the preamble / postamble contract — do not reimplement.
+5. Each PR ends by appending a decisions entry to `STATE.md` and
+   updating the Tier-1+2 green count.

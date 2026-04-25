@@ -1,0 +1,9 @@
+A three-chapter near-future novella set in 2041 Singapore, where a
+cognitive-offload implant called "Marginalia" lets the wearer rent out
+a subsymbolic chunk of their working memory to strangers. Audra, a
+court stenographer, discovers her rented-out working memory is being
+used to cache testimony she is forbidden by law to remember.
+
+Three chapters: (1) the rental-detection protocol fails, (2) Audra
+retraces the path back to the renter, (3) she confronts the choice to
+keep the memory or flush it before trial.

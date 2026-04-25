@@ -14,7 +14,7 @@ from pathlib import Path
 from . import __version__
 from .adapters import detect as detect_mod
 from .adapters import installer as installer_mod
-from .housekeeping import doctor, lifecycle, rollback, scaffold, status
+from .housekeeping import doctor, lifecycle, rollback, scaffold, status, test_fixture
 from .paths import SeriesNotFound, load_series
 
 
@@ -78,6 +78,28 @@ def _build_parser() -> argparse.ArgumentParser:
     uninst.add_argument("--only", default=None, choices=["claude", "codex", "gemini"])
     uninst.add_argument("--path", default=None)
     uninst.set_defaults(func=_cmd_uninstall)
+
+    tf = sub.add_parser("test-fixture", help="Manage genre-fixture series under tests/fixtures/.")
+    tf_sub = tf.add_subparsers(dest="action", required=True)
+
+    tf_new = tf_sub.add_parser("new", help="Scaffold a new genre fixture + smoke test.")
+    tf_new.add_argument("name", help="Short fixture name, e.g. `mystery`")
+    tf_new.add_argument("--genre", default=None, help="Genre label (default: same as name)")
+    tf_new.add_argument("--book-name", default="book-one")
+    tf_new.add_argument("--repo-root", default=None,
+                        help="Override repo root (default: walk up to find tests/fixtures/)")
+    tf_new.set_defaults(func=_cmd_fixture_new)
+
+    tf_list = tf_sub.add_parser("list", help="List available fixtures.")
+    tf_list.add_argument("--repo-root", default=None)
+    tf_list.set_defaults(func=_cmd_fixture_list)
+
+    tf_run = tf_sub.add_parser("run", help="Run one fixture's smoke test via pytest.")
+    tf_run.add_argument("name")
+    tf_run.add_argument("--repo-root", default=None)
+    tf_run.add_argument("pytest_args", nargs=argparse.REMAINDER,
+                        help="Extra args passed verbatim to pytest after `--`.")
+    tf_run.set_defaults(func=_cmd_fixture_run)
 
     _begin = sub.add_parser("_begin", help=argparse.SUPPRESS)
     _begin.add_argument("--command", required=True)
@@ -236,6 +258,55 @@ def _cmd_uninstall(args: argparse.Namespace) -> int:
         for r in result.removed:
             print(f"  - {r.name}")
     return 0
+
+
+def _cmd_fixture_new(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else None
+    try:
+        result = test_fixture.new_fixture(
+            args.name,
+            repo_root=repo_root,
+            genre=args.genre,
+            book_name=args.book_name,
+        )
+    except test_fixture.FixtureError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    print(f"Created fixture tiny-series-{result.fixture.name}/")
+    print(f"  fixture:    {result.fixture.path}")
+    print(f"  smoke test: {result.fixture.smoke_test_path}")
+    print("")
+    print(f"Next: edit the seed files, then:")
+    print(f"  autonovel test-fixture run {args.name}")
+    return 0
+
+
+def _cmd_fixture_list(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else None
+    try:
+        fixtures = test_fixture.list_fixtures(repo_root=repo_root)
+    except test_fixture.FixtureError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    print(test_fixture.render_list(fixtures))
+    return 0
+
+
+def _cmd_fixture_run(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else None
+    extra: list[str] = list(args.pytest_args or [])
+    if extra and extra[0] == "--":
+        extra = extra[1:]
+    try:
+        rc = test_fixture.run_fixture(
+            args.name,
+            repo_root=repo_root,
+            extra_pytest_args=extra,
+        )
+    except test_fixture.FixtureError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    return rc
 
 
 def _cmd_begin(args: argparse.Namespace) -> int:

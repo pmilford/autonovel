@@ -1,0 +1,39 @@
+{
+  "name": "autonovel",
+  "version": "0.1.0",
+  "description": "Autonomous novel-writing pipeline that drops /autonovel:* commands into Claude Code, OpenAI Codex, or Gemini CLI.",
+  "bin": {
+    "autonovel": "bin/autonovel.js"
+  },
+  "files": [
+    "bin/",
+    "commands/",
+    "src/",
+    "pyproject.toml",
+    "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "CRAFT.md",
+    "ANTI-SLOP.md",
+    "ANTI-PATTERNS.md",
+    "docs/"
+  ],
+  "scripts": {
+    "test": "echo \"Tests are pytest — see docs/testing.md\" && exit 0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "novel",
+    "fiction",
+    "claude-code",
+    "codex",
+    "gemini-cli",
+    "creative-writing",
+    "agent"
+  ],
+  "homepage": "https://github.com/anthropics/autonovel",
+  "license": "MIT"
+}

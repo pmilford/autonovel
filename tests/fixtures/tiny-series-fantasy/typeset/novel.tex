@@ -1,0 +1,176 @@
+% Shared typesetting template. `/autonovel:typeset` copies this file
+% into `books/<name>/typeset/novel.tex` and substitutes the three
+% placeholders @TITLE@, @AUTHOR@, @SERIES_NAME@ at build time. Hand-
+% edit the copy, never this template, for per-book tweaks.
+
+\documentclass[11pt, openany]{book}
+
+% === GEOMETRY: Trade paperback (5.5 x 8.5 inches) ===
+\usepackage[
+  paperwidth=5.5in,
+  paperheight=8.5in,
+  inner=0.85in,
+  outer=0.65in,
+  top=0.75in,
+  bottom=0.85in,
+  headheight=14pt
+]{geometry}
+
+% === FONTS ===
+\usepackage{fontspec}
+\setmainfont{EB Garamond}[
+  Ligatures=TeX,
+  Numbers=OldStyle
+]
+
+% === TYPOGRAPHY ===
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.12}
+\usepackage{parskip}
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{0pt}
+
+% === GRAPHICS ===
+\usepackage{graphicx}
+
+% === DROP CAPS ===
+\usepackage{lettrine}
+\setcounter{DefaultLines}{2}
+
+% === HEADERS AND FOOTERS ===
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\textsc{@TITLE@}}
+\fancyhead[RO]{\small\textit{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+% === CHAPTER STYLE ===
+\usepackage{titlesec}
+
+\newcommand{\scenebreak}{%
+  \par\vspace{0.6\baselineskip}%
+  \noindent\hfil%
+  \IfFileExists{../art/pdf/scene_break.pdf}{%
+    \includegraphics[width=1.2in]{../art/pdf/scene_break.pdf}%
+  }{%
+  \IfFileExists{../art/scene_break.png}{%
+    \includegraphics[width=1.2in]{../art/scene_break.png}%
+  }{%
+    {\small\symbol{"2022}\quad\symbol{"2022}\quad\symbol{"2022}}%
+  }}%
+  \hfil%
+  \par\vspace{0.6\baselineskip}%
+}
+
+\renewcommand{\thechapter}{\Roman{chapter}}
+\titleformat{\chapter}[display]
+  {\normalfont\centering}
+  {\vspace*{1.5in}\footnotesize\textsc{chapter \thechapter}}
+  {4pt}
+  {\Large\itshape}
+  [\vspace{8pt}{\small--- $\diamond$ ---}\vspace{0.5in}]
+
+\titlespacing*{\chapter}{0pt}{0pt}{0pt}
+
+% Lowercase chapter name in header
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+
+% === TITLE PAGE DESIGN ===
+\newcommand{\makenoveltitle}{%
+  \thispagestyle{empty}
+  \begin{center}
+  \vspace*{2in}
+
+  {\Huge\textsc{@TITLE@}}\\[0.4in]
+
+  {\small------\quad$\diamond$\quad------}\\[0.5in]
+
+  {\large\textit{A Novel}}\\[1in]
+
+  {\Large\textsc{@AUTHOR@}}\\[1.5in]
+
+  \end{center}
+  \clearpage
+}
+
+% === HALF TITLE ===
+\newcommand{\makehalftitle}{%
+  \thispagestyle{empty}
+  \vspace*{3in}
+  \begin{center}
+  {\large\textsc{@TITLE@}}
+  \end{center}
+  \clearpage
+}
+
+% === PDF METADATA ===
+\usepackage{hyperref}
+\hypersetup{
+  pdftitle={@TITLE@},
+  pdfauthor={@AUTHOR@},
+  pdfsubject={@SERIES_NAME@},
+  hidelinks
+}
+
+% === BEGIN DOCUMENT ===
+\begin{document}
+
+\frontmatter
+
+% Full-bleed cover image (if exists)
+\IfFileExists{../art/cover.png}{%
+  \thispagestyle{empty}
+  \newgeometry{margin=0pt}
+  \noindent\includegraphics[width=\paperwidth, height=\paperheight, keepaspectratio]{../art/cover.png}
+  \restoregeometry
+  \clearpage
+}{}
+
+% Half title
+\makehalftitle
+
+% Blank verso
+\thispagestyle{empty}
+\mbox{}
+\clearpage
+
+% Title page
+\makenoveltitle
+
+% Copyright / colophon
+\thispagestyle{empty}
+\vspace*{\fill}
+\begin{center}
+
+{\small This is a work of fiction.}\\[18pt]
+
+{\small Typeset by autonovel.}
+
+\end{center}
+\vspace*{\fill}
+\clearpage
+
+\mainmatter
+
+% === CHAPTERS ===
+\input{chapters_content.tex}
+
+% === END MATTER ===
+\backmatter
+
+\thispagestyle{empty}
+\vspace*{3in}
+\begin{center}
+{\small------\quad$\diamond$\quad------}
+\end{center}
+
+\end{document}

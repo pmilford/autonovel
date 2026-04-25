@@ -1,6 +1,6 @@
 # autonovel rewrite state
 
-**Last updated:** 2026-04-24 by PR 8
+**Last updated:** 2026-04-24 by PR 9
 
 ## Completed
 - [x] PR 1: layout + housekeeping
@@ -11,10 +11,11 @@
 - [x] PR 6: orchestrator + multi-book wiring
 - [x] PR 7: art, covers, audiobook, typeset, landing
 - [x] PR 8: Codex + Gemini adapters
-- [ ] PR 9: docs + full genre fixtures + publish
+- [x] PR 9: docs + full genre fixtures + publish prep
 
 ## In progress
-- none — PR 8 landed. Tier 1+2 440/440 green.
+- none — PR 9 landed. Tier 1+2 451/451 green. `npm publish` itself
+  is parked behind a human gate (see FUTURE-TODOS.md).
 
 ## Blockers
 - none
@@ -320,6 +321,65 @@
   deps (Pillow, pydub) move to a new `[export]` extras-require
   group; `.env.example` documents both keys (FAL_KEY,
   ELEVENLABS_API_KEY) and the OS install hints (apt + brew).
+- 2026-04-24 (PR 9): seven new genre fixtures shipped under
+  `tests/fixtures/tiny-series-{scifi,literary,mystery,thriller,romance,fantasy,horror}/`
+  with paired smoke tests at `tests/smoke/test_<genre>_smoke.py`.
+  Each test asserts a §12 genre-characteristic property
+  (sci-fi: ≥3 hard-limit bullets in world.md and no `[citation needed]`
+  placeholders; literary: ≥5 distinct voice-discovery trials;
+  mystery: ≥3 red herrings + clue-per-act ledger;
+  thriller: stakes-escalation per chapter + ≥1 page-turn hook;
+  romance: four-beat coverage + HEA/HFN named;
+  fantasy: every magic-system bullet has a cost/limit clause;
+  horror: dread keyword + sensory-specifics per chapter).
+  All seven auto-skip cleanly when `claude` is not on `$PATH`.
+- 2026-04-24 (PR 9): `autonovel test-fixture new|list|run` shipped.
+  Scaffolds a fixture series + paired smoke-test stub by walking up
+  from cwd to the repo root (a directory carrying both
+  `tests/fixtures/` and `tests/smoke/`). 11 new Tier-1 tests in
+  `tests/deterministic/test_test_fixture.py` cover the layout,
+  rejection of bad names, idempotency-failure on existing fixtures,
+  list/has-smoke-test marking, and missing-smoke detection. Total
+  Tier 1+2: **451 passing** (440 → 451).
+- 2026-04-24 (PR 9): npm shape scaffolded — `package.json` declares
+  the `autonovel` bin, `bin/autonovel.js` is a thin Node shim that
+  forwards to `python -m autonovel.cli`. The shim picks `python3`
+  then `python` from `$PATH`, tries `import autonovel`, and falls
+  back to running against the bundled `src/` via `PYTHONPATH` for
+  `npx autonovel ...` against an unprovisioned Python (otherwise
+  prints a `pipx install autonovel` hint). Actual `npm publish` is
+  deferred to a human gate (FUTURE-TODOS.md "Real `npm publish`
+  flow").
+- 2026-04-24 (PR 9): docs landed under `docs/` —
+  `commands.md` (every `/autonovel:*` per tier+context-mode),
+  `multi-book.md` (story-time gating, events ledger, promote-canon),
+  `testing.md` (four tiers, auth policy, flakiness),
+  `adding-a-genre-fixture.md` (§12a walkthrough),
+  `writing-a-historical-series.md` (12-step end-to-end). README
+  rewritten for the rewrite (npm + npx + pipx install paths;
+  install requirements; doc index; subscription-auth guidance).
+  CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
+  and GEMINI.md symlink to it.
+- 2026-04-24 (PR 9): legacy root files deleted —
+  `WORKFLOW.md` (replaced by `docs/writing-a-historical-series.md`),
+  `audiobook_voices.json` (the example moved to
+  `commands/audiobook-voices.md`'s docs;
+  `/autonovel:audiobook-voices` writes per-book at
+  `books/{book}/audiobook/voices.yaml`),
+  `main.py`, repo-root `world.md` / `characters.md` / `outline.md` /
+  `canon.md` / `voice.md` / `MYSTERY.md` / `state.json` /
+  `results.tsv` / `chapters/.gitkeep` (all pre-rewrite per-novel
+  templates, now under `src/autonovel/templates/`). `program.md`
+  moved to `docs/program-history.md` (parallel to PR-8's
+  `docs/pipeline-history.md`); the one inline reference in
+  `commands/gen-outline.md` was replaced by an inline 4-line
+  Stability-Trap explanation. `.env.example` cleaned of legacy-Python
+  language.
+- 2026-04-24 (PR 9): forward-looking todos consolidated into
+  `FUTURE-TODOS.md` (output writing quality, reader interest,
+  maintenance, portability, testing). ROADMAP.md no longer doubles as
+  a future-todos sink — that role moves to FUTURE-TODOS.md so a
+  freshly cleared session has one obvious place to look.
 - 2026-04-24 (PR 4): Tier-4 Bells regression harness scaffolded at
   `tests/fixtures/bells-reference/` (empty chapters dir + empty
   scores.json + populate-instructions README) and
@@ -332,8 +392,20 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — **440
-  passing** (`pytest tests/deterministic tests/contracts`). PR 8
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — **451
+  passing** (`pytest tests/deterministic tests/contracts`). PR 9
+  added 11 new Tier-1 tests in
+  `tests/deterministic/test_test_fixture.py` covering the
+  `autonovel test-fixture new|list|run` housekeeping shape: layout
+  parity with `autonovel new-series`, smoke-test stub generation
+  (markers + function name + fixture-name interpolation), name
+  validation, idempotency-on-existing rejection, repo-root walk-up,
+  and `list_fixtures` marking ✓ vs · for fixtures with/without a
+  paired smoke test. The seven new fixture directories did not
+  trigger any new contract tests; the existing contract suite is
+  command-shape only.
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — 440
+  passing (`pytest tests/deterministic tests/contracts`). PR 8
   added 24 new Tier-1 tests (12 in `test_adapter_codex.py`,
   12 in `test_adapter_gemini.py`) covering render, frontmatter
   shape, backticked tool-name translation, custom model maps,

@@ -14,73 +14,54 @@ Forward-looking todos and the next-PR resume pointer. Companion to
 - [x] PR 6 — orchestrator + multi-book wiring
 - [x] PR 7 — export: art, covers, audiobook, typeset, landing
 - [x] PR 8 — Codex + Gemini adapters
-- [ ] **PR 9 — docs + full genre fixtures + publish** ← *next*
+- [x] PR 9 — docs + full genre fixtures + publish prep
+- [ ] **publish: tag v0.1.0 + `npm publish` + `pipx install` from PyPI** ← *human gate*
 
 Each PR's full scope, acceptance, and human-gate policy lives in
 `REWRITE-PLAN.md` §13.
 
-## PR 9 — documentation, full genre fixture suite, publish
+## What landed in PR 9
 
-Resume pointer — read first:
-1. `REWRITE-PLAN.md` §13 PR 9.
-2. `REWRITE-PLAN.md` §12a — user-extensible genre fixtures.
-3. `STATE.md` — the PR-8 decisions log entries explain what shipped
-   and what each adapter still owes.
+- Eight genre fixtures complete under `tests/fixtures/tiny-series-*/`
+  (historical from PR 5; scifi, literary, mystery, thriller, romance,
+  fantasy, horror added in PR 9), each with a paired `tests/smoke/`
+  test asserting one §12 genre-characteristic property.
+- `autonovel test-fixture new|list|run` shipped with 11 new Tier-1
+  tests; total Tier-1+2 went 440 → 451.
+- Docs: `docs/commands.md`, `docs/multi-book.md`, `docs/testing.md`,
+  `docs/adding-a-genre-fixture.md`,
+  `docs/writing-a-historical-series.md`. Pre-rewrite `program.md`
+  moved to `docs/program-history.md`.
+- README rewritten for npm + npx + pipx install paths. CLAUDE.md
+  rewritten as the agent-side conventions file; AGENTS.md and
+  GEMINI.md symlink to it.
+- npm shape scaffolded — `package.json` + `bin/autonovel.js` shim
+  forwards to `python -m autonovel.cli`. Real `npm publish` is a
+  separate human gate.
+- Legacy root files deleted: `WORKFLOW.md`, `audiobook_voices.json`,
+  `main.py`, repo-root `world.md` / `characters.md` / `outline.md` /
+  `canon.md` / `voice.md` / `MYSTERY.md` / `state.json` /
+  `results.tsv` / `chapters/`. `.env.example` cleaned of
+  legacy-Python language.
 
-Carry-over notes from PR 8:
-- Codex adapter targets `~/.codex/skills/autonovel/<stem>/SKILL.md`.
-  REWRITE-PLAN §11 originally said `~/.codex/commands/`; the PR-8
-  session updated it to match Codex CLI 0.125, which uses skills.
-  PR 9 docs should reflect the current convention, not the original
-  matrix.
-- Gemini Tier-3 spot-check ships skipped (no `gemini` binary on the
-  test box). The smoke test at `tests/smoke/test_gemini_smoke.py`
-  follows the Codex shape; PR 9 should run it once on a Gemini-CLI
-  box and either confirm the convention or adjust the adapter.
-- PDF / ePub build path still depends on `tectonic` and `pandoc`
-  being on PATH (carried from PR 7). PR 9 docs should add these to
-  the install-requirements checklist.
-- Art / cover / audiobook Tier-3 smoke tests are still not shipped —
-  they require paid third-party APIs (fal.ai / ElevenLabs). Document
-  the manual invocation path in PR 9.
-- Token + usage-budget tracking is still not plumbed through. Natural
-  home is PR 9 release polish.
+## What is NOT in PR 9 (publish gate)
 
-Work items (per REWRITE-PLAN §13 PR 9):
-1. Complete the eight shipped genre fixtures under `tests/fixtures/`
-   with their per-genre smoke tests (§12).
-2. `autonovel test-fixture new|list|run` housekeeping commands (§12a).
-3. `docs/commands.md`, `docs/multi-book.md`, `docs/testing.md`,
-   `docs/adding-a-genre-fixture.md`,
-   `docs/writing-a-historical-series.md`.
-4. Rewrite `README.md` with both install paths (npm -g and npx).
-   Update `CLAUDE.md`; symlink `AGENTS.md` and `GEMINI.md`.
-5. Delete any remaining Python legacy (`audiobook_voices.json` at
-   repo root, etc. — see §18).
-6. Tag `v0.1.0` and publish.
+The actual `npm publish` and `pipx install autonovel` from PyPI
+require:
 
-## Carry-over from earlier PRs (not PR-9 scope)
+1. A human verifying `npx autonovel install` works on a clean box
+   (no pre-existing pipx env).
+2. Choosing the `autonovel` PyPI / npm names (squat-checked).
+3. Tagging `v0.1.0`, running `python -m build`, `twine upload`,
+   and `npm publish`.
 
-- **Bells Tier-4 fixture populate** (from PR 4). The harness at
-  `tests/fixtures/bells-reference/` is scaffolded but empty; skips
-  until a human copies chapters from the `autonovel/bells` branch
-  and freezes `scores.json`. Should happen as part of PR 9
-  release-polish if not before.
-- **Token + usage-budget tracking** (from PR-5 session, deferred
-  through PR 8). User wants the app/dev workflow to surface how many
-  tokens a Tier-3 run consumed and an estimated $ cost, so future
-  runs are priced before they happen. Natural home is PR 9 release
-  polish.
-- **Legacy README / WORKFLOW / CLAUDE.md references to
-  `run_pipeline.py`** (noted during PR 6). Those files still describe
-  the pre-rewrite Python orchestrator. PR 8 moved `PIPELINE.md` to
-  `docs/pipeline-history.md` per §18. README/CLAUDE rewrite is still
-  parked for PR 9 to keep diffs small.
-- **Art / cover / audiobook Tier-3 smoke tests** (from PR 7). Only
-  `test_typeset_smoke.py` shipped — the others need paid third-party
-  APIs (fal.ai / ElevenLabs). PR 9 should document the manual
-  invocation path rather than adding them to CI.
-- **Spine-width for non-US trim sizes** (from PR 7). The mechanical
-  spine calculator supports four paper stocks; `A5` / European
-  royal-octavo trim is just a different `--trim-w` / `--trim-h`.
-  PR 9 docs should enumerate the common presets.
+These are reversible only by yanking; do them once, do them right.
+See FUTURE-TODOS.md "Real `npm publish` flow".
+
+## Forward-looking todos
+
+Promoted from this file to its own home so a freshly cleared session
+has one obvious place to look:
+
+→ [`FUTURE-TODOS.md`](FUTURE-TODOS.md) — output writing quality,
+reader interest, maintenance, portability, testing.
