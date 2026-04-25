@@ -38,10 +38,6 @@ for the full architecture write-up.
 > **never set up programming tools on this machine before**. If you
 > already have `git` and `pipx`, jump to "Get the source".
 
-The current install path is from a git clone. Once we publish `v0.1.0`
-to npm and PyPI, `npx autonovel install` and `pipx install autonovel`
-will work without a clone — but for now you need the clone.
-
 ### Chromebook (ChromeOS Linux)
 
 1. **Enable the Linux development environment.** This is a one-time
@@ -167,7 +163,7 @@ terminal is open with `git` and `pipx` available.
    autonovel --version
    ```
 
-   You should see `autonovel 0.1.0`. If you see "command not found",
+   You should see `autonovel 0.2.0`. If you see "command not found",
    the most common cause is that you didn't open a fresh terminal
    after `pipx ensurepath` — close this terminal, open a new one,
    try again.

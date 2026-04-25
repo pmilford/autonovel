@@ -61,9 +61,11 @@ the whole book drafted unattended.
 
 For each chapter the sweep runs: **draft → anachronism check →
 evaluate → if score < threshold (default 7.0), brief + revise +
-re-eval (keeps best)**. After the last chapter completes, it runs
-`promote-canon` so `shared/canon.md` reflects everything the
-drafts discovered.
+re-eval (keeps best) → promote-canon** (so each chapter's
+discoveries land in `shared/canon.md` before the next chapter
+drafts and reads it). A final `promote-canon` sweep also runs
+after the last chapter to catch anything still pending. Disable
+either with `--no-promote`.
 
 Add `--deep` and the sweep also runs `reader-panel` and `review`
 on the whole book at the end — produces reports (does not
@@ -465,7 +467,19 @@ visibility lives in:
 
 - `autonovel status` — full report (phase, scores, lock, log tail).
 - `autonovel statusline` — one-line summary in the runtime's status
-  bar, updated live (after `autonovel statusline-setup`).
+  bar (after `autonovel statusline-setup`). Updates only when Claude
+  Code re-renders the bar, which it does on user input — not on a
+  timer. During a long sweep the chapter count therefore *appears*
+  frozen between prompts; the bar tags the active command name as
+  `◍ <command>` while the lock is held so you can tell what's
+  actually running. If the context-percentage half is missing on
+  your Claude Code version (the JSON schema has changed across
+  releases), enable a one-shot diagnostic dump: set
+  `AUTONOVEL_STATUSLINE_DEBUG=1` in your shell, hit Enter once
+  inside Claude Code, then read
+  `~/.autonovel-statusline-debug.log` — it captures the raw stdin
+  payload Claude Code is sending so a missing schema path can be
+  added.
 - `cat .autonovel/command-log.jsonl` — append-only log of every
   command that ran, with timestamps and write-paths.
 - `git log --oneline` — every successful command's

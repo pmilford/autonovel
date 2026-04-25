@@ -1,6 +1,6 @@
 {
   "name": "autonovel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Autonomous novel-writing pipeline that drops /autonovel:* commands into Claude Code, OpenAI Codex, or Gemini CLI.",
   "bin": {
     "autonovel": "bin/autonovel.js"

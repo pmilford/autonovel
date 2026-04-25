@@ -11,6 +11,26 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Per-book rubric extensions via `voice.md`.** Today, adding a
+  book/genre-specific scoring rule (e.g. "at most 2 financial
+  transactions per chapter" for a mercantile historical) means
+  editing `commands/evaluate.md` — wrong layer, since `commands/`
+  is repo-shared and installed into every runtime. Evolve the
+  contract: `books/{book}/voice.md` gains an optional
+  `## Custom rubric` section (bulleted criteria, prose). Update
+  `commands/evaluate.md` and `commands/reader-panel.md` to read
+  voice.md, locate that heading if present, and instruct the judge
+  to score and flag each criterion explicitly in the eval log.
+  `commands/brief.md` already reads voice.md and the eval log, so
+  the flag propagates to revise without further wiring. For
+  recurring patterns, ship optional snippets under
+  `src/autonovel/templates/rubrics/<name>.md` that voice.md can
+  paste-in or reference. Cost: ~1 hr for the contract change plus a
+  Tier-2 contract test asserting evaluate/reader-panel/brief still
+  declare voice.md under `reads:`, plus a fixture chapter under
+  `tests/fixtures/` whose voice.md carries a `## Custom rubric`
+  block to lock the parsing.
+
 - ~~**Long-sweep context exhaustion in draft-pass / revision-pass.**~~
   **Partly fixed 2026-04-25 evening.** draft-pass and revision-pass
   per-chapter sequences now run inside `task` subagents — each
