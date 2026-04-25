@@ -273,7 +273,25 @@ into prose.
 
 ### 4. Open the series in your runtime and run commands
 
-In the same terminal:
+**Be in the series root** — the folder that contains `project.yaml`.
+For our example that's `~/novels/renaissance-europe/`. The
+`/autonovel:*` commands resolve paths like `shared/world.md` and
+`books/the-inquisitor/seed.txt` relative to wherever you launch the
+runtime, so being one folder too deep produces "file not found"
+errors that look mysterious.
+
+Sanity-check your location first:
+
+```bash
+pwd                       # should end in /renaissance-europe
+ls project.yaml           # should print "project.yaml" with no error
+```
+
+If `ls project.yaml` errors, you're in the wrong place. The fastest
+fix is `cd ~/novels/renaissance-europe`. (If you `cd`-ed into the
+book directory to edit the seed, `cd ..` once is enough.)
+
+Then launch your runtime:
 
 ```bash
 claude            # or `codex`, or `gemini`
