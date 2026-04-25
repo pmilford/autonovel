@@ -59,7 +59,7 @@ Light tier — mechanical. No LLM call.
    art degrades gracefully, the build still completes.
 
 3. Build `chapters_content.tex` via `bash`:
-   `python -m autonovel.mechanical build-tex books/{book}/chapters
+   `autonovel mechanical build-tex books/{book}/chapters
    --art-dir books/{book}/art --output
    books/{book}/typeset/chapters_content.tex`.
    Parse its JSON output — print the per-chapter titles + which

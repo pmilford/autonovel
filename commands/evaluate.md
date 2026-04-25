@@ -98,7 +98,7 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
 
 9. Mechanical slop penalty. For `--chapter` and `--full`, before writing
    the log, use `bash` to run
-   `python -m autonovel.mechanical slop <chapter-path>` for each chapter
+   `autonovel mechanical slop <chapter-path>` for each chapter
    under evaluation and parse its JSON. Record the per-chapter
    `slop_penalty` under `result["slop"]` (for single-chapter) or
    `result["slop_per_chapter"][N]` (for full). Subtract `slop_penalty`
@@ -108,7 +108,7 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
    `--compare`.
 
 10. Period bans. If `shared/period_bans.txt` exists and is non-empty,
-    also run `bash: python -m autonovel.mechanical period-bans
+    also run `bash: autonovel mechanical period-bans
     <chapter-path> shared/period_bans.txt` for each chapter under
     evaluation. Record the `hits` list under `result["period_ban_hits"]`.
     A single period-ban violation caps `canon_compliance` at 6; three or

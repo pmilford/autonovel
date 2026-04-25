@@ -40,7 +40,7 @@ his watch") lands in the published book.
    the window the semantic pass checks against.
 
 3. Deterministic pass. Use the `bash` tool to run:
-   `python -m autonovel.mechanical period-bans
+   `autonovel mechanical period-bans
     books/{book}/chapters/ch_{chapter}.md shared/period_bans.txt`
    Parse the JSON it prints: `{ "hits": [[word, count], ...],
    "total": N }`. If `shared/period_bans.txt` is missing, treat

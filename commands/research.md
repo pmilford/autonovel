@@ -178,32 +178,51 @@ Design rules:
     already in the bib.
 
 11. **Auto-pipe research candidates into the canon-promotion queue.**
-    For every line in this notes file's `## Candidate Canon Entries`
-    section, append it to `books/{book}/pending_canon.md` with a
-    `[research:<slug>]` tag at the end of the line, so the next
-    `/autonovel:promote-canon` run picks them up. Format:
+
+    > **Hard rule: do NOT write to `shared/canon.md` from this
+    > command. Ever. The only command that writes `shared/canon.md`
+    > is `/autonovel:promote-canon`.** Research candidates go into
+    > the per-book queue file, where they wait for the next
+    > promote-canon run. This rule exists because canon.md is the
+    > single point of truth across all books in the series, and an
+    > out-of-band write here loses provenance, race-protection, and
+    > conflict detection.
+
+    Concretely: for every line in this notes file's
+    `## Candidate Canon Entries` section, **append it to
+    `books/{book}/pending_canon.md`** (using `file_write` in append
+    mode — read the existing content, add new lines after it, write
+    back). Add a `[research:<slug>]` tag at the end of every
+    appended line. Required exact format:
 
     ```
     - <fact> [shortname] [research:<slug>]
     ```
 
-    This makes research-from-seed truly automatic — the user runs
-    `/autonovel:research --from-seed` once, then
-    `/autonovel:promote-canon` once, and `shared/canon.md` reflects
-    the cited primary-source facts without manual editing. The
-    `[research:<slug>]` tag is what `/autonovel:promote-canon` keys
-    on to resolve conflicts in research's favour (cited > guessed)
-    while preserving the citation in the canonical entry.
+    The `[research:<slug>]` tag is what
+    `/autonovel:promote-canon` keys on to resolve conflicts in
+    research's favour (cited > guessed) while preserving the
+    citation in the canonical entry. Without the tag, the entry
+    looks like a chapter-derived candidate and loses the
+    research-wins-on-conflict behaviour. Do not omit it.
+
+    User flow this step enables:
+    1. `/autonovel:research --from-seed`  — research notes written;
+       candidates queued in `pending_canon.md`.
+    2. `/autonovel:promote-canon`         — queued candidates
+       merged into canon, contradictions decided in research's
+       favour, supersedures recorded with citations.
 
     Skip this step in mode (a) — explicit-topic mode is for
     on-demand research where the user is reading the notes
     themselves; auto-piping there would surprise them. Mode (b)
-    --from-seed is the auto-piping mode by design.
+    `--from-seed` is the auto-piping mode by design.
 
-    If `--book` is unknown (because mode-b is being run series-wide
-    without a specific book), append to *every* book's
+    If `--book` is unknown (mode-b run series-wide without a
+    specific book), append to *every* book's
     `pending_canon.md` listed in `project.yaml`. Each book's
-    `/autonovel:promote-canon` run then picks them up at its leisure.
+    `/autonovel:promote-canon` run then picks them up at its
+    leisure.
 </workflow>
 
 <acceptance>

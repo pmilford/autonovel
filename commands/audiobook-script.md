@@ -26,7 +26,7 @@ every paragraph of narration as `NARRATOR`, and optional
 
 Standard tier — the job is structured extraction with light emotional
 judgement. The parser output is schema-validated by
-`python -m autonovel.mechanical audio-validate` before the chapter's
+`autonovel mechanical audio-validate` before the chapter's
 script is written, so shape errors are caught at write time.
 </purpose>
 
@@ -62,7 +62,7 @@ script is written, so shape errors are caught at write time.
         should carry none.
    d. Use `file_write` to save the JSON under
       `books/{book}/audiobook/scripts/ch{chapter:02d}_script.json`.
-   e. Use `bash: python -m autonovel.mechanical audio-validate
+   e. Use `bash: autonovel mechanical audio-validate
       books/{book}/audiobook/scripts/ch{chapter:02d}_script.json
       books/{book}/audiobook/voices.yaml` to verify the shape and the
       speaker coverage. On a non-zero exit, surface the problem list

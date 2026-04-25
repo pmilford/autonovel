@@ -43,7 +43,7 @@ to `python -m autonovel.context_loader --book <b> --chapter <N>` so
 the `/autonovel:draft` invocation knows which sibling-book chapters
 are readable at that story_time (no spoilers from chapters whose
 `story_time` is later). Events come from `shared/events.md`, which
-should be valid per `python -m autonovel.mechanical` — run
+should be valid per `autonovel mechanical` — run
 `/autonovel:promote-canon` first if `pending_canon.md` has entries.
 </purpose>
 

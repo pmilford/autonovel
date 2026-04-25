@@ -112,6 +112,22 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Extra args passed verbatim to pytest after `--`.")
     tf_run.set_defaults(func=_cmd_fixture_run)
 
+    mech = sub.add_parser(
+        "mechanical",
+        help="Run a deterministic mechanical helper (slop, period-bans, apply-cuts, spine-width, audio-*, build-tex).",
+        description=(
+            "Forwards the rest of $ARGV to `autonovel.mechanical`'s CLI. "
+            "Use `autonovel mechanical <subcmd> --help` for per-subcommand "
+            "help. This is the entry point command-body authors should "
+            "invoke from the `bash` tool — it survives pipx install (which "
+            "isolates the `autonovel` Python module so `python -m "
+            "autonovel.mechanical` does not work outside the pipx venv)."
+        ),
+        add_help=False,  # let mechanical.main handle --help itself
+    )
+    mech.add_argument("mech_args", nargs=argparse.REMAINDER)
+    mech.set_defaults(func=_cmd_mechanical)
+
     _tc = sub.add_parser("_tail-chapter", help=argparse.SUPPRESS)
     _tc.add_argument("--book", required=True)
     _tc.add_argument("--chapter", type=int, required=True)
@@ -361,6 +377,17 @@ def _cmd_fixture_run(args: argparse.Namespace) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     return rc
+
+
+def _cmd_mechanical(args: argparse.Namespace) -> int:
+    """Dispatch to autonovel.mechanical's CLI. The whole point is that
+    `autonovel` is on $PATH after pipx install, while `python -m
+    autonovel.mechanical` only works when `autonovel` is importable
+    from the system Python — which is *not* true under pipx isolation.
+    Command bodies that previously shelled to `python -m
+    autonovel.mechanical` should now shell to `autonovel mechanical`."""
+    from .mechanical.__main__ import main as mech_main
+    return mech_main(args.mech_args)
 
 
 def _cmd_tail_chapter(args: argparse.Namespace) -> int:

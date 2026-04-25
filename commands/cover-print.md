@@ -23,7 +23,7 @@ thumbnail matrix (Amazon KDP full-size, two web thumbnails, a
 square for audiobook platforms).
 
 Spine width is computed from the page count + paper stock via
-`python -m autonovel.mechanical spine-width`. A printer-supplied
+`autonovel mechanical spine-width`. A printer-supplied
 override (`--spine-override <inches>`) wins when present.
 
 Light tier — PIL only, no LLM. Improvement over pre-rewrite: one
@@ -43,7 +43,7 @@ previously those were two scripts run separately.
    run-art-pick reminder.
 
 3. Use `bash` to compute the cover spec:
-   `python -m autonovel.mechanical spine-width --pages <N> --paper <P>`
+   `autonovel mechanical spine-width --pages <N> --paper <P>`
    plus the trim + bleed flags as passed. Capture the JSON output and
    echo spine + canvas dimensions in the summary so the user can
    eyeball them before hitting the printer.

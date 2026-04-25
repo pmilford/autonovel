@@ -26,7 +26,7 @@ over the pre-rewrite version:
      mispronounced or stumbled, the user had to re-run the whole
      chapter.
   2. **Chunking via the mechanical module.** `/autonovel:audiobook-
-     script` wrote the script; `python -m autonovel.mechanical
+     script` wrote the script; `autonovel mechanical
      audio-chunk` packs it into TTS-budget chunks. The command never
      reimplements chunking.
 
@@ -48,7 +48,7 @@ writer-model traffic.
    --chapters {chapter}` first".
 
 3. Chunk the script with `bash`:
-   `python -m autonovel.mechanical audio-chunk
+   `autonovel mechanical audio-chunk
    books/{book}/audiobook/scripts/ch{chapter:02d}_script.json
    books/{book}/audiobook/voices.yaml`. Parse the JSON output. In
    `--test` mode, keep only the first 10 segments before chunking.

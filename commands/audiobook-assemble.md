@@ -22,7 +22,7 @@ context_mode: book
 Replace `gen_audiobook.py --assemble`. Two improvements:
 
   1. Proper chapter marks via
-     `python -m autonovel.mechanical audio-marks`. The pre-rewrite
+     `autonovel mechanical audio-marks`. The pre-rewrite
      version concatenated chapter MP3s with no marks, so chapter
      navigation in any player was broken.
   2. Optional `m4b` output (the audiobook-native container with
@@ -52,7 +52,7 @@ Light tier — no LLM.
    installed, fall back to `ffprobe -v 0 -show_entries
    format=duration -of csv=p=0 <path>` for the durations.
 
-4. Compute chapter marks with `bash: python -m autonovel.mechanical
+4. Compute chapter marks with `bash: autonovel mechanical
    audio-marks <rows.json> --pause <pause> --format ffmetadata`.
    Save both the JSON mark list and the ffmetadata text.
 

@@ -178,3 +178,31 @@ def test_promote_canon_prefers_research_tagged_entries():
     assert "[research:" in body
     assert "Superseded" in body
     assert "research-tagged" in body.lower() or "research entry" in body.lower()
+
+
+# ---------------------------------------------------------------------------
+# Mechanical-helper invocation — must use `autonovel mechanical <subcmd>`,
+# never `python -m autonovel.mechanical`. The latter only works when
+# `autonovel` is importable from the system Python, which is NOT the case
+# under pipx install (autonovel is isolated in pipx's own venv). Author
+# hit this 2026-04-25: /autonovel:check-anachronism failed mid-run because
+# `python -m autonovel.mechanical period-bans …` couldn't find the module.
+
+def test_no_command_uses_python_m_autonovel_mechanical():
+    """Every mechanical-helper invocation must go through the
+    `autonovel mechanical` subcommand of the main CLI, which IS on
+    $PATH after pipx install."""
+    from pathlib import Path
+    commands_dir = Path(__file__).resolve().parent.parent.parent / "commands"
+    offenders: list[tuple[str, int, str]] = []
+    for md in sorted(commands_dir.glob("*.md")):
+        for i, line in enumerate(md.read_text(encoding="utf-8").splitlines(), 1):
+            if "python -m autonovel.mechanical" in line:
+                offenders.append((md.name, i, line.strip()))
+            if "python3 -m autonovel.mechanical" in line:
+                offenders.append((md.name, i, line.strip()))
+    assert not offenders, (
+        f"command files still invoke `python -m autonovel.mechanical`; "
+        f"replace with `autonovel mechanical`. Offenders:\n"
+        + "\n".join(f"  {n}:{i}: {l}" for n, i, l in offenders)
+    )

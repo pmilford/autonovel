@@ -17,7 +17,7 @@ context_mode: book
 <purpose>
 Apply the cuts produced by `/autonovel:adversarial-edit`. This is NOT an
 LLM operation — string removal is deterministic via
-`python -m autonovel.mechanical apply-cuts`. The command's job is to
+`autonovel mechanical apply-cuts`. The command's job is to
 parse arguments, invoke the CLI, and summarise results. The Bells
 production learned that OVER-EXPLAIN (~32%) and REDUNDANT (~26%)
 dominate cuts; default to those two types unless the user says otherwise.
@@ -45,7 +45,7 @@ dominate cuts; default to those two types unless the user says otherwise.
    The exact shape is:
 
    ```
-   python -m autonovel.mechanical apply-cuts books/{book}/chapters/ch_{chapter}.md books/{book}/edit_logs/ch{chapter:02d}_cuts.json --types <TYPE1> [<TYPE2> ...] [--min-fat N] [--dry-run]
+   autonovel mechanical apply-cuts books/{book}/chapters/ch_{chapter}.md books/{book}/edit_logs/ch{chapter:02d}_cuts.json --types <TYPE1> [<TYPE2> ...] [--min-fat N] [--dry-run]
    ```
 
    Substitute the user's types list; omit `--min-fat` and `--dry-run`
