@@ -11,6 +11,25 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Drafter must degrade gracefully when reading prior chapter
+  context fails.** Author hit this 2026-04-25: `/autonovel:draft 3`
+  on the laptop stalled on retry attempt 3 of `Read books/<book>/
+  chapters/ch_02.md` (lines 88-147), no useful diagnostic surfaced.
+  `commands/draft.md` step 7 reads the last ~1000 words of the prior
+  chapter for continuity but has no fallback when the read fails.
+  Two fixes:
+    1. The command should `task`-spawn the prior-chapter read with
+       a per-call timeout, and on failure log the missed context to
+       the eval log and proceed with whatever it has (the summary
+       file from step 8 is now usually enough).
+    2. Step 7 should be marked "best-effort, not load-bearing" in
+       the body so the LLM doesn't spin trying to satisfy it. The
+       summary file is the load-bearing continuity surface now;
+       the last-1000-words quote is a flavour assist.
+  Also: when this kind of failure happens, `_begin`'s timeout-based
+  watchdog should mark the lock abandoned even though the PID is
+  still live. ~1 hour of work.
+
 - **Cross-provider `/autonovel:compare-models`.** V1 (shipped
   2026-04-25) is single-provider — it compares two Claude models
   within the active runtime. The natural extension is Opus vs GPT
