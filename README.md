@@ -189,6 +189,16 @@ terminal is open with `git` and `pipx` available.
    drops the `/autonovel:*` command files into each one. You can pin
    a single runtime with `--only claude` (or `codex` / `gemini`).
 
+6. **(Claude Code only) Pick a standard-context model.** Launch
+   `claude` once and run `/model`. Pick a model **without** the
+   `[1m]` suffix — for example `claude-sonnet-4-6`, not
+   `claude-sonnet-4-6[1m]`. The 1M-context variants require a
+   separate paid usage tier; the autonovel commands all fit
+   comfortably inside the 200k standard context, and the runtime
+   will otherwise fail mid-pipeline with `API Error: Extra usage is
+   required for 1M context`. (This is a Claude Code default
+   choice, not an autonovel choice.)
+
 You're done with installation. The next section is for using it.
 
 ---
