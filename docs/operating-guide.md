@@ -55,24 +55,43 @@ the whole book drafted unattended.
 
 ```text
 /autonovel:next                        # confirms the next step
-/autonovel:draft-pass --chapters 1-19  # walk away — drafts ~19 chapters sequentially
-                                       #   each chapter: draft → evaluate → retry-once-if-low
+/autonovel:draft-pass --chapters 1-19  # walk away — does the full per-chapter loop
+                                       # plus the end-of-sweep canon promote
 ```
 
-When it finishes (~60–90 min for 19 chapters of ~3,500 words each),
-the postamble prints a summary table:
+For each chapter the sweep runs: **draft → anachronism check →
+evaluate → if score < threshold (default 7.0), brief + revise +
+re-eval (keeps best)**. After the last chapter completes, it runs
+`promote-canon` so `shared/canon.md` reflects everything the
+drafts discovered.
+
+Add `--deep` and the sweep also runs `reader-panel` and `review`
+on the whole book at the end — produces reports (does not
+auto-revise from them) and surfaces a flagged-chapters list:
+
+```text
+/autonovel:draft-pass --chapters 1-19 --deep   # adds ~10–25 min for the deep passes
+```
+
+Realistic time budget on a 19-chapter / 70k-word book:
+- Plain `draft-pass`: 2–3 hours unattended.
+- `draft-pass --deep`: 2.5–3.5 hours unattended.
+
+Postamble prints a summary table:
 
 ```
-chapter | words | score | status
---------|-------|-------|---------
-     1  | 3100  |  7.4  | ok
-     2  | 2950  |  6.1  | ok (retried once)
+chapter | draft (words) | anach | eval v1 | eval v2 | final | revised?
+--------|---------------|-------|---------|---------|-------|----------
+     1  | 3100          | 0     | 7.4     | —       | 7.4   | no
+     2  | 2950          | 2     | 6.8     | 7.3     | 7.3   | yes
    …
 ```
 
-Your move next: `/autonovel:reader-panel --book <name>` for the
-whole-book pass. **Time you spent watching this happen: zero.**
-Time skimming the summary: 5 min.
+With `--deep`: append a "panel + review flagged chapters X, Y, Z"
+block. Your move next is `/autonovel:revision-pass --chapters
+X,Y,Z` against the flagged list, or done if nothing was flagged.
+**Time you spent watching this happen: zero.** Time skimming the
+summary: 5 min.
 
 ### 2b. Minor revision (a single chapter feels off)
 
@@ -129,7 +148,61 @@ For a misspelled character name across the whole book:
 chapter, outline, and shared file. Refuses if the change would
 overlap a longer word (e.g. won't rename `Ana` if `Anatolia` exists).
 
-### 2d. Major change (cut a chapter, change the ending)
+### 2d. Adding pictorial plates (maps, paintings, photographs)
+
+Historical fiction (and some non-fiction) wants real images in the
+typeset PDF — a period map, a portrait, a trade-route diagram.
+`/autonovel:art-import` handles each:
+
+```text
+/autonovel:art-import --file ~/Downloads/de_barbari_venice_1500.png \
+  --chapter 1 --placement before-chapter \
+  --caption "Jacopo de' Barbari, View of Venice, 1500." \
+  --attribution "Public domain, via Wikimedia Commons."
+
+/autonovel:art-import --file ~/Downloads/durer_jakob_fugger.jpg \
+  --chapter 5 --placement before-chapter \
+  --caption "Albrecht Dürer, Portrait of Jakob Fugger the Rich, c. 1518." \
+  --attribution "Bayerische Staatsgemäldesammlungen."
+
+/autonovel:art-import --file ~/maps/hanseatic_routes.svg \
+  --chapter 9 --placement before-chapter \
+  --caption "Principal Venetian–Hanseatic trade routes, late 15th century."
+
+/autonovel:typeset                     # rebuild the PDF with the plates woven in
+```
+
+Each invocation copies your image into
+`books/<book>/typeset/plates/<slug>.<ext>` and registers it in
+`books/<book>/typeset/plates.yaml` with the chapter, placement,
+caption, and attribution. Three placements:
+
+- `--placement before-chapter` (default) — **dedicated full-page**
+  plate facing the chapter heading. Best for full maps, portraits,
+  full paintings.
+- `--placement chapter-start` — **inline centered** image just below
+  the chapter title. Smaller; no page break. Best for atmospheric
+  inserts (a sketch of bagged spices, a small woodcut).
+- `--placement after-chapter` — full-page plate after the chapter
+  body. Less common.
+
+For a small monochrome insert that should *replace* the AI-generated
+chapter ornament rather than add a new page:
+
+```text
+/autonovel:art-import --file ~/Downloads/austere_church_woodcut.png \
+  --chapter 7 --as ornament
+```
+
+`--as ornament` mode drops the file at `books/<book>/art/ornaments/
+ch_07.png` (overriding whatever ornament-pipeline produced).
+
+`books/<book>/typeset/plates.yaml` is human-readable; you can edit
+it directly to tweak captions, reorder, or remove plates. Re-running
+`art-import` with the same `--slug` overwrites the prior entry only
+if you pass `--force`.
+
+### 2e. Major change (cut a chapter, change the ending)
 
 Halfway through revision you decide chapter 12 should be cut — its
 beats are folded into chapters 11 and 13.
@@ -163,7 +236,7 @@ just a tweak — the cleanest path is:
 
 Time: 20–60 min of human thinking, 30–90 min of compute.
 
-### 2e. Adding a plot point retroactively
+### 2f. Adding a plot point retroactively
 
 You've drafted 10 chapters and realise you want to add a subplot —
 a minor character secretly poisoning the well — that needs setup
