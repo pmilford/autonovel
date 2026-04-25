@@ -11,6 +11,55 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Test-coverage gaps surfaced 2026-04-25.** The session's bug
+  pattern revealed three structural test gaps that let
+  late-stage / multi-stage / install-time bugs slip past Tier 1+2:
+
+  1. **Realistic late-stage fixtures.** The `late_stage_book`
+     conftest fixture (committed today) is one example — book with
+     5 chapters, paired summaries, eval logs, briefs, edit logs,
+     pending canon. Extend this pattern: every test of state-machine
+     or filesystem-counting code should have a matching test
+     against the realistic shape, not just the synthetic 0–2-chapter
+     case. Convert existing tests opportunistically.
+
+  2. **Multi-stage integration tests** (deterministic, no LLM).
+     Today each command has a unit test in isolation. Real bugs hit
+     the *seams between commands*: draft writes a summary file →
+     count rolls forward → next-step decides → evaluate runs →
+     score lands → next-step decides again. Add a Tier-1 integration
+     suite that stitches these by simulating the on-disk state each
+     command would have produced (no actual LLM call), and asserts
+     the next-step recommendation at each seam. Prevents the kind
+     of "evaluate kept recommending evaluate" bug we hit today.
+
+  3. **pipx-isolated install test (Tier-3).** Spin up a clean tmp
+     pipx home, `pipx install <repo>`, then verify
+     `autonovel mechanical slop <file>` and
+     `autonovel _tail-chapter --book ...` work from a shell whose
+     `python` is the system python (not the project venv). This
+     catches the `python -m autonovel.mechanical doesn't import`
+     class of bug we hit today. ~30 min of work; opt-in marker
+     so it doesn't run on every commit.
+
+- **Bells Tier-4 fixture populate.** Still parked since PR 4. The
+  harness is built; the chapters from `autonovel/bells` branch
+  need copying in. Once populated, this is the canonical
+  full-pipeline regression — gates LLM-prompt drift across an
+  entire 19-chapter manuscript. Today's work would have benefited:
+  a regression run on Bells chapters with summaries + evals + briefs
+  would have caught at least the chapter-count and next-step bugs
+  before they shipped.
+
+- **Property-based tests for invariants.** Use `hypothesis` to
+  generate random book layouts (varying chapter counts, presence/
+  absence of summaries / eval logs / briefs / etc.) and assert
+  invariants like "chapter count == count of `ch_NN.md` files only",
+  "next-step is one of {evaluate, revise, draft, promote-canon,
+  reader-panel} given drafting phase", "no chapter file is also a
+  summary file". Catches the long tail of glob/inference bugs
+  before they hit production.
+
 - **Read-only TUI / web dashboard for series state.** Author noted
   2026-04-25 that NousResearch's earlier autonovel had a richer
   read-only console showing file artifacts and live progress; the
