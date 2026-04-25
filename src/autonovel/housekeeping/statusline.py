@@ -140,10 +140,31 @@ def _enrich_from_claude_session(ctx: StatusContext, stdin_data: str | None,
         elif isinstance(model, str):
             ctx.model = model
 
+        # Claude Code's statusline JSON schema varies by version. Try a
+        # few likely paths for each field; the first non-None wins.
         usage = payload.get("usage") or payload.get("session") or {}
-        ctx.context_pct = _coerce_int(usage.get("context_pct"))
-        ctx.cost_usd = _coerce_float(usage.get("cost_usd") or usage.get("cost"))
-        ctx.thinking_effort = usage.get("thinking") or payload.get("thinking_effort")
+        cost = payload.get("cost") or {}
+
+        ctx.context_pct = (
+            _coerce_int(usage.get("context_pct"))
+            or _coerce_int(usage.get("context_percentage"))
+            or _coerce_int(payload.get("context_pct"))
+            or _coerce_int(payload.get("context_percentage"))
+            or _context_pct_from_token_counts(usage, payload)
+        )
+        ctx.cost_usd = (
+            _coerce_float(usage.get("cost_usd"))
+            or _coerce_float(usage.get("cost"))
+            or _coerce_float(cost.get("total_cost_usd"))
+            or _coerce_float(cost.get("total_cost"))
+            or _coerce_float(cost.get("usd"))
+            or _coerce_float(payload.get("total_cost_usd"))
+        )
+        ctx.thinking_effort = (
+            usage.get("thinking")
+            or payload.get("thinking_effort")
+            or payload.get("thinking")
+        )
 
     # Env-var fallbacks, only fill what stdin missed.
     if ctx.model is None:
@@ -176,6 +197,44 @@ def _coerce_float(v) -> float | None:
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+# Approximate context windows per model family. When stdin reports
+# token counts (input_tokens / output_tokens / total_tokens) but
+# not a direct percentage, we divide by the window to get one.
+_CONTEXT_WINDOWS = {
+    # Standard 200k variants
+    "claude-opus-4-7": 200_000,
+    "claude-sonnet-4-6": 200_000,
+    "claude-haiku-4-5": 200_000,
+    # 1M variants — match the [1m] suffix
+    "[1m]": 1_000_000,
+    "[1M]": 1_000_000,
+}
+
+
+def _context_pct_from_token_counts(usage: dict, payload: dict) -> int | None:
+    """Approximate context% from raw token counts when Claude Code's
+    schema doesn't carry a direct percentage. Falls back on the
+    standard 200k window if model-name lookup fails."""
+    tokens = (
+        _coerce_int(usage.get("total_tokens"))
+        or _coerce_int(usage.get("input_tokens"))
+        or _coerce_int(payload.get("total_tokens"))
+        or _coerce_int(payload.get("input_tokens"))
+    )
+    if tokens is None:
+        return None
+    window = 200_000  # default
+    model = payload.get("model")
+    model_name = (
+        model.get("id") if isinstance(model, dict) else
+        model if isinstance(model, str) else
+        ""
+    ) or ""
+    if "[1m]" in model_name.lower():
+        window = 1_000_000
+    return min(99, int(tokens * 100 / window))
 
 
 def render(ctx: StatusContext) -> str:

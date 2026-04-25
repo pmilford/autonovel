@@ -280,11 +280,51 @@ def test_evaluate_chapter_1_scores_first_page_hook():
 # loop so chapter N+1 sees N's discoveries.
 
 def test_draft_pass_promotes_canon_per_chapter():
+    """Per-chapter promote-canon must be part of the per-chapter
+    sequence so chapter N+1 sees N's discoveries before drafting.
+    The Task-subagent rewrite (2026-04-25 evening) moved the step
+    inside the subagent's prompt template — assertion is on the
+    presence of the step in the per-chapter sequence (under
+    PROMOTE CANON in the subagent prompt), not its absolute line."""
     from pathlib import Path
     body = (Path(__file__).resolve().parent.parent.parent
             / "commands" / "draft-pass.md").read_text(encoding="utf-8")
-    # The per-chapter promote-canon step must be present in the
-    # workflow (step e), not just in the end-of-sweep step (4).
-    assert "Promote pending canon for this chapter" in body
-    # Rationale must explain why per-chapter timing matters.
-    assert "BEFORE chapter N+1" in body or "before chapter N+1" in body.lower()
+    # Per-chapter promote step exists somewhere in the body — the
+    # subagent template names it as step 5 PROMOTE CANON.
+    assert ("PROMOTE CANON" in body
+            or "Promote pending canon" in body
+            or "promote-canon" in body.lower())
+    # Per-chapter rationale (the next chapter must see this chapter's
+    # discoveries) is stated explicitly. Allow several wordings.
+    assert ("chapter n+1" in body.lower()
+            or "next chapter" in body.lower()
+            or "n+1's draft" in body.lower())
+
+
+# ---------------------------------------------------------------------------
+# Long-sweep commands MUST run per-chapter work in Task subagents so the
+# parent conversation doesn't accumulate per-chapter prose + tool output.
+# Author hit context exhaustion mid-sweep on 2026-04-25; the sequential
+# in-line model fits ~6-10 chapters of a 19-chapter book before the parent
+# conversation fills up. Task subagents are the structural fix.
+
+def test_draft_pass_uses_task_subagents_per_chapter():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "draft-pass.md").read_text(encoding="utf-8")
+    # The body must instruct spawning a `task` subagent per chapter.
+    assert "spawn a `task` subagent" in body.lower() or \
+           "use the `task` tool to spawn a subagent" in body.lower()
+    # And state the rationale so a future refactor doesn't strip it.
+    # (Markdown bold/italic markers may sit inside the wording, so
+    # check for the load-bearing substrings independently.)
+    text = body.lower().replace("*", "")
+    assert "fresh subagent conversation" in text or "fresh subagent" in text
+
+
+def test_revision_pass_uses_task_subagents_per_chapter():
+    from pathlib import Path
+    body = (Path(__file__).resolve().parent.parent.parent
+            / "commands" / "revision-pass.md").read_text(encoding="utf-8")
+    assert "task" in body.lower() and "subagent" in body.lower()
+    assert "fresh subagent conversation" in body.lower()

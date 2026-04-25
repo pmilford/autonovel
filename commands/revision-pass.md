@@ -77,23 +77,27 @@ chapter the sweep touched in one shot.
    chapter numbers; resolve `all` to the full list and validate that
    every requested chapter exists.
 
-3. **Choose execution mode.**
+3. **Spawn one `task` subagent per chapter.** Per-chapter execution
+   runs in a fresh subagent conversation, not in this parent
+   conversation. Same context-saving discipline as draft-pass:
+   the parent only sees one short summary string per chapter, so
+   long sweeps don't exhaust the parent's context window.
 
-   - Default (no `--parallel`): iterate chapters in ascending
-     chapter-number order. Each chapter's full sequence completes
-     before the next chapter starts. Maximum continuity fidelity.
-   - `--parallel [N]`: spawn up to N chapters' sequences across
-     `Task` subagents simultaneously (default N=3). Each Task
-     receives the same context bundle the sequential path would
-     have built and runs the four-step sequence (a)→(d) for one
-     chapter. Results return when all complete; merge the
-     per-chapter progress lines and the summary table afterwards.
-     Continuity-cost note: each Task reads the *pre-sweep*
-     versions of every other chapter's summary, so the rolling
-     summary context is one revision-pass stale within the run.
-     Re-run `/autonovel:revision-pass` once more to propagate.
+   Two execution modes:
 
-   For each chapter N (sequential or as a parallel Task body):
+   - **Default (no `--parallel`):** spawn one Task at a time, in
+     ascending chapter-number order. Each chapter's full sequence
+     completes before the next is spawned. Maximum continuity
+     fidelity (each chapter's revise reads its predecessors'
+     refreshed summaries).
+   - **`--parallel [N]`:** spawn up to N Task subagents
+     simultaneously (default N=3). Faster but each parallel Task
+     reads the *pre-sweep* version of its neighbours' summaries,
+     so the rolling-summary context is one revision-pass stale
+     within the run. Re-run revision-pass once more to propagate.
+
+   For each chapter N, the subagent's prompt template (substitute
+   {book}, N, and the active flags):
 
    a. **check-anachronism** *(skippable via --skip-anachronism)*:
       Use `Bash` to run

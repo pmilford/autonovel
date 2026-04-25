@@ -131,78 +131,121 @@ When TO use this:
    defined; resolve `all` to outlined chapters that lack a chapter
    file.
 
-3. **For each chapter N in the resolved range, in ascending order**
-   (drafts MUST be sequential — N+1 reads N's prose and summary):
+3. **For each chapter N in the resolved range, in ascending order,
+   spawn a `task` subagent.**
 
-   a. **Draft N**: reproduce the workflow of `/autonovel:draft N`
-      inline — same context bundle (project.yaml, world,
-      characters, canon, events, research notes the outline names,
-      voice, prior summaries, prior chapter tail via
-      `autonovel _tail-chapter --book {book} --chapter {N-1}
-      --words 1000`). Write `books/{book}/chapters/ch_{N:02d}.md`
-      with frontmatter + the 150-250 word
-      `books/{book}/chapters/ch_{N:02d}.summary.md`. Append
-      candidate canon facts to `books/{book}/pending_canon.md`.
+   Per-chapter execution runs in a *fresh* subagent conversation,
+   not in this parent conversation. The parent only sees the
+   subagent's one-line return value. This is what makes long
+   sweeps feasible: in the old in-line model, each chapter inflated
+   the parent conversation with chapter-of-prose-plus-tool-output
+   and a 19-chapter sweep would exhaust context around chapter
+   8-10. With Task subagents, parent context grows by ~16 short
+   strings across the run.
 
-   b. **Anachronism check** (skip if `--no-anachronism`):
-      reproduce the workflow of `/autonovel:check-anachronism N`
-      inline. Run `autonovel mechanical period-bans
-      books/{book}/chapters/ch_{N:02d}.md
-      shared/period_bans.txt` for the deterministic half. Then
-      LLM semantic pass for concept/metaphor anachronism. Combined
-      report at `books/{book}/edit_logs/ch{N:02d}_anachronism.md`.
-      Anachronism findings inform the brief in step (d) if the
-      revise loop fires.
+   Drafts MUST be sequential (N+1 reads N's prose and summary), so
+   spawn one Task at a time and wait for the result before the next.
 
-   c. **Evaluate** (skip if `--skip-eval`): reproduce the workflow
-      of `/autonovel:evaluate --chapter N` inline. Write
-      `books/{book}/eval_logs/ch{N:02d}_eval.json`. Read
-      `overall_score`. Call this `score_v1`.
+   For each chapter N:
 
-   d. **Revise loop** (skip if `--skip-eval` or `--no-revise-low`,
-      or if `score_v1 >= threshold`):
-      i.   Reproduce `/autonovel:brief N --from auto`'s workflow
-           inline — read the eval log from (c), the anachronism
-           report from (b), any cuts file. Synthesize
-           `books/{book}/briefs/ch{N:02d}.md` with named-passage
-           prescriptions.
-      ii.  Reproduce `/autonovel:revise N`'s workflow inline —
-           read the brief, the chapter, the prior chapter's tail
-           (via `autonovel _tail-chapter`, best-effort, no retry).
-           Rewrite `books/{book}/chapters/ch_{N:02d}.md`.
-           Regenerate `books/{book}/chapters/ch_{N:02d}.summary.md`
-           so chapter N+1's draft reads the revised version.
-      iii. Re-evaluate. Call this `score_v2`.
-      iv.  Keep whichever version scored higher. The other version
-           is recoverable via the preamble's checkpoint
-           (`autonovel rollback`).
+   a. Use the `task` tool to spawn a subagent. Description:
+      `Draft chapter N of book {book} (autonovel pipeline)`. Allowed
+      tools: Read, Write, Bash, WebSearch (for research-note
+      fallbacks). Model: standard tier (sonnet 4.6 for draft;
+      heavier sub-steps run their own).
 
-   e. **Promote pending canon for this chapter** (skip if
-      `--no-promote`). Reproduce `/autonovel:promote-canon`'s
-      workflow inline against
-      `books/{book}/pending_canon.md`. The new entries chapter N's
-      draft (and revise, if it ran) appended must be merged into
-      `shared/canon.md` BEFORE chapter N+1 starts drafting —
-      otherwise N+1 invents alternative versions of the facts N
-      just established. Conflicts (rare per chapter) get parked
-      under `# Conflicts` and do NOT abort the sweep; the summary
-      in step (6) flags them.
-
-   f. **Critical: do NOT call `autonovel _begin` or `autonovel
-      _end` for any sub-step.** This command holds the series lock
-      for the entire sweep; sub-steps that tried to acquire the
-      lock would deadlock.
-
-   g. After each chapter finishes, print one progress line:
+      Prompt for the subagent (substitute {book}, N, threshold,
+      and the active flags into this template; keep structure
+      verbatim so subagents behave consistently):
 
       ```
-      [ch N] draft <words>w · anachronism <hits> · eval <s1>
-                 [→ revise → eval <s2>] · final <best> · canon +<P>
+      You are running ONE chapter (chapter N) of an autonovel
+      draft-pass for book {book}. The PARENT command holds
+      .autonovel/in-progress.lock — do NOT call `autonovel _begin`
+      or `autonovel _end` inside this task.
+
+      Threshold for the revise loop: {threshold}.
+      Skip flags in effect: {flags}.
+
+      Run these steps in order, each one inline (do not invoke
+      slash-commands):
+
+      1. DRAFT (full /autonovel:draft body — see the canonical
+         workflow at ~/.claude/commands/autonovel/draft.md if you
+         need to refer back). Read project.yaml, shared/world.md,
+         shared/characters.md, shared/canon.md, shared/events.md,
+         books/{book}/voice.md, books/{book}/outline.md (locate
+         chapter N's beats), books/{book}/chapters/ch_*.summary.md
+         (rolling continuity), and run
+         `autonovel _tail-chapter --book {book} --chapter {N-1}
+         --words 1000` for prior tail (best-effort, no retry).
+         Write books/{book}/chapters/ch_{N:02d}.md with YAML
+         frontmatter + the 150-250 word
+         books/{book}/chapters/ch_{N:02d}.summary.md. Append
+         candidate canon facts to
+         books/{book}/pending_canon.md.
+
+      2. ANACHRONISM (skip if --no-anachronism is in flags):
+         run `autonovel mechanical period-bans
+         books/{book}/chapters/ch_{N:02d}.md
+         shared/period_bans.txt` plus a brief LLM semantic
+         pass. Combined report at
+         books/{book}/edit_logs/ch{N:02d}_anachronism.md. Capture
+         the total hit count.
+
+      3. EVALUATE (skip if --skip-eval):
+         reproduce the /autonovel:evaluate --chapter N body —
+         judge the chapter on the standard chapter dimensions,
+         run `autonovel mechanical slop`,
+         `autonovel mechanical cliches`,
+         `autonovel mechanical sensory` for mechanical penalties.
+         Write books/{book}/eval_logs/ch{N:02d}_eval.json.
+         Capture overall_score as score_v1.
+
+      4. REVISE LOOP (skip if --skip-eval or --no-revise-low or
+         score_v1 ≥ threshold):
+         a. Brief from eval+anachronism: write
+            books/{book}/briefs/ch{N:02d}.md with named-passage
+            prescriptions.
+         b. Revise: rewrite books/{book}/chapters/ch_{N:02d}.md
+            per the brief. Regenerate
+            books/{book}/chapters/ch_{N:02d}.summary.md.
+         c. Re-evaluate. score_v2.
+         d. Keep whichever version scored higher; the other
+            version is in the preamble checkpoint and recoverable
+            via autonovel rollback.
+
+      5. PROMOTE CANON (skip if --no-promote):
+         reproduce /autonovel:promote-canon's body against
+         books/{book}/pending_canon.md only (the per-chapter
+         scope — the parent will run a final sweep over all
+         books at end). Merge into shared/canon.md;
+         research-tagged entries win contradictions. Capture the
+         count of entries promoted.
+
+      Return EXACTLY this single line as your final message
+      (nothing else):
+
+      [ch N] draft Xw · anach Y · eval s1 [→ revise → eval s2] · final s · canon +P
+
+      Where: X = final word count, Y = anachronism hit count or
+      "—" if skipped, s1 = score_v1, s2 = score_v2 (only if
+      revise ran; otherwise "—"), s = the kept score, P = count
+      of canon entries promoted (or "—" if --no-promote).
       ```
 
-      where `+P` is the count of pending entries promoted in step
-      (e). The user has live progress, and per-chapter canon
-      promotion is visible.
+   b. Capture the subagent's return string. Append to the running
+      progress list (you will print these in the summary at step
+      6). Print the line immediately so the user has live progress.
+
+   c. Move to chapter N+1. The subagent terminates; its working
+      memory (the chapter prose, the eval JSON, the brief, etc.)
+      is discarded — only the one-line summary persists in your
+      parent context.
+
+   **Critical: do NOT call `autonovel _begin` or `autonovel _end`
+   yourself, and do not let the subagent call them either. The
+   parent command holds the series lock for the entire sweep.**
 
 4. **Final promote-canon sweep** (skip if `--no-promote`). After
    the loop completes, run promote-canon one last time to catch

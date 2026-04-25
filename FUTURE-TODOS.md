@@ -11,25 +11,19 @@ to start.
 
 ## Near-term — pull into the next PR
 
-- **Long-sweep context exhaustion in draft-pass / revision-pass.**
-  Author hit this 2026-04-25 around chapter 10 of a 4-19 sweep —
-  each chapter's inline workflow accumulates prose + tool output in
-  the Claude Code session, and a 200k-context session fills somewhere
-  between chapter 8 and 12 depending on chapter length and how often
-  the revise loop fires. Two complementary fixes worth shipping:
-    1. **`--clear-between` flag.** Between chapters, the parent
-       agent compacts the conversation (Claude Code supports this
-       via the harness; the sweep would invoke it programmatically).
-       Loses some narrative continuity in the parent's working
-       memory but all the load-bearing continuity is in
-       chapters/ch_*.summary.md anyway.
-    2. **Sweep checkpoint file** — `.autonovel/sweep-progress.json`
-       written after each chapter completes, listing which chapters
-       are done and which are pending. `/autonovel:resume` reads it
-       and offers to continue the sweep from the next pending
-       chapter. Today the user has to re-run with `--chapters
-       <remaining>` manually.
-  ~2 hours of work for both.
+- ~~**Long-sweep context exhaustion in draft-pass / revision-pass.**~~
+  **Partly fixed 2026-04-25 evening.** draft-pass and revision-pass
+  per-chapter sequences now run inside `task` subagents — each
+  chapter's full workflow lives in a fresh subagent conversation
+  and only a one-line summary returns to the parent. The parent's
+  context grows by one short string per chapter instead of one
+  full chapter's prose + tool output. Sweeps that previously
+  stalled around chapter 8-10 should now run end-to-end.
+  Still open: a sweep checkpoint file
+  (`.autonovel/sweep-progress.json`) that `/autonovel:resume`
+  reads to offer "continue from chapter N" recovery, so the user
+  doesn't have to figure out `--chapters <remaining>` after an
+  interruption.
 
 
 - **Test-coverage gaps surfaced 2026-04-25.** The session's bug
