@@ -56,21 +56,28 @@ off-limits.
 6. Use `file_read` on `books/{book}/voice.md`. Both Part 1 (series voice) and
    Part 2 (book fingerprint) are in scope.
 
-7. **Best-effort prior-chapter quote (do not retry on failure).** If
-   `books/{book}/chapters/ch_{prev}.md` exists (where `{prev}` =
-   chapter - 1, zero-padded to two digits), attempt one
-   `file_read`. Use the last ~1000 words as immediate continuity
-   flavour. If the read fails for any reason (file missing, file
-   empty, file unreadable, tool error, the read returning fewer
-   bytes than expected): **do not retry**. Note the gap as a
+7. **Best-effort prior-chapter quote (do not retry on failure).** Use
+   the `Bash` tool to run, exactly once:
+
+   ```
+   autonovel _tail-chapter --book {book} --chapter {prev} --words 1000
+   ```
+
+   The helper reads `books/{book}/chapters/ch_{prev}.md`, strips any
+   YAML frontmatter, and prints the last 1000 words to stdout — no
+   `file_read` line-range gymnastics. If the prior chapter doesn't
+   exist, the helper exits zero with no output; that's normal for
+   chapter 1. Capture the
+   stdout as your continuity flavour. **Do not retry** on any failure
+   (non-zero exit, empty output, error message): note the gap as a
    one-line observation you'll repeat in the postamble's eval-log
    write, and proceed to step 8. Step 8 (per-chapter summaries) is
    the *load-bearing* continuity surface; this last-1000-words
-   quote is a flavour assist that the chapter can be drafted
-   without. Do not loop on Read retries — autonovel author testing
-   2026-04-25 hit a stall here on a prior chapter that was readable
-   for `summarize-chapter` but tripped Claude Code's `Read` tool's
-   retry logic on the targeted line range.
+   quote is a flavour assist the chapter can be drafted without.
+   We use the helper specifically to prevent the loop autonovel
+   hit on author testing 2026-04-25, where `Read` with an off-by-one
+   `offset/limit` triggered retry attempts on a prior chapter
+   shorter than the requested line range.
 
 8. **Read every prior summary** for narrative continuity. Use `file_read`
    on `books/{book}/chapters/ch_*.summary.md` for chapters 1 through

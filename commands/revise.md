@@ -55,14 +55,20 @@ target, not a mental "safe" overshoot.
    read IS load-bearing; if it fails, stop with a one-line message
    ("cannot read current chapter; check books/{book}/chapters/").
 
-   Then, **best-effort (do not retry on failure)**, attempt one
-   `file_read` of `books/{book}/chapters/ch_{prev}.md` and keep
-   only the last ~2000 words of the previous chapter for continuity.
-   If the prior-chapter read fails for any reason (missing, empty,
-   tool error), do NOT retry — note the gap as a one-line
-   observation in the eval log and proceed without it. The brief is
-   the load-bearing input here; the prior-chapter quote is a
-   flavour assist.
+   Then, **best-effort (do not retry on failure)**, use the `Bash`
+   tool to run exactly once:
+
+   ```
+   autonovel _tail-chapter --book {book} --chapter {prev} --words 2000
+   ```
+
+   The helper reads `books/{book}/chapters/ch_{prev}.md`, strips
+   YAML frontmatter, and prints the last 2000 words of the previous
+   chapter as continuity flavour, in one deterministic shot (no
+   `file_read` line-range gymnastics). If the helper exits non-zero
+   or returns no output: **do not retry** — note the gap in the
+   eval log and proceed without the prior-chapter quote. The brief
+   is the load-bearing input here; the quote is a flavour assist.
 
 7. Draft the rewrite. Follow the brief exactly. Honor the anti-pattern
    rules:

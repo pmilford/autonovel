@@ -112,6 +112,13 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Extra args passed verbatim to pytest after `--`.")
     tf_run.set_defaults(func=_cmd_fixture_run)
 
+    _tc = sub.add_parser("_tail-chapter", help=argparse.SUPPRESS)
+    _tc.add_argument("--book", required=True)
+    _tc.add_argument("--chapter", type=int, required=True)
+    _tc.add_argument("--words", type=int, default=1000,
+                     help="Number of trailing words to print (default 1000).")
+    _tc.set_defaults(func=_cmd_tail_chapter)
+
     _begin = sub.add_parser("_begin", help=argparse.SUPPRESS)
     _begin.add_argument("--command", required=True)
     _begin.add_argument("--args", default="")
@@ -354,6 +361,45 @@ def _cmd_fixture_run(args: argparse.Namespace) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     return rc
+
+
+def _cmd_tail_chapter(args: argparse.Namespace) -> int:
+    """Print the last N words of a chapter file. Replaces an LLM-side
+    `Read offset/limit` hack that stalled on author-testing 2026-04-25
+    when the LLM's chosen line range overran EOF (e.g. asking for lines
+    88-147 of a 146-line chapter, then retrying when fewer lines came
+    back than expected). Deterministic, single-shot, no retries."""
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    book_root = series.books / args.book
+    chapter_file = book_root / "chapters" / f"ch_{args.chapter:02d}.md"
+    if not chapter_file.is_file():
+        # Soft failure: prior chapter not drafted is a normal state for
+        # chapter 1. Exit zero with no output so the caller falls back
+        # to "no prior chapter context".
+        return 0
+    try:
+        text = chapter_file.read_text(encoding="utf-8")
+    except OSError as e:
+        print(f"error: read failed: {e}", file=sys.stderr)
+        return 1
+    if not text.strip():
+        return 0
+    # Strip a leading YAML frontmatter block so we don't bleed
+    # `book: foo\nchapter: 2\n...` into the continuity quote.
+    if text.startswith("---\n"):
+        end = text.find("\n---\n", 4)
+        if end != -1:
+            text = text[end + 5:]
+    words = text.split()
+    n = max(1, args.words)
+    tail = words[-n:] if len(words) > n else words
+    sys.stdout.write(" ".join(tail))
+    sys.stdout.write("\n")
+    return 0
 
 
 def _cmd_begin(args: argparse.Namespace) -> int:
