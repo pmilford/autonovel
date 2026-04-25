@@ -368,8 +368,8 @@ same command N times:
 
 | Command | What it batches |
 |---|---|
-| `/autonovel:draft-pass --chapters 1-10` | Draft chapters 1–10 in one go (sequential — chapter N+1 reads N's prose). Same prose quality as `/autonovel:draft` repeated. |
-| `/autonovel:revision-pass --chapters 1-10` | Sweep `check-anachronism → brief → revise → evaluate` across chapters 1–10. Add `--parallel [N]` (default 3) to fan out via subagents. |
+| `/autonovel:draft-pass --chapters 1-10` | "Write the rest of the book." Per chapter: draft → anachronism check → evaluate → if score < threshold, brief + revise + re-eval (keep best). At sweep end: promote pending canon into `shared/canon.md`. Sequential. The single command for letting the pipeline run unattended and getting back a coherent first-pass-plus-immediate-fix book. |
+| `/autonovel:revision-pass --chapters 1-10` | The deeper revision pass. Sweeps `check-anachronism → brief → revise → evaluate` across the range; add `--parallel [N]` (default 3) for speed. Use after `draft-pass` (or after any change that needs deepening). |
 | `/autonovel:compare-models --chapter 5 --models claude-opus-4-7,claude-sonnet-4-6` | A/B-draft the same chapter with two models in parallel, judge head-to-head, write verdict to `eval_logs/`. |
 
 When to use the sweeps vs per-chapter typing:

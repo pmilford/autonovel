@@ -37,7 +37,7 @@ argument is required when more than one book exists in the series.
 | `/autonovel:gen-outline --book <short-name>` | standard | Generate the outline from seed, world, and characters. |
 | `/autonovel:voice-discovery --book <short-name>` | heavy | Fill the book-specific fingerprint in Part 2 of `voice.md`. |
 | `/autonovel:draft <chapter-number> --book <short-name>` | standard | Draft one chapter as full prose. |
-| `/autonovel:draft-pass --chapters <range> [--book <name>] [--skip-eval] [--retry-below <score>]` | standard | Draft a range of chapters end-to-end (sequential, must be — chapter N+1 reads N's prose and summary). Same prose quality as repeated `/autonovel:draft`; one rollback covers the sweep. |
+| `/autonovel:draft-pass --chapters <range> [--book <name>] [--retry-below <score>] [--no-revise-low] [--no-anachronism] [--no-promote] [--skip-eval]` | heavy | "Write the rest of the book." Per chapter: draft → anachronism check → evaluate → if score < threshold, brief + revise + re-eval (keep best). At sweep end: promote-canon. Sequential only. Same per-chapter quality as `/autonovel:draft` plus immediate-fix-on-low-score and end-of-sweep canon coherence. |
 | `/autonovel:summarize-chapter <chapter> [--book <short-name>] [--force]` | standard | Backfill the 150–250-word continuity summary for a chapter drafted before summaries shipped. |
 
 ### Evaluation and revision
