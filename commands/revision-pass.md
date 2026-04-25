@@ -99,6 +99,17 @@ chapter the sweep touched in one shot.
    For each chapter N, the subagent's prompt template (substitute
    {book}, N, and the active flags):
 
+   **0. Capture the pre-revision score** (always; cheap):
+      Use `file_read` on `books/{book}/eval_logs/ch{N:02d}_eval.json`
+      and remember its top-level `overall_score` field as
+      `prev_score`. If the file is missing or unparseable, set
+      `prev_score = None` (this happens when the chapter was just
+      drafted in the same session and never evaluated, or on the
+      very first revision pass before any eval ran). The score
+      delta we report at step (e) is computed against this value
+      so the user sees how the revise actually moved the chapter,
+      not just where it landed.
+
    a. **check-anachronism** *(skippable via --skip-anachronism)*:
       Use `Bash` to run
       `autonovel mechanical period-bans
@@ -132,8 +143,14 @@ chapter the sweep touched in one shot.
    d. **evaluate** *(skippable via --skip-eval)*: Reproduce the
       body of `/autonovel:evaluate --chapter N` — score the revised
       chapter against the standard chapter dimensions, write
-      `books/{book}/eval_logs/ch{N:02d}_eval.json`. The eval is
-      what the next sweep iteration's brief will pull from.
+      `books/{book}/eval_logs/ch{N:02d}_eval.json`. Read the new
+      `overall_score` from the file you just wrote and remember it
+      as `new_score`. The eval file is what the next sweep
+      iteration's brief will pull from.
+
+   e. **Compute the delta**: `delta = new_score - prev_score`
+      (only if both are non-None; otherwise leave as "—"). This
+      is display-only — no file written.
 
    **Critical: do NOT call `autonovel _begin` or `autonovel _end`
    for any sub-step.** This command holds the series lock for the
@@ -143,26 +160,43 @@ chapter the sweep touched in one shot.
    After each chapter finishes, print one line:
 
    ```
-   [ch N] anachronism: <count> hits | brief: <words>w | revise: <words>w (delta <±N>w) | eval: <score>
+   [ch N] anachronism: <count> hits | brief: <words>w | revise: <words>w (delta <±N>w) | eval: <prev_score> → <new_score> (Δ <±X.X>)
    ```
 
-   so the user has live progress. If a sub-step errors, log the
-   failure and continue to the next chapter — do not abort the
-   whole sweep on one chapter's hiccup.
+   When `prev_score` is None (no prior eval on disk), render the
+   eval segment as `eval: — → <new_score>` and omit the Δ. When
+   `--skip-eval` was passed, omit the eval segment entirely.
 
-4. After the loop completes, print a summary table:
+   so the user has live progress and can see whether the revise
+   actually improved the chapter or made it worse — a negative Δ
+   is a real signal worth surfacing immediately, not buried in the
+   end-of-sweep table. If a sub-step errors, log the failure and
+   continue to the next chapter — do not abort the whole sweep on
+   one chapter's hiccup.
+
+4. After the loop completes, print a summary table that includes
+   the score movement so the user sees at a glance which chapters
+   the revise lifted, which it left flat, and which it regressed:
 
    ```
-   chapter | anachronism | revise (words) | eval (score)
-   --------|-------------|----------------|-------------
-        1  | 2 hits      | 2900 (-150)    | 7.4
-        2  | 0 hits      | 3200 (+50)     | 6.8
-        3  | 1 hit       | 2750 (-300)    | 7.1
+   chapter | anachronism | revise (words) | prev → new (Δ)
+   --------|-------------|----------------|----------------
+        1  | 2 hits      | 2900 (-150)    | 7.5 → 7.9 (+0.4)
+        2  | 0 hits      | 3200 (+50)     | 6.5 → 6.8 (+0.3)
+        3  | 1 hit       | 2750 (-300)    | 7.4 → 7.1 (-0.3)
    ```
 
-   Append a one-paragraph headline assessment ("3/3 chapters
-   above threshold; chapter 2 closest to the floor; recommend
-   `/autonovel:reader-panel` next").
+   Render `—` in the prev cell when no prior eval existed
+   (typically chapter just drafted and never evaluated, or the
+   very first revision pass). Render `—` in the Δ cell whenever
+   either side is `—`.
+
+   Append a one-paragraph headline assessment that calls out any
+   *regressions* explicitly ("3/3 chapters above threshold;
+   chapter 3 regressed -0.3 — review before next pass; recommend
+   `/autonovel:reader-panel` next"). A negative delta on any
+   chapter is a real concern and should not be buried in the
+   table.
 
 5. The postamble's standard footer recommends the next step. With
    the sweep complete and chapters all above the threshold, that
