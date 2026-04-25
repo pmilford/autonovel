@@ -144,13 +144,24 @@ def _enrich_from_claude_session(ctx: StatusContext, stdin_data: str | None,
         # few likely paths for each field; the first non-None wins.
         usage = payload.get("usage") or payload.get("session") or {}
         cost = payload.get("cost") or {}
+        # Newer Claude Code releases nest the context info under
+        # `context_window` and report it as REMAINING percentage.
+        # Convert remaining→used at the read site so the rest of the
+        # codebase keeps treating ctx.context_pct as "used %".
+        cw = payload.get("context_window") or {}
 
         ctx.context_pct = (
-            _coerce_int(usage.get("context_pct"))
+            _used_from_remaining(_first_present(cw,
+                "remaining_pct", "remaining_percentage",
+                "percent_remaining", "percentage_remaining"))
+            or _coerce_int(_first_present(cw,
+                "used_pct", "used_percentage",
+                "percent_used", "percentage_used"))
+            or _coerce_int(usage.get("context_pct"))
             or _coerce_int(usage.get("context_percentage"))
             or _coerce_int(payload.get("context_pct"))
             or _coerce_int(payload.get("context_percentage"))
-            or _context_pct_from_token_counts(usage, payload)
+            or _context_pct_from_token_counts(usage, payload, cw)
         )
         ctx.cost_usd = (
             _coerce_float(usage.get("cost_usd"))
@@ -199,6 +210,34 @@ def _coerce_float(v) -> float | None:
         return None
 
 
+def _first_present(d: dict, *keys: str):
+    """Return the first value for any of *keys* that's actually in *d*
+    (treating `None` as absent so a key with a null value falls
+    through to the next candidate)."""
+    if not isinstance(d, dict):
+        return None
+    for k in keys:
+        if k in d and d[k] is not None:
+            return d[k]
+    return None
+
+
+def _used_from_remaining(v) -> int | None:
+    """Convert a remaining-% value to a used-% int. Claude Code reports
+    `context_window.remaining_pct` (and aliases) as "% of the window
+    still free"; the rest of this module renders "% used", so flip at
+    the boundary. None → None so callers can fall through."""
+    n = _coerce_float(v)
+    if n is None:
+        return None
+    used = 100.0 - n
+    if used < 0:
+        used = 0.0
+    if used > 100:
+        used = 100.0
+    return int(round(used))
+
+
 # Approximate context windows per model family. When stdin reports
 # token counts (input_tokens / output_tokens / total_tokens) but
 # not a direct percentage, we divide by the window to get one.
@@ -213,26 +252,32 @@ _CONTEXT_WINDOWS = {
 }
 
 
-def _context_pct_from_token_counts(usage: dict, payload: dict) -> int | None:
+def _context_pct_from_token_counts(usage: dict, payload: dict,
+                                    context_window: dict | None = None) -> int | None:
     """Approximate context% from raw token counts when Claude Code's
     schema doesn't carry a direct percentage. Falls back on the
     standard 200k window if model-name lookup fails."""
+    cw = context_window or {}
     tokens = (
-        _coerce_int(usage.get("total_tokens"))
+        _coerce_int(_first_present(cw, "tokens_used", "used_tokens", "input_tokens"))
+        or _coerce_int(usage.get("total_tokens"))
         or _coerce_int(usage.get("input_tokens"))
         or _coerce_int(payload.get("total_tokens"))
         or _coerce_int(payload.get("input_tokens"))
     )
     if tokens is None:
         return None
-    window = 200_000  # default
+    window = (
+        _coerce_int(_first_present(cw, "total_tokens", "window_size", "limit"))
+        or 200_000
+    )
     model = payload.get("model")
     model_name = (
         model.get("id") if isinstance(model, dict) else
         model if isinstance(model, str) else
         ""
     ) or ""
-    if "[1m]" in model_name.lower():
+    if window == 200_000 and "[1m]" in model_name.lower():
         window = 1_000_000
     return min(99, int(tokens * 100 / window))
 

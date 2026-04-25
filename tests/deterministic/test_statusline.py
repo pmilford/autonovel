@@ -341,6 +341,64 @@ def test_debug_dump_writes_payload(tmp_path: Path, monkeypatch) -> None:
     assert dump["env_relevant"]["AUTONOVEL_STATUSLINE_DEBUG"] == "1"
 
 
+def test_context_pct_from_remaining_pct() -> None:
+    """Newer Claude Code releases nest context info under
+    `context_window` and report `remaining_pct`. Convert remaining→used
+    at the read site so the statusline keeps showing 'used %'."""
+    payload = json.dumps({
+        "model": {"display_name": "Sonnet 4.6", "id": "claude-sonnet-4-6"},
+        "context_window": {"remaining_pct": 73},
+    })
+    ctx = statusline.gather(stdin_data=payload, env={})
+    assert ctx.context_pct == 27, "100 - 73 = 27% used"
+
+
+def test_context_pct_from_used_pct() -> None:
+    """Some Claude Code releases use `used_pct` directly under
+    `context_window`. Read it as-is."""
+    payload = json.dumps({
+        "model": "claude-opus-4-7",
+        "context_window": {"used_pct": 41},
+    })
+    ctx = statusline.gather(stdin_data=payload, env={})
+    assert ctx.context_pct == 41
+
+
+def test_context_pct_from_token_counts_inside_context_window() -> None:
+    """Fallback path: payload carries raw token counts under
+    `context_window` (tokens_used + total_tokens) instead of a direct
+    percentage. Compute used % against the window declared in the same
+    block, not the per-model default — this is what GPD relies on."""
+    payload = json.dumps({
+        "model": {"id": "claude-sonnet-4-6"},
+        "context_window": {"tokens_used": 50_000, "total_tokens": 200_000},
+    })
+    ctx = statusline.gather(stdin_data=payload, env={})
+    assert ctx.context_pct == 25
+
+
+def test_context_pct_remaining_zero_means_full() -> None:
+    """remaining=0 should render as 100% used (not None), so the bar
+    stays informative when the model is at the wall."""
+    payload = json.dumps({
+        "model": "claude-opus-4-7",
+        "context_window": {"remaining_pct": 0},
+    })
+    ctx = statusline.gather(stdin_data=payload, env={})
+    assert ctx.context_pct == 100
+
+
+def test_context_pct_legacy_path_still_works() -> None:
+    """Old `usage.context_pct` path still resolves. Regression guard for
+    older Claude Code versions or alternative runtimes."""
+    payload = json.dumps({
+        "model": "claude-sonnet-4-6",
+        "usage": {"context_pct": 12},
+    })
+    ctx = statusline.gather(stdin_data=payload, env={})
+    assert ctx.context_pct == 12
+
+
 def test_debug_dump_skipped_when_flag_unset(tmp_path: Path, monkeypatch) -> None:
     """No env var → no dump file. The diagnostic is opt-in; we don't
     want every prompt-render writing a file under the user's home."""
