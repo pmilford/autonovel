@@ -14,8 +14,14 @@
 - [x] PR 9: docs + full genre fixtures + publish prep
 
 ## In progress
-- none — PR 9 landed. Tier 1+2 451/451 green. `npm publish` itself
-  is parked behind a human gate (see FUTURE-TODOS.md).
+- none — PR 9 landed. Tier 1+2 456/456 green. `npm publish` itself
+  is parked behind a human gate. Post-PR-9 author testing on
+  Chromebook + WSL on Claude Max $200 surfaced 12 onboarding /
+  reliability issues; 11 are fixed (commits 9207a55, 405930b,
+  d5ceebb, 56d7734, 3851ac0, 79ebb99, 34098d0, plus this entry's
+  lesson-recording commit), 1 is open. Full narrative in
+  `docs/lessons-from-author-testing.md`; remaining open items in
+  `FUTURE-TODOS.md`.
 
 ## Blockers
 - none
@@ -360,6 +366,22 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-25 (PR 9 author-testing follow-ups): twelve onboarding /
+  reliability issues surfaced during a real first-run on Chromebook
+  + WSL on Claude Max $200/month. Eleven fixed across commits
+  `9207a55` (README rewrite), `405930b` (seed.txt template +
+  time/effort guidance), `d5ceebb` (series-root callout),
+  `56d7734` (series CLAUDE.md + AGENTS/GEMINI symlinks),
+  `3851ac0` and `79ebb99` (1M-context docs and reframed to
+  recommend `/extra-usage`), `79ebb99` again (next-step phase
+  inferred from filesystem; postamble strengthened to **Mandatory**),
+  `34098d0` (foundation chained in canonical order via
+  `_foundation_gap`; populated-marker list extended to cover
+  Seeded by / Filled by / Leave empty until then), and the present
+  commit (lessons doc + cross-links). Open: per-command `model:`
+  override on `[1m]` session models — see FUTURE-TODOS.md and the
+  open question in `docs/lessons-from-author-testing.md` §8.
+  Tier 1+2: 451 → 456.
 - 2026-04-24 (PR 9 fixup): `audiobook_voices.json` had a second job
   beyond being a deletion target — it was the **shape reference** a
   user comparing against `voices.yaml` would consult. Restored as

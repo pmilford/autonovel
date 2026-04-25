@@ -1,12 +1,42 @@
 # Future todos
 
 Items that are out of PR-9 scope but worth recording so a future
-session can pick them up. Companion to `ROADMAP.md` (PR sequence) and
-`STATE.md` (decisions log).
+session can pick them up. Companion to `ROADMAP.md` (PR sequence),
+`STATE.md` (decisions log), and `docs/lessons-from-author-testing.md`
+(narrative explanation of *why* certain defensive shapes exist).
 
 The list is rough on purpose — each entry is a one-line reminder, not
 a spec. Promote to `ROADMAP.md` (or a fresh PR plan) when one is ready
 to start.
+
+## From live author testing (post-PR-9)
+
+These surfaced during a real first-run on a Chromebook + WSL on Claude
+Max $200/month. Full narrative + rationale in
+`docs/lessons-from-author-testing.md`.
+
+- **Per-command `model:` override on `[1m]` session models.** Verify
+  whether Claude Code's session-level `[1m]` selection silently wins
+  over the per-command `model:` field. If yes, decide between (i)
+  leaving as-is, (ii) dropping the `model:` line, (iii) making it
+  opt-out via `project.yaml :: llm.honor_session_model`.
+- **Postamble compliance watchdog.** LLMs still occasionally skip
+  `autonovel _end`. A wall-clock timeout in `_begin` that
+  auto-marks the lock as `abandoned` after N minutes would catch
+  this without needing the LLM to cooperate.
+- **Verify `writes:` files were actually modified.** Postamble
+  trusts `--wrote` paths; the LLM can claim it wrote a file without
+  having invoked `Write`. Compare modification time / size against
+  the checkpointed snapshot before declaring success.
+- **Canon-vs-outline cross-consistency in `/autonovel:evaluate`.**
+  When canon says X arrived in 1473 and the outline says 1471, the
+  user shouldn't have to spot the contradiction manually. evaluate
+  --phase foundation could date-compare references.
+- **`autonovel install --dry-run`** so users can preview what would
+  be written into `~/.claude/commands/` before mutating it.
+- **`autonovel _begin` should echo a "running from `<dir>`" banner.**
+  Wrong-cwd launches are the #1 silent-failure mode for the runtime;
+  surfacing the cwd in the transcript would make the cause obvious.
 
 ## Output writing quality
 
