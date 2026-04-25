@@ -292,3 +292,72 @@ def test_running_status_maps_to_in_flight_when_no_command() -> None:
     normalise to 'in-flight' when no command name is present."""
     ctx = statusline.StatusContext(book="b", lock_status="running")
     assert "in-flight" in statusline.render(ctx)
+
+
+# -------------------------------------------------------------- debug capture
+
+
+def test_debug_dump_writes_payload(tmp_path: Path, monkeypatch) -> None:
+    """When AUTONOVEL_STATUSLINE_DEBUG=1, statusline.main writes a
+    single-shot diagnostic to ~/.autonovel-statusline-debug.log
+    containing the raw stdin, the parsed StatusContext fields, the
+    rendered line, and any CLAUDE_*/AUTONOVEL_* env vars. This is the
+    documented diagnostic for "the percentage doesn't show up" — the
+    file reveals the actual JSON schema Claude Code is sending so the
+    statusline's path list can be updated."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("AUTONOVEL_STATUSLINE_DEBUG", "1")
+    monkeypatch.setenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+
+    payload = json.dumps({
+        "model": {"display_name": "Sonnet 4.6", "id": "claude-sonnet-4-6"},
+        "usage": {"context_pct": 42},
+        "cost": {"total_cost_usd": 1.23},
+    })
+
+    class _StubStdin:
+        def isatty(self) -> bool:
+            return False
+        def read(self) -> str:
+            return payload
+
+    import sys as _sys
+    monkeypatch.setattr(_sys, "stdin", _StubStdin())
+
+    rc = statusline.main()
+    assert rc == 0
+
+    dump_path = Path(tmp_path) / ".autonovel-statusline-debug.log"
+    assert dump_path.exists(), "debug-mode flag should produce a dump"
+    dump = json.loads(dump_path.read_text())
+
+    assert dump["stdin_raw"] == payload
+    assert dump["stdin_parsed"]["usage"]["context_pct"] == 42
+    assert dump["context"]["model"] == "Sonnet 4.6"
+    assert dump["context"]["context_pct"] == 42
+    assert "42%" in dump["rendered_line"]
+    # CLAUDE_* / AUTONOVEL_* env vars are echoed for diagnosis.
+    assert dump["env_relevant"]["CLAUDE_MODEL"] == "claude-sonnet-4-6"
+    assert dump["env_relevant"]["AUTONOVEL_STATUSLINE_DEBUG"] == "1"
+
+
+def test_debug_dump_skipped_when_flag_unset(tmp_path: Path, monkeypatch) -> None:
+    """No env var → no dump file. The diagnostic is opt-in; we don't
+    want every prompt-render writing a file under the user's home."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("AUTONOVEL_STATUSLINE_DEBUG", raising=False)
+
+    class _StubStdin:
+        def isatty(self) -> bool:
+            return False
+        def read(self) -> str:
+            return ""
+
+    import sys as _sys
+    monkeypatch.setattr(_sys, "stdin", _StubStdin())
+
+    rc = statusline.main()
+    assert rc == 0
+
+    dump_path = Path(tmp_path) / ".autonovel-statusline-debug.log"
+    assert not dump_path.exists(), "debug dump must be opt-in"

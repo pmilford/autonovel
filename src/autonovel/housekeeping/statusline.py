@@ -299,7 +299,17 @@ def _lock_label(status: str) -> str:
 def main() -> int:
     """CLI entry. Reads stdin if a non-tty is attached (Claude Code may
     pipe JSON in); falls back to env vars. Errors are swallowed so a
-    misbehaving statusline never crashes Claude Code."""
+    misbehaving statusline never crashes Claude Code.
+
+    Debug capture: set `AUTONOVEL_STATUSLINE_DEBUG=1` in your shell
+    before launching Claude Code. The next statusline render will write
+    a single-shot dump of the raw stdin payload, the parsed
+    StatusContext fields, and the rendered output line to
+    `~/.autonovel-statusline-debug.log`. This is the diagnostic for
+    "the percentage doesn't show" — the dump reveals exactly what
+    Claude Code is passing on this particular version, so missing
+    schema paths can be added.
+    """
     try:
         stdin_data: str | None = None
         if not sys.stdin.isatty():
@@ -311,7 +321,38 @@ def main() -> int:
         line = render(ctx)
         if line:
             print(line)
+        if os.environ.get("AUTONOVEL_STATUSLINE_DEBUG"):
+            _debug_dump(stdin_data, ctx, line)
     except Exception:  # noqa: BLE001
         # Never let a bad statusline trip Claude Code.
         return 0
     return 0
+
+
+def _debug_dump(stdin_data: str | None, ctx: StatusContext, line: str) -> None:
+    """Write a single-shot diagnostic dump to ~/.autonovel-statusline-debug.log.
+
+    Single-shot (overwrite, not append) so the file is always the most
+    recent invocation — that's the useful shape for "show me what Claude
+    Code is sending me *right now*". Errors are silently swallowed —
+    debug capture must never break the statusline render path it's
+    diagnosing.
+    """
+    try:
+        target = Path(os.path.expanduser("~/.autonovel-statusline-debug.log"))
+        from dataclasses import asdict
+        payload = {
+            "stdin_raw": stdin_data,
+            "stdin_parsed": (
+                json.loads(stdin_data) if stdin_data and stdin_data.strip() else None
+            ),
+            "context": asdict(ctx),
+            "rendered_line": line,
+            "env_relevant": {
+                k: v for k, v in os.environ.items()
+                if k.startswith(("CLAUDE_", "AUTONOVEL_"))
+            },
+        }
+        target.write_text(json.dumps(payload, indent=2, default=str))
+    except Exception:  # noqa: BLE001
+        pass
