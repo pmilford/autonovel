@@ -1,3 +1,104 @@
-One to three paragraphs describing what this book is about: who the POV
-character is, what they want, what stands in their way, and what changes by
-the end. Edit freely before running /autonovel:gen-outline.
+# Seed for this book
+#
+# This is the ONE piece of writing autonovel needs from you. Everything
+# else (world, characters, outline, prose) is built by the AI from
+# what's in this file. Spend 20-30 minutes on it. Don't try to write
+# elegantly — just answer the questions plainly. The AI will turn
+# bullet points into prose.
+#
+# Lines starting with `#` are notes to you and are ignored. Delete
+# them if you like, or leave them — the AI strips them out.
+#
+# When you're done, save the file and start drafting in your AI
+# runtime with /autonovel:gen-world. If you change your mind later
+# you can edit this file and re-run the foundation commands.
+
+
+## 1. The pitch (one or two sentences)
+
+# What is this book in one breath? The kind of thing you'd say to
+# a friend who asked "what's it about?". Don't worry about hooks —
+# just be specific.
+#
+# Example:
+#   A mid-Renaissance Venetian inquisitor investigating a fire at
+#   the mint discovers his own brother's name in a ledger he was
+#   ordered to destroy.
+
+(write here)
+
+
+## 2. The POV character
+
+# Who are we following? Name, age, occupation, one defining
+# trait, one thing they want, one thing they're afraid of.
+#
+# Example:
+#   Tommaso Da Mosto, 34. Inquisitor of state, ten years in
+#   the role. Methodical, dry, a little cruel when tired.
+#   Wants to be reassigned to the Arsenale's procurement
+#   tribunals before another winter on docks duty. Afraid he
+#   has become someone his brother would not recognise.
+
+(write here)
+
+
+## 3. What stands in the way
+
+# Two or three concrete obstacles. Not "society" or "his
+# emotions" — name people, institutions, or facts that block
+# the POV. Internal obstacles count if they're specific.
+#
+# Example:
+#   - The Council of Ten has classified the mint-fire ledgers
+#     and ordered the originals burned within 30 days.
+#   - The witness who could place his brother near the mint
+#     vanished three days into the investigation.
+#   - Tommaso has not spoken to his brother in nine years and
+#     does not know whether he still lives in the city.
+
+(write here)
+
+
+## 4. What changes by the end
+
+# What is true at the start that is no longer true at the end?
+# An ending that returns the world to its starting state is
+# the "Stability Trap" — autonovel will fight you on it. Aim
+# for an irreversible change.
+#
+# Example:
+#   Tommaso identifies the brother as one of three coiners,
+#   chooses not to name him in the official report, and
+#   accepts a posting to the salt-tax tribunal in Chioggia
+#   that effectively ends his career as an inquisitor. The
+#   brother survives but the city is closed to him.
+
+(write here)
+
+
+## 5. Period and place (skip if contemporary)
+
+# A few sentences on when and where, and what's distinctive
+# about the setting that the AI should know. Be concrete: the
+# Rialto, the Zecca, the inquisitori di stato, plague-year
+# regulations.
+#
+# Example:
+#   Venice, autumn 1521. Plague returns every few years; the
+#   Zecca mints ducats under guard; apothecaries' guild
+#   controls medicine; the Council of Ten runs state security
+#   through the inquisitori di stato. Three months after the
+#   mint fire of last winter.
+
+(write here)
+
+
+## 6. Anything else worth telling the AI
+
+# Optional. Tone you want. Comparable books or authors.
+# Constraints (no on-page violence; first-person POV; must
+# mention a specific real person). Things you do NOT want
+# (no romance subplot; no chosen-one structure).
+
+(write here)

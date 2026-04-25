@@ -243,9 +243,33 @@ renaissance-europe/
 
 ### 3. Write the seed
 
-`books/the-inquisitor/seed.txt` is a 1–3 paragraph pitch — POV,
-goal, obstacle, what changes. This is the one piece of writing that
-isn't generated.
+The seed file is the **one piece of writing autonovel needs from
+you**. Everything else (world, characters, outline, prose) is built
+from it. The new book template ships a guided template with six
+prompts — the pitch, your POV character, the obstacles, what
+changes by the end, period and place, and anything else you want
+the AI to know. There's an example answer under each prompt so you
+can see the depth expected.
+
+You're currently in `~/novels/renaissance-europe/`. The seed lives
+one folder down at `books/the-inquisitor/seed.txt`. Open it in any
+text editor — pick whichever you have:
+
+- **Chromebook:** the *Text* app from your launcher works. Or, in
+  the terminal: `nano books/the-inquisitor/seed.txt`.
+- **Windows / WSL:** type `notepad.exe books/the-inquisitor/seed.txt`
+  (Notepad opens on the Windows side, editing the WSL file). Or in
+  the terminal: `nano books/the-inquisitor/seed.txt`.
+- **macOS:** `open -e books/the-inquisitor/seed.txt` opens it in
+  TextEdit. Or in the terminal: `nano books/the-inquisitor/seed.txt`.
+- **VS Code on any OS** (if installed): `code books/the-inquisitor/seed.txt`.
+
+If you've never used `nano` before, it shows the keyboard shortcuts
+along the bottom of the window: `Ctrl-O` saves, `Ctrl-X` quits.
+
+Plan to spend **20–30 minutes** on the seed. You don't need to
+write elegantly — bullet points are fine; the AI will turn them
+into prose.
 
 ### 4. Open the series in your runtime and run commands
 
@@ -281,6 +305,41 @@ For a 12-step end-to-end walkthrough on a 3-book historical series
 — including research, period guardrails, cross-book events, and
 publishing to PDF/ePub/audiobook — see
 [`docs/writing-a-historical-series.md`](docs/writing-a-historical-series.md).
+
+### How much do you write, and when?
+
+You write the seed (~20–30 minutes). After that, your job is to
+**read what the AI produces and steer**, not to write prose. Rough
+expectations for a single ~70,000-word novel:
+
+| Phase | What you do | Realistic time |
+|---|---|---|
+| Seed | Answer the six prompts in `seed.txt`. | 20–30 min |
+| Foundation review | Read `shared/world.md`, `shared/characters.md`, the outline. Re-run any of `/autonovel:gen-world`, `/autonovel:gen-characters`, `/autonovel:gen-outline` if something is off — they reference your seed each time. | 30–90 min total, spread across 1–3 cycles |
+| Voice discovery | `/autonovel:voice-discovery` produces five trial passages; you pick one (or rerun for new trials). | 5–15 min |
+| Drafting | The runtime drafts chapters one at a time. You can let it run unattended; later, glance at chapters that scored low in `/autonovel:evaluate` and decide whether to retry. | 5–30 min of attention per chapter, mostly skimming |
+| Revision | Read the briefs from `/autonovel:reader-panel` and `/autonovel:review`. Override anything you disagree with before running `/autonovel:revise`. | 30–90 min per book per cycle; usually 2–3 cycles |
+| Export | `/autonovel:typeset`, `/autonovel:cover-print`, `/autonovel:audiobook-*` are mostly pushbutton if you have the tools and keys. | 1–2 hours, mostly waiting |
+
+**Total wall-clock time** for a tiny 3-chapter book (like the smoke
+fixtures): an afternoon. For a 70k-word novel: **a few full days of
+on-and-off attention**, with the AI doing the heavy lifting and you
+reading + steering. The Bells production took about a week of part-time
+work spread across several months.
+
+**Where to invest the most thought, in order:**
+
+1. **The seed** — every downstream layer derives from it. A vague seed
+   produces a vague book.
+2. **The outline review** — fixing a structural issue in the outline
+   takes minutes; fixing it after eight chapters are drafted takes
+   hours.
+3. **The first chapter eval** — voice problems caught in chapter 1
+   compound across the book. Read `/autonovel:evaluate --chapter 1`
+   carefully and rerun voice-discovery if needed before drafting more.
+4. **Reader-panel / review feedback** in the revision phase — you'll
+   want to override some items and prioritise others. The AI will
+   otherwise try to address every comment, even ones that conflict.
 
 ### What the commands do
 
