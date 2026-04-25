@@ -27,6 +27,7 @@ class BeginResult:
     resolved_writes: list[Path]
     resolved_book: str | None = None
     book_inferred: bool = False  # True if `--book` was missing and we filled it in
+    abandoned_lock: lock.LockInfo | None = None  # set when we took over a stale lock
 
 
 class BeginError(RuntimeError):
@@ -46,7 +47,7 @@ def begin(command_name: str, arg_string: str, *, runtime: str = "claude",
 
     resolved = _resolve_writes(cmd, ctx, series.root)
 
-    lock_info = lock.acquire(
+    lock_info, abandoned = lock.acquire_with_takeover(
         series.lock_file,
         runtime=runtime,
         command=command_name,
@@ -69,6 +70,7 @@ def begin(command_name: str, arg_string: str, *, runtime: str = "claude",
         resolved_writes=resolved,
         resolved_book=resolved_book,
         book_inferred=book_inferred,
+        abandoned_lock=abandoned,
     )
 
 
@@ -270,18 +272,20 @@ def _substitute_placeholders(path: str, ctx: dict[str, str]) -> str | None:
 def _next_step_for(series: SeriesLayout, book: str) -> object:
     """Build a PipelineState for `book` and ask next_step what to suggest.
 
-    Phase is inferred from filesystem state rather than trusting
-    `project.yaml :: books[].status`, which is set to "seed" at scaffold
-    time and is not reliably advanced by every command. Inferring from
-    on-disk artefacts is idempotent and self-correcting — if a user
-    rolls back, the inferred phase moves with them.
-
-    Foundation order: before the generic next_step decision tree decides
-    foundation→draft, we check that every foundation artefact exists. A
-    missing one short-circuits to that command. This means a user who
-    just runs /autonovel:next after every command walks through
-    gen-world → gen-characters → voice-discovery → gen-canon → gen-outline
-    → evaluate without having to remember the sequence.
+    Decision order:
+      1. Foundation gap — if any of the five foundation artefacts is
+         empty, recommend running it. Walks world → characters → voice
+         → canon → outline so the user never has to remember the
+         sequence.
+      2. Pending-canon gate — if `pending_canon.md` has entries that
+         haven't been promoted, surface that *between* chapters (after
+         a draft is evaluated, before the next is started) so chapter
+         N+1 sees the new facts. Skipped during foundation phase since
+         no canon candidates exist yet.
+      3. Generic next_step decision tree — phase-driven (drafting →
+         evaluate → revise / advance, etc.). Phase is inferred from the
+         filesystem rather than `project.yaml :: books[].status` to
+         keep the recommendation self-correcting after rollbacks.
     """
     cfg = project_mod.load(series.project_file)
     entry = cfg.book_by_name(book)
@@ -291,6 +295,11 @@ def _next_step_for(series: SeriesLayout, book: str) -> object:
     if missing is not None:
         from .next_step import NextStep
         return NextStep(command=missing.command, rationale=missing.rationale)
+
+    pending = _pending_canon_gate(series, book_root)
+    if pending is not None:
+        from .next_step import NextStep
+        return NextStep(command=pending.command, rationale=pending.rationale)
 
     phase, chapters_drafted = _infer_phase(series, book_root)
     state = PipelineState(
@@ -309,6 +318,87 @@ def _next_step_for(series: SeriesLayout, book: str) -> object:
 class _FoundationGap:
     command: str
     rationale: str
+
+
+def _pending_canon_gate(series: SeriesLayout, book_root: Path) -> "_FoundationGap | None":
+    """Return a `promote-canon` recommendation when:
+      - the user has at least one drafted chapter (drafting / revision
+        phase — no canon candidates exist before drafting starts),
+      - `books/<book>/pending_canon.md` has content beyond its
+        template stub,
+      - and the file's modification time is newer than the most recent
+        run of `/autonovel:promote-canon` for this series (so we don't
+        re-suggest a freshly-emptied pending file).
+
+    Returning None means "no gate" — fall through to the generic
+    next_step decision tree.
+    """
+    chapters_dir = book_root / "chapters"
+    if not chapters_dir.is_dir():
+        return None
+    drafted = any(p.is_file() for p in chapters_dir.glob("ch_*.md"))
+    if not drafted:
+        return None
+
+    pending = book_root / "pending_canon.md"
+    if not _pending_canon_has_entries(pending):
+        return None
+
+    # Skip if pending_canon.md is older than the last successful
+    # /autonovel:promote-canon run (logged in command-log.jsonl).
+    last_promote = _last_command_run(series, "autonovel:promote-canon")
+    if last_promote is not None and pending.stat().st_mtime <= last_promote:
+        return None
+
+    book_name = book_root.name
+    return _FoundationGap(
+        command=f"/autonovel:promote-canon --book {book_name}",
+        rationale=(
+            "pending_canon.md has new candidate facts; promote them so "
+            "the next chapter draft sees them"
+        ),
+    )
+
+
+def _pending_canon_has_entries(pending_path: Path) -> bool:
+    """True if `pending_canon.md` carries at least one bullet entry of
+    its expected `- [headline] body` shape. Robust to template length
+    drift; we don't compare byte counts because real candidate entries
+    are often shorter than the template's explanatory text."""
+    if not pending_path.is_file():
+        return False
+    try:
+        text = pending_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("- ", "* ", "+ ")) and len(stripped) > 4:
+            return True
+    return False
+
+
+def _last_command_run(series: SeriesLayout, command_name: str) -> float | None:
+    """Return the UNIX timestamp of the most recent successful run of
+    `command_name`, or None if there isn't one. Reads
+    `.autonovel/command-log.jsonl`."""
+    from datetime import datetime
+    from .. import command_log
+    try:
+        entries = command_log.read_all(series.command_log_file)
+    except Exception:  # noqa: BLE001
+        return None
+    latest: float | None = None
+    for e in entries:
+        if e.command != command_name or e.status != "ok":
+            continue
+        try:
+            ts = datetime.fromisoformat(e.timestamp).timestamp()
+        except (ValueError, AttributeError):
+            continue
+        if latest is None or ts > latest:
+            latest = ts
+    return latest
 
 
 def _foundation_gap(series: SeriesLayout, book_root: Path) -> "_FoundationGap | None":

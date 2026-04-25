@@ -292,3 +292,129 @@ def test_begin_leaves_book_unresolved_when_ambiguous(demo_series: SeriesLayout) 
     result = lifecycle.begin("autonovel:draft", "5", series=demo_series)
     assert result.resolved_book is None
     assert result.book_inferred is False
+
+
+# ---------------------------------------------------------------------------
+# Pending-canon gate (post-PR-9 author-testing): when chapters have been
+# drafted and pending_canon.md has new candidates, the right next step is
+# /autonovel:promote-canon, NOT another draft. Otherwise chapter N+1 misses
+# the new facts that chapter N just discovered.
+
+def test_pending_canon_blocks_advance_after_draft(demo_series: SeriesLayout) -> None:
+    book_root = demo_series.books / "one"
+    _populate_foundation(demo_series, book_root)
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    (chapters / "ch_01.md").write_text(
+        "---\nbook: one\nchapter: 1\npov: Ana\nstory_time: 2020-01-01\n"
+        "events: []\nstatus: draft\n---\n\nProse goes here.\n",
+        encoding="utf-8",
+    )
+    # Pending canon has new entries (not the template stub).
+    (book_root / "pending_canon.md").write_text(
+        "# Pending canon\n\n- [Tommaso's birthday] 1487-05-12\n"
+        "- [Mint fire date] 1521-11-04\n- [Brother's name] Niccolò\n",
+        encoding="utf-8",
+    )
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft", "1 --book one", status="ok",
+        wrote=["books/one/chapters/ch_01.md"], series=demo_series,
+    )
+    next_cmd = result.last_action.next_standard_step
+    assert next_cmd is not None
+    assert "promote-canon" in next_cmd, (
+        f"expected promote-canon recommendation; got {next_cmd!r}"
+    )
+
+
+def test_pending_canon_skipped_during_foundation(demo_series: SeriesLayout) -> None:
+    """No chapters drafted yet → no canon candidates can exist; the
+    pending-canon gate must not fire even if pending_canon.md happens
+    to have content (e.g. user pre-loaded it)."""
+    book_root = demo_series.books / "one"
+    _populate_foundation(demo_series, book_root)
+    (book_root / "pending_canon.md").write_text(
+        "- [Tommaso's birthday] 1487-05-12\n", encoding="utf-8"
+    )
+    lifecycle.begin("autonovel:gen-outline", "--book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:gen-outline", "--book one", status="ok",
+        wrote=["books/one/outline.md"], series=demo_series,
+    )
+    # Should advance to evaluate or draft, NOT to promote-canon (no
+    # chapters drafted yet → no candidates to promote).
+    assert "promote-canon" not in result.last_action.next_standard_step
+
+
+def test_pending_canon_skipped_after_promotion(demo_series: SeriesLayout) -> None:
+    """If /autonovel:promote-canon was just run and pending_canon.md
+    is older than that run, don't re-suggest promote-canon."""
+    import time
+    book_root = demo_series.books / "one"
+    _populate_foundation(demo_series, book_root)
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    (chapters / "ch_01.md").write_text(
+        "---\nbook: one\nchapter: 1\npov: Ana\nstory_time: 2020-01-01\n"
+        "events: []\nstatus: draft\n---\n\nProse goes here.\n",
+        encoding="utf-8",
+    )
+    pending = book_root / "pending_canon.md"
+    pending.write_text(
+        "- [Tommaso's birthday] 1487-05-12\n", encoding="utf-8"
+    )
+    # Simulate that promote-canon just ran successfully (logged in
+    # command-log.jsonl), and modify pending_canon.md to be older.
+    time.sleep(0.05)
+    lifecycle.begin("autonovel:promote-canon", "--book one", series=demo_series)
+    lifecycle.end(
+        "autonovel:promote-canon", "--book one", status="ok",
+        wrote=["shared/canon.md"], series=demo_series,
+    )
+    # Now make pending_canon.md older than the promote-canon log entry.
+    import os
+    older = pending.stat().st_mtime - 60
+    os.utime(pending, (older, older))
+
+    # After draft, the gate should NOT re-suggest promote-canon.
+    lifecycle.begin("autonovel:draft", "2 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft", "2 --book one", status="ok",
+        wrote=[], series=demo_series,
+    )
+    assert "promote-canon" not in result.last_action.next_standard_step
+
+
+# ---------------------------------------------------------------------------
+# Postamble compliance watchdog: a previous run that never closed its
+# lock should be silently overridden when its PID is dead, but with a
+# warning surfaced via BeginResult.abandoned_lock so the user knows.
+
+def test_begin_takes_over_stale_lock_and_reports_it(demo_series: SeriesLayout) -> None:
+    """A lock written under a non-existent PID is treated as abandoned;
+    next begin succeeds and surfaces the prior info."""
+    import json as _json
+    from autonovel.lock import LockInfo
+    # Write a lock with a PID that almost certainly doesn't exist.
+    fake = LockInfo(
+        pid=999999,
+        runtime="claude",
+        command="autonovel:draft",
+        args=["3", "--book", "one"],
+        started_at="2026-04-25T12:00:00+00:00",
+        status="running",
+    )
+    demo_series.lock_file.parent.mkdir(parents=True, exist_ok=True)
+    demo_series.lock_file.write_text(
+        _json.dumps(fake.to_dict(), indent=2), encoding="utf-8"
+    )
+
+    result = lifecycle.begin("autonovel:draft", "5 --book one", series=demo_series)
+    assert result.abandoned_lock is not None
+    assert result.abandoned_lock.pid == 999999
+    assert result.abandoned_lock.command == "autonovel:draft"
+    # The new lock is held by the current process.
+    assert demo_series.lock_file.exists()
+    info = lock.read(demo_series.lock_file)
+    assert info is not None and info.pid == os.getpid()

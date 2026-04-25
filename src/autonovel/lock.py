@@ -55,10 +55,34 @@ class LockHeld(RuntimeError):
 
 def acquire(lock_path: Path, *, runtime: str, command: str, args: list[str], pid: int | None = None) -> LockInfo:
     """Try to create a lock file. Raises LockHeld if a live lock exists."""
+    info, _ = acquire_with_takeover(
+        lock_path, runtime=runtime, command=command, args=list(args), pid=pid,
+    )
+    return info
+
+
+def acquire_with_takeover(
+    lock_path: Path, *, runtime: str, command: str, args: list[str],
+    pid: int | None = None,
+) -> tuple[LockInfo, LockInfo | None]:
+    """Like `acquire`, but also returns the prior abandoned lock when
+    we silently took over a stale one. Callers who want to *warn* the
+    user about an incomplete previous run should use this and surface
+    the second return value if non-None.
+
+    Cases:
+      - No prior lock: new lock created; `prior` is None.
+      - Live prior lock: `LockHeld` raised, no return.
+      - Stale prior lock (PID is dead): silently overwritten; `prior`
+        is the abandoned LockInfo so the caller can warn the user.
+    """
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     existing = read(lock_path)
-    if existing is not None and _pid_is_live(existing.pid):
-        raise LockHeld(existing)
+    abandoned: LockInfo | None = None
+    if existing is not None:
+        if _pid_is_live(existing.pid):
+            raise LockHeld(existing)
+        abandoned = existing
     info = LockInfo(
         pid=pid if pid is not None else os.getpid(),
         runtime=runtime,
@@ -67,7 +91,7 @@ def acquire(lock_path: Path, *, runtime: str, command: str, args: list[str], pid
         started_at=datetime.now(timezone.utc).isoformat(),
     )
     lock_path.write_text(json.dumps(info.to_dict(), indent=2), encoding="utf-8")
-    return info
+    return info, abandoned
 
 
 def read(lock_path: Path) -> LockInfo | None:

@@ -61,3 +61,73 @@ def test_export_tool_check_is_not_fatal(series_root: Path) -> None:
 def test_export_tool_check_can_be_suppressed(series_root: Path) -> None:
     report = doctor.run(series_root, export_tools=False)
     assert not any("export tool" in w for w in report.warnings)
+
+
+# ---------------------------------------------------------------------------
+# Claude Code settings — [1m] context-mode billing-gate detection.
+
+import json as _json
+
+
+def test_claude_settings_warns_on_1m_model(tmp_path):
+    from autonovel.housekeeping import doctor
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude" / "settings.json").write_text(_json.dumps({
+        "model": "claude-opus-4-7[1m]",
+    }), encoding="utf-8")
+    warnings = doctor.check_claude_settings(home=home)
+    assert any("[1m]" in w for w in warnings)
+    assert any("/extra-usage" in w for w in warnings)
+    assert any("/model" in w for w in warnings)
+
+
+def test_claude_settings_clean_when_no_1m(tmp_path):
+    from autonovel.housekeeping import doctor
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude" / "settings.json").write_text(_json.dumps({
+        "model": "claude-sonnet-4-6",
+    }), encoding="utf-8")
+    assert doctor.check_claude_settings(home=home) == []
+
+
+def test_claude_settings_walks_nested_keys(tmp_path):
+    from autonovel.housekeeping import doctor
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude" / "settings.json").write_text(_json.dumps({
+        "preferred": {"models": ["claude-opus-4-7", "claude-sonnet-4-6[1m]"]},
+    }), encoding="utf-8")
+    warnings = doctor.check_claude_settings(home=home)
+    assert len(warnings) == 1
+    assert "claude-sonnet-4-6[1m]" in warnings[0]
+
+
+def test_claude_settings_skips_missing_files(tmp_path):
+    from autonovel.housekeeping import doctor
+    # No ~/.claude/settings.json, no <project>/.claude/settings.json.
+    assert doctor.check_claude_settings(home=tmp_path / "no-home",
+                                         project_root=tmp_path / "no-project") == []
+
+
+def test_claude_settings_skips_malformed_json(tmp_path):
+    from autonovel.housekeeping import doctor
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude" / "settings.json").write_text("{not json", encoding="utf-8")
+    # Malformed file is *not* our remit; we just don't crash.
+    assert doctor.check_claude_settings(home=home) == []
+
+
+def test_claude_settings_includes_project_local(tmp_path):
+    from autonovel.housekeeping import doctor
+    project = tmp_path / "project"
+    (project / ".claude").mkdir(parents=True)
+    (project / ".claude" / "settings.json").write_text(_json.dumps({
+        "statusLine": {"command": "echo"},
+        "model": "claude-haiku-4-5[1m]",
+    }), encoding="utf-8")
+    warnings = doctor.check_claude_settings(home=tmp_path / "no-home",
+                                             project_root=project)
+    assert any("[1m]" in w for w in warnings)

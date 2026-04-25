@@ -375,6 +375,14 @@ def _cmd_begin(args: argparse.Namespace) -> int:
     if result.resolved_book is not None:
         suffix = " (inferred from last-action / single-book project)" if result.book_inferred else ""
         print(f"book: {result.resolved_book}{suffix}")
+    if result.abandoned_lock is not None:
+        ab = result.abandoned_lock
+        print(
+            f"WARNING: previous run of /{ab.command} (PID {ab.pid}, started "
+            f"{ab.started_at}) ended without running its postamble. "
+            f"Lock taken over. Run `/autonovel:resume` if you want to "
+            f"inspect the partial state from that run."
+        )
     return 0
 
 
