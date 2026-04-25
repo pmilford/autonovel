@@ -107,3 +107,49 @@ def test_two_books_coexist(series_root: Path) -> None:
     cfg = project_mod.load(series.project_file)
     names = sorted(b.name for b in cfg.books)
     assert names == ["one", "two"]
+
+
+def test_new_series_writes_agent_conventions(tmp_path: Path) -> None:
+    """CLAUDE.md ships in the template; AGENTS.md / GEMINI.md are aliased
+    so all three runtimes auto-load the same conventions file."""
+    result = scaffold.new_series(tmp_path / "demo", series_name="demo")
+    root = result.series.root
+
+    claude = root / "CLAUDE.md"
+    assert claude.is_file()
+    primary = claude.read_text(encoding="utf-8")
+    assert "autonovel series" in primary.lower()
+    assert "Operating rules" in primary  # spot-check expected content
+
+    for alias_name in ("AGENTS.md", "GEMINI.md"):
+        alias = root / alias_name
+        assert alias.exists(), f"{alias_name} missing from scaffolded series"
+        # Symlink target points at CLAUDE.md (or the file is a plain copy
+        # on a platform that refused the symlink). Either way the
+        # contents must match — that is the contract.
+        assert alias.read_text(encoding="utf-8") == primary, (
+            f"{alias_name} content does not match CLAUDE.md"
+        )
+
+
+def test_seed_template_carries_guided_prompts(tmp_path: Path) -> None:
+    """The seed.txt template should be a guided multi-section prompt,
+    not a 1-line stub. Author-testing in PR 9 surfaced that a short
+    stub leaves writers with no idea how much to fill in."""
+    series_result = scaffold.new_series(tmp_path / "demo", series_name="demo")
+    book_result = scaffold.new_book(series_result.series, book_name="one")
+    seed = (book_result.book_root / "seed.txt").read_text(encoding="utf-8")
+
+    # Expect the six guided sections.
+    expected_headings = [
+        "## 1. The pitch",
+        "## 2. The POV character",
+        "## 3. What stands in the way",
+        "## 4. What changes by the end",
+        "## 5. Period and place",
+        "## 6. Anything else",
+    ]
+    for h in expected_headings:
+        assert h in seed, f"seed.txt missing heading: {h}"
+    # Each section should ship at least one example so an author sees depth.
+    assert seed.lower().count("example") >= 4

@@ -89,7 +89,33 @@ def new_series(root: Path, *, series_name: str, genre: str = "general") -> NewSe
 
     _write_autonovel_state(series)
     created.append(series.state_file)
+
+    _link_agent_aliases(root, created)
     return NewSeriesResult(series=series, created=created)
+
+
+def _link_agent_aliases(root: Path, created: list[Path]) -> None:
+    """Create AGENTS.md and GEMINI.md aliases pointing at CLAUDE.md.
+
+    Codex CLI auto-loads AGENTS.md; Gemini CLI auto-loads GEMINI.md;
+    Claude Code auto-loads CLAUDE.md. We ship CLAUDE.md in the
+    template and create the other two as symlinks at scaffold time
+    (mirrors the top-level repo's pattern). On platforms where
+    symlinks aren't supported (rare; mostly old Windows non-WSL),
+    fall back to copying so all three files exist.
+    """
+    primary = root / "CLAUDE.md"
+    if not primary.is_file():
+        return
+    for alias_name in ("AGENTS.md", "GEMINI.md"):
+        alias = root / alias_name
+        if alias.exists() or alias.is_symlink():
+            continue
+        try:
+            alias.symlink_to("CLAUDE.md")
+        except (OSError, NotImplementedError):
+            alias.write_bytes(primary.read_bytes())
+        created.append(alias)
 
 
 def new_book(series: SeriesLayout, *, book_name: str, pov: str | None = None,
