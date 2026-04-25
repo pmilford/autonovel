@@ -51,6 +51,8 @@ export commands (art, covers, audiobook, typeset, landing, package).
 
    Drafting:
      6.  Draft a chapter                   → /autonovel:draft <N> --book <name>
+     6a. Backfill chapter summary          → /autonovel:summarize-chapter <N> --book <name>
+     6b. A/B-compare two models on draft   → /autonovel:compare-models --chapter <N> --book <name>
 
    Evaluation:
      7.  Score a chapter / book / compare  → /autonovel:evaluate --chapter <N> --book <name>

@@ -17,6 +17,7 @@ reads:
   - books/{book}/chapters/ch_{prev}.md
 writes:
   - books/{book}/chapters/ch_{chapter}.md
+  - books/{book}/chapters/ch_{chapter}.summary.md
   - books/{book}/pending_canon.md
 context_mode: book
 ---
@@ -75,11 +76,19 @@ target, not a mental "safe" overshoot.
    `books/{book}/chapters/ch_{chapter}.md` with the full revised
    chapter. Do not truncate. Do not summarize.
 
-9. Use `file_write` to append any new candidate canon facts to
-   `books/{book}/pending_canon.md` (or add a single `no new facts`
-   line if the rewrite established nothing new). Never edit
-   `shared/canon.md` directly — that is what `/autonovel:promote-canon`
-   is for (ships in PR 5).
+9. **Regenerate the chapter summary.** Use `file_write` to overwrite
+   `books/{book}/chapters/ch_{chapter}.summary.md` with a fresh
+   150–250 word continuity summary covering: plot, POV state, cast on
+   stage, threads opened, threads closed, story time. The shape is
+   the same as `/autonovel:draft` step 12 — this is the continuity
+   handoff future drafters will read, so it must reflect the
+   *revised* chapter, not the draft it replaced.
+
+10. Use `file_write` to append any new candidate canon facts to
+    `books/{book}/pending_canon.md` (or add a single `no new facts`
+    line if the rewrite established nothing new). Never edit
+    `shared/canon.md` directly — that is what `/autonovel:promote-canon`
+    is for.
 </workflow>
 
 <acceptance>
@@ -87,6 +96,9 @@ target, not a mental "safe" overshoot.
   frontmatter, and carries `status: revised` plus a fresh `word_count`.
 - The rewrite differs from the prior draft (not a byte-for-byte copy).
 - Chapter length is within ±15% of the brief's stated target.
+- `books/{book}/chapters/ch_{chapter}.summary.md` exists and reflects
+  the revised chapter (mtime is newer than the chapter file's prior
+  draft).
 - `books/{book}/pending_canon.md` grows by at least one line (either a
   candidate fact or the explicit `no new facts` marker).
 </acceptance>

@@ -1,7 +1,7 @@
 ---
 name: autonovel:research
 description: Research a real-world topic with live web search and write sourced notes into shared/research/notes/.
-argument-hint: "\"<topic>\""
+argument-hint: "\"<topic>\" | --from-seed [--book <name>]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -14,6 +14,7 @@ reads:
   - shared/sources.bib
   - shared/world.md
   - shared/research/notes/{topic}.md
+  - books/{book}/seed.txt
 writes:
   - shared/research/notes/{topic}.md
   - shared/sources.bib
@@ -47,10 +48,42 @@ Design rules:
 </purpose>
 
 <workflow>
-1. Parse `$ARGUMENTS`. The topic is a free-form quoted string, e.g.
+1. Parse `$ARGUMENTS`. Two modes:
+
+   **(a) Explicit topic.** A free-form quoted string, e.g.
    `"Venetian apothecaries 1520"`. Anything not quoted is still
-   accepted as a single topic. Missing topic → stop with a one-line
-   reminder: `usage: /autonovel:research "<topic>"`.
+   accepted as a single topic. Run the workflow once for that topic.
+
+   **(b) From-seed.** `--from-seed [--book <name>]` reads the active
+   book's `seed.txt` plus `project.yaml :: period` to auto-derive 2–4
+   research topics, then runs the per-topic workflow (steps 2-10
+   below) for each. Use this at the start of foundation for any
+   project with a period set — it gives `gen-world` and `gen-canon`
+   primary-source notes to draw from instead of the LLM's general
+   knowledge. If `--book` is missing, use the inferred book from
+   `_begin`'s output.
+
+   To derive topics in mode (b):
+
+   - Pull the period (`period.start`, `period.end`, `period.region`)
+     and genre from `project.yaml`.
+   - Read `books/{book}/seed.txt`. Extract every named real person,
+     place, institution, event, or historically-specific noun (e.g.
+     "Jakob Fugger", "Fondaco dei Tedeschi", "the Council of Ten",
+     "the mint fire of 1521"). Skip clearly fictional names.
+   - Always include one *period overview* topic, slugged as
+     `<region>-<start>-<end>` (e.g. `italy-1450-1550`), that asks
+     for a one-page summary of the period's politics, economy, and
+     daily life in the region.
+   - Always include one *period vocabulary* topic, slugged as
+     `<region>-<start>-<end>-vocabulary`, that asks for ten
+     period-correct nouns and ten anachronisms to avoid.
+   - Cap total topics at 4 to keep cost predictable. If the seed
+     yields more than 2 named people/places, pick the 2 most central
+     to the plot per the seed's pitch.
+
+   Missing topic and no `--from-seed` → stop with a one-line reminder:
+   `usage: /autonovel:research "<topic>"  OR  /autonovel:research --from-seed [--book <name>]`.
 
 2. Slugify the topic (lowercase, non-alphanumerics → `-`, collapse
    repeats, trim). Example: `"Venetian apothecaries 1520"` →

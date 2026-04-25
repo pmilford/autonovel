@@ -17,8 +17,10 @@ reads:
   - books/{book}/voice.md
   - books/{book}/outline.md
   - books/{book}/chapters/ch_{prev}.md
+  - books/{book}/chapters/ch_*.summary.md
 writes:
   - books/{book}/chapters/ch_{chapter}.md
+  - books/{book}/chapters/ch_{chapter}.summary.md
   - books/{book}/pending_canon.md
 context_mode: book
 ---
@@ -58,21 +60,52 @@ off-limits.
    zero-padded to two digits), read it and keep only the last ~1000 words as
    immediate continuity.
 
-8. Use `task` to fan out loading of sibling-book chapters whose `story_time`
+8. **Read every prior summary** for narrative continuity. Use `file_read`
+   on `books/{book}/chapters/ch_*.summary.md` for chapters 1 through
+   `{prev}` (any that exist). Each file is ~150-250 words and contains
+   the chapter's plot, character moves, threads opened, threads
+   resolved. Together with the last-1000-words quote from step 7,
+   these summaries are the load-bearing context that prevents chapter
+   N from forgetting what chapter 1 set up. If a summary is missing
+   for a drafted chapter — likely a chapter drafted before this
+   summarization step shipped — note the gap but do not regenerate it
+   inline; the user can backfill via `/autonovel:summarize-chapter`.
+
+9. Use `task` to fan out loading of sibling-book chapters whose `story_time`
    is less than or equal to this chapter's `story_time`. Budget the loader —
    truncate oldest first, summarize rather than quote beyond ~8000 tokens.
 
-9. Draft the chapter. Target length comes from
+10. Draft the chapter. Target length comes from
    `project.yaml :: defaults.chapter_target_words`. Obey `ANTI-PATTERNS.md`
    and `ANTI-SLOP.md`. Do not use any word that appears in
    `shared/period_bans.txt`.
 
-10. Use `file_write` to write `books/{book}/chapters/ch_{chapter}.md`. Start
+11. Use `file_write` to write `books/{book}/chapters/ch_{chapter}.md`. Start
     with a YAML frontmatter block per `docs/chapter-frontmatter.md`:
     `book`, `chapter`, `pov`, `story_time` (ISO date or range), `events`,
     `status: drafted`, and `word_count`.
 
-11. Use `file_write` to append any new candidate canon facts to
+12. **Write the chapter summary.** Use `file_write` to save a
+    150–250 word summary at
+    `books/{book}/chapters/ch_{chapter}.summary.md`. Cover six things,
+    each as a one or two sentence section:
+      - **Plot:** what happened in this chapter (action, decisions,
+        outcomes — not theme).
+      - **POV state:** what the POV character knows, wants, fears at
+        the close that they didn't at the open.
+      - **Cast on stage:** every named character who appeared,
+        with their role in this chapter (e.g. "Tommaso — POV;
+        Niccolò — first appearance, declined to speak").
+      - **Threads opened:** new mysteries, conflicts, promises this
+        chapter introduced that future chapters need to pay off.
+      - **Threads closed:** earlier setups this chapter resolved
+        (cite the earlier chapter when known).
+      - **Story time:** the ISO date or date range covered.
+    Future drafts read this file as continuity context (step 8). It
+    is NOT a chapter summary for the reader — it is a continuity
+    handoff to the next drafter.
+
+13. Use `file_write` to append any new candidate canon facts to
     `books/{book}/pending_canon.md`. If none are new, append a single line
     noting that no new facts were discovered in this chapter. Never edit
     `shared/canon.md` directly — that is what `autonovel promote-canon` is for.
@@ -82,6 +115,8 @@ off-limits.
 - `books/{book}/chapters/ch_{chapter}.md` exists and is at least 2000 words.
 - Its YAML frontmatter parses and contains `book`, `chapter`, `pov`,
   `story_time`, `events`, and `status: drafted`.
+- `books/{book}/chapters/ch_{chapter}.summary.md` exists and is between
+  100 and 400 words.
 - `books/{book}/pending_canon.md` has at least one new line appended (either
   a candidate fact or an explicit no-new-facts marker).
 - No case-insensitive word-boundary match of any word from

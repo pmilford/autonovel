@@ -11,6 +11,18 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Cross-provider `/autonovel:compare-models`.** V1 (shipped
+  2026-04-25) is single-provider — it compares two Claude models
+  within the active runtime. The natural extension is Opus vs GPT
+  vs Gemini head-to-head, since model providers ship updates every
+  few months and the user shouldn't have to migrate to evaluate.
+  Implementation hint: add a `--runtimes claude,codex,gemini`
+  argument; the parent runtime spawns a draft per (runtime, model)
+  pair via the adapter layer (likely a new `autonovel _spawn-draft`
+  CLI subcommand that knows how to invoke each runtime's headless
+  mode and copy the result back into `eval_logs/`). The judge stays
+  on whichever runtime the parent is in. ~3-5 hours of work.
+
 - **Research belongs at the front of the foundation, not as a manual
   step.** A historical / period-fantasy / alternate-history project
   needs research *before* gen-world, gen-characters, and gen-canon

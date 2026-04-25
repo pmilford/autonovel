@@ -418,3 +418,55 @@ def test_begin_takes_over_stale_lock_and_reports_it(demo_series: SeriesLayout) -
     assert demo_series.lock_file.exists()
     info = lock.read(demo_series.lock_file)
     assert info is not None and info.pid == os.getpid()
+
+
+# ---------------------------------------------------------------------------
+# Research-from-seed at the front of the foundation: when project.yaml
+# has a period set and no research notes exist, the foundation gap
+# recommends /autonovel:research --from-seed BEFORE gen-world.
+
+def test_foundation_gap_recommends_research_when_period_set(demo_series: SeriesLayout) -> None:
+    import yaml as _yaml
+    raw = _yaml.safe_load(demo_series.project_file.read_text(encoding="utf-8"))
+    raw["period"] = {"start": 1450, "end": 1550, "region": "italy"}
+    demo_series.project_file.write_text(_yaml.safe_dump(raw), encoding="utf-8")
+
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft", "1 --book one", status="ok", wrote=[],
+        series=demo_series,
+    )
+    assert "research --from-seed" in result.last_action.next_standard_step
+
+
+def test_foundation_gap_skips_research_for_contemporary(demo_series: SeriesLayout) -> None:
+    """With no period set, research is not part of the foundation
+    chain — gen-world is the first recommendation."""
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft", "1 --book one", status="ok", wrote=[],
+        series=demo_series,
+    )
+    assert "research" not in result.last_action.next_standard_step
+
+
+def test_foundation_gap_skips_research_when_notes_exist(demo_series: SeriesLayout) -> None:
+    import yaml as _yaml
+    raw = _yaml.safe_load(demo_series.project_file.read_text(encoding="utf-8"))
+    raw["period"] = {"start": 1450, "end": 1550, "region": "italy"}
+    demo_series.project_file.write_text(_yaml.safe_dump(raw), encoding="utf-8")
+    notes = demo_series.shared / "research" / "notes" / "italy-1450-1550.md"
+    notes.parent.mkdir(parents=True, exist_ok=True)
+    notes.write_text(
+        "# Research — Italy 1450-1550\n\n"
+        + ("Real research content. " * 20),
+        encoding="utf-8",
+    )
+    lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft", "1 --book one", status="ok", wrote=[],
+        series=demo_series,
+    )
+    # Research populated → next gap is gen-world.
+    assert "research" not in result.last_action.next_standard_step
+    assert "gen-world" in result.last_action.next_standard_step
