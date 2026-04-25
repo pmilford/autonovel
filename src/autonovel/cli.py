@@ -325,6 +325,9 @@ def _cmd_begin(args: argparse.Namespace) -> int:
         return 2
     print(f"_begin ok: locked as PID {result.lock_info.pid}; "
           f"checkpoint {result.checkpoint.timestamp if result.checkpoint else '(none)'}")
+    if result.resolved_book is not None:
+        suffix = " (inferred from last-action / single-book project)" if result.book_inferred else ""
+        print(f"book: {result.resolved_book}{suffix}")
     return 0
 
 

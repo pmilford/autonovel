@@ -25,6 +25,8 @@ class BeginResult:
     lock_info: lock.LockInfo
     checkpoint: checkpoints.Checkpoint | None
     resolved_writes: list[Path]
+    resolved_book: str | None = None
+    book_inferred: bool = False  # True if `--book` was missing and we filled it in
 
 
 class BeginError(RuntimeError):
@@ -36,6 +38,12 @@ def begin(command_name: str, arg_string: str, *, runtime: str = "claude",
     series = series or load_series()
     cmd = _load_command(command_name)
     ctx = _parse_arguments(cmd, arg_string)
+
+    book_was_explicit = "book" in ctx
+    ctx = _infer_book(ctx, series)
+    book_inferred = "book" in ctx and not book_was_explicit
+    resolved_book = ctx.get("book")
+
     resolved = _resolve_writes(cmd, ctx, series.root)
 
     lock_info = lock.acquire(
@@ -55,7 +63,13 @@ def begin(command_name: str, arg_string: str, *, runtime: str = "claude",
             args=shlex.split(arg_string) if arg_string else [],
         )
 
-    return BeginResult(lock_info=lock_info, checkpoint=cp, resolved_writes=resolved)
+    return BeginResult(
+        lock_info=lock_info,
+        checkpoint=cp,
+        resolved_writes=resolved,
+        resolved_book=resolved_book,
+        book_inferred=book_inferred,
+    )
 
 
 @dataclass
@@ -69,6 +83,7 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
     series = series or load_series()
     cmd = _load_command(command_name)
     ctx = _parse_arguments(cmd, arg_string)
+    ctx = _infer_book(ctx, series)
     book = ctx.get("book")
 
     if status != "ok":
@@ -112,6 +127,44 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
 
 _ARG_HINT_PLACEHOLDER = re.compile(r"<([^>]+)>")
 _PATH_PLACEHOLDER = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+
+
+def _infer_book(ctx: dict[str, str], series: SeriesLayout) -> dict[str, str]:
+    """If `--book` was not in `$ARGUMENTS`, fill it in from
+    `last-action.json` (the book of the most recent command) or, failing
+    that, from a single-book project. If neither yields a book and the
+    project has multiple books, leave `ctx` untouched — the caller
+    surfaces a usage error.
+    """
+    if "book" in ctx:
+        return ctx
+
+    # 1. Most recent book the user worked on.
+    try:
+        la = last_action.read(series.last_action_file)
+    except Exception:  # noqa: BLE001 — last-action file may be malformed
+        la = None
+    if la is not None and la.book:
+        try:
+            cfg = project_mod.load(series.project_file)
+        except Exception:  # noqa: BLE001
+            cfg = None
+        if cfg is not None and cfg.book_by_name(la.book) is not None:
+            ctx = dict(ctx)
+            ctx["book"] = la.book
+            return ctx
+
+    # 2. Single-book series — only one possible book.
+    try:
+        cfg = project_mod.load(series.project_file)
+    except Exception:  # noqa: BLE001
+        return ctx
+    if len(cfg.books) == 1:
+        ctx = dict(ctx)
+        ctx["book"] = cfg.books[0].name
+        return ctx
+
+    return ctx
 
 
 def _load_command(name: str) -> CommandDef:

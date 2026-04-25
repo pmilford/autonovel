@@ -227,3 +227,68 @@ def test_next_step_chains_foundation_in_order(demo_series: SeriesLayout) -> None
     assert "voice-discovery" not in nxt
     assert "gen-canon" not in nxt
     assert "gen-outline" not in nxt
+
+
+# ---------------------------------------------------------------------------
+# --book inference (post-PR-9 author testing): defaulting to the last book
+# the user worked on, or to the only book in a single-book project.
+
+def test_begin_infers_book_from_last_action(demo_series: SeriesLayout) -> None:
+    """If --book is missing from $ARGUMENTS, infer it from
+    last-action.json (the most recent book the user worked on)."""
+    new_book(demo_series, book_name="two", pov="Beatrice")
+    # Last action sets the active book to "two".
+    last_action.write(
+        demo_series.last_action_file,
+        command="autonovel:draft",
+        args=["1", "--book", "two"],
+        wrote=[],
+        book="two",
+        next_standard_step=None,
+        next_rationale=None,
+        sidequests=[],
+    )
+    # Begin a draft with NO --book in $ARGUMENTS.
+    result = lifecycle.begin("autonovel:draft", "5", series=demo_series)
+    assert result.resolved_book == "two"
+    assert result.book_inferred is True
+    # Writes resolved against the inferred book.
+    paths = {str(p.relative_to(demo_series.root)) for p in result.resolved_writes}
+    assert "books/two/chapters/ch_05.md" in paths
+
+
+def test_begin_infers_book_from_single_book_project(demo_series: SeriesLayout) -> None:
+    """If the series has exactly one book and no last-action, infer
+    that book."""
+    # demo_series has one book ("one") and no last-action yet.
+    result = lifecycle.begin("autonovel:draft", "3", series=demo_series)
+    assert result.resolved_book == "one"
+    assert result.book_inferred is True
+
+
+def test_begin_does_not_override_explicit_book(demo_series: SeriesLayout) -> None:
+    """An explicit --book in $ARGUMENTS wins over inference."""
+    new_book(demo_series, book_name="two", pov="Beatrice")
+    last_action.write(
+        demo_series.last_action_file,
+        command="autonovel:draft",
+        args=["1", "--book", "two"],
+        wrote=[],
+        book="two",
+        next_standard_step=None,
+        next_rationale=None,
+        sidequests=[],
+    )
+    result = lifecycle.begin("autonovel:draft", "1 --book one", series=demo_series)
+    assert result.resolved_book == "one"
+    assert result.book_inferred is False
+
+
+def test_begin_leaves_book_unresolved_when_ambiguous(demo_series: SeriesLayout) -> None:
+    """Multiple books, no last-action, no --book — leave book
+    unresolved so the LLM surfaces the usage error to the user."""
+    new_book(demo_series, book_name="two")
+    new_book(demo_series, book_name="three")
+    result = lifecycle.begin("autonovel:draft", "5", series=demo_series)
+    assert result.resolved_book is None
+    assert result.book_inferred is False

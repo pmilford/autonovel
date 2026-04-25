@@ -86,7 +86,22 @@ every destructive change is reversible.
    another command is in flight or the series is malformed — stop and
    surface the message verbatim.
 
-2. Only proceed to the <workflow> below once `_begin` has succeeded.
+2. **Read `_begin`'s stdout for the active book.** If the user did not
+   pass `--book <name>` in `$ARGUMENTS`, autonovel will infer the book
+   from `.autonovel/last-action.json` (the most recent book worked on)
+   or — when there's only one book in the series — from `project.yaml`.
+   `_begin` prints a `book: <name>` line in that case. Use that name
+   for every `{{book}}` placeholder in the workflow below as if the user
+   had typed `--book <name>` themselves. If `_begin` did not print a
+   `book:` line and `$ARGUMENTS` lacks `--book`, surface this to the
+   user verbatim and stop:
+
+   > Multiple books exist in this series and no `--book` was
+   > specified. Re-run with `--book <name>` (one of the names in
+   > `project.yaml`).
+
+3. Only proceed to the <workflow> below once `_begin` has succeeded
+   and the active book is resolved.
 
 Writes this command will perform (for context):
 {writes_bullet}
