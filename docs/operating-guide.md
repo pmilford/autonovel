@@ -271,6 +271,101 @@ Time: ~10–15 min of compute, ~5 min reading the brief between
 steps to see if you disagree with anything. If you do, edit
 `books/<book>/briefs/ch07.md` before running `revise`.
 
+### 2b.1. Late research, woven lightly into existing chapters
+
+You finished a revision pass. Then you realised you wanted deeper
+research on a specific topic — Venice politics + trade in the
+1479-1500 window when Jakob Fugger was there, say. You don't want
+to redraft anything; you want the chapters where Fugger appears
+to carry richer period detail, but their plot, dialogue, scene
+shapes, and voice should stay exactly as they are.
+
+Three commands, in order:
+
+```text
+# 1. Targeted research (writes notes to shared/research/notes/<slug>.md)
+/autonovel:research "Venice politics and trade 1479-1500"
+```
+
+The notes file lands at
+`shared/research/notes/venice-politics-and-trade-1479-1500.md`
+with `## Material detail`, `## People and institutions`, and a
+`## Sources` block carrying `[shortname]` citations. Read it once;
+make sure it actually says what you wanted.
+
+```text
+# 2. Identify chapters where the research is relevant.
+#    Easiest path: grep your chapter files for the topic's main names.
+ls books/<book>/chapters/ch_*.md | xargs grep -l Fugger
+# →  books/<book>/chapters/ch_05.md
+#    books/<book>/chapters/ch_08.md
+#    books/<book>/chapters/ch_12.md
+```
+
+Or scan the outline if your chapter files don't quote the names
+verbatim yet. Aim for the ≤6 chapters where the research naturally
+belongs — forcing it elsewhere just produces tone shifts.
+
+```text
+# 3. Sweep those chapters with --enrich-with pointing at the notes.
+/autonovel:revision-pass --chapters 5,8,12 \
+    --enrich-with shared/research/notes/venice-politics-and-trade-1479-1500.md
+```
+
+For each chapter, `revision-pass` runs the standard loop
+(anachronism → brief → revise → evaluate → promote-canon). The
+`--enrich-with` flag passes through to each chapter's brief. The
+brief considers whether the research is relevant to *this*
+chapter; when it is, it adds an `## Enrichment from research`
+block with **1-2 specific period details per relevant scene**
+(named scene index, named detail, the `[shortname]` citation,
+plus an explicit "do NOT change plot, dialogue, voice, scene
+structure" guard). Chapters where the research doesn't fit (the
+research is a brush, not a chisel) get briefs without the
+enrichment block — they pass through with whatever revisions the
+standard loop wanted.
+
+Why this works:
+- The brief is the bridge — it decides which scenes get
+  enriched and which stay alone, based on the chapter's actual
+  content, not blanket find-and-replace.
+- The "do NOT change" guards in the enrichment block keep the
+  rewrite light. Without them, `revise` would re-write the whole
+  chapter, which is the opposite of what you want post-revision.
+- The research notes also carry their own `## Candidate Canon
+  Entries` section — concrete dated facts (e.g. "Fugger arrived
+  in Venice 1478 [bib]") that the per-chapter `promote-canon`
+  step folds into `shared/canon.md` at the end of each chapter's
+  loop. So the research's *facts* land in canon (and supersede
+  any contradictory entries because of the `[research:slug]` tag)
+  while the research's *texture* lands in prose.
+
+Surgical alternative for a single chapter: same flag works on
+`brief` directly:
+
+```text
+/autonovel:brief 8 --from auto \
+    --enrich-with shared/research/notes/venice-politics-and-trade-1479-1500.md
+/autonovel:revise 8
+/autonovel:evaluate --chapter 8
+```
+
+When NOT to use this:
+- For sweeping period research at the start of a project, use
+  `/autonovel:research --from-seed` instead — it auto-derives
+  topics from the seed and auto-pipes facts into pending_canon.
+  `--enrich-with` is for *late* research on chapters that are
+  already revised.
+- For a wrong fact (canon says 1471, research says 1478), the
+  fact lands in canon via promote-canon; you don't need
+  `--enrich-with` for that. Use it when you want *texture* —
+  named officials, building details, period vocabulary, the
+  weight of a coin in the right currency — that the original
+  draft generalised.
+
+Time: ~2-3 min per affected chapter (the standard revision-pass
+budget). The light-touch constraint keeps it predictable.
+
 ### 2c. Minor factual error (a date is wrong, a name is misspelled)
 
 Research found that Jakob Fugger arrived in Venice in 1478, but

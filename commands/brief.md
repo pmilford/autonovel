@@ -1,7 +1,7 @@
 ---
 name: autonovel:brief
-description: Generate a revision brief for one chapter from cuts, eval, or panel feedback.
-argument-hint: "<chapter-number> --book <short-name> [--from cuts|eval|panel|auto]"
+description: Generate a revision brief for one chapter from cuts, eval, panel feedback, and (optionally) targeted research notes.
+argument-hint: "<chapter-number> --book <short-name> [--from cuts|eval|panel|auto] [--enrich-with <research-notes-path>]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -13,6 +13,7 @@ reads:
   - books/{book}/edit_logs/ch{chapter:02d}_cuts.json
   - books/{book}/edit_logs/reader_panel.json
   - books/{book}/eval_logs/*.json
+  - shared/research/notes/*.md
 writes:
   - books/{book}/briefs/ch{chapter:02d}.md
 context_mode: book
@@ -31,8 +32,11 @@ A good brief names specific passages to change, not vague moods.
 <workflow>
 1. Parse `$ARGUMENTS`. Expect `<chapter-number> --book <short-name>`.
    `--from` is one of `cuts`, `eval`, `panel`, or `auto` (default
-   `auto`). Missing required args are a usage error — print a one-line
-   reminder and stop.
+   `auto`). `--enrich-with <path>` (optional) names a research notes
+   file (typically `shared/research/notes/<slug>.md` produced by
+   `/autonovel:research`) whose detail the rewrite should weave in
+   *lightly* — see step 5b. Missing required args are a usage error
+   — print a one-line reminder and stop.
 
 2. Use `file_read` on `project.yaml` and `books/{book}/voice.md` for
    voice guardrails the brief must preserve (body-first emotion, no
@@ -54,6 +58,18 @@ A good brief names specific passages to change, not vague moods.
      recent. If two or more exist, merge signals (cuts weighted highest
      because they're the most concrete).
 
+5a. **Load enrichment research** (only when `--enrich-with <path>`
+    was supplied). Use `file_read` on the named file. Treat the
+    file's `## Material detail` and `## People and institutions`
+    sections as the well to draw from. Identify which scenes in the
+    chapter the research is *relevant to* — typically scenes where
+    a person, place, institution, or material item from the
+    research notes appears or could plausibly appear. Skip scenes
+    where forcing in research detail would distort the chapter's
+    existing focus. **The research is a brush, not a chisel:** the
+    rewrite must add 1–2 period-specific details per relevant scene,
+    not restructure or expand the chapter.
+
 5. Draft the revision brief. Required sections, as Markdown H2s:
    - `## Chapter {chapter} — revision target` (one-line goal)
    - `## What works` (two or three sentences from the source material)
@@ -63,6 +79,25 @@ A good brief names specific passages to change, not vague moods.
    - `## Specific rewrites` (before → after snippets where the source
      suggested them)
    - `## Voice guardrails` (bulleted — preserve from voice.md Part 2)
+   - `## Enrichment from research` *(only when `--enrich-with` was
+     given AND step 5a found at least one scene where the research
+     is relevant)*. For each relevant scene, write one bullet:
+       - **Scene index** (from the existing eval log's
+         `beat_coverage.scenes` if available, otherwise eyeball it)
+         and the scene's opening line as identifier.
+       - **The research detail to add**, named specifically (a
+         person's official title, a building's location, a material
+         object's price or scale, a named institution's process).
+         Quote the citation `[shortname]` from the notes so the
+         rewrite knows the provenance.
+       - **What NOT to change**: plot, dialogue, voice, scene
+         structure, scene length (±5%), POV positioning. Enrichment
+         is texture; the existing scenes stay shaped as they are.
+     Cap at 4 enrichment bullets per chapter — more than that and
+     the rewrite stops being light. Omit the section entirely when
+     `--enrich-with` was not given OR no scenes warranted it
+     (don't force-fit research where it doesn't belong; chapters
+     that simply don't touch the researched topic stay clean).
    - `## Weak scenes` *(only when the eval log's
      `beat_coverage.weakest_scenes` array has any entries)* — for
      each entry, write one bullet naming the scene by index, the

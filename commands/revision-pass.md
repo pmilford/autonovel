@@ -1,7 +1,7 @@
 ---
 name: autonovel:revision-pass
 description: Sweep check-anachronism + brief + revise + evaluate across a range of chapters in one invocation.
-argument-hint: "--chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--no-promote] [--parallel [N]]"
+argument-hint: "--chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--no-promote] [--enrich-with <research-notes-path>] [--parallel [N]]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -14,6 +14,7 @@ reads:
   - shared/characters.md
   - shared/canon.md
   - shared/period_bans.txt
+  - shared/research/notes/*.md
   - books/{book}/voice.md
   - books/{book}/outline.md
   - books/{book}/chapters/ch_{chapter}.md
@@ -70,7 +71,15 @@ chapter the sweep touched in one shot.
    (every drafted chapter). `--book` defaults via `_begin`.
    `--skip-anachronism`, `--skip-eval`, and `--no-promote` are
    independent flags that drop those stages from the per-chapter
-   sequence. Missing `--chapters` → stop with a one-line usage hint.
+   sequence. `--enrich-with <research-notes-path>` (optional)
+   propagates to each chapter's `brief` step — the brief considers
+   whether the named research file is relevant to that chapter
+   and, when it is, adds an `## Enrichment from research` block
+   with light-touch period detail (no plot/dialogue/structure
+   change). Use this when targeted research finished AFTER the
+   first revision pass and you want to weave its detail into the
+   chapters where it naturally belongs without redrafting them.
+   Missing `--chapters` → stop with a one-line usage hint.
 
 2. Use `file_read` on `project.yaml` to resolve the book entry,
    `pov`, and `defaults.chapter_target_words`. Use the `Bash` tool
@@ -131,6 +140,17 @@ chapter the sweep touched in one shot.
       brief at `books/{book}/briefs/ch{N:02d}.md`. The brief
       enumerates specific named passages to change, target word
       count, and prescriptions per anti-pattern.
+
+      **When this sweep was invoked with `--enrich-with <path>`,
+      pass that flag through to the per-chapter brief.** Each
+      chapter's brief considers whether the research file is
+      relevant to that chapter (a chapter where the researched
+      topic — person, institution, period detail — naturally
+      appears); when it is, the brief adds an `## Enrichment from
+      research` block with 1–2 specific period details per relevant
+      scene, no structural changes. Chapters whose subject doesn't
+      touch the research stay clean; the brief omits the
+      enrichment block.
 
    c. **revise**: Reproduce the body of `/autonovel:revise` — read
       the brief, the current chapter, the prior chapter's last
