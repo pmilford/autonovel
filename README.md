@@ -439,14 +439,24 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   `voice-discovery`, `gen-canon`, `research`.
 - **Drafting & revision:** `draft`, `evaluate`, `adversarial-edit`,
   `apply-cuts`, `reader-panel`, `review`, `brief`, `revise`,
-  `check-anachronism`.
+  `check-anachronism`, plus the sweep commands `draft-pass` and
+  `revision-pass` that loop those across many chapters.
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
-  `landing`, `package`.
+  `title`, `introduction`, `landing`, `package`.
 
 Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 `revoice`, `split-chapter`, `merge-chapters`, `reorder`,
 `remove-chapter`, `deepen-character`, `add-subplot`, `foreshadow`,
 `rename-character`).
+
+> **Confused which one to run when?** The drafting/revision commands
+> have a layered relationship — `draft-pass` and `revision-pass`
+> are *sweeps* that automatically call the atomic `draft` /
+> `evaluate` / `brief` / `revise`; `review` and `reader-panel` only
+> write *reports*, never modify chapters. The single explainer is
+> [`docs/operating-guide.md` §0 — How the editing commands relate](docs/operating-guide.md#0-how-the-editing-commands-relate).
+> Read it once before your second pass; the question you're about
+> to ask is answered there.
 
 ### Two immune systems against AI slop
 

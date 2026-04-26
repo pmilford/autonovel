@@ -30,6 +30,16 @@ These read or write `shared/*` files and apply to the series as a whole.
 These read or write files under `books/{book}/`. The `--book <short-name>`
 argument is required when more than one book exists in the series.
 
+> **If you're confused about which command to run when** —
+> specifically how `draft`, `draft-pass`, `revise`, `revision-pass`,
+> `brief`, `review`, and `reader-panel` relate to each other —
+> read [`operating-guide.md` §0](operating-guide.md#0-how-the-editing-commands-relate)
+> before this reference. The roles (atomic / sweep / whole-book
+> reviewer / mechanical helper) and the call graph (which command
+> automatically invokes which) are explained there. This file is
+> a per-command reference; the relationships are in the operating
+> guide.
+
 ### Drafting
 
 | Command | Tier | Description |

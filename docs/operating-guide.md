@@ -13,6 +13,159 @@ your second novel.
 
 ---
 
+## 0. How the editing commands relate
+
+The single most-asked question after a first-pass draft. **Read
+this section first if you're confused about which of `draft`,
+`draft-pass`, `revise`, `revision-pass`, `brief`, `evaluate`,
+`review`, or `reader-panel` to run when.** Everything else in this
+doc assumes you've internalised this layout.
+
+### The four roles
+
+Every editing command falls into one of four roles:
+
+| Role | What it does | Scope | Modifies prose? |
+|---|---|---|---|
+| **Atomic** | Operate on ONE chapter at a time. | 1 chapter | Some yes, some no |
+| **Sweep** | Loop the atomic commands across MANY chapters in one shot. | N chapters | Yes (delegates to atomic) |
+| **Whole-book reviewer** | Read the whole book and write a REPORT. Never modifies prose. | Whole book | **No** |
+| **Mechanical helper** | Deterministic regex / scanner / file-mover. Feeds evidence into other commands. | Varies | Sometimes |
+
+### The commands by role
+
+| Command | Role | One-line summary |
+|---|---|---|
+| `/autonovel:draft N` | Atomic | Write chapter N from outline + voice + canon. |
+| `/autonovel:evaluate --chapter N` | Atomic | Score chapter N. Writes `eval_logs/chNN_eval.json`. |
+| `/autonovel:brief N` | Atomic | Synthesise a per-chapter revision plan from whatever evidence is on disk (eval, cuts, panel, review). Writes `briefs/chNN.md`. **Does NOT rewrite prose** — just plans. |
+| `/autonovel:revise N` | Atomic | Rewrite chapter N **per the brief at `briefs/chNN.md`**. Refuses if the brief is missing. |
+| `/autonovel:adversarial-edit N` | Atomic helper | Find 10–20 cut/rewrite candidates in chapter N. Writes `edit_logs/chNN_cuts.json`. |
+| `/autonovel:apply-cuts N` | Atomic helper | Deterministically remove flagged passages (no LLM). |
+| `/autonovel:check-anachronism N` | Atomic helper | Period-vocabulary + LLM semantic anachronism scan. Writes `edit_logs/chNN_anachronism.md`. |
+| `/autonovel:draft-pass` | Sweep | "Write the rest of the book." Per chapter: draft → anachronism → evaluate → if low, brief + revise + re-eval → promote-canon. With `--deep`: also runs reader-panel + review at end. |
+| `/autonovel:revision-pass` | Sweep | "Improve these chapters." Per chapter: anachronism → brief → revise → evaluate → promote-canon. |
+| `/autonovel:reader-panel` | Whole-book reviewer | Four-persona panel (Editor / Genre Reader / Writer / First Reader). Writes `edit_logs/reader_panel.json`. **Does NOT modify chapters.** |
+| `/autonovel:review` | Whole-book reviewer | Opus dual-persona deep review (literary critic + professor of fiction). Writes `edit_logs/opus_review.md`. **Does NOT modify chapters.** |
+
+### The crucial insight: `brief` is the synthesiser
+
+`brief` is the bridge between **evidence on disk** (eval logs,
+cuts, anachronism reports, reader-panel findings, review findings,
+custom-rubric flags from `voice.md` Part 3) and **a plan the
+rewrite can act on**. It reads everything available, picks the
+load-bearing items, and writes one focused per-chapter `briefs/chNN.md`.
+
+`revise` then reads `briefs/chNN.md` and rewrites the chapter to
+match. **`revise` won't run without a brief** — that's deliberate;
+it's the reason rewrites stay targeted instead of drifting.
+
+You almost never call `brief` and `revise` directly. You call a
+sweep that calls them for you.
+
+### Who calls whom (the automation graph)
+
+```
+                ┌───────────────────────────────────────────────────┐
+                │  draft-pass (sweep over N chapters, default sequential)
+                │      ├─ per chapter:
+                │      │    draft → anachronism → evaluate
+                │      │    if score < threshold:
+                │      │        brief + revise + re-eval (keep best)
+                │      │    promote-canon (per chapter)
+                │      └─ with --deep:
+                │            reader-panel + review on whole book at END
+                └───────────────────────────────────────────────────┘
+
+                ┌───────────────────────────────────────────────────┐
+                │  revision-pass (sweep over N chapters)
+                │      └─ per chapter:
+                │            anachronism → brief → revise → evaluate
+                │            promote-canon (per chapter)
+                └───────────────────────────────────────────────────┘
+
+                ┌───────────────────────────────────────────────────┐
+                │  reader-panel  (whole book → REPORT, no rewrites)
+                │  review        (whole book → REPORT, no rewrites)
+                └───────────────────────────────────────────────────┘
+                        │
+                        │  reports land in edit_logs/
+                        ▼
+                 You then run revision-pass
+                 (which calls brief → revise → evaluate per chapter,
+                  with brief picking up the panel + review evidence
+                  along with the existing eval + cuts).
+```
+
+### "I ran draft-pass --all, then review, then reader-panel — did I need to run brief?"
+
+**Short answer: no, but you're not done.**
+
+`draft-pass` already ran `brief` + `revise` for any chapter whose
+draft scored below threshold. Every chapter ended at a score above
+threshold (or marked low, with a recorded brief) by the time the
+sweep finished.
+
+`review` and `reader-panel` then produced **reports**. They wrote
+findings to `edit_logs/reader_panel.json` and
+`edit_logs/opus_review.md`. **They did not touch any chapter.**
+
+To act on those reports — to actually rewrite the chapters they
+flagged — your next move is:
+
+```text
+/autonovel:revision-pass --chapters <flagged>
+```
+
+Pass the chapter list the panel + review surfaced (the `--deep`
+postamble names them). `revision-pass` walks each one and calls
+`brief` (which now sees the new panel + review evidence on disk
+and folds it in), then `revise` (which rewrites against the
+brief), then `evaluate` (re-scores). One sweep — no manual
+`brief` calls needed.
+
+If you want surgical control over a single chapter (you read the
+panel report and disagree with most of it but agree on chapter
+12), use the per-chapter atomic flow:
+
+```text
+/autonovel:brief 12 --from auto      # write the brief; hand-edit briefs/ch12.md if needed
+/autonovel:revise 12                 # rewrite per the brief
+/autonovel:evaluate --chapter 12     # re-score
+```
+
+### The minimal end-to-end flow on a fresh book
+
+```text
+# Foundation (run /autonovel:next; do each step it suggests)
+/autonovel:gen-world
+/autonovel:gen-characters
+/autonovel:voice-discovery --book <book>
+/autonovel:gen-canon
+/autonovel:gen-outline --book <book>
+/autonovel:evaluate --phase foundation --book <book>
+
+# First-pass draft (one command, walks away)
+/autonovel:draft-pass --chapters 1-19 --deep    # --deep adds review + reader-panel at end
+
+# Act on the deep-pass reports
+/autonovel:revision-pass --chapters <flagged-from-deep-pass>
+
+# (Repeat the previous two steps until reports are clean.)
+
+# Set the title, write the front matter, typeset
+/autonovel:title --book <book>           # propose / pick / set title + author
+/autonovel:introduction --book <book> --from both   # preface (you write) + intro (AI drafts)
+/autonovel:typeset --book <book>         # PDF + ePub
+```
+
+That's the whole story. `draft` and `revise` and `brief` and
+`evaluate` exist for surgical work; `draft-pass` and
+`revision-pass` exist because you almost always want the loop, not
+the atoms.
+
+---
+
 ## 1. Where human input matters, and how much
 
 The pipeline is autonomous in execution but you decide the shape.
@@ -52,6 +205,11 @@ folder containing `project.yaml`) and have launched `claude` /
 
 You've finished the foundation. The eval scored ≥ 7.5. You want
 the whole book drafted unattended.
+
+> If you're unclear how `draft-pass` relates to `draft`, `revise`,
+> `brief`, `revision-pass`, `review`, and `reader-panel`, **read
+> [§0 first](#0-how-the-editing-commands-relate)** — that section
+> is the conceptual map for everything below.
 
 ```text
 /autonovel:next                        # confirms the next step
