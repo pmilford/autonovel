@@ -367,6 +367,97 @@ When NOT to use this:
 Time: ~2-3 min per affected chapter (the standard revision-pass
 budget). The light-touch constraint keeps it predictable.
 
+#### After the sweep — the closer
+
+A multi-chapter revision pass (with or without `--enrich-with`)
+substantively changes the manuscript and the canon. Don't stop at
+"the sweep finished" — there's a short, named verify-then-review
+sequence that catches the things a sweep can silently break:
+
+1. **Read the score deltas in the postamble** *(2 min, attention)*.
+   Per-chapter line ends in `eval: <prev> → <new> (Δ ±X.X) |
+   canon: +<P>`. Two flags worth acting on:
+   - **Negative Δ** on any chapter = the rewrite made it worse.
+     Re-run *that one chapter* without the enrichment flag:
+     `/autonovel:revision-pass --chapters <NN>`. The brief drops
+     the enrichment block and reconsiders the rewrite from
+     cuts/eval evidence alone.
+   - **canon: +P where P > 0** = research-derived facts landed
+     in `shared/canon.md`. End-of-sweep promote-canon also ran;
+     anything *still* in `pending_canon.md` is a conflict that
+     needs human resolution — see §2c below.
+
+2. **Check `books/<book>/pending_canon.md`** *(2 min if any conflicts)*.
+   If the file says `no new facts`, you're done with canon. If
+   it has `# Conflicts — resolve before next promote-canon`,
+   open it and follow the HTML-comment instruction block at the
+   top (three labelled paths). Re-run `/autonovel:promote-canon`
+   after editing.
+
+3. **Re-run reader-panel + review on the revised book**
+   *(15-30 min compute, 30 min reading)*.
+   You changed many chapters; any prior `reader_panel.json` and
+   `opus_review.md` describe the pre-revision book and are now
+   stale. Re-running gives you a fresh flagged-chapter list:
+
+   ```text
+   /autonovel:reader-panel --book <book>
+   /autonovel:review --book <book>
+   ```
+
+   Both are whole-book reviewers (see §0) — they write reports,
+   don't modify chapters. The chapters you just revised should
+   now be stronger; chapters that *weren't* revised may look
+   weaker by comparison, which is itself a useful signal pointing
+   at next round's targets.
+
+4. **Commit to your GitHub backup** *(1 min)*. A substantive
+   revision is the right cadence for a snapshot:
+
+   ```bash
+   cd ~/<series-root>
+   git add . && git commit -m "Research enrichment pass: chapters <list>" && git push
+   ```
+
+   Recipe + `.gitignore` template in §3e.1. Skip if your novel
+   isn't yet backed up — set up the private repo first.
+
+5. **(Optional) Typeset and read a few chapters in PDF form**
+   *(1 min compute, 5-15 min reading)*.
+
+   ```text
+   /autonovel:typeset --book <book>
+   ```
+
+   Open `books/<book>/typeset/<book>_latest.pdf` and read 2–3
+   of the chapters you just enriched end-to-end. Reading on the
+   page catches texture problems the LLM judges miss — a name
+   that came in too heavy, a period detail that breaks voice, a
+   citation that reads as didactic. Cheap, safe, read-only
+   against chapter prose.
+
+6. **Decide: another revision pass on the panel/review flagged
+   chapters?**
+
+   ```text
+   /autonovel:revision-pass --chapters <flagged-list>
+   ```
+
+   No `--enrich-with` this time *unless* you have new research.
+   If nothing was flagged, you're done with this round — move
+   on to `/autonovel:title`, `/autonovel:introduction`,
+   `/autonovel:typeset`, `/autonovel:package`.
+
+The same closer applies to a non-`--enrich-with` revision-pass —
+the verify → panel-review → backup → decide loop is what closes
+*every* multi-chapter rewrite, not just enrichment ones. §2a's
+first-pass recipe already names this implicitly ("Your move next
+is `/autonovel:revision-pass --chapters X,Y,Z` against the flagged
+list, or done if nothing was flagged"); this section names it
+explicitly because §2b.1 readers come here from a different
+mental model (they were doing a research integration, not a
+quality pass) and shouldn't have to chase the closer through §2a.
+
 ### 2c. Minor factual error (a date is wrong, a name is misspelled)
 
 Research found that Jakob Fugger arrived in Venice in 1478, but
