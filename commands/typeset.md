@@ -22,6 +22,7 @@ reads:
   - books/{book}/art/svg/*.svg
 writes:
   - books/{book}/typeset/chapters_content.tex
+  - books/{book}/typeset/chapters_combined.md
   - books/{book}/typeset/novel.tex
   - books/{book}/typeset/novel.pdf
   - books/{book}/typeset/novel.epub
@@ -86,23 +87,45 @@ Light tier — mechanical. No LLM call.
       inspect them.
 
 5. ePub path (unless `--pdf-only`):
-   a. Use `bash` with `pandoc` to build the ePub from chapters +
-      front/back matter + metadata:
+   a. **Build the combined markdown.** Use `bash` to run
+      `autonovel mechanical build-epub-md books/{book}/chapters
+      --output books/{book}/typeset/chapters_combined.md`. This
+      enumerates only `ch_NN.md` files (NOT `ch_NN.summary.md`,
+      which would otherwise leak the per-chapter continuity
+      handoff — POV, threads_opened, threads_closed — into the
+      reader's ePub), strips YAML frontmatter from each chapter
+      (so `book: …`, `word_count: …` don't render as visible
+      prose), and emits a canonical `# Chapter N: <title>` heading
+      per chapter so pandoc reliably sees one top-level division
+      per chapter (which makes ePub chapter navigation actually
+      work). Bug both fixed 2026-04-25.
+
+   b. **Run pandoc** against the combined file plus front/back
+      matter:
       ```
       pandoc -o books/{book}/typeset/novel.epub \
         --metadata-file=books/{book}/typeset/metadata.yaml \
         --css=typeset/epub_style.css \
         --epub-cover-image=books/{book}/art/cover_titled.png \
+        --top-level-division=chapter \
+        --toc \
         typeset/epub_front_matter.md \
-        books/{book}/chapters/ch_*.md \
+        books/{book}/typeset/chapters_combined.md \
         typeset/epub_back_cover.md \
         typeset/epub_colophon.md
       ```
+      `--top-level-division=chapter` + `--toc` produce a clean
+      per-chapter ePub spine with proper TOC entries (without
+      these flags pandoc sometimes treats `# …` headings as
+      sections instead of chapters, which is why earlier ePubs
+      had unclear chapter marking).
+
       The metadata.yaml for this book is assembled on the fly from
       `project.yaml` + `typeset/epub_metadata.yaml` (template) and
       written to `books/{book}/typeset/metadata.yaml` before the
       pandoc call.
-   b. If `pandoc` isn't installed, stop with a single-line install
+
+   c. If `pandoc` isn't installed, stop with a single-line install
       hint. The PDF path can still have succeeded before this step;
       report what got built.
 

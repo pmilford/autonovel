@@ -22,37 +22,14 @@ from __future__ import annotations
 
 import re
 
+from .frontmatter import strip_yaml_frontmatter
+
 
 # A scene-break line is a line containing only `***` or `---` (with
 # optional surrounding whitespace), nothing else. Markdown horizontal
 # rules use the same syntax; in chapter prose those have always been
 # scene breaks.
 _BREAK_LINE_RE = re.compile(r"^\s*(\*\s*\*\s*\*|-\s*-\s*-)\s*$")
-
-# YAML frontmatter delimiter: a line of exactly `---` that opens or
-# closes a frontmatter block. We strip the frontmatter before splitting,
-# so once stripped, any remaining `---` line IS a scene break. Distinct
-# from the break regex because frontmatter detection is positional
-# (must be at the very top), not pattern-based.
-
-
-def _strip_frontmatter(text: str) -> str:
-    """Remove a leading `---\\n…\\n---\\n` YAML frontmatter block, if
-    present. The closing `---` is consumed; the body that follows is
-    returned. If the text doesn't start with `---`, returned unchanged.
-    """
-    if not text.startswith("---"):
-        return text
-    lines = text.splitlines(keepends=True)
-    # First line is `---` (possibly with trailing whitespace); find the
-    # next `---` line.
-    if not lines or lines[0].strip() != "---":
-        return text
-    for i in range(1, len(lines)):
-        if lines[i].strip() == "---":
-            return "".join(lines[i + 1:])
-    # No closing `---` — treat the file as not having frontmatter.
-    return text
 
 
 def split_scenes(text: str) -> list[dict]:
@@ -75,7 +52,7 @@ def split_scenes(text: str) -> list[dict]:
     A chapter with no scene breaks is one scene; the result list has
     length 1.
     """
-    body = _strip_frontmatter(text)
+    body = strip_yaml_frontmatter(text)
     chunks: list[str] = []
     current: list[str] = []
     for line in body.splitlines():

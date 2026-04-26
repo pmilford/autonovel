@@ -151,6 +151,48 @@ class TestBuildChaptersTex:
         art.mkdir()
         assert find_ornament(art, 5) is None
 
+    def test_yaml_frontmatter_is_stripped(self, tmp_path: Path) -> None:
+        """Regression for the 2026-04-25 PDF bug: when a chapter file
+        opens with YAML frontmatter (book / chapter / pov / word_count
+        / story_time / events / status — what every real autonovel
+        chapter has), the previous build_chapters_tex treated lines[0]
+        as the title (`---`) and rendered every frontmatter field as
+        prose at the top of the chapter. Locking the fix: the
+        frontmatter must NOT appear in the rendered LaTeX, AND the
+        chapter title must come from the `# Title` heading, NOT
+        from the frontmatter delimiter."""
+        ch_dir = tmp_path / "chapters"
+        ch_dir.mkdir()
+        (ch_dir / "ch_01.md").write_text(
+            "---\n"
+            "book: tiny\n"
+            "chapter: 1\n"
+            "pov: Tommaso\n"
+            "story_time: 1521-12-04\n"
+            "events: []\n"
+            "status: drafted\n"
+            "word_count: 3245\n"
+            "---\n"
+            "# The Real Chapter Title\n"
+            "\n"
+            "First sentence of actual prose.\n",
+            encoding="utf-8",
+        )
+        content, reports = build_chapters_tex(ch_dir)
+        # Frontmatter must not leak as visible prose.
+        assert "book: tiny" not in content
+        assert "word_count" not in content
+        assert "Tommaso" not in content
+        assert "story\\_time" not in content  # underscore escapes
+        assert "story_time" not in content    # raw too
+        assert "events: []" not in content
+        # Real title comes from the `# …` heading, not `---`.
+        assert "\\chapter{The Real Chapter Title}" in content
+        assert "\\chapter{---}" not in content
+        # Real prose still renders.
+        assert "First sentence of actual prose." in content
+        assert reports[0].title == "The Real Chapter Title"
+
 
 class TestCli:
     def test_build_tex_cli_writes_output(self, tmp_path: Path) -> None:

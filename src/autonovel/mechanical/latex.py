@@ -16,6 +16,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from .frontmatter import strip_yaml_frontmatter
+
 
 def latex_escape(text: str) -> str:
     """Escape the five characters that need it in running LaTeX text.
@@ -178,7 +180,12 @@ def build_chapters_tex(
             num = int(num_str)
         except ValueError as exc:
             raise ValueError(f"cannot parse chapter number from {ch_path.name!r}") from exc
-        text = ch_path.read_text(encoding="utf-8")
+        # Strip YAML frontmatter first, otherwise lines[0] is `---`
+        # and the title becomes the frontmatter delimiter while every
+        # frontmatter field (book, chapter, pov, word_count, …) leaks
+        # into the chapter prose at typeset time. Bug observed
+        # 2026-04-25 against the live novel.
+        text = strip_yaml_frontmatter(ch_path.read_text(encoding="utf-8"))
         lines = text.strip().split("\n")
         title = _chapter_title(lines[0]) if lines else f"Chapter {num}"
         body = "\n".join(lines[1:]).strip()

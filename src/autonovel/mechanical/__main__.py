@@ -9,6 +9,7 @@ Subcommands:
   audio-chunk <script> <voices>    Pack segments into TTS-budget chunks.
   audio-marks <rows> [--pause S]   Compute cumulative chapter marks.
   scenes <path> [--full]           Split a chapter into scenes by *** / --- breaks.
+  build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
 
 All subcommands print a single JSON object to stdout. Commands invoke
@@ -31,6 +32,7 @@ from .audio import (
 )
 from .cliches import cliche_density, cliche_hits
 from .cuts import VALID_TYPES, apply_cuts
+from .epub import build_epub_md
 from .latex import build_chapters_tex
 from .scenes import split_scenes
 from .sensory import channel_balance
@@ -181,6 +183,31 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_build_epub_md(args: argparse.Namespace) -> int:
+    chapters_dir = Path(args.chapters_dir)
+    output = Path(args.output) if args.output else None
+    content, reports = build_epub_md(chapters_dir, output=output)
+    json.dump(
+        {
+            "chapters": len(reports),
+            "bytes": len(content),
+            "output": str(output) if output else None,
+            "reports": [
+                {
+                    "chapter": r.chapter,
+                    "title": r.title,
+                    "word_count": r.word_count,
+                }
+                for r in reports
+            ],
+        },
+        sys.stdout,
+        indent=2,
+    )
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_build_tex(args: argparse.Namespace) -> int:
     chapters_dir = Path(args.chapters_dir)
     art_dir = Path(args.art_dir) if args.art_dir else None
@@ -278,6 +305,13 @@ def main(argv: list[str] | None = None) -> int:
     sc.add_argument("--full", action="store_true",
                     help="Include each scene's full prose in the output (heavy; default off).")
     sc.set_defaults(func=_cmd_scenes)
+
+    em = sub.add_parser("build-epub-md",
+                        help="Concatenate ch_NN.md files into one pandoc-ready markdown.")
+    em.add_argument("chapters_dir")
+    em.add_argument("--output", default=None,
+                    help="Write the combined markdown to this path; otherwise stdout-JSON only.")
+    em.set_defaults(func=_cmd_build_epub_md)
 
     bt = sub.add_parser("build-tex", help="Build chapters_content.tex from a chapters dir.")
     bt.add_argument("chapters_dir")
