@@ -517,7 +517,9 @@ Optional: **`rsvg-convert`** (for vector ornaments at print quality).
 ```bash
 # Linux / WSL Ubuntu / Chromebook Linux container:
 sudo apt update
-sudo apt install -y tectonic librsvg2-bin
+sudo apt install -y librsvg2-bin
+# tectonic — try apt first; if doctor still flags it, see below.
+sudo apt install -y tectonic
 
 # macOS (with Homebrew):
 brew install tectonic librsvg
@@ -527,9 +529,19 @@ tectonic --version          # should print the version
 rsvg-convert --version
 ```
 
-Note for ChromeOS users specifically: tectonic is in the standard
-Debian repos, so the `apt install` path works inside the Linux
-development environment.
+**Chromebook / Debian — when apt's `tectonic` doesn't work:**
+Author testing 2026-04-25 hit the case where the Debian apt
+`tectonic` package was either missing on the user's channel or
+too old for autonovel's templates (the failure mode looks like
+"needs a static-library compiled version"). If `tectonic` is
+absent or `autonovel doctor` keeps complaining, grab the
+prebuilt static binary from the official quick-install:
+
+  <https://tectonic-typesetting.github.io/book/latest/installation/index.html>
+
+The Linux instructions there drop one self-contained binary into
+`~/.local/bin/`. No Rust toolchain or system libraries needed.
+Re-run `tectonic --version` and `autonovel doctor` to confirm.
 
 ### 5b. ePub generation (`/autonovel:typeset --epub-only`)
 
@@ -559,8 +571,9 @@ sudo apt install -y fontconfig potrace
 # macOS:
 brew install fontconfig potrace
 
-# Python image library (one-time):
-pipx inject autonovel pillow
+# Python image library (one-time, only if you ran the bare
+# `pipx install .` rather than `pipx install '.[export]'`):
+pipx inject autonovel Pillow
 ```
 
 EB Garamond and Bebas Neue are the cover fonts the templates
@@ -589,7 +602,8 @@ sudo apt install -y ffmpeg
 # macOS:
 brew install ffmpeg
 
-# Python audio library:
+# Python audio library (one-time, only if you ran the bare
+# `pipx install .` rather than `pipx install '.[export]'`):
 pipx inject autonovel pydub
 
 # ElevenLabs key — paste into <series-root>/.env
@@ -603,13 +617,14 @@ ffmpeg -version
 
 ```bash
 # Linux / WSL / Chromebook (one shot):
-sudo apt update && sudo apt install -y tectonic pandoc potrace ffmpeg \
+sudo apt update && sudo apt install -y pandoc potrace ffmpeg \
     librsvg2-bin fontconfig fonts-ebgaramond fonts-bebas-neue
-pipx inject autonovel pillow pydub
+sudo apt install -y tectonic   # may fail or be too old; if so, see §5a fallback
+pipx inject autonovel Pillow pydub  # skip if you already used `pipx install '.[export]'`
 
 # macOS (one shot):
 brew install tectonic pandoc potrace ffmpeg librsvg fontconfig
-pipx inject autonovel pillow pydub
+pipx inject autonovel Pillow pydub  # skip if you already used `pipx install '.[export]'`
 # (then download EB Garamond + Bebas Neue from Google Fonts manually)
 ```
 

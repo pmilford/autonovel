@@ -317,7 +317,29 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   full Tier-1 coverage; just needs an end-to-end run.
 - **`autonovel doctor --fix` for missing external CLI tools.** Today
   the doctor reports them; could shell out to brew/apt to install on
-  approval.
+  approval. **Caveat from author testing 2026-04-25:** naïve `apt
+  install` of `tectonic` on Chromebook/Debian frequently fails or
+  installs a too-old version that autonovel can't use. A real
+  `--fix` mode would need (a) per-OS install command tables, (b) a
+  per-tool fallback chain when the package-manager version is broken
+  (tectonic → apt → prebuilt static binary), and (c) post-install
+  re-verification (run the binary, confirm version) rather than just
+  checking `which`. Probably better as a separate `autonovel
+  install-export-tools` subcommand than a `doctor` flag, since the
+  scope is "set up an environment" not "diagnose a series".
+
+- **`autonovel install-export-tools` interactive helper.** Surfaced
+  by 2026-04-25 author testing: writers hit real pain getting
+  tectonic + Pillow + ffmpeg installed on Chromebook ("for a writer
+  this stuff is too hard"). New subcommand asks the user which
+  exports they want (PDF? cover? audiobook?), detects the OS,
+  prints the exact commands they need (or runs them with
+  confirmation), and handles the known special cases (tectonic
+  fallback to prebuilt binary on Linux; `pipx inject` for `Pillow`
+  / `pydub` when autonovel was installed without `[export]`
+  extras; per-OS font install hints for cover rendering). Goal:
+  zero shell debugging for the export path — the writer answers
+  three questions and gets working tools. Cost: ~2-3 hrs.
 - **Drift on `commands/*.md` frontmatter schema.** When `argument-hint`
   or `model_tier` semantics change, the contract test catches usage
   but not field shape. Add a JSON-schema file at

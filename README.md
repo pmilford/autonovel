@@ -149,13 +149,21 @@ terminal is open with `git` and `pipx` available.
 
    ```bash
    cd autonovel
-   pipx install .
+   pipx install '.[export]'
    ```
 
    `cd` ("change directory") moves you into the cloned folder.
-   `pipx install .` reads the `pyproject.toml` here, installs
-   autonovel as a tool you can run from anywhere, and shows you
-   where the `autonovel` command was placed.
+   `pipx install '.[export]'` reads the `pyproject.toml` here,
+   installs autonovel as a tool you can run from anywhere, and
+   pulls in the Python image + audio libraries (`Pillow`, `pydub`)
+   that the export commands (cover art, audiobook) need. Quotes
+   around `'.[export]'` matter — your shell will otherwise try to
+   glob the brackets.
+
+   If you only ever plan to draft and revise (no PDF / cover /
+   audiobook export), `pipx install .` without the extras works
+   too and is faster. You can add the extras later with
+   `pipx inject autonovel Pillow pydub`.
 
 3. **Confirm it worked:**
 
@@ -475,25 +483,68 @@ Drop a `.env` file at the root of your series folder — see
 
 ### Optional external tools (for export only)
 
-`autonovel doctor` reports any of these as missing **warnings**, not
-errors. You only need them if you want the matching export:
+You don't need any of these to draft or revise. Install only the
+ones for the export you actually want, when you want it.
+`autonovel doctor` reports anything missing as a **warning** (not
+an error), so you can drift through writing without thinking about
+this section.
+
+#### Pick what you actually want
+
+| Goal | OS tools | Python extras |
+|---|---|---|
+| PDF only | `tectonic` | — |
+| PDF + ePub | `tectonic`, `pandoc` | — |
+| AI-generated cover | (above) + `fontconfig`, `potrace` | `Pillow` |
+| Vector ornaments in PDF | (above) + `rsvg-convert` | `Pillow` |
+| Audiobook (m4b) | `ffmpeg` (+ `ELEVENLABS_API_KEY`) | `pydub` |
+
+#### Install the OS tools
+
+**macOS — one shot, everything:**
 
 ```bash
-# Linux / WSL / Chromebook:
-sudo apt install tectonic pandoc potrace ffmpeg librsvg2-bin fontconfig
-
-# macOS:
 brew install tectonic pandoc potrace ffmpeg librsvg fontconfig
 ```
 
-| Tool | Used for |
-|---|---|
-| `tectonic` | PDF typesetting |
-| `pandoc` | ePub generation |
-| `potrace` | PNG → SVG ornament vectorisation |
-| `ffmpeg` | m4b audiobook output |
-| `rsvg-convert` | SVG → PDF for print-quality ornaments |
-| `fontconfig` | EB Garamond / Bebas Neue lookup |
+**Chromebook / Debian / WSL — almost everything:**
+
+```bash
+sudo apt install -y pandoc potrace ffmpeg librsvg2-bin fontconfig
+```
+
+**Chromebook / Debian / WSL — `tectonic` is a special case.** The
+`tectonic` in apt is often too old or broken; `autonovel doctor`
+will flag it after install if so. If `apt install tectonic` works
+for you, great. Otherwise grab the prebuilt static binary from the
+official quick-install:
+
+  <https://tectonic-typesetting.github.io/book/latest/installation/index.html>
+
+The Linux instructions there install one self-contained binary into
+`~/.local/bin/`. Verify with `tectonic --version`.
+
+#### Install the Python extras
+
+If you ran `pipx install '.[export]'` during the main install, you
+already have these. If you ran the bare `pipx install .` and now
+want to export:
+
+```bash
+pipx inject autonovel Pillow pydub
+```
+
+`pipx inject` adds packages into the same isolated environment that
+holds `autonovel`, so you don't have to reinstall.
+
+#### Verify
+
+```bash
+autonovel doctor
+```
+
+The export-tools warnings should disappear for whatever you
+installed. Anything still flagged is something you don't need yet.
 
 ---
 

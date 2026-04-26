@@ -24,7 +24,9 @@ from ..paths import SERIES_MARKER, SeriesLayout
 EXPORT_TOOLS: dict[str, tuple[str, str]] = {
     "tectonic": (
         "PDF typesetting (/autonovel:typeset)",
-        "cargo install tectonic  OR  brew install tectonic  OR  see https://tectonic-typesetting.github.io/",
+        "brew install tectonic  OR  apt install tectonic (often too old) "
+        "— if apt fails or doctor still flags it, grab the prebuilt static "
+        "binary from https://tectonic-typesetting.github.io/book/latest/installation/",
     ),
     "pandoc": (
         "ePub generation (/autonovel:typeset)",
