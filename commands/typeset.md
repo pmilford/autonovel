@@ -52,12 +52,26 @@ Light tier — mechanical. No LLM call.
    `books/{book}/art/pdf/<stem>.pdf` before building so the ornaments
    use vector versions; skipped if `rsvg-convert` isn't installed).
 
-2. Use `file_read` on `project.yaml` to pull the book's display title,
-   author, and subtitle. Fall back to `series_name` + the book's
-   short name if explicit title/author aren't set. The TeX includes
-   `books/{book}/art/cover.png` (full-bleed cover page) and the
-   per-chapter `ornament_ch*.png` files via `\IfFileExists` — missing
-   art degrades gracefully, the build still completes.
+2. Use `file_read` on `project.yaml` to pull the book's display
+   metadata. Resolution rules (matches `BookEntry.display_title()` /
+   `display_author()` in `src/autonovel/project.py`):
+
+   - **title**: `books[<name>].title` if set, else the series-level
+     `series_name`, else the book's short name.
+   - **subtitle**: `books[<name>].subtitle` if set, else empty
+     (typeset omits the subtitle line entirely when empty).
+   - **author**: `books[<name>].author` if set, else the
+     series-level `author` (top-level field in `project.yaml`),
+     else "Anonymous".
+
+   Set these via `/autonovel:title --book {book}` (proposes, picks,
+   or sets explicitly — the command writes to `project.yaml`
+   without you needing to hand-edit YAML).
+
+   The TeX includes `books/{book}/art/cover.png` (full-bleed cover
+   page) and the per-chapter `ornament_ch*.png` files via
+   `\IfFileExists` — missing art degrades gracefully, the build still
+   completes.
 
 3. Build `chapters_content.tex` via `bash`:
    `autonovel mechanical build-tex books/{book}/chapters

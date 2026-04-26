@@ -18,6 +18,13 @@ class BookEntry:
     pov: str | None = None
     story_time_range: list[int] | None = None
     status: str = "seed"
+    # Display metadata, set by /autonovel:title (or hand-edited).
+    # All optional — typeset falls back to `name` for `title` and to
+    # the series-level `author` (or the placeholder "Anonymous") for
+    # `author` when a book entry doesn't override.
+    title: str | None = None
+    subtitle: str | None = None
+    author: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name}
@@ -26,7 +33,34 @@ class BookEntry:
         if self.story_time_range is not None:
             d["story_time_range"] = list(self.story_time_range)
         d["status"] = self.status
+        if self.title is not None:
+            d["title"] = self.title
+        if self.subtitle is not None:
+            d["subtitle"] = self.subtitle
+        if self.author is not None:
+            d["author"] = self.author
         return d
+
+    def display_title(self, fallback: str | None = None) -> str:
+        """Return the book's display title — explicit `title` field if
+        set, otherwise *fallback* (typically the series name) or the
+        book's `name` slug as a last resort."""
+        if self.title:
+            return self.title
+        if fallback:
+            return fallback
+        return self.name
+
+    def display_author(self, fallback: str | None = None) -> str:
+        """Return the book's author — explicit `author` field if set,
+        otherwise *fallback* (typically the series-level author) or
+        "Anonymous" as a last resort. Typeset uses this to fill the
+        title page and ePub metadata."""
+        if self.author:
+            return self.author
+        if fallback:
+            return fallback
+        return "Anonymous"
 
 
 @dataclass
@@ -37,9 +71,12 @@ class ProjectConfig:
     llm: dict[str, Any] = field(default_factory=dict)
     books: list[BookEntry] = field(default_factory=list)
     defaults: dict[str, Any] = field(default_factory=dict)
+    # Series-level author — inherited by any BookEntry whose own
+    # `author` field is unset. Optional; "Anonymous" if neither is set.
+    author: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "series_name": self.series_name,
             "genre": self.genre,
             "period": dict(self.period),
@@ -47,6 +84,9 @@ class ProjectConfig:
             "books": [b.to_dict() for b in self.books],
             "defaults": dict(self.defaults),
         }
+        if self.author is not None:
+            d["author"] = self.author
+        return d
 
     def book_by_name(self, name: str) -> BookEntry | None:
         for b in self.books:
@@ -117,6 +157,9 @@ def _from_dict(raw: dict[str, Any]) -> ProjectConfig:
                 pov=b.get("pov"),
                 story_time_range=b.get("story_time_range"),
                 status=b.get("status", "seed"),
+                title=b.get("title"),
+                subtitle=b.get("subtitle"),
+                author=b.get("author"),
             )
         )
 
@@ -131,6 +174,7 @@ def _from_dict(raw: dict[str, Any]) -> ProjectConfig:
         llm=llm,
         books=books,
         defaults=raw.get("defaults") or {},
+        author=raw.get("author"),
     )
 
 
