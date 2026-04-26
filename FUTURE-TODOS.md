@@ -272,9 +272,25 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   knowledge the POV cannot have at the moment of narration. Hard to
   do well; cheap version: search for "the woman / the man" referring
   to a named character the POV already knows.
-- **Bell's "irreversible change" scorer.** Score each chapter on
-  whether something that cannot be undone happens. The Stability Trap
-  is a known AI failure; encode the antidote.
+- ~~**Bell's "irreversible change" scorer.**~~ **Shipped 2026-04-25.**
+  evaluate.md gains an `irreversible_change` dimension on
+  `--chapter` mode and `irreversible_change_arc` on `--full` mode.
+  Per-chapter calibration runs from 9-10 (specific named irreversible
+  change at the chapter's main beat) down to 1-2 (pure setup or
+  stasis); chapter 1 specifically caps at 7 if the ending leaves the
+  protagonist able to refuse the call to action. Whole-book mode
+  walks every (N→N+1) chapter pair asking "could chapter N+1 have
+  started from N's *opening* state?" — every "yes" is a chapter that
+  failed to commit, surfaced in `cuttable_chapters`. Below 6 on the
+  per-chapter score is added to `top_3_revisions` automatically.
+  brief.md adds a `## Stability check` section (only when the eval
+  log's score is <7) that names the reversion and prescribes ONE
+  specific irreversible commitment — never falls back to vague
+  "raise stakes" because that's exactly what the Stability Trap
+  produces. The named ceiling failure from CLAUDE.md ("AI defaults
+  to safe, round-edged endings; pacing ≈ 7 plateau on
+  investigation-heavy plots") now has a measurement and a
+  prescription.
 - **Per-chapter motif tracker.** Some books reward repetition of a
   central image (the bell, the apothecary's mortar). Track motif
   density per chapter and warn when one drops to zero in the back

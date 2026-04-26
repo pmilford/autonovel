@@ -99,19 +99,80 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
    `books/{book}/chapters/ch_{prev}.md` (where `{prev}` = chapter - 1,
    zero-padded). Score the dimensions: `voice_adherence`, `beat_coverage`,
    `character_voice`, `plants_seeded`, `prose_quality`, `continuity`,
-   `canon_compliance`, `lore_integration`, `engagement`. Each emits
-   `{score, weakest_moment, fix, note}`. Include
-   `three_weakest_sentences`, `three_strongest_sentences`,
-   `ai_patterns_detected`, `overall_score`, `weakest_dimension`,
-   `top_3_revisions`, `new_canon_entries`.
+   `canon_compliance`, `lore_integration`, `engagement`,
+   `irreversible_change`. Each emits `{score, weakest_moment, fix,
+   note}`. Include `three_weakest_sentences`,
+   `three_strongest_sentences`, `ai_patterns_detected`,
+   `overall_score`, `weakest_dimension`, `top_3_revisions`,
+   `new_canon_entries`.
+
+   **`irreversible_change` (Stability Trap antidote).** This is
+   the named ceiling failure from the Bells production: AI
+   defaults to safe, round-edged chapter endings — the board
+   resets between chapters, tension can't compound, the book
+   plateaus around pacing 7. The score classifies the chapter's
+   ending and trajectory:
+
+     9-10: At least one specific, named, irreversible change
+           (death, public revelation, broken oath, signed
+           contract, opened door that can't be closed). The
+           character or world cannot return to the chapter's
+           opening state.
+     7-8:  Irreversible change happened, but it's softened
+           (deferred consequence, off-page, not the chapter's
+           main beat). Still moves the story forward.
+     5-6:  Reversible change: something happened that *could*
+           be undone, walked back, or revealed as misunderstanding
+           in a later chapter. The chapter "advances" but commits
+           to nothing.
+     3-4:  Status-quo restored: the board ends the chapter where
+           it started. The events of the chapter could be cut
+           without affecting later chapters.
+     1-2:  Pure setup or pure stasis: nothing of consequence
+           happened. The chapter exists to fill space.
+
+   Required: `weakest_moment` quotes the chapter's final scene
+   when the score is below 7, naming what reverted; `fix`
+   prescribes ONE specific irreversible commitment the rewrite
+   should make (a line, a death, a refusal, a destroyed object —
+   not vague "raise stakes"). Below 6 is added to
+   `top_3_revisions` automatically.
+
+   For chapter 1 specifically, additionally check whether the
+   ending makes the protagonist incapable of refusing the call
+   to action — chapter 1 endings that leave the door open for the
+   protagonist to walk away score capped at 7.
 
 7. Mode `--full`: glob `books/{book}/chapters/*.md` in order. Build a
    compact chapter-by-chapter summary (opening 500 chars, closing 500
    chars, word count, any outline beats marked rendered) and score novel
    dimensions: `arc_completion`, `pacing_curve`, `theme_coherence`,
    `foreshadowing_resolution`, `world_consistency`, `voice_consistency`,
-   `overall_engagement`. Include `novel_score`, `weakest_dimension`,
-   `weakest_chapter`, `top_suggestion`.
+   `overall_engagement`, `irreversible_change_arc`. Include
+   `novel_score`, `weakest_dimension`, `weakest_chapter`, `top_suggestion`.
+
+   **`irreversible_change_arc` (whole-book Stability Trap check).**
+   Walk every chapter pair (N → N+1) and ask: "Could chapter N+1
+   have started from chapter N's *opening* state instead of its
+   *closing* state?" Every "yes" is a chapter that didn't change
+   the world. Score the book on the ratio:
+
+     9-10: Every chapter's closing state is load-bearing for the
+           next chapter (or the climax). No chapter could be cut
+           without breaking later chapters' premises.
+     7-8:  ≤2 chapters could be cut without breaking later
+           chapters; book commits to its consequences.
+     5-6:  3-5 chapters are essentially reversible / cuttable; the
+           middle sags because the board keeps resetting.
+     3-4:  Half the book leaves the world unchanged; suspect a
+           series of "filler" chapters in the middle act.
+     1-2:  Only the climax commits to anything; the rest is stalling.
+
+   Required when the score is below 8: a `cuttable_chapters` list
+   naming each chapter that fails the "could chapter N+1 have
+   started from N's opening state?" test, with one line of
+   evidence per chapter. This is the load-bearing surface for
+   the user's revision plan.
 
 8. Mode `--compare <N>,<M>`: use `file_read` on
    `books/{book}/chapters/ch_{chapter}.md` for each of N and M (truncate

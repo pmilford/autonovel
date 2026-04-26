@@ -63,6 +63,18 @@ A good brief names specific passages to change, not vague moods.
    - `## Specific rewrites` (before → after snippets where the source
      suggested them)
    - `## Voice guardrails` (bulleted — preserve from voice.md Part 2)
+   - `## Stability check` *(only when the eval log's
+     `irreversible_change` score is below 7)* — name the chapter's
+     final scene, name what reverted (board reset to opening / change
+     softened / no consequence committed), and prescribe ONE specific
+     irreversible commitment the rewrite must add: a death, a public
+     revelation, a signed contract, a destroyed object, a refused
+     offer, an oath broken, a door closed. Use the eval log's
+     `irreversible_change.fix` verbatim or sharpen it; never fall
+     back to vague "raise stakes" — the Stability Trap (AI's default
+     to safe, round-edged endings) is the named ceiling failure from
+     the Bells production, and only specific irreversible commitments
+     break it. Omit the section when the score is ≥7.
    - `## Custom-rubric findings` *(only when present)* — for every
      criterion in the eval log's `custom_rubric` array (or the panel
      log's `custom_rubric` block) that scored below 6 or was named
