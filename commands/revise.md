@@ -109,11 +109,21 @@ target, not a mental "safe" overshoot.
 
 9. **Regenerate the chapter summary.** Use `file_write` to overwrite
    `books/{book}/chapters/ch_{chapter}.summary.md` with a fresh
-   150–250 word continuity summary covering: plot, POV state, cast on
-   stage, threads opened, threads closed, story time. The shape is
-   the same as `/autonovel:draft` step 12 — this is the continuity
-   handoff future drafters will read, so it must reflect the
-   *revised* chapter, not the draft it replaced.
+   150–250 word continuity summary. **The shape and section list
+   are exactly those defined in `/autonovel:draft` step 12** — see
+   that file for the canonical seven labelled sections (Location,
+   Plot, POV state, Cast on stage, Threads opened, Threads closed,
+   Story time). Do NOT inline a different list here; defer to
+   draft.md's spec so the two stay in sync. The summary must
+   reflect the *revised* chapter, not the draft it replaced.
+
+   Specifically: if the chapter's setting changed in the rewrite
+   (a scene moved from Venice to Padua, say), update the **Location**
+   field accordingly. Cast on stage entries are similarly
+   refreshed for the new prose. The whole point of regenerating
+   the summary post-revise is that downstream readers (the next
+   chapter's drafter, `/autonovel:chapter-summary`'s table) see
+   the current state, not the pre-revision one.
 
 10. Use `file_write` to append any new candidate canon facts to
     `books/{book}/pending_canon.md` (or add a single `no new facts`
