@@ -1,7 +1,7 @@
 ---
 name: autonovel:revision-pass
 description: Sweep check-anachronism + brief + revise + evaluate across a range of chapters in one invocation.
-argument-hint: "--chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--parallel [N]]"
+argument-hint: "--chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--no-promote] [--parallel [N]]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -27,6 +27,7 @@ writes:
   - books/{book}/chapters/ch_{chapter}.summary.md
   - books/{book}/eval_logs/ch{chapter:02d}_eval.json
   - books/{book}/pending_canon.md
+  - shared/canon.md
 context_mode: book
 ---
 
@@ -67,9 +68,9 @@ chapter the sweep touched in one shot.
 1. Parse `$ARGUMENTS`. Required: `--chapters <range>`. The range
    can be `N-M` (inclusive), `N,M,K` (comma-separated), or `all`
    (every drafted chapter). `--book` defaults via `_begin`.
-   `--skip-anachronism` and `--skip-eval` are independent flags
-   that drop those stages from the per-chapter sequence. Missing
-   `--chapters` → stop with a one-line usage hint.
+   `--skip-anachronism`, `--skip-eval`, and `--no-promote` are
+   independent flags that drop those stages from the per-chapter
+   sequence. Missing `--chapters` → stop with a one-line usage hint.
 
 2. Use `file_read` on `project.yaml` to resolve the book entry,
    `pov`, and `defaults.chapter_target_words`. Use the `Bash` tool
@@ -152,6 +153,22 @@ chapter the sweep touched in one shot.
       (only if both are non-None; otherwise leave as "—"). This
       is display-only — no file written.
 
+   f. **promote-canon** *(skippable via --no-promote)*: reproduce
+      the body of `/autonovel:promote-canon` against this book's
+      `pending_canon.md`. Merge new entries into `shared/canon.md`;
+      research-tagged entries win contradictions. Capture the
+      count of entries promoted and the count of conflicts
+      encountered. Mirrors the per-chapter promote-canon that
+      draft-pass adopted in `aea1511` — without it, revisions
+      that discover new canon facts (a clarified date, a
+      character revelation, a corrected name) leave them in
+      pending_canon.md until the *end* of the sweep, so chapter
+      N+1's revise reads the *pre-revision* shared/canon.md and
+      can re-introduce the same inconsistency the chapter-N
+      revise just fixed. Per-chapter promotion lets each
+      revision's discoveries land before the next chapter's
+      revise reads canon.
+
    **Critical: do NOT call `autonovel _begin` or `autonovel _end`
    for any sub-step.** This command holds the series lock for the
    entire range — its own preamble already ran. Sub-steps that
@@ -160,12 +177,16 @@ chapter the sweep touched in one shot.
    After each chapter finishes, print one line:
 
    ```
-   [ch N] anachronism: <count> hits | brief: <words>w | revise: <words>w (delta <±N>w) | eval: <prev_score> → <new_score> (Δ <±X.X>)
+   [ch N] anachronism: <count> hits | brief: <words>w | revise: <words>w (delta <±N>w) | eval: <prev_score> → <new_score> (Δ <±X.X>) | canon: +<P>
    ```
 
    When `prev_score` is None (no prior eval on disk), render the
    eval segment as `eval: — → <new_score>` and omit the Δ. When
-   `--skip-eval` was passed, omit the eval segment entirely.
+   `--skip-eval` was passed, omit the eval segment entirely. When
+   `--no-promote` was passed, omit the `canon:` segment; otherwise
+   `<P>` is the count of pending_canon entries promoted into
+   shared/canon.md by this chapter's promote-canon step (`0` is a
+   valid value when the chapter discovered no new facts).
 
    so the user has live progress and can see whether the revise
    actually improved the chapter or made it worse — a negative Δ
@@ -198,11 +219,19 @@ chapter the sweep touched in one shot.
    chapter is a real concern and should not be buried in the
    table.
 
-5. The postamble's standard footer recommends the next step. With
+5. **Final promote-canon sweep** *(skip if `--no-promote`)*. After
+   the loop completes, run `/autonovel:promote-canon` one last time
+   to catch any pending_canon entries that the per-chapter step
+   couldn't promote (typically: revise additions in the very last
+   chapter that landed after that chapter's promote-canon ran, or
+   any other book's pending file in a multi-book series). Idempotent
+   — if every per-chapter promote already consumed everything, this
+   call is a no-op summary line.
+
+6. The postamble's standard footer recommends the next step. With
    the sweep complete and chapters all above the threshold, that
    should be `/autonovel:reader-panel --book {book}` (book-wide
-   pass) or `/autonovel:promote-canon` (if pending_canon has
-   entries from any of the revises).
+   pass).
 </workflow>
 
 <files-touched>

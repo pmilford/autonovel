@@ -35,7 +35,7 @@ argument is required when more than one book exists in the series.
 | Command | Tier | Description |
 |---|---|---|
 | `/autonovel:gen-outline --book <short-name>` | standard | Generate the outline from seed, world, and characters. |
-| `/autonovel:voice-discovery --book <short-name>` | heavy | Fill the book-specific fingerprint in Part 2 of `voice.md`. |
+| `/autonovel:voice-discovery --book <short-name> [--force \| --upgrade]` | heavy | Fill the book-specific fingerprint in Part 2 of `voice.md`, draft per-character voice fingerprints into Part 4 when the cast count is ≥3, and append the Part 3 (Custom rubric) placeholder if missing. `--upgrade` is the safe path for existing books — preserves Parts 1 and 2 verbatim while adding Parts 3 and 4. `--force` regenerates everything. |
 | `/autonovel:draft <chapter-number> --book <short-name>` | standard | Draft one chapter as full prose. |
 | `/autonovel:draft-pass --chapters <range> [--book <name>] [--retry-below <score>] [--no-revise-low] [--no-anachronism] [--no-promote] [--skip-eval] [--deep]` | heavy | "Write the rest of the book." Per chapter: draft → anachronism check → evaluate → if score < threshold (default 7.0), brief + revise + re-eval (keep best). At sweep end: promote-canon. With `--deep`: also run reader-panel + Opus review on the whole book and surface the flagged-chapter list. Sequential only. Same per-chapter quality as `/autonovel:draft` plus immediate-fix-on-low-score, end-of-sweep canon coherence, and (in deep mode) the whole-book passes. |
 | `/autonovel:summarize-chapter <chapter> [--book <short-name>] [--force]` | standard | Backfill the 150–250-word continuity summary for a chapter drafted before summaries shipped. |
@@ -45,16 +45,16 @@ argument is required when more than one book exists in the series.
 | Command | Tier | Description |
 |---|---|---|
 | `/autonovel:evaluate --phase foundation --book <name>` | heavy | Score the foundation. |
-| `/autonovel:evaluate --chapter <N> --book <name>` | heavy | Score one chapter. |
-| `/autonovel:evaluate --full --book <name>` | heavy | Score the whole book. |
+| `/autonovel:evaluate --chapter <N> --book <name>` | heavy | Score one chapter against the standard rubric plus `irreversible_change` (Stability Trap antidote), `beat_coverage` (per-scene goal/conflict/disaster-or-decision/consequence; surfaces `weakest_scenes` by index), and any criteria in `voice.md` Part 3 (Custom rubric). For chapter 1, also scores `hook_strength` over the first 250 words. |
+| `/autonovel:evaluate --full --book <name>` | heavy | Score the whole book — adds `irreversible_change_arc` (walks every (N→N+1) chapter pair, surfaces `cuttable_chapters`), `book_beat_coverage_score`, and `weak_beat_coverage_chapters`. Emits the per-chapter pacing-curve table + tension-drop alarms. |
 | `/autonovel:evaluate --compare <N>,<M> --book <name>` | heavy | Head-to-head chapter pair. |
 | `/autonovel:adversarial-edit <chapter> --book <short-name>` | heavy | Find 10–20 cut/rewrite candidates in one chapter. |
 | `/autonovel:apply-cuts <chapter> --book <short-name> [--types OVER-EXPLAIN REDUNDANT] [--dry-run]` | light | Deterministically remove quotes flagged by adversarial-edit. |
 | `/autonovel:reader-panel --book <short-name>` | heavy | Four-persona reader-panel review of a book's complete arc. |
 | `/autonovel:review --book <short-name>` | heavy | Deep dual-persona manuscript review — literary critic + professor of fiction. |
-| `/autonovel:brief <chapter> --book <short-name> [--from cuts|eval|panel|auto]` | standard | Generate a revision brief from cuts, eval, or panel feedback. |
+| `/autonovel:brief <chapter> --book <short-name> [--from cuts\|eval\|panel\|auto]` | standard | Generate a revision brief from cuts, eval, or panel feedback. Surfaces a `## Weak scenes` section (when the eval log's `beat_coverage.weakest_scenes` is non-empty), a `## Stability check` section (when the eval log's `irreversible_change` score is below 7), and a `## Custom-rubric findings` section (when voice.md Part 3 criteria were flagged). |
 | `/autonovel:revise <chapter> --book <short-name>` | heavy | Rewrite one chapter from a brief, preserving voice and continuity. |
-| `/autonovel:revision-pass --chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--parallel [N]]` | heavy | Sweep check-anachronism + brief + revise + evaluate across a range of chapters. Sequential by default; `--parallel [N]` (default N=3) fans out via `Task` subagents at the cost of one revision-pass of summary-staleness. |
+| `/autonovel:revision-pass --chapters <range> [--book <name>] [--skip-anachronism] [--skip-eval] [--no-promote] [--parallel [N]]` | heavy | Sweep check-anachronism + brief + revise + evaluate + promote-canon across a range of chapters. Per-chapter promote-canon (added 2026-04-25) lands each revision's discoveries in `shared/canon.md` before the next chapter's revise reads canon — without it, an early-chapter revise that clarifies a fact would re-introduce the inconsistency in the next chapter. Sequential by default; `--parallel [N]` (default N=3) fans out via `Task` subagents at the cost of one revision-pass of summary-staleness. Per-chapter line shows score delta (`prev → new (Δ ±X.X)`) and canon promotion count. Final end-of-sweep promote-canon catches anything pending. `--no-promote` skips the canon merge if you want to inspect `pending_canon.md` before promoting. |
 | `/autonovel:compare-models --chapter <N> [--book <name>] [--models <a>,<b>]` | heavy | A/B-draft the same chapter with two models in parallel, judge head-to-head, write verdict + both candidate drafts to `eval_logs/`. Live chapter file is unchanged. |
 
 ### Period guardrails (historical / period fantasy)

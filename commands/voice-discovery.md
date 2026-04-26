@@ -1,7 +1,7 @@
 ---
 name: autonovel:voice-discovery
 description: Fill the book-specific fingerprint in Part 2 of the book's voice.md.
-argument-hint: "--book <short-name>"
+argument-hint: "--book <short-name> [--force | --upgrade]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -28,8 +28,19 @@ they refuse to name.
 
 <workflow>
 1. Parse `$ARGUMENTS`. Expect `--book <short-name>`. If missing, stop and
-   surface a one-line usage reminder. `--force` permits overwriting an
-   already-populated Part 2.
+   surface a one-line usage reminder.
+
+   Two re-run flags (mutually exclusive):
+   - `--force` regenerates Parts 1, 2, and 4 from scratch, overwriting
+     whatever was there. Use only when the prior voice.md is junk and
+     you want a clean re-derive.
+   - `--upgrade` is the safe upgrade path for an existing book whose
+     voice.md predates Parts 3 and 4. It **preserves Parts 1 and 2
+     verbatim**, appends the Part 3 placeholder if it's missing, and
+     drafts Part 4 from `shared/characters.md` (when the cast is ≥3).
+     This is what to run after `autonovel install` brings in a new
+     autonovel version that adds voice.md sections — no
+     hand-editing required.
 
 2. Use `file_read` on `project.yaml`. Resolve the book entry and its POV.
    Capture `genre` and `period` — the voice has to sit inside the period's
@@ -43,8 +54,17 @@ they refuse to name.
    seed about appetite; the outline's pacing shapes cadence.
 
 5. Use `file_read` on `books/{book}/voice.md`. Keep Part 1 (series voice)
-   verbatim. If Part 2 has substantive content (more than the template
-   placeholder) and `--force` was not supplied, stop.
+   verbatim.
+
+   Part 2 handling depends on the flags:
+   - `--upgrade`: **always preserve Part 2 verbatim**, even when it's
+     populated. Skip steps 6 (Part 2 drafting) entirely; jump to
+     step 6a (Part 4) and step 7 (write).
+   - `--force`: regenerate Part 2.
+   - Neither flag: if Part 2 has substantive content (more than the
+     template placeholder), stop with a one-line message: "Part 2 is
+     populated; re-run with `--upgrade` to add Parts 3 and 4 without
+     touching it, or `--force` to regenerate everything."
 
 6. Draft Part 2. Keep it concrete and usable by a drafting model. Include:
    - sentence-length tendency and variance,

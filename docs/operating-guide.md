@@ -332,6 +332,84 @@ Three-line variant when you remember the gist but not the order:
 ( cd ~/autonovel && git pull && pipx reinstall . )  &&  autonovel install
 ```
 
+**Important:** `autonovel install` only overwrites command files in
+your runtime's directory (e.g. `~/.claude/commands/autonovel/`). It
+**does not touch your book content** — your `books/<book>/voice.md`,
+`books/<book>/chapters/`, `shared/canon.md`, eval logs, briefs, and
+everything else under your series root are completely safe across
+upgrades. Re-installing the commands is how you *pick up* new
+features (e.g. the per-book Custom rubric, per-character voice
+fingerprints, irreversible-change scorer, scene-beat coverage that
+shipped 2026-04-25); your novel never gets clobbered.
+
+### 3b.1. Upgrading an existing book to use new voice.md sections
+
+When autonovel ships new voice.md surfaces (Parts 3 and 4 shipped
+2026-04-25 — Custom rubric and Per-character voice fingerprints),
+your existing book's `voice.md` won't have them yet. The safe
+upgrade path:
+
+```bash
+# 1. Pull the new autonovel and reinstall commands (see §3b above).
+( cd ~/autonovel && git pull && pipx reinstall . )  &&  autonovel install
+
+# 2. Inside Claude Code, in your series root:
+/autonovel:voice-discovery --book <book> --upgrade
+```
+
+`--upgrade` is the load-bearing flag here. It:
+
+- **Preserves Parts 1 and 2 verbatim** — your hand-tuned voice
+  fingerprint is never overwritten.
+- **Appends the Part 3 placeholder** (Custom rubric) if it isn't
+  already present. You then hand-edit Part 3 to add book-specific
+  scoring rules — see the placeholder comment for examples.
+- **Drafts Part 4** (Per-character voice fingerprints) from
+  `shared/characters.md` if the cast count is ≥3.
+
+Without `--upgrade`, voice-discovery refuses to re-run on a
+populated voice.md (because it would otherwise regenerate Part 2
+and lose your work). Use `--force` only when the prior voice.md is
+junk and you genuinely want a clean re-derive.
+
+### 3b.2. Generating a PDF and ePub
+
+The fastest "I want to see the book typeset" sequence, after the
+tools in §5a/§5b are installed:
+
+```bash
+# 1. Inside Claude Code, in your series root:
+/autonovel:typeset --book <book>
+```
+
+That single command produces:
+
+- `books/<book>/typeset/<book>.pdf` (via tectonic)
+- `books/<book>/typeset/<book>.epub` (via pandoc, when pandoc is
+  installed; silently skipped if not)
+
+If you only want one or the other:
+
+```text
+/autonovel:typeset --book <book> --pdf-only
+/autonovel:typeset --book <book> --epub-only
+```
+
+Pre-flight: run `autonovel doctor` (in the series root) first.
+Missing `tectonic` or `pandoc` show as **WARNING** lines with the
+fix command — install whatever you need, re-run `doctor` until the
+warning for your target tool is gone, then run typeset.
+
+You can run typeset between revision passes purely as a "what does
+the book look like right now?" check — it doesn't modify the
+chapters, only writes typeset artifacts under
+`books/<book>/typeset/`. Safe to interrupt and re-run.
+
+For cover art (`/autonovel:cover-print`), audiobook
+(`/autonovel:audiobook-*`), and chapter ornaments
+(`/autonovel:art-vectorize`), see §5c–§5d for the tool prerequisites
+and the per-command help inside Claude Code.
+
 ### 3c. Restarting after a crash, power loss, or kernel reboot
 
 Power off mid-draft → boot back up → continue. autonovel is
