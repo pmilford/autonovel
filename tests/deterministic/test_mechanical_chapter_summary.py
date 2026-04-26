@@ -49,15 +49,20 @@ def _make_chapter(book: Path, num: int, *, pov: str = "Tommaso",
 
 
 def _make_summary(book: Path, num: int, *, plot: str,
-                  cast: str, story_time: str = "1521-12-04") -> None:
-    (book / "chapters" / f"ch_{num:02d}.summary.md").write_text(
-        f"**Plot:** {plot}\n\n"
-        f"**POV state:** Tommaso now suspects Niccolò.\n\n"
-        f"**Cast on stage:** {cast}\n\n"
-        f"**Threads opened:** the missing ledger.\n\n"
-        f"**Threads closed:** —\n\n"
+                  cast: str, story_time: str = "1521-12-04",
+                  location: str | None = None) -> None:
+    parts = [f"**Plot:** {plot}\n"]
+    if location is not None:
+        parts.insert(0, f"**Location:** {location}\n")
+    parts.extend([
+        f"**POV state:** Tommaso now suspects Niccolò.\n",
+        f"**Cast on stage:** {cast}\n",
+        f"**Threads opened:** the missing ledger.\n",
+        f"**Threads closed:** —\n",
         f"**Story time:** {story_time}\n",
-        encoding="utf-8",
+    ])
+    (book / "chapters" / f"ch_{num:02d}.summary.md").write_text(
+        "\n".join(parts), encoding="utf-8",
     )
 
 
@@ -209,9 +214,45 @@ def test_render_table_basic(tmp_path: Path) -> None:
     rows = summarize_chapters(book)
     table = render_markdown_table(rows)
     assert "| Ch | Date" in table
+    # Score column is renamed to Sco and tightened.
+    assert "| Sco |" in table
     assert "Tommaso" in table
     assert "7.4" in table
     assert "Fire at the apothecary." in table
+
+
+def test_location_is_parsed_and_prepended_to_plot(tmp_path: Path) -> None:
+    """When the summary carries a Location field, the helper exposes
+    it both on the row dict and in the rendered table — bolded and
+    prepended to the Plot column with `**Loc** — plot` so a writer
+    can scan the Plot column for "Venice" / "Augsburg" without
+    needing a separate Location column."""
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1)
+    _make_summary(book, 1, plot="Fire at the apothecary.",
+                  cast="Tommaso", location="Venice / Rialto")
+    rows = summarize_chapters(book)
+    assert rows[0].location == "Venice / Rialto"
+    table = render_markdown_table(rows)
+    assert "**Venice / Rialto** — Fire at the apothecary." in table
+
+
+def test_chapter_without_location_falls_back_to_plot_only(tmp_path: Path) -> None:
+    """Older summaries (written before the Location field shipped)
+    must still render — the Plot column shows just plot, no
+    location prefix."""
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1)
+    _make_summary(book, 1, plot="Fire at the apothecary.",
+                  cast="Tommaso")  # no location
+    rows = summarize_chapters(book)
+    assert rows[0].location is None
+    table = render_markdown_table(rows)
+    # Plot still rendered; no `**…** —` prefix.
+    assert "Fire at the apothecary." in table
+    # Specifically: no bolded location marker before the plot text.
+    line = [ln for ln in table.splitlines() if "Fire at the apothecary." in ln][0]
+    assert "** —" not in line
 
 
 def test_render_table_handles_no_chapters(tmp_path: Path) -> None:

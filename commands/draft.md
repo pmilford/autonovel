@@ -125,10 +125,18 @@ off-limits.
 
 12. **Write the chapter summary.** Use `file_write` to save a
     150–250 word summary at
-    `books/{book}/chapters/ch_{chapter}.summary.md`. Cover six things,
-    each as a one or two sentence section:
+    `books/{book}/chapters/ch_{chapter}.summary.md`. Cover seven
+    things, each as a one or two sentence section:
       - **Plot:** what happened in this chapter (action, decisions,
         outcomes — not theme).
+      - **Location:** the dominant setting in compact form, e.g.
+        `Venice / Rialto`, `Augsburg / Fugger counting-house`,
+        `Padua road`. One short phrase. When the chapter spans
+        multiple locations, name the primary one (where the most
+        on-page time happens) optionally with `+ <other>` after.
+        This is what `/autonovel:chapter-summary` displays in the
+        Plot column for at-a-glance "which chapters are set in X?"
+        filtering — keep it succinct.
       - **POV state:** what the POV character knows, wants, fears at
         the close that they didn't at the open.
       - **Cast on stage:** every named character who appeared,

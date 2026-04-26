@@ -38,6 +38,7 @@ class ChapterRow:
     story_time: str | None = None
     pov: str | None = None
     word_count: int | None = None
+    location: str | None = None    # short phrase from summary's Location section
     plot: str | None = None        # one-sentence pull from Plot
     cast: list[str] = field(default_factory=list)   # names from Cast on stage
     score: float | None = None     # latest overall_score
@@ -49,6 +50,7 @@ class ChapterRow:
             "story_time": self.story_time,
             "pov": self.pov,
             "word_count": self.word_count,
+            "location": self.location,
             "plot": self.plot,
             "cast": list(self.cast),
             "score": self.score,
@@ -109,6 +111,7 @@ def summarize_chapters(book_root: Path) -> list[ChapterRow]:
             sm = _parse_summary(summary_path.read_text(encoding="utf-8"))
             row.plot = sm.get("plot")
             row.cast = sm.get("cast") or []
+            row.location = sm.get("location")
             # The summary's Story time tends to be more specific than
             # the frontmatter's (which can be a range); prefer it
             # when present.
@@ -208,6 +211,11 @@ def _parse_summary(text: str) -> dict:
         out["cast"] = _parse_cast(sections["cast on stage"])
     if "story time" in sections:
         out["story_time"] = sections["story time"]
+    if "location" in sections:
+        # Location is meant to be a short phrase; if the summary
+        # accidentally wrote a longer paragraph, take the first
+        # sentence so the table column doesn't blow.
+        out["location"] = _first_sentence(sections["location"])
     return out
 
 
@@ -318,28 +326,42 @@ def render_markdown_table(rows: list[ChapterRow]) -> str:
     """Render the chapter summary as a markdown table the
     `/autonovel:chapter-summary` command prints to stdout.
 
-    Columns: Ch | Date | POV | Score | Words | Cast | Plot.
+    Columns: Ch | Date | POV | Sco | Words | Cast | Plot.
+
+    The Plot column is **prefixed with the chapter's Location** when
+    the summary carries one (e.g.
+    `Venice / Rialto: Fire at the apothecary…`). Chapters whose
+    summary predates the Location field show plot alone — graceful
+    fallback so older books don't get blank Plot cells. The Sco
+    column is intentionally compact (3-char header + 3-char cell)
+    to leave width for Plot, which is where filtering happens.
+
     Cast and Plot are width-trimmed defensively so the table stays
     one-row-per-chapter even on long entries.
     """
     if not rows:
         return "_No chapters drafted yet._\n"
 
-    header = "| Ch | Date       | POV       | Score | Words | Cast                          | Plot |"
-    sep    = "|----|------------|-----------|-------|-------|-------------------------------|------|"
+    header = "| Ch | Date       | POV       | Sco | Words | Cast                          | Plot |"
+    sep    = "|----|------------|-----------|-----|-------|-------------------------------|------|"
     lines = [header, sep]
     for r in rows:
         ch = f"{r.chapter:>2}"
         date = (r.story_time or "—")[:10].ljust(10)
         pov = (r.pov or "—")[:9].ljust(9)
         score = f"{r.score:.1f}" if r.score is not None else "—"
-        score_col = score.center(5)
+        score_col = score.rjust(3)
         words = f"{r.word_count}" if r.word_count is not None else "—"
         words_col = words.rjust(5)
         cast_str = ", ".join(r.cast) if r.cast else "—"
         if len(cast_str) > 29:
             cast_str = cast_str[:28] + "…"
         cast_col = cast_str.ljust(29)
-        plot = (r.plot or "—").replace("|", "\\|")
-        lines.append(f"| {ch} | {date} | {pov} | {score_col} | {words_col} | {cast_col} | {plot} |")
+        plot_text = (r.plot or "—").replace("|", "\\|")
+        if r.location:
+            location_text = r.location.replace("|", "\\|")
+            plot_with_location = f"**{location_text}** — {plot_text}"
+        else:
+            plot_with_location = plot_text
+        lines.append(f"| {ch} | {date} | {pov} | {score_col} | {words_col} | {cast_col} | {plot_with_location} |")
     return "\n".join(lines) + "\n"

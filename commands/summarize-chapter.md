@@ -57,8 +57,15 @@ stage, what threads opened, what threads closed, where in story time.
    the per-book fingerprint) and on `books/{book}/outline.md` (just
    the entry for this chapter, for plant/payoff context).
 
-6. Synthesize the summary. Six sections, each one or two sentences:
+6. Synthesize the summary. Seven sections, each one or two sentences:
 
+   - **Location:** the dominant setting in compact form (e.g.
+     `Venice / Rialto`, `Augsburg / Fugger counting-house`). One
+     short phrase. Multi-location chapters: name the primary
+     location with `+ <other>` after if helpful. The
+     `/autonovel:chapter-summary` table prepends this to the Plot
+     column for at-a-glance "which chapters are set in X?"
+     filtering.
    - **Plot:** what happened (action, decisions, outcomes — not
      theme).
    - **POV state:** what the POV character knows, wants, fears at
@@ -75,7 +82,7 @@ stage, what threads opened, what threads closed, where in story time.
 
 7. Use `file_write` to save the summary at
    `books/{book}/chapters/ch_{chapter}.summary.md`. Plain markdown,
-   no frontmatter, no `# Heading` — just the six labelled sections.
+   no frontmatter, no `# Heading` — just the seven labelled sections.
 </workflow>
 
 <acceptance>
