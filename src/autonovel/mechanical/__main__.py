@@ -11,6 +11,8 @@ Subcommands:
   scenes <path> [--full]           Split a chapter into scenes by *** / --- breaks.
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
+  render-novel-tex <template> [-s KEY=V ...]  Substitute @KEY@ placeholders (safer than sed).
+  typeset-filename <slug> <kind>   Print canonical timestamped + latest filenames.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -38,6 +40,7 @@ from .scenes import split_scenes
 from .sensory import channel_balance
 from .slop import period_ban_hits, slop_score
 from .spine import cover_spec
+from .typeset import latest_filename, output_filename, render_novel_tex
 
 
 def _cmd_slop(args: argparse.Namespace) -> int:
@@ -183,6 +186,37 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_render_novel_tex(args: argparse.Namespace) -> int:
+    template = Path(args.template).read_text(encoding="utf-8")
+    subs: dict[str, str] = {}
+    for kv in (args.substitutions or []):
+        if "=" not in kv:
+            print(f"error: substitutions must be KEY=VALUE; got {kv!r}", file=sys.stderr)
+            return 2
+        key, _, value = kv.partition("=")
+        subs[key] = value
+    rendered = render_novel_tex(template, subs)
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(rendered, encoding="utf-8")
+    json.dump({"output": str(output), "bytes": len(rendered),
+               "substitutions_applied": sorted(subs.keys())},
+              sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_typeset_filename(args: argparse.Namespace) -> int:
+    """Print the canonical timestamped filename. Used by typeset.md
+    so the bash side doesn't have to do its own date math."""
+    name = output_filename(args.slug, args.kind)
+    latest = latest_filename(args.slug, args.kind)
+    json.dump({"timestamped": name, "latest": latest},
+              sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_build_epub_md(args: argparse.Namespace) -> int:
     chapters_dir = Path(args.chapters_dir)
     output = Path(args.output) if args.output else None
@@ -312,6 +346,20 @@ def main(argv: list[str] | None = None) -> int:
     em.add_argument("--output", default=None,
                     help="Write the combined markdown to this path; otherwise stdout-JSON only.")
     em.set_defaults(func=_cmd_build_epub_md)
+
+    rt = sub.add_parser("render-novel-tex",
+                        help="Substitute @KEY@ placeholders in a novel.tex template (replaces fragile sed).")
+    rt.add_argument("template", help="Path to the novel.tex template.")
+    rt.add_argument("--output", required=True, help="Destination path for the rendered .tex.")
+    rt.add_argument("--substitution", "-s", dest="substitutions", action="append",
+                    help="KEY=VALUE pair. Repeat for multiple. KEY substitutes @KEY@ in the template.")
+    rt.set_defaults(func=_cmd_render_novel_tex)
+
+    tf = sub.add_parser("typeset-filename",
+                        help="Print canonical typeset output filename `<slug>_<YYYYMMDD>_<HHMM>.<kind>` plus latest.")
+    tf.add_argument("slug", help="Book slug (will be normalised).")
+    tf.add_argument("kind", help="Extension without dot (`pdf` or `epub`).")
+    tf.set_defaults(func=_cmd_typeset_filename)
 
     bt = sub.add_parser("build-tex", help="Build chapters_content.tex from a chapters dir.")
     bt.add_argument("chapters_dir")

@@ -39,11 +39,19 @@
 \setcounter{DefaultLines}{2}
 
 % === HEADERS AND FOOTERS ===
+% Classic novel typography: book title on the verso (left-even), the
+% chapter mark on the recto (right-odd). The recto deliberately uses
+% `Chapter <Roman>` rather than `\leftmark` (chapter title) — chapter
+% titles vary in length, can carry italics or special characters, and
+% in author-testing 2026-04-25 the previous `\textit{\leftmark}` setup
+% bled italic chapter-title fragments into the running header in
+% surprising ways. The Roman chapter number is short, stable, and
+% always renders cleanly.
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[LE]{\small\textsc{@TITLE@}}
-\fancyhead[RO]{\small\textit{\leftmark}}
+\fancyhead[RO]{\small\textsc{Chapter \thechapter}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0pt}
 

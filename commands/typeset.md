@@ -24,8 +24,8 @@ writes:
   - books/{book}/typeset/chapters_content.tex
   - books/{book}/typeset/chapters_combined.md
   - books/{book}/typeset/novel.tex
-  - books/{book}/typeset/novel.pdf
-  - books/{book}/typeset/novel.epub
+  - books/{book}/typeset/*.pdf
+  - books/{book}/typeset/*.epub
   - books/{book}/typeset/metadata.yaml
 context_mode: book
 ---
@@ -74,17 +74,47 @@ Light tier — mechanical. No LLM call.
    summary.
 
 4. PDF path (unless `--epub-only`):
-   a. Use `bash: cp typeset/novel.tex books/{book}/typeset/novel.tex`.
-   b. Use `bash` with `sed -i` to substitute `@TITLE@`, `@AUTHOR@`,
-      `@SERIES_NAME@` placeholders in the copied file. (See the
-      `typeset/novel.tex` template — the pre-rewrite version hard-
-      coded the Bells title; it now uses placeholders.)
-   c. Use `bash: (cd books/{book}/typeset && tectonic novel.tex)`.
-      Tectonic is the only typesetter supported — it downloads
-      dependencies on first run and is hermetic across platforms.
-   d. On failure, print the last ~30 lines of the log and stop.
-      Partial PDFs left by tectonic stay in place; the user can
-      inspect them.
+   a. **Render the per-book novel.tex** via the safer Python helper
+      (no sed):
+      ```
+      autonovel mechanical render-novel-tex \
+        typeset/novel.tex \
+        --output books/{book}/typeset/novel.tex \
+        -s TITLE='<title>' \
+        -s AUTHOR='<author>' \
+        -s SERIES_NAME='<series_name>'
+      ```
+      Resolve `<title>` / `<author>` from `project.yaml` step 2 (see
+      title fallbacks there). The helper does pure string replacement
+      — no shell interpretation, no escape-needed for `/` or `&` in
+      titles — replacing the previous `sed -i` which was fragile on
+      titles containing those characters and was the likely cause of
+      the "first PDF run didn't work" symptom reported 2026-04-25.
+   b. **Resolve the timestamped output names** for this build:
+      ```
+      autonovel mechanical typeset-filename {book} pdf
+      ```
+      Parse the JSON output: `timestamped` is the per-build name
+      (e.g. `the-inquisitor_20260425_1540.pdf`); `latest` is the
+      convenience pointer (e.g. `the-inquisitor_latest.pdf`).
+   c. Use `bash` to run tectonic and copy the result to the
+      timestamped + latest filenames:
+      ```
+      (cd books/{book}/typeset && tectonic novel.tex)
+      cp books/{book}/typeset/novel.pdf \
+         books/{book}/typeset/<timestamped>
+      cp books/{book}/typeset/novel.pdf \
+         books/{book}/typeset/<latest>
+      ```
+      Tectonic produces `novel.pdf` from `novel.tex`; we copy to both
+      destinations so a writer can keep every build (timestamped) AND
+      always know which file is the most recent (latest). Tectonic
+      is the only typesetter supported — it downloads dependencies
+      on first run and is hermetic across platforms.
+   d. On tectonic failure, print the last ~30 lines of the log and
+      stop. Partial `novel.pdf` left by tectonic stays in place for
+      inspection; the timestamped + latest copies are NOT written
+      (they should only point at successful builds).
 
 5. ePub path (unless `--pdf-only`):
    a. **Build the combined markdown.** Use `bash` to run
@@ -100,10 +130,17 @@ Light tier — mechanical. No LLM call.
       per chapter (which makes ePub chapter navigation actually
       work). Bug both fixed 2026-04-25.
 
-   b. **Run pandoc** against the combined file plus front/back
-      matter:
+   b. **Resolve the timestamped output names** for the ePub build:
       ```
-      pandoc -o books/{book}/typeset/novel.epub \
+      autonovel mechanical typeset-filename {book} epub
+      ```
+      Same JSON shape as step 4b — `timestamped` and `latest`.
+
+   c. **Run pandoc** against the combined file plus front/back
+      matter, writing to the timestamped name first; copy to
+      `latest` after pandoc succeeds:
+      ```
+      pandoc -o books/{book}/typeset/<timestamped> \
         --metadata-file=books/{book}/typeset/metadata.yaml \
         --css=typeset/epub_style.css \
         --epub-cover-image=books/{book}/art/cover_titled.png \
@@ -113,6 +150,8 @@ Light tier — mechanical. No LLM call.
         books/{book}/typeset/chapters_combined.md \
         typeset/epub_back_cover.md \
         typeset/epub_colophon.md
+      cp books/{book}/typeset/<timestamped> \
+         books/{book}/typeset/<latest>
       ```
       `--top-level-division=chapter` + `--toc` produce a clean
       per-chapter ePub spine with proper TOC entries (without
@@ -125,23 +164,42 @@ Light tier — mechanical. No LLM call.
       written to `books/{book}/typeset/metadata.yaml` before the
       pandoc call.
 
-   c. If `pandoc` isn't installed, stop with a single-line install
+   d. If `pandoc` isn't installed, stop with a single-line install
       hint. The PDF path can still have succeeded before this step;
       report what got built.
 
-6. Print a one-screen summary: size of the PDF, page count if
-   discoverable (parse `pdfinfo books/{book}/typeset/novel.pdf`), ePub
-   size, and a warning if either output is missing.
+6. Print a one-screen summary naming the timestamped filename
+   AND the `latest` pointer for each artefact, plus size of the
+   PDF, page count if discoverable (parse `pdfinfo` against
+   the timestamped PDF), ePub size, and a warning if either
+   output is missing. Format:
+
+   ```
+   PDF:  books/{book}/typeset/<book>_20260425_1540.pdf  (412 KB, 247 pages)
+         books/{book}/typeset/<book>_latest.pdf  (alias)
+   ePub: books/{book}/typeset/<book>_20260425_1540.epub  (387 KB)
+         books/{book}/typeset/<book>_latest.epub  (alias)
+   ```
+
+   The timestamped filenames let the writer keep every build for
+   side-by-side comparison across revisions; `<book>_latest.*` is
+   always the most recent successful build, so opening the same
+   file repeatedly works without chasing timestamps.
 </workflow>
 
 <acceptance>
-- Unless `--epub-only`, `books/{book}/typeset/novel.pdf` exists and
-  is a valid PDF (≥ 4 KB sanity floor).
-- Unless `--pdf-only`, `books/{book}/typeset/novel.epub` exists and
-  is a valid ePub.
+- Unless `--epub-only`, both `books/{book}/typeset/<book>_<YYYYMMDD>_<HHMM>.pdf`
+  and `books/{book}/typeset/<book>_latest.pdf` exist and are valid
+  PDFs (≥ 4 KB sanity floor). The two files have identical bytes.
+- Unless `--pdf-only`, the corresponding `.epub` pair exists.
 - `books/{book}/typeset/chapters_content.tex` reflects the current
   chapter set — re-running the command after changing a chapter
   updates the PDF.
 - No chapter file is modified; the book's working tree is untouched
   outside `books/{book}/typeset/`.
+- `<book>_latest.pdf` / `<book>_latest.epub` always point at the
+  most recent successful build (i.e. were re-copied this run).
+- Failed tectonic runs leave the partial `novel.pdf` in place for
+  inspection but DO NOT update the timestamped or latest names —
+  those names should only refer to successful builds.
 </acceptance>
