@@ -248,10 +248,60 @@ chapter the sweep touched in one shot.
    — if every per-chapter promote already consumed everything, this
    call is a no-op summary line.
 
-6. The postamble's standard footer recommends the next step. With
-   the sweep complete and chapters all above the threshold, that
-   should be `/autonovel:reader-panel --book {book}` (book-wide
-   pass).
+6. **Postamble: write a multi-line `next_standard_step` reflecting
+   what the sweep just produced.** The default
+   single-line `next_standard_step` is wrong for a multi-chapter
+   rewrite — `/autonovel:next` would otherwise just say "run
+   reader-panel" and skip the verify-then-review-then-backup
+   closer that ANY multi-chapter sweep needs. Operating-guide
+   §2b.1 "After the sweep — the closer" is the canonical
+   prose; the postamble should write a compact version of the
+   same six steps as a numbered list, with state filled in from
+   *what just happened in this run*:
+
+   ```
+   1. Verify deltas: <N> chapter(s) regressed (Δ<0): <list>.
+      Re-run those without --enrich-with:
+        /autonovel:revision-pass --chapters <list> --book {book}
+      <OR "No regressions; all chapters held or improved." when N=0>
+
+   2. Resolve canon conflicts: <K> entry/entries still in
+      books/{book}/pending_canon.md as conflicts.
+      Open it and follow the HOW TO RESOLVE block at the top.
+      <OR "No conflicts; pending_canon.md is clean." when K=0>
+
+   3. Re-run whole-book reviewers (prior reports are now stale —
+      <N> chapters changed):
+        /autonovel:reader-panel --book {book}
+        /autonovel:review --book {book}
+
+   4. Backup the substantive change:
+        cd ~/<series-root>
+        git add . && git commit -m "Revision pass: chapters <range>" && git push
+      <OR omit when no git remote is set up>
+
+   5. Optional: typeset to read in PDF form:
+        /autonovel:typeset --book {book}
+
+   6. After (3), decide whether to run another revision-pass on
+      the panel/review flagged-chapter list, or move on to
+      /autonovel:title, /autonovel:introduction, /autonovel:typeset,
+      /autonovel:package.
+   ```
+
+   Substitute the actual values: count of regressions and the
+   list, count of pending-canon conflicts (read
+   `books/{book}/pending_canon.md` after the final promote-canon
+   to count `## Conflict N` blocks), the chapter range that was
+   swept. Pass the whole multi-line block as `next_standard_step`
+   to the postamble — `/autonovel:next` will print it verbatim
+   so the user sees exactly what to do without re-deriving from
+   scratch.
+
+   Note: this multi-line shape is the right shape for any
+   multi-chapter sweep. Single-chapter atomic commands (draft,
+   revise, evaluate) keep their concise single-line
+   `next_standard_step` because their state space is small.
 </workflow>
 
 <files-touched>

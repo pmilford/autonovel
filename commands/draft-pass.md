@@ -292,21 +292,58 @@ When TO use this:
    plus the chapter list each one flags. This is the user's
    shopping list for the next revision-pass.
 
-7. The postamble's standard footer recommends the next step.
-   Common cases:
-     - With `--deep`, panel + review surfaced specific chapters →
-       `/autonovel:revision-pass --chapters <those>` is the natural
-       next move (acts on those reports).
-     - Without `--deep`, all chapters ≥ threshold and no conflicts →
-       `/autonovel:reader-panel --book {book}` then
-       `/autonovel:review --book {book}` for whole-book depth (or
-       re-run `draft-pass --deep` to do both at once next time).
-     - One or more chapters still below threshold →
-       `/autonovel:revision-pass --chapters <those>` for the
-       multi-pass deepener.
-     - Canon conflicts parked → resolve them by hand-editing
-       `pending_canon.md` (the `# Conflicts` section) and re-running
-       `/autonovel:promote-canon`.
+7. **Postamble: write a multi-line `next_standard_step` reflecting
+   what the sweep just produced.** A multi-chapter draft sweep
+   (especially with `--deep`) leaves multiple concurrent
+   next-actions; the default single-line `next_standard_step` is
+   wrong because `/autonovel:next` would otherwise pick one and
+   miss the rest. Same shape as `revision-pass.md` step 6 — a
+   numbered list of the cases that apply, with state filled in
+   from *this run*:
+
+   ```
+   1. Verify per-chapter scores: <N> chapter(s) ended below
+      threshold despite the inline retry-revise: <list>.
+      Run /autonovel:revision-pass --chapters <list> --book {book}
+      to deepen them.
+      <OR "All chapters ≥ threshold." when N=0>
+
+   2. Resolve canon conflicts: <K> entry/entries in
+      books/{book}/pending_canon.md as conflicts.
+      Open it and follow the HOW TO RESOLVE block at the top.
+      <OR "No conflicts; pending_canon.md is clean." when K=0>
+
+   3. <only when --deep ran:> Reader-panel + review flagged:
+      <chapter list from those reports>.
+      Act on them: /autonovel:revision-pass --chapters <list>
+      <OR "Reader-panel + review flagged nothing." when empty>
+
+   4. <only when --deep did NOT run:> Whole-book reviewers
+      haven't run yet on this draft. Run them:
+        /autonovel:reader-panel --book {book}
+        /autonovel:review --book {book}
+      Or re-run /autonovel:draft-pass --deep to do both at once
+      next time.
+
+   5. Backup the substantive change:
+        cd ~/<series-root>
+        git add . && git commit -m "Draft pass: chapters <range>" && git push
+      <OR omit when no git remote is set up>
+
+   6. After acting on (1)/(3), decide whether to run another
+      revision-pass on any newly-flagged chapters, or move on
+      to /autonovel:title, /autonovel:introduction,
+      /autonovel:typeset, /autonovel:package.
+   ```
+
+   Substitute the actual values: count + list of below-threshold
+   chapters, count of pending-canon conflicts (read
+   `books/{book}/pending_canon.md` to count `## Conflict N`
+   blocks), the chapter range that was swept, the panel+review
+   flagged lists when `--deep` ran. Pass the whole multi-line
+   block as `next_standard_step` to the postamble —
+   `/autonovel:next` prints it verbatim so the user sees exactly
+   what to do without re-deriving from scratch.
 </workflow>
 
 <files-touched>

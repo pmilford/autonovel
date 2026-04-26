@@ -11,6 +11,47 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Make `/autonovel:next` dynamic instead of static.** Today the
+  command reads `.autonovel/last-action.json` and prints
+  `next_standard_step` verbatim — it never inspects current
+  filesystem state. Net effect: `/autonovel:next` shows "what the
+  previously-run command thought you should do next, frozen in
+  time." It can't say "you have N negative-delta chapters from the
+  last revision-pass" or "pending_canon.md has K conflicts" or
+  "the reader-panel report is now stale because half the chapters
+  changed since". Author noticed 2026-04-26: *"I would expect the
+  proposed autonovel:next would give this information cleanly —
+  why doesn't it? is the information in next static?"* — yes, it
+  is static.
+
+  Right shape: extend `commands/next.md` to read filesystem state
+  (eval logs and their per-chapter recency, `pending_canon.md`
+  conflict-block count, edit_logs/reader_panel.json mtime vs
+  chapter mtimes for staleness, git remote state, title/author
+  in project.yaml, preface/introduction presence, typeset
+  artefact recency) and re-derive a numbered list of next-actions
+  from current ground truth. Most logic already exists in
+  `housekeeping/lifecycle.py::_infer_phase` and
+  `housekeeping/status.py`; this command just needs to compose
+  them and emit a state-aware multi-line recommendation block.
+
+  Stopgap shipped 2026-04-26: sweep commands' postambles
+  (`revision-pass.md` step 6, `draft-pass.md` step 7) now write
+  multi-line `next_standard_step` values that name the verify →
+  conflict-check → panel-review → backup → decide closer with
+  state filled in from what just happened. So `/autonovel:next`
+  after a sweep IS now informative — but only because the sweep
+  baked the right info into last-action.json. The dynamic
+  version stays correct even after time passes (e.g. you ran
+  draft-pass yesterday, then today three chapters were revised
+  by hand-editing — last-action.json says "draft-pass next:
+  reader-panel" but reality says "those three chapters need
+  re-eval first").
+
+  Cost ~3-5 hrs (+ Tier-1 tests for the state-inference logic).
+
+
+
 - **Per-chapter art prompts as first-class artifacts.** Today
   `art-ornaments-all` builds its per-chapter image prompt inline
   from the chapter's title + first ~400 words of prose, then
