@@ -66,7 +66,10 @@ pending files, so `autonovel rollback` undoes the whole promotion.
    - **Contradiction**: an entry that contradicts `shared/canon.md`,
      `shared/world.md`, or `shared/characters.md`. Default-discard
      and record under the per-book conflict list — but with one
-     exception below.
+     exception below. **Capture which of the three files holds the
+     contradicting line** along with the line itself; both fields
+     are required by step 8's conflict-block output so the user knows
+     which file to edit when resolving.
 
      **Exception — research-tagged entries win contradictions.** A
      pending entry carrying a `[research:<slug>]` tag was written
@@ -123,11 +126,85 @@ pending files, so `autonovel rollback` undoes the whole promotion.
 8. Use `file_write` to rewrite each consumed
    `books/{book}/pending_canon.md`. After a successful promotion the
    file contains either:
-   - the entries that were rejected as conflicts (so the user sees
-     them on the next `autonovel status` check), plus a header
-     `# Conflicts — resolve before next promote-canon`, or
-   - a single line `no new facts` if every entry was promoted or
-     dropped as duplicate.
+
+   **(a) Conflicts to resolve.** When at least one entry was rejected
+   as a contradiction, write the file in this exact self-documenting
+   format. The HTML-comment block at the top is mandatory — it is
+   the user's instruction sheet for *how* to act on each conflict,
+   and the previous "just dump the bullet lines" format was
+   reported (2026-04-26) as making resolution unclear:
+
+   ````markdown
+   # Conflicts — resolve before next promote-canon
+
+   <!--
+   HOW TO RESOLVE A CONFLICT
+   =========================
+
+   Each `## Conflict N` block below names a pending candidate that
+   couldn't be promoted because it contradicts something in
+   shared/canon.md, shared/world.md, or shared/characters.md. For
+   each conflict, pick ONE of the three resolutions and act:
+
+     (A) ACCEPT the new fact (replace the existing one)
+         1. Open the file named in `Existing canon (in: ...)`.
+         2. Replace the old line (quoted under `Existing canon`)
+            with the new line (quoted under `New candidate`). Keep
+            the canonical bullet shape: `- <fact> (from <source>)`.
+         3. Delete the entire `## Conflict N` block from THIS file.
+         4. Re-run /autonovel:promote-canon. The conflict is gone.
+
+     (B) REJECT the new fact (the existing one stays)
+         1. Delete the entire `## Conflict N` block from THIS file.
+         2. (Optional but recommended) fix the chapter that
+            re-introduced the wrong fact, so it doesn't come back
+            on the next draft / revise. The chapter is named under
+            `Source`. Run:
+              /autonovel:brief <N> --book <book>
+              /autonovel:revise <N> --book <book>
+
+     (C) BOTH ARE WRONG
+         1. Edit the file named in `Existing canon (in: ...)` to
+            the correct value.
+         2. Delete the entire `## Conflict N` block from THIS file.
+         3. Re-run /autonovel:promote-canon to land any newly
+            consistent pending entries.
+
+   After your edits, re-run /autonovel:promote-canon. Resolved
+   conflicts disappear; anything still contradictory is re-emitted
+   on the next run with the same instructions.
+   -->
+
+   ## Conflict 1
+   - **New candidate:** `- <pending entry as it would have been promoted>`
+   - **Existing canon (in: <relative file path>):** `- <existing line, verbatim>`
+   - **Why they conflict:** <one sentence — what specifically disagrees>
+   - **Source:** (from <book> ch_<NN>) — *or* — (from research note <slug>)
+
+   ## Conflict 2
+   ...
+   ````
+
+   Each conflict gets its own `## Conflict N` block. Number the
+   blocks 1..K in the order conflicts were detected (stable across
+   re-runs so the user editing N=3 doesn't have it renumber under
+   them). The `Existing canon (in: ...)` field is required — name
+   the actual file path that holds the contradicting line, NOT
+   just "canon" — because conflicts can be against `shared/canon.md`,
+   `shared/world.md`, or `shared/characters.md` and the user
+   needs to know which file to edit.
+
+   **(b) No conflicts.** When every pending entry was either
+   promoted or dropped as duplicate, write a single line:
+
+   ```
+   no new facts
+   ```
+
+   That single-line form is what `revise` / `draft` / `revision-pass`
+   then append fresh candidates to on subsequent runs. Do NOT leave
+   the file empty (some tooling treats an empty file as
+   "uninitialised" rather than "settled").
 
 9. Print a one-screen summary: per-book promoted / duplicates /
    conflict counts, plus the canonical next command
@@ -143,6 +220,12 @@ pending files, so `autonovel rollback` undoes the whole promotion.
 - For every book whose pending file contained only non-conflicting
   entries, `books/{book}/pending_canon.md` ends with `no new facts`.
 - Contradictions are never silently merged: they are preserved under
-  the `# Conflicts` header in the pending file so the user can
-  resolve them by editing canon or the pending file.
+  the `# Conflicts — resolve before next promote-canon` header in
+  the pending file using the structured `## Conflict N` block format
+  from step 8, including the mandatory HTML-comment instruction
+  block at the top. Each conflict block names: the new candidate,
+  the existing canon line, the file the existing line lives in, a
+  one-sentence rationale, and the source (chapter or research note).
+- A pending file containing conflicts NEVER also contains a
+  `no new facts` marker — the two states are mutually exclusive.
 </acceptance>

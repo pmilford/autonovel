@@ -403,6 +403,39 @@ For a misspelled character name across the whole book:
 chapter, outline, and shared file. Refuses if the change would
 overlap a longer word (e.g. won't rename `Ana` if `Anatolia` exists).
 
+#### What if `/autonovel:promote-canon` reports conflicts?
+
+When the same `pending_canon.md` entry contradicts an existing
+line in `shared/canon.md` (or `world.md` / `characters.md`),
+`/autonovel:promote-canon` does NOT silently merge. It writes the
+contradicting entries back to `books/<book>/pending_canon.md`
+under a `# Conflicts — resolve before next promote-canon`
+header, and each conflict gets its own `## Conflict N` block.
+
+Open `books/<book>/pending_canon.md` and read the HTML-comment
+block at the top — it contains step-by-step instructions for the
+three resolution paths (accept the new fact / reject it / both
+are wrong). Each `## Conflict N` block tells you exactly which
+file the contradicting line lives in, so you know where to edit.
+
+The short version:
+
+- **Accept the new fact** (research-derived dates are usually
+  this case): edit the file named in `Existing canon (in: ...)`,
+  replace the old line with the new one, delete the `## Conflict
+  N` block from `pending_canon.md`, re-run `/autonovel:promote-canon`.
+- **Reject the new fact** (a chapter hallucinated something the
+  canon already settles): delete the `## Conflict N` block; the
+  candidate is dropped. Optionally `/autonovel:revise` the chapter
+  named under `Source` so the wrong fact stops coming back.
+- **Both wrong**: edit the canonical file to the correct value,
+  delete the `## Conflict N` block.
+
+Re-run `/autonovel:promote-canon` after editing. Resolved
+conflicts disappear; unresolved ones come back flagged with the
+same instructions. There is no `--force-merge` mode by design —
+the human decision lives in this loop.
+
 ### 2d. Adding pictorial plates (maps, paintings, photographs)
 
 Historical fiction (and some non-fiction) wants real images in the
