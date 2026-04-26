@@ -366,6 +366,149 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-26 (live-novel session, second wave): a long author-test
+  day on the live novel surfaced concrete gaps; everything below
+  shipped on master between 2026-04-25 PM and 2026-04-26 PM.
+  Tier 1+2: 451 → 674.
+  - **Quality dimensions for the brief→revise loop.** Four named
+    ceiling fixes from CLAUDE.md's "production gotchas" list ship
+    as a stack: (1) per-book Custom rubric in voice.md Part 3,
+    read by evaluate / reader-panel / brief / draft / revise so
+    book-specific scoring rules don't have to live in repo-shared
+    command files; (2) per-character voice fingerprints in
+    voice.md Part 4, auto-drafted by voice-discovery when the
+    cast is ≥3, applied at every dialogue line and POV interiority;
+    (3) `irreversible_change` evaluate dimension (per chapter) +
+    `irreversible_change_arc` (whole book, with `cuttable_chapters`
+    list), with brief.md's new `## Stability check` section
+    forbidden from vague "raise stakes" prescriptions; (4) per-
+    scene `beat_coverage` (goal / conflict / disaster-or-decision
+    / consequence) backed by a new `autonovel mechanical scenes`
+    helper, with brief.md's new `## Weak scenes` section naming
+    the scene by index + opening line.
+  - **voice.md upgrade path.** voice-discovery gains a `--upgrade`
+    flag: preserves Parts 1+2 verbatim while appending Part 3
+    placeholder and drafting Part 4. Safe rollout for existing
+    books without re-running foundation.
+  - **Late research → light integration.** Both /autonovel:brief
+    and /autonovel:revision-pass gain `--enrich-with <research-
+    notes-path>`. The brief reads the research notes,
+    identifies which scenes the research is relevant to, adds an
+    `## Enrichment from research` block with 1–2 specific period
+    details per relevant scene and explicit "do NOT change plot,
+    dialogue, voice, structure" guards. Chapters where the
+    research doesn't fit get briefs without the block — the
+    research is a brush, not a chisel.
+  - **Per-chapter promote-canon in revision-pass.** Mirrors the
+    aea1511 fix from draft-pass: each chapter's revise discoveries
+    land in shared/canon.md before the next chapter's revise
+    reads canon. Without it, an early-chapter revise that
+    clarified a fact would re-introduce the inconsistency in
+    chapter N+1.
+  - **promote-canon postamble + conflict-block clarity.** Two
+    user-confusion fixes shipped together. Conflict blocks
+    written back to `pending_canon.md` now carry a mandatory
+    HTML-comment instruction block at the top with three
+    labelled resolution paths (accept / reject / both wrong),
+    and each `## Conflict N` block names the file path the
+    contradicting line lives in. Postamble names the next
+    command explicitly per case (supersedure → revision-pass on
+    the affected chapter; conflicts → open the pending file's
+    instruction block; plain success → /autonovel:next).
+    revision-pass is the default recommendation even for a
+    single chapter — `revision-pass --chapters NN` does the
+    whole loop in one command.
+  - **Typeset bug-cluster fix.** Three bugs reported against
+    the live PDF/ePub build: (1) ePub contaminated with summary
+    file content (`ch_*.md` glob matched both prose and
+    `ch_NN.summary.md`) — fixed by new `build_epub_md` helper
+    enumerating via `iter_chapter_files()`; (2) PDF leaked YAML
+    frontmatter into chapter prose because `latex.py` parsed
+    `lines[0]` as the title — fixed by shared
+    `strip_yaml_frontmatter()` helper; (3) running header
+    cascaded into italicised chapter-prose-looking content —
+    fixed by switching recto to `\textsc{Chapter \thechapter}`
+    (Roman numeral, no chapter-title state). Plus replaced
+    fragile `sed -i 's/@TITLE@/.../'` with Python helper
+    `render_novel_tex` (sed silently breaks on titles
+    containing `/`, `&`, `\`).
+  - **Dated typeset filenames.** PDF/ePub now write
+    `<book>_<YYYYMMDD>_<HHMM>.{pdf,epub}` per build (kept) plus
+    `<book>_latest.{pdf,epub}` overwritten on each successful
+    build. Failed tectonic runs leave the partial novel.pdf in
+    place but do NOT update the timestamped or latest names.
+  - **Title + author management.** New `/autonovel:title`
+    command (light) with three modes: propose (5 title + 3
+    author candidates from outline/seed), pick (commits a
+    proposal), set (explicit values). `BookEntry` schema gains
+    optional `title` / `subtitle` / `author` fields; series-
+    level `author` field also added (book inherits from series).
+    Display-resolution helpers `BookEntry.display_title()` /
+    `display_author()` codify the fallback chain. Backwards-
+    compatible: existing project.yaml files load cleanly.
+  - **Front matter (preface + introduction).** New
+    `/autonovel:introduction` command (heavy) with `--from
+    user|auto|both`. Scaffolds `books/<book>/preface.md`
+    (hand-authored — the AI explicitly does NOT fill the
+    bracketed placeholders) and/or AI-generates
+    `books/<book>/introduction.md` (~600–1200 words, essay-form,
+    grounded in the book's themes; never reveals plot past the
+    inciting incident). Both auto-included in typeset's PDF
+    front matter (via new `build_front_matter_tex` helper +
+    `\IfFileExists{front_matter.tex}` guard in novel.tex) and
+    ePub front matter (pandoc invocation gains optional preface +
+    introduction args).
+  - **`/autonovel:chapter-summary` command.** Pure-mechanical
+    one-line-per-chapter overview table: Ch | Date | POV | Sco |
+    Words | Cast | Plot (with `**Location** —` prefix when the
+    summary carries the new Location field). Pulls structured
+    fields from chapter frontmatter, summary.md, and the latest
+    eval log. The right tool for "which chapters happen in
+    <date range>?" or "where does <character> appear?" — scan
+    the relevant column instead of grepping prose.
+  - **Chapter summary template gains `**Location:**`** as the
+    first field, paired with Plot. Updated in draft.md step 12
+    and summarize-chapter.md step 6. revise.md step 9 was the
+    one path that drifted (had a stale inline list); commit
+    3ba469a fixed it by replacing the inline list with a real
+    DRY reference to draft step 12.
+  - **Score-delta surfacing in revision-pass.** Per-chapter line
+    now ends with `eval: <prev> → <new> (Δ ±X.X) | canon: +<P>`
+    so writers see whether a revise actually moved the chapter
+    or regressed it. End-of-sweep summary table column is
+    `prev → new (Δ)`; headline assessment is required to call
+    out regressions explicitly.
+  - **Statusline: context-% from `data["context_window"]`.**
+    Reads the nested object Claude Code sends (where the value
+    is **remaining** %, converted to used at the read site).
+    Five new schema paths covered (remaining_pct +
+    percentage_remaining + percent_remaining + remaining_percentage
+    + the legacy `usage.context_pct`). Plus an opt-in debug
+    dump under `AUTONOVEL_STATUSLINE_DEBUG=1` writing
+    `~/.autonovel-statusline-debug.log` for diagnosing future
+    schema drift.
+  - **Comprehensive series .gitignore + GitHub backup
+    walkthrough** (operating-guide §3e.1). Excludes `.autonovel/
+    checkpoints/`, audiobook MP3s, timestamped typeset builds;
+    KEEPS `<book>_latest.{pdf,epub}` so a fresh `git clone` of
+    a backup carries usable artefacts. Doc walkthrough explicitly
+    notes that the autonovel codebase being on GitHub does NOT
+    back up the user's book — the two are separate dirs.
+  - **`requires-python` lowered 3.12 → 3.11.** Conservative pick
+    at PR-1 time; audit confirmed no 3.12-only features in
+    runtime source. Matches Debian 12 / WSL Ubuntu 22.04+ system
+    Python. README install step gains a `pipx install '.[export]'
+    --python python3.13` callout for users whose default `python3`
+    is older.
+  - **Operating-guide §0 "How the editing commands relate".**
+    Single-most-asked confusion after a first-pass draft. Four-
+    role table (atomic / sweep / whole-book reviewer /
+    mechanical helper), per-command table, ASCII call-graph,
+    explicit Q&A for the "I ran draft-pass --all then review
+    then reader-panel — did I need to run brief?" case (no, but
+    you're not done — your next move is revision-pass --chapters
+    <flagged>). README's command list also gained the new
+    commands (`chapter-summary`, `title`, `introduction`).
 - 2026-04-25 (PR 9 author-testing follow-ups): twelve onboarding /
   reliability issues surfaced during a real first-run on Chromebook
   + WSL on Claude Max $200/month. Eleven fixed across commits
@@ -424,6 +567,15 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-26 — **674
+  passing** (`pytest tests/deterministic tests/contracts`). The
+  2026-04-25 PM and 2026-04-26 waves added 223 tests across the
+  scene splitter (14), shared frontmatter helper (6), ePub
+  combiner (12), front-matter builder (12), typeset helpers (16),
+  per-book metadata (9), chapter-summary helper (16 + 5 contract),
+  statusline debug-capture + context-% paths (5), plus the
+  Tier-2 contract auto-pickups for the new commands
+  (`title`, `introduction`, `chapter-summary`).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-24 — **451
   passing** (`pytest tests/deterministic tests/contracts`). PR 9
   added 11 new Tier-1 tests in

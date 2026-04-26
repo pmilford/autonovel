@@ -460,7 +460,10 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
 - **Drafting & revision:** `draft`, `evaluate`, `adversarial-edit`,
   `apply-cuts`, `reader-panel`, `review`, `brief`, `revise`,
   `check-anachronism`, plus the sweep commands `draft-pass` and
-  `revision-pass` that loop those across many chapters.
+  `revision-pass` that loop those across many chapters. Plus
+  `chapter-summary` for a one-line-per-chapter overview table
+  ("which chapters happen in <date range>?", "where does
+  <character> appear?").
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
   `title`, `introduction`, `landing`, `package`.
 
