@@ -2,7 +2,13 @@
 name = "autonovel"
 version = "0.2.0"
 description = "Autonomous novel-writing pipeline (series-aware scaffold)."
-requires-python = ">=3.12"
+# 3.11 floor matches what Debian 12 (Chromebook Linux container, WSL Ubuntu
+# 22.04+, Raspberry Pi OS Bookworm) ships as the system Python. The
+# codebase doesn't use any 3.12-only features (no `type X =` aliases, no
+# `class X[T]:` generic syntax, no @override). If a user's default
+# `python3` is older, point pipx at a newer one explicitly:
+#     pipx install '.[export]' --python python3.13
+requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.28.1",
     "python-dotenv>=1.2.2",

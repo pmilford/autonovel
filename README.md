@@ -165,6 +165,26 @@ terminal is open with `git` and `pipx` available.
    too and is faster. You can add the extras later with
    `pipx inject autonovel Pillow pydub`.
 
+   **If pipx complains about Python version** ("requires Python
+   3.11 or newer; default python3 is 3.10.X"): your default
+   `python3` is older than autonovel needs. The fix is to point
+   pipx at a newer Python you already have installed (most
+   Chromebook / WSL setups have 3.11 or 3.13 available even when
+   `python3` defaults to something older):
+
+   ```bash
+   # Find a newer Python you have:
+   ls /usr/bin/python3.* 2>/dev/null
+   # → e.g. /usr/bin/python3.11  /usr/bin/python3.13
+
+   # Point pipx at it:
+   pipx install '.[export]' --python python3.13
+   ```
+
+   No need to change your system default — this only tells pipx
+   which Python to put autonovel on. Other tools you've installed
+   via pipx are unaffected.
+
 3. **Confirm it worked:**
 
    ```bash
