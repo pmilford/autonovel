@@ -11,6 +11,32 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Per-chapter art prompts as first-class artifacts.** Today
+  `art-ornaments-all` builds its per-chapter image prompt inline
+  from the chapter's title + first ~400 words of prose, then
+  immediately calls the provider — the prompt itself is never
+  written to disk, so the user can't preview, hand-edit, or feed
+  it to a different generator (Midjourney, ComfyUI, a hand-
+  commissioned artist, etc.). New light-tier command
+  `/autonovel:art-prompts --book {book} [--chapters N,M]
+  [--surface ornament|plate|scene-break] [--style lineart|full|
+  symbolic]` reads the chapter's outline beats + summary +
+  `art/visual_style.json` + `shared/world.md`, and writes one
+  prompt file per chapter at
+  `books/{book}/art/prompts/ch{NN}_{surface}.md` — the prompt,
+  the universal constraints (white background / no text), plus a
+  one-line motif rationale ("the apothecary's cracked mortar —
+  central to the chapter's turning point"). No provider call, no
+  API key, cheap to re-run. Wire `art-ornaments-all` (and a
+  future `art-plates-all`) to read the prompt file if present,
+  falling back to the current inline-derive behaviour. Outline +
+  summary are richer motif sources than the first 400 words of
+  prose; they also make this useful for plates and full art, not
+  just small ornaments. Cost: ~2–3 hrs (one command file, a
+  light Python helper for chapter-input loading, Tier-1 tests for
+  the helper, README + operating-guide updates per the
+  keep-docs-in-sync rule).
+
 - **Per-book rubric extensions via `voice.md`.** Today, adding a
   book/genre-specific scoring rule (e.g. "at most 2 financial
   transactions per chapter" for a mercantile historical) means
