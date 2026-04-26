@@ -11,12 +11,18 @@ __pycache__/
 .env
 .venv/
 
-# Typeset artefacts — all regenerable from chapter prose
-# (run /autonovel:typeset to rebuild). Includes the dated builds
-# (`<book>_YYYYMMDD_HHMM.pdf`) and the convenience pointer
-# (`<book>_latest.pdf`) plus the same shape for .epub.
+# Typeset artefacts — most regenerable from chapter prose
+# (run /autonovel:typeset to rebuild). The timestamped builds
+# (`<book>_YYYYMMDD_HHMM.pdf`) are excluded — committing one per
+# rebuild would balloon the repo. The convenience pointer
+# (`<book>_latest.pdf` / `_latest.epub`) IS kept: always the most
+# recent successful build, so a fresh `git clone` of your backup
+# carries a usable PDF and ePub immediately. If you'd rather not
+# commit any binary outputs at all, delete the two `!` lines below.
 books/*/typeset/*.pdf
+!books/*/typeset/*_latest.pdf
 books/*/typeset/*.epub
+!books/*/typeset/*_latest.epub
 books/*/typeset/novel.tex
 books/*/typeset/chapters_content.tex
 books/*/typeset/chapters_combined.md
