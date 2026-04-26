@@ -206,10 +206,79 @@ pending files, so `autonovel rollback` undoes the whole promotion.
    the file empty (some tooling treats an empty file as
    "uninitialised" rather than "settled").
 
-9. Print a one-screen summary: per-book promoted / duplicates /
-   conflict counts, plus the canonical next command
-   (`autonovel status` to see remaining conflicts, or the drafting
-   step for the next chapter).
+9. **Print the postamble summary AND specific next-step guidance.**
+   The user sees this output the moment promote-canon finishes;
+   they should never have to read docs to know what to do next.
+   Format:
+
+   ```
+   promoted: <N>
+   duplicates: <M>
+   conflicts:  <K>
+   supersedures: <S>   (research-tagged entries that replaced existing canon)
+
+   Next:
+     <one or more of the lines below, depending on what happened>
+   ```
+
+   Pick the next-step lines from this decision tree. **Print every
+   line that applies; do not collapse them into a single
+   recommendation.** Multiple categories can apply in one run.
+
+   **(a) Supersedures landed (S > 0).** For each `## Superseded`
+   block written to `shared/canon.md` this run, identify the
+   chapter that introduced the OLD canon line by parsing its
+   provenance tail (`(from <book> ch_<NN>)`). That chapter likely
+   still references the now-wrong value in its prose. Print one
+   line per affected chapter:
+
+   ```
+     - Chapter <NN> (<book>) introduced the prior value of
+       "<short description>". Run:
+           /autonovel:check-anachronism <NN> --book <book>
+       to confirm the chapter actually quotes the old value, then:
+           /autonovel:brief <NN> --book <book> --from auto
+           /autonovel:revise <NN> --book <book>
+       to update the prose. (Or use /autonovel:revision-pass
+       --chapters <list> to batch multiple affected chapters.)
+   ```
+
+   When more than 3 chapters are affected, collapse into a single
+   `revision-pass` recommendation:
+
+   ```
+     - <S> chapters introduced now-superseded values. Batch them:
+           /autonovel:revision-pass --chapters <comma-list> --book <book>
+   ```
+
+   **(b) Conflicts written back (K > 0).** Print:
+
+   ```
+     - <K> conflict(s) need human resolution. Open
+           books/<book>/pending_canon.md
+       and follow the HOW TO RESOLVE A CONFLICT block at the top
+       of the file (three resolution paths: accept / reject / both
+       wrong). Re-run /autonovel:promote-canon after editing.
+   ```
+
+   **(c) Plain successful promote (N > 0, S = 0, K = 0).** Print:
+
+   ```
+     - Canon updated. Continue with /autonovel:next.
+   ```
+
+   **(d) Nothing to do (N = M = K = S = 0; every pending file
+   said `no new facts`).** Print:
+
+   ```
+     - No pending facts to promote. Continue with /autonovel:next.
+   ```
+
+   The point of (a) specifically is the answer to "what now?"
+   after a successful research-driven supersedure. Without it the
+   user has to grep their own chapters to find what referenced the
+   old value — the command already knows the answer (the
+   provenance tail of the superseded line) and should print it.
 </workflow>
 
 <acceptance>
