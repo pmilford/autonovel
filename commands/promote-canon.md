@@ -229,26 +229,42 @@ pending files, so `autonovel rollback` undoes the whole promotion.
    block written to `shared/canon.md` this run, identify the
    chapter that introduced the OLD canon line by parsing its
    provenance tail (`(from <book> ch_<NN>)`). That chapter likely
-   still references the now-wrong value in its prose. Print one
-   line per affected chapter:
+   still references the now-wrong value in its prose. **Always
+   recommend `/autonovel:revision-pass`** — it runs the whole
+   per-chapter loop (anachronism → brief → revise → evaluate →
+   promote-canon) in one command, which is what the user wants
+   regardless of whether 1 chapter or 10 are affected. The 3-step
+   atomic sequence (check-anachronism → brief → revise) is for
+   surgical work where the user wants to inspect each artifact
+   between steps; almost no post-promote-canon revision is that
+   surgical.
+
+   Single chapter:
 
    ```
      - Chapter <NN> (<book>) introduced the prior value of
-       "<short description>". Run:
-           /autonovel:check-anachronism <NN> --book <book>
-       to confirm the chapter actually quotes the old value, then:
-           /autonovel:brief <NN> --book <book> --from auto
-           /autonovel:revise <NN> --book <book>
-       to update the prose. (Or use /autonovel:revision-pass
-       --chapters <list> to batch multiple affected chapters.)
+       "<short description>". Update its prose:
+           /autonovel:revision-pass --chapters <NN> --book <book>
    ```
 
-   When more than 3 chapters are affected, collapse into a single
-   `revision-pass` recommendation:
+   Multiple chapters:
 
    ```
-     - <S> chapters introduced now-superseded values. Batch them:
+     - <S> chapters introduced now-superseded values:
+       <list of "ch_NN (<book>)" with the prior values>.
+       Update them in one sweep:
            /autonovel:revision-pass --chapters <comma-list> --book <book>
+   ```
+
+   For users who specifically want the surgical 3-step path (rare),
+   add a one-line "or run them individually" footnote ONLY when
+   exactly 1 chapter is affected:
+
+   ```
+       (Surgical alternative — inspect between steps:
+            /autonovel:check-anachronism <NN> --book <book>
+            /autonovel:brief <NN> --book <book> --from auto
+            /autonovel:revise <NN> --book <book>)
    ```
 
    **(b) Conflicts written back (K > 0).** Print:
