@@ -63,6 +63,15 @@ A good brief names specific passages to change, not vague moods.
    - `## Specific rewrites` (before → after snippets where the source
      suggested them)
    - `## Voice guardrails` (bulleted — preserve from voice.md Part 2)
+   - `## Custom-rubric findings` *(only when present)* — for every
+     criterion in the eval log's `custom_rubric` array (or the panel
+     log's `custom_rubric` block) that scored below 6 or was named
+     by any reader, write one bullet: the rule, the violation
+     finding, and the prescription (what the revise should do
+     instead). These are the book-specific rules from voice.md Part
+     3. They are NOT optional — a brief that ignores a flagged
+     custom-rubric finding will produce a revise that still violates
+     the rule. Omit the section entirely when no findings apply.
    - `## Target length` (in words — the Bells learning is that
      `gen_revision` overshoots ~30%, so brief for `target × 0.77` if a
      final target applies)

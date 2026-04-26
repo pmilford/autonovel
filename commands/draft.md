@@ -53,8 +53,12 @@ off-limits.
 5. Use `file_read` on any `shared/research/notes/*.md` that the outline entry
    for this chapter names explicitly. Do not load the full research tree.
 
-6. Use `file_read` on `books/{book}/voice.md`. Both Part 1 (series voice) and
-   Part 2 (book fingerprint) are in scope.
+6. Use `file_read` on `books/{book}/voice.md`. Parts 1 (series voice),
+   2 (book fingerprint), AND 3 (custom rubric, when present) are all
+   in scope. Part 3 lists book-specific writing rules that must be
+   honoured at draft time — drafting against the rules is cheaper
+   than revising back to them. Treat each Part 3 bullet as a hard
+   constraint on the chapter's prose.
 
 7. **Best-effort prior-chapter quote (do not retry on failure).** Use
    the `Bash` tool to run, exactly once:

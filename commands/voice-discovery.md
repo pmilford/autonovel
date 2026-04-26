@@ -56,7 +56,19 @@ they refuse to name.
    - a two-sentence sample paragraph in-voice as a reference.
 
 7. Use `file_write` to replace `books/{book}/voice.md` with Part 1
-   (preserved verbatim) + the new Part 2 under its existing heading.
+   (preserved verbatim) + the new Part 2 under its existing heading
+   + Part 3 (preserved verbatim if present — see step 7a).
+
+7a. **Preserve Part 3 (Custom rubric) verbatim.** If the existing
+    voice.md contains a `## Part 3 — Custom rubric` section, keep
+    its body byte-for-byte. Part 3 holds book-specific scoring
+    criteria the user authored (or left as the placeholder); this
+    command must never overwrite or "regenerate" it. The standard
+    template's commented-out placeholder is preserved unchanged
+    when no real content has been added. If voice.md has no Part
+    3 section at all (older books from before the custom-rubric
+    contract), append the template's Part 3 placeholder at the
+    end so the surface exists for the user to fill in later.
 </workflow>
 
 <acceptance>
@@ -66,4 +78,7 @@ they refuse to name.
   fingerprint`) now contains concrete guidance: sentence-length guidance,
   POV distance, at least one palette line, and at least one `do not` rule.
 - Part 2 is not empty and not only the template placeholder comment.
+- A `## Part 3 — Custom rubric` section exists in the file (either
+  preserved verbatim from a prior version or appended from the
+  template placeholder). Its body is unchanged from the input.
 </acceptance>

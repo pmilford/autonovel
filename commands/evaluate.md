@@ -54,7 +54,16 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
    `shared/period_bans.txt` if it exists; treat missing as empty.
 
 4. Load the per-book layer with `file_read`: `books/{book}/voice.md`
-   (both parts) and `books/{book}/outline.md`.
+   (Parts 1, 2, AND 3) and `books/{book}/outline.md`.
+
+4a. **Parse Part 3 (Custom rubric) from voice.md.** Look for a
+    heading exactly matching `## Part 3 — Custom rubric` (em-dash)
+    or `## Custom rubric`. Treat each top-level bullet under that
+    heading as one rubric criterion. Strip the HTML comment
+    placeholder (the `<!-- … -->` block from the template) — only
+    real bullets count. Empty or comment-only sections mean "no
+    custom rubric for this book"; proceed normally without flagging
+    a missing surface (this is the expected state for many books).
 
 5. Mode `--phase foundation`: evaluate the planning layer only. Use a
    literary-critic system prompt calibrated to the SCORING CALIBRATION
@@ -135,6 +144,25 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
     it reads as a film-script camera move rather than a scene with
     a body in it. Do not subtract from the score automatically; the
     judge weighs it as one signal among many.
+
+10d. **Custom-rubric scoring.** When step 4a parsed at least one
+    bullet criterion, score each one in addition to the standard
+    rubric. For each criterion:
+      - Apply the rule to the chapter (or, in `--full` mode, to
+        every chapter and aggregate).
+      - Score 0–10 (10 = chapter fully respects the rule; 0 = the
+        rule is grossly violated). Use the same calibration as the
+        standard rubric.
+      - Surface a one-sentence finding: what the chapter did vs.
+        what the rule asked for. Quote a passage when violated.
+    Record under `result["custom_rubric"]` as a list of
+    `{criterion, score, finding}` objects (single-chapter mode) or
+    `result["custom_rubric_per_chapter"][N]` (full mode). Any
+    criterion with a score below 6 is also added to the
+    `top_3_revisions` list so brief picks it up. Do NOT subtract
+    from `overall_score` automatically — the judge weighs custom
+    rubric findings as one signal among many; the visible flag in
+    the eval log + the brief is the load-bearing surface.
 
 10c. First-page hook (for `--chapter 1` only). Read the first
     250 words of the chapter and score them on a separate
@@ -233,6 +261,24 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
     decides whether a reader continues. Suggest
     `/autonovel:revise 1 --from auto` and call out the hook
     weakness in the brief.
+
+    **Custom-rubric findings table** (when step 10d ran with at
+    least one criterion). Render under the dimension table as its
+    own block:
+
+    ```markdown
+    **Custom rubric (book-specific):**
+
+    | Criterion (first 60 chars) | Score | Finding |
+    |---|---|---|
+    | At most 2 financial transactions per chapter | 5.0 | 4 ledger entries on p.3; arithmetic crowds out scene |
+    | Ending must commit to one irreversible thing | 7.0 | — |
+    ```
+
+    Use the criterion's leading text (truncated to 60 chars +
+    ellipsis) as the row label. Render `—` when there's no finding
+    to report. This is the load-bearing surface for per-book
+    rules; do not collapse it into a single line.
 </workflow>
 
 <scoring-calibration>

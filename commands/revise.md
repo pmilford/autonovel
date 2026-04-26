@@ -47,8 +47,13 @@ target, not a mental "safe" overshoot.
    `shared/characters.md`, `shared/canon.md`. These are guardrails, not
    raw material — the chapter must not contradict them.
 
-5. Use `file_read` on `books/{book}/voice.md` (Parts 1 and 2). The
-   voice fingerprint is the most important input after the brief.
+5. Use `file_read` on `books/{book}/voice.md` (Parts 1, 2, AND 3).
+   The voice fingerprint is the most important input after the
+   brief. Part 3 is the custom rubric — book-specific writing rules
+   the rewrite must honour. The brief's `## Custom-rubric findings`
+   section names which rules were flagged in the prior eval; the
+   rewrite must fix those *and* not introduce fresh violations of
+   any other Part 3 rule.
 
 6. Use `file_read` on `books/{book}/chapters/ch_{chapter}.md` (the
    current draft — the raw material the rewrite carves from). This
