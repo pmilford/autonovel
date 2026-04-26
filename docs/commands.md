@@ -49,6 +49,7 @@ argument is required when more than one book exists in the series.
 | `/autonovel:draft <chapter-number> --book <short-name>` | standard | Draft one chapter as full prose. |
 | `/autonovel:draft-pass --chapters <range> [--book <name>] [--retry-below <score>] [--no-revise-low] [--no-anachronism] [--no-promote] [--skip-eval] [--deep]` | heavy | "Write the rest of the book." Per chapter: draft → anachronism check → evaluate → if score < threshold (default 7.0), brief + revise + re-eval (keep best). At sweep end: promote-canon. With `--deep`: also run reader-panel + Opus review on the whole book and surface the flagged-chapter list. Sequential only. Same per-chapter quality as `/autonovel:draft` plus immediate-fix-on-low-score, end-of-sweep canon coherence, and (in deep mode) the whole-book passes. |
 | `/autonovel:summarize-chapter <chapter> [--book <short-name>] [--force]` | standard | Backfill the 150–250-word continuity summary for a chapter drafted before summaries shipped. |
+| `/autonovel:chapter-summary [--book <short-name>] [--format markdown\|json]` | light | Print a one-line-per-chapter overview — Date / POV / Score / Words / Cast / Plot — for the active book. Pure mechanical (no LLM), pulls already-structured fields from chapter frontmatter, summary.md, and the latest eval log. The right tool for "which chapters happen in <date range>?" or "where does <character> appear?" or "which chapter scored lowest?" — scan the relevant column. `--format json` for piping. |
 
 ### Evaluation and revision
 

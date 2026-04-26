@@ -9,6 +9,7 @@ Subcommands:
   audio-chunk <script> <voices>    Pack segments into TTS-budget chunks.
   audio-marks <rows> [--pause S]   Compute cumulative chapter marks.
   scenes <path> [--full]           Split a chapter into scenes by *** / --- breaks.
+  chapter-summary <book> [--format] One-line-per-chapter overview (date/POV/score/cast/plot).
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
   build-front-matter-tex <book>    Build front_matter.tex from preface.md + introduction.md.
@@ -33,6 +34,7 @@ from .audio import (
     load_script,
     validate_script,
 )
+from .chapter_summary import render_markdown_table, summarize_chapters
 from .cliches import cliche_density, cliche_hits
 from .cuts import VALID_TYPES, apply_cuts
 from .epub import build_epub_md
@@ -185,6 +187,22 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     }
     json.dump(payload, sys.stdout, indent=2)
     sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_chapter_summary(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    rows = summarize_chapters(book_root)
+    if args.format == "json":
+        json.dump(
+            {"book_root": str(book_root),
+             "chapter_count": len(rows),
+             "rows": [r.to_dict() for r in rows]},
+            sys.stdout, indent=2,
+        )
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_markdown_table(rows))
     return 0
 
 
@@ -365,6 +383,13 @@ def main(argv: list[str] | None = None) -> int:
     em.add_argument("--output", default=None,
                     help="Write the combined markdown to this path; otherwise stdout-JSON only.")
     em.set_defaults(func=_cmd_build_epub_md)
+
+    cs = sub.add_parser("chapter-summary",
+                        help="One-line-per-chapter overview (date / POV / score / cast / plot).")
+    cs.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    cs.add_argument("--format", choices=("markdown", "json"), default="markdown",
+                    help="Output format (default: markdown table).")
+    cs.set_defaults(func=_cmd_chapter_summary)
 
     fm = sub.add_parser("build-front-matter-tex",
                         help="Concatenate preface.md + introduction.md into front_matter.tex.")
