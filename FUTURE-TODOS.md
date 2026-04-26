@@ -11,6 +11,44 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **`autonovel _promote-canon` Python helper for safe in-sweep canon promotion.**
+  Author bug-report 2026-04-26: per-chapter promote-canon inside
+  `revision-pass` (and `draft-pass`) silently failed with "parent
+  holds the lock" because the per-chapter subagent invoked the
+  `/autonovel:promote-canon` slash-command instead of inlining
+  its body. Slash-command's preamble (`autonovel _begin`)
+  collides with the parent's already-held
+  `.autonovel/in-progress.lock`. Net effect: chapter N's
+  discoveries stayed in pending_canon.md instead of landing in
+  shared/canon.md between chapters; chapter N+1 read stale canon
+  and could re-introduce facts chapter N had just corrected.
+  End-of-sweep promote-canon caught the residual but in-sweep
+  cross-chapter consistency drifted.
+
+  Stopgap shipped 2026-04-26: tightened the inline-don't-invoke
+  wording in `revision-pass.md` step 3f and `draft-pass.md`
+  step 5 with explicit anti-pattern callouts. Relies on the
+  subagent LLM following the prose correctly — fragile.
+
+  Right shape: ship a hidden `autonovel _promote-canon
+  --book <name> [--no-lock]` Python subcommand that does the
+  promote-canon file operations atomically (de-dup, contradiction
+  detection, supersedure-block emission, conflict-block
+  emission, structured `## Conflict N` format, `[research:slug]`
+  resolution) WITHOUT acquiring `.autonovel/in-progress.lock`
+  when invoked with `--no-lock`. Sub-agents in sweeps invoke
+  `autonovel _promote-canon --book {book} --no-lock` via the
+  bash tool; no LLM ambiguity, no possible lock deadlock. Same
+  helper backs the slash-command's body (with `--no-lock` off
+  when invoked standalone). Tier-1 testable end-to-end.
+
+  Cost: ~3-4 hrs. Includes Tier-1 tests for de-dup,
+  contradiction detection, supersedure, conflict-block format
+  parity with the slash-command, and safe concurrent-invocation
+  semantics. The lock-collision bug class disappears entirely
+  once the helper is in place — sub-agents have a tool that
+  literally cannot collide with the parent's lock.
+
 - **Make `/autonovel:next` dynamic instead of static.** Today the
   command reads `.autonovel/last-action.json` and prints
   `next_standard_step` verbatim — it never inspects current

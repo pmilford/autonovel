@@ -216,12 +216,31 @@ When TO use this:
             via autonovel rollback.
 
       5. PROMOTE CANON (skip if --no-promote):
-         reproduce /autonovel:promote-canon's body against
-         books/{book}/pending_canon.md only (the per-chapter
-         scope — the parent will run a final sweep over all
-         books at end). Merge into shared/canon.md;
-         research-tagged entries win contradictions. Capture the
-         count of entries promoted.
+         **inline the file operations — DO NOT invoke
+         /autonovel:promote-canon as a slash-command.**
+         The parent draft-pass holds the in-progress lock; the
+         slash-command's preamble would try to acquire the same
+         lock and fail with "parent holds the lock", silently
+         leaving pending_canon entries unmerged into
+         shared/canon.md and letting chapter N+1 read stale
+         canon. Instead, do the file operations directly:
+           - file_read books/{book}/pending_canon.md (per-chapter
+             scope — the parent runs a final sweep over all books
+             at end);
+           - file_read shared/canon.md, world.md, characters.md
+             for de-dup + contradiction detection;
+           - classify each candidate per
+             commands/promote-canon.md step 4 (research-tagged
+             entries win contradictions);
+           - file_write the survivors to shared/canon.md under a
+             `## Promoted <UTC-date>` heading; emit
+             `## Superseded` blocks for research-tagged
+             supersedures;
+           - file_write pending_canon.md with either the
+             structured `# Conflicts` block (per
+             promote-canon.md step 8) or `no new facts`.
+         Capture the count of entries promoted to feed P in the
+         status line below.
 
       Return EXACTLY this single line as your final message
       (nothing else):
