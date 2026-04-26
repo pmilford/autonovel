@@ -1,7 +1,53 @@
+# autonovel runtime state
 .autonovel/in-progress.lock
-typeset/*.pdf
-typeset/chapters_content.tex
+.autonovel/checkpoints/
+.autonovel/last-action.json
+# .autonovel/command-log.jsonl is append-only history; commit it
+# unless you'd rather keep your trail private.
+
+# Python tooling
 *.pyc
 __pycache__/
 .env
 .venv/
+
+# Typeset artefacts — all regenerable from chapter prose
+# (run /autonovel:typeset to rebuild). Includes the dated builds
+# (`<book>_YYYYMMDD_HHMM.pdf`) and the convenience pointer
+# (`<book>_latest.pdf`) plus the same shape for .epub.
+books/*/typeset/*.pdf
+books/*/typeset/*.epub
+books/*/typeset/novel.tex
+books/*/typeset/chapters_content.tex
+books/*/typeset/chapters_combined.md
+books/*/typeset/front_matter.tex
+books/*/typeset/metadata.yaml
+# LaTeX intermediates (when tectonic leaves any behind)
+books/*/typeset/*.aux
+books/*/typeset/*.log
+books/*/typeset/*.out
+books/*/typeset/*.toc
+
+# Audiobook output — large MP3 / WAV / M4B files. Scripts and
+# voices.yaml ARE committed; audio files are regenerable via
+# /autonovel:audiobook-generate.
+books/*/audiobook/*.mp3
+books/*/audiobook/*.wav
+books/*/audiobook/*.m4b
+books/*/audiobook/chunks/
+
+# Generated art derivatives — rasterised PNGs, vectorised SVGs.
+# The source `cover.png` and `ornament_chNN.png` ARE committed
+# (regenerating them costs API credit). The derivatives below are
+# rebuilt by /autonovel:art-vectorize / /autonovel:cover-print.
+books/*/art/svg/cache/
+books/*/art/pdf/
+
+# Landing-page output (regenerated via /autonovel:landing).
+books/*/landing/dist/
+
+# Editor / OS junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
