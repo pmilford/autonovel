@@ -54,11 +54,26 @@ off-limits.
    for this chapter names explicitly. Do not load the full research tree.
 
 6. Use `file_read` on `books/{book}/voice.md`. Parts 1 (series voice),
-   2 (book fingerprint), AND 3 (custom rubric, when present) are all
-   in scope. Part 3 lists book-specific writing rules that must be
-   honoured at draft time — drafting against the rules is cheaper
-   than revising back to them. Treat each Part 3 bullet as a hard
+   2 (book fingerprint), 3 (custom rubric, when present), AND 4
+   (per-character voice fingerprints, when present) are all in
+   scope.
+
+   Part 3 lists book-specific writing rules that must be honoured
+   at draft time — drafting against the rules is cheaper than
+   revising back to them. Treat each Part 3 bullet as a hard
    constraint on the chapter's prose.
+
+   Part 4 lists per-character voice fingerprints. When present,
+   apply each character's block at every line of their dialogue
+   AND (for the POV character) at every interiority sentence.
+   This is the antidote to the "all characters sound the same"
+   AI tell — without per-character voicing, every speaker tends
+   to converge on the narrator's register. Verify before writing
+   each dialogue exchange: which character is speaking, what's
+   in their Part 4 block, does the line you're about to write
+   honour Speech / Verbal tics / Refuses? If Part 4 is empty or
+   absent (solo-cast book, or the cast threshold wasn't met),
+   fall back to Part 2 alone.
 
 7. **Best-effort prior-chapter quote (do not retry on failure).** Use
    the `Bash` tool to run, exactly once:

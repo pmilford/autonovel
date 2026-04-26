@@ -227,12 +227,21 @@ These are things that would lift the prose ceiling beyond what the
 current pipeline reliably produces (Bells topped out at pacing ≈ 7,
 prose ≈ 8 / 10, with investigation-heavy plots).
 
-- **Per-character voice fingerprints.** Today `voice.md` is a
-  single fingerprint for the whole book (close-third or first). Adding
-  a per-character voice fingerprint applied at dialogue + close-POV
-  scenes catches the AI tell of "all characters sound the same".
-  Implementation hint: extend `/autonovel:voice-discovery` to produce
-  a per-character voice block when the cast has ≥3 named POVs.
+- ~~**Per-character voice fingerprints.**~~ **Shipped 2026-04-25.**
+  voice.md template now includes a `## Part 4 — Per-character voice
+  fingerprints` section. voice-discovery (step 6a) auto-drafts it
+  when shared/characters.md has ≥3 named principals — one ~5-bullet
+  block per character (Speech / Verbal tics / Refuses / Body during
+  dialogue / Interiority [POV only]); cap 6 characters. Step 7b
+  preserves hand-edited Part 4 verbatim across re-runs (`--force`
+  overrides). draft.md (step 6) and revise.md (step 5) both apply
+  Part 4 at every dialogue line + every interiority sentence.
+  evaluate.md (step 4b) shifts the `character_voice` dimension from
+  "do characters sound distinct?" to "does each character honour
+  their Part 4 block?" when Part 4 is populated, with the strongest
+  violation quoted in `weakest_moment`. Solo-cast / single-speaker
+  books fall back to Part 2 cleanly (the threshold rule skips Part
+  4 generation; the placeholder comment stays).
 - **Dialogue mechanics linter.** A new mechanical scanner that flags
   dialogue tics LLMs over-use: every line with an action beat (`she
   laughed`, `he frowned`), unattributed dialogue when ≥3 speakers, and

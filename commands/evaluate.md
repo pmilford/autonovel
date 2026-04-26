@@ -65,6 +65,20 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
     custom rubric for this book"; proceed normally without flagging
     a missing surface (this is the expected state for many books).
 
+4b. **Parse Part 4 (Per-character voice fingerprints) from
+    voice.md.** Look for `## Part 4 — Per-character voice
+    fingerprints`. Treat every `### Name (...)` block under that
+    heading as one character fingerprint. Strip the HTML comment
+    placeholder; only real `###` blocks count. Empty or comment-
+    only Part 4 means "use Part 2 alone for character_voice
+    scoring"; proceed normally. When Part 4 has fingerprints, the
+    `character_voice` dimension scored in step 6 changes from
+    "do characters sound distinct?" (Part 2 only) to "does each
+    character honour their Part 4 block?" — verify per-line that
+    Tommaso's dialogue obeys Tommaso's Speech / Verbal tics /
+    Refuses, etc. Quote the strongest violation in
+    `weakest_moment` for the dimension.
+
 5. Mode `--phase foundation`: evaluate the planning layer only. Use a
    literary-critic system prompt calibrated to the SCORING CALIBRATION
    block below. Score the dimensions: `magic_system` (or

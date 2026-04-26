@@ -55,9 +55,44 @@ they refuse to name.
      to resist),
    - a two-sentence sample paragraph in-voice as a reference.
 
+6a. **Draft Part 4 — Per-character voice fingerprints** (when the
+    cast warrants it). Read `shared/characters.md` and identify the
+    book's main cast: named characters who appear as principals
+    (POV characters from `project.yaml :: books[*].pov`, plus any
+    other named characters with substantive paragraphs in
+    characters.md — antagonists, primary supporting cast).
+    Threshold: **draft Part 4 when the main cast count is ≥3.**
+    Below that, single-character or two-character books are well
+    served by Part 2 alone — skip Part 4 and leave the template
+    placeholder comment in place.
+
+    For each main-cast character, emit one block under `## Part 4
+    — Per-character voice fingerprints`:
+
+      ### {Name} ({POV} | speaking-only)
+      - Speech: {sentence shape, register shifts under stress}
+      - Verbal tics: {distinctive words / phrases / never-says}
+      - Refuses: {topics, emotional registers, metaphor families
+        they avoid}
+      - Body during dialogue: {what their hands / face / posture do}
+      - Interiority: {only for POV characters — how they think
+        about emotion; direct vs indirect, what they refuse to name}
+
+    Keep each block to those five items; the drafter has to apply
+    many at once and verbose blocks dilute. The "all characters
+    sound the same" AI tell is the one Part 4 exists to fight, so
+    each character must be distinguishable on speech alone.
+    Speaking-only characters (non-POV) skip the Interiority line.
+
+    Cap the cast at 6 characters in Part 4. Walk-on characters
+    (one-scene cameos, named villagers) get no fingerprint;
+    they're voiced from Part 2.
+
 7. Use `file_write` to replace `books/{book}/voice.md` with Part 1
    (preserved verbatim) + the new Part 2 under its existing heading
-   + Part 3 (preserved verbatim if present — see step 7a).
+   + Part 3 (preserved verbatim if present — see step 7a) + Part 4
+   (newly drafted from step 6a, OR preserved verbatim if the user
+   has hand-edited it — see step 7b).
 
 7a. **Preserve Part 3 (Custom rubric) verbatim.** If the existing
     voice.md contains a `## Part 3 — Custom rubric` section, keep
@@ -69,6 +104,16 @@ they refuse to name.
     3 section at all (older books from before the custom-rubric
     contract), append the template's Part 3 placeholder at the
     end so the surface exists for the user to fill in later.
+
+7b. **Preserve Part 4 if hand-edited.** If the existing voice.md
+    contains a `## Part 4 — Per-character voice fingerprints`
+    section AND its body has any character block (a `### Name`
+    heading), preserve it byte-for-byte — the user has tuned per-
+    character voices and the auto-generation must not overwrite
+    that work. `--force` overrides this preservation. If Part 4
+    exists but contains only the template placeholder comment
+    (no `###` headings), step 6a's freshly-drafted Part 4
+    replaces it.
 </workflow>
 
 <acceptance>
@@ -81,4 +126,11 @@ they refuse to name.
 - A `## Part 3 — Custom rubric` section exists in the file (either
   preserved verbatim from a prior version or appended from the
   template placeholder). Its body is unchanged from the input.
+- A `## Part 4 — Per-character voice fingerprints` section exists.
+  Its body is either (a) a freshly-drafted set of `### Name` blocks
+  (when shared/characters.md had ≥3 named principals and Part 4
+  was not previously hand-edited), (b) preserved verbatim from the
+  prior voice.md if hand-edited, or (c) the template placeholder
+  comment (when the cast count is below 3 — Part 4 isn't useful
+  for solo-cast books).
 </acceptance>

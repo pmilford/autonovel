@@ -32,3 +32,26 @@ binary check the judge can apply. Examples:
 Leave empty (or delete this whole section) if you have no per-book
 rules — the standard rubric still applies.
 -->
+
+## Part 4 — Per-character voice fingerprints
+
+<!--
+Filled by /autonovel:voice-discovery when shared/characters.md has at
+least three named principals. One short block per main-cast character;
+the drafter and reviser apply these at dialogue lines and (for the POV
+character) interiority.
+
+Each block is ~5 fingerprint items. Short because the writer has to
+apply many of them at once. Format:
+
+  ### {Name} ({POV} | speaking-only)
+  - Speech: {sentence shape, register shifts under stress}
+  - Verbal tics: {distinctive words / phrases / never-says}
+  - Refuses: {topics, emotional registers, metaphor families they avoid}
+  - Body during dialogue: {what their hands / face / posture do}
+  - Interiority: {only for POV characters — how they think about emotion;
+    direct vs indirect, what they refuse to name}
+
+Leave empty (or delete this whole section) for solo-cast or single-
+speaker books — the standard voice fingerprint in Part 2 covers them.
+-->

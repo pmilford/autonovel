@@ -47,13 +47,25 @@ target, not a mental "safe" overshoot.
    `shared/characters.md`, `shared/canon.md`. These are guardrails, not
    raw material — the chapter must not contradict them.
 
-5. Use `file_read` on `books/{book}/voice.md` (Parts 1, 2, AND 3).
+5. Use `file_read` on `books/{book}/voice.md` (Parts 1, 2, 3, AND 4).
    The voice fingerprint is the most important input after the
-   brief. Part 3 is the custom rubric — book-specific writing rules
-   the rewrite must honour. The brief's `## Custom-rubric findings`
+   brief.
+
+   Part 3 is the custom rubric — book-specific writing rules the
+   rewrite must honour. The brief's `## Custom-rubric findings`
    section names which rules were flagged in the prior eval; the
    rewrite must fix those *and* not introduce fresh violations of
    any other Part 3 rule.
+
+   Part 4 is per-character voice fingerprints. When present, apply
+   each character's block at every line of their dialogue AND (for
+   the POV character) at every interiority sentence. The revise
+   pass is the right place to *intensify* per-character voice — a
+   first draft often has every character converging on the
+   narrator's register; the rewrite should make each character
+   recognisable from a single line of dialogue. If a character's
+   line in the prior draft could plausibly belong to any other
+   speaker in the book, that's the line to rewrite first.
 
 6. Use `file_read` on `books/{book}/chapters/ch_{chapter}.md` (the
    current draft — the raw material the rewrite carves from). This
