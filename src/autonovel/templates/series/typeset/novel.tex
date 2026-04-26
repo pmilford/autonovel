@@ -167,6 +167,14 @@
 \vspace*{\fill}
 \clearpage
 
+% === FRONT MATTER (preface + introduction, optional) ===
+% typeset writes `front_matter.tex` from `preface.md` +
+% `introduction.md` if either exists in the book's root. Preface goes
+% first (author voice), then introduction (typically more about the
+% work itself). Both render as `\chapter*` so they're unnumbered and
+% kept out of the chapter sequence, but added to the TOC.
+\IfFileExists{front_matter.tex}{\input{front_matter.tex}}{}
+
 \mainmatter
 
 % === CHAPTERS ===

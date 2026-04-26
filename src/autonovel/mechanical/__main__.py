@@ -11,6 +11,7 @@ Subcommands:
   scenes <path> [--full]           Split a chapter into scenes by *** / --- breaks.
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
+  build-front-matter-tex <book>    Build front_matter.tex from preface.md + introduction.md.
   render-novel-tex <template> [-s KEY=V ...]  Substitute @KEY@ placeholders (safer than sed).
   typeset-filename <slug> <kind>   Print canonical timestamped + latest filenames.
 
@@ -35,6 +36,7 @@ from .audio import (
 from .cliches import cliche_density, cliche_hits
 from .cuts import VALID_TYPES, apply_cuts
 from .epub import build_epub_md
+from .front_matter import build_front_matter_tex
 from .latex import build_chapters_tex
 from .scenes import split_scenes
 from .sensory import channel_balance
@@ -182,6 +184,23 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
         ],
     }
     json.dump(payload, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_build_front_matter_tex(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    output = Path(args.output) if args.output else None
+    content, titles = build_front_matter_tex(book_root, output=output)
+    json.dump(
+        {
+            "sections": titles,
+            "bytes": len(content),
+            "output": str(output) if output else None,
+            "wrote": output is not None and content != "",
+        },
+        sys.stdout, indent=2,
+    )
     sys.stdout.write("\n")
     return 0
 
@@ -346,6 +365,12 @@ def main(argv: list[str] | None = None) -> int:
     em.add_argument("--output", default=None,
                     help="Write the combined markdown to this path; otherwise stdout-JSON only.")
     em.set_defaults(func=_cmd_build_epub_md)
+
+    fm = sub.add_parser("build-front-matter-tex",
+                        help="Concatenate preface.md + introduction.md into front_matter.tex.")
+    fm.add_argument("book_root", help="Path to the book dir (the parent of preface.md).")
+    fm.add_argument("--output", default=None, help="Write to this path; otherwise stdout-JSON only.")
+    fm.set_defaults(func=_cmd_build_front_matter_tex)
 
     rt = sub.add_parser("render-novel-tex",
                         help="Substitute @KEY@ placeholders in a novel.tex template (replaces fragile sed).")

@@ -23,6 +23,7 @@ reads:
 writes:
   - books/{book}/typeset/chapters_content.tex
   - books/{book}/typeset/chapters_combined.md
+  - books/{book}/typeset/front_matter.tex
   - books/{book}/typeset/novel.tex
   - books/{book}/typeset/*.pdf
   - books/{book}/typeset/*.epub
@@ -78,6 +79,20 @@ Light tier — mechanical. No LLM call.
    --art-dir books/{book}/art --output
    books/{book}/typeset/chapters_content.tex
    --plates-manifest books/{book}/typeset/plates.yaml`.
+
+3a. Build `front_matter.tex` via `bash`:
+    `autonovel mechanical build-front-matter-tex books/{book}
+    --output books/{book}/typeset/front_matter.tex`.
+    The helper checks for `books/{book}/preface.md` (hand-authored)
+    and `books/{book}/introduction.md` (typically written by
+    `/autonovel:introduction --from auto`); when neither exists,
+    it writes nothing and the chapter file `\IfFileExists{}`
+    guard in novel.tex silently skips the include. When either
+    or both exist, each becomes a `\chapter*{...}` block (unnumbered,
+    in the TOC, in the `\frontmatter` zone — i.e. before chapter 1).
+    Parse the JSON output — print the section names that landed
+    (`["Preface"]`, `["Introduction"]`, or both) as part of the
+    summary.
    The `--plates-manifest` flag is best-effort — if the file
    doesn't exist (no user-imported plates), the build still
    succeeds. If it does exist, every entry's image gets woven into
@@ -161,6 +176,8 @@ Light tier — mechanical. No LLM call.
         --top-level-division=chapter \
         --toc \
         typeset/epub_front_matter.md \
+        <preface-arg> \
+        <introduction-arg> \
         books/{book}/typeset/chapters_combined.md \
         typeset/epub_back_cover.md \
         typeset/epub_colophon.md
@@ -172,6 +189,16 @@ Light tier — mechanical. No LLM call.
       these flags pandoc sometimes treats `# …` headings as
       sections instead of chapters, which is why earlier ePubs
       had unclear chapter marking).
+
+      `<preface-arg>` and `<introduction-arg>` are the literal
+      paths `books/{book}/preface.md` and
+      `books/{book}/introduction.md` when those files exist (test
+      with `[ -f books/{book}/preface.md ]` etc.); when a file
+      doesn't exist, omit the argument entirely (don't pass an
+      empty path to pandoc — it errors). Pandoc reads each `# …`
+      heading inside preface.md / introduction.md as a top-level
+      division, so they appear in the spine and TOC alongside
+      the chapters.
 
       The metadata.yaml for this book is assembled on the fly from
       `project.yaml` + `typeset/epub_metadata.yaml` (template) and
