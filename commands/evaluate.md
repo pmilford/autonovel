@@ -220,6 +220,62 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
     a body in it. Do not subtract from the score automatically; the
     judge weighs it as one signal among many.
 
+10e. **Per-scene beat coverage.** For `--chapter` and `--full`,
+    run `bash: autonovel mechanical scenes <chapter-path>` for each
+    chapter and parse its JSON. The output gives a stable per-scene
+    index (`scene_count`, then a `scenes` list with `index`,
+    `word_count`, `opening_line`, `closing_line` for each).
+
+    For each scene in each chapter, score the **four story beats**
+    on a 0/1 binary (present / absent):
+
+      - **goal** — does someone in the scene want something
+        specific (not just emotional valence)?
+      - **conflict** — is there resistance to that want (another
+        character, the world, the POV's own contradiction)?
+      - **disaster_or_decision** — does the scene turn (the want
+        is denied / a bad result, OR the POV makes a choice they
+        can't unmake)?
+      - **consequence** — does the scene's end change something
+        going forward (knowledge, relationship, position, stakes)?
+
+    Aggregate per chapter into `beat_coverage` block:
+
+    ```json
+    "beat_coverage": {
+      "score": 7.5,
+      "scenes": [
+        {"index": 1, "beats_hit": ["goal", "conflict", "consequence"],
+         "beats_missed": ["disaster_or_decision"]},
+        {"index": 2, "beats_hit": ["goal", "conflict",
+         "disaster_or_decision", "consequence"], "beats_missed": []}
+      ],
+      "weakest_scenes": [
+        {"index": 1, "missed_count": 1,
+         "fix": "scene 1 ends without anyone changing — give Tommaso a "
+                "decision he can't take back before the break"}
+      ]
+    }
+    ```
+
+    Scoring: every beat is worth 2.5 points; per-chapter score is
+    the average across scenes. **A scene missing 2 or more beats
+    goes into `weakest_scenes`** with a one-sentence prescription
+    naming the missing beat and what to add. brief.md walks
+    `weakest_scenes` and names them by index — that's the load-
+    bearing surface that turns "tighten chapter 8" into "scene 8.2
+    needs a decision before the break". Single-scene chapters
+    (no `***` breaks) are scored as one scene; the prescription
+    might be "split into two scenes around the midpoint
+    decision".
+
+    For `--full` mode, record `beat_coverage_per_chapter[N]` and
+    surface a top-line `book_beat_coverage_score` averaging the
+    per-chapter scores. Chapters whose score is below 6 go into
+    a `weak_beat_coverage_chapters` list at the top level —
+    these are the chapters whose middles drift, which is the
+    "drifting middle" Bells failure mode.
+
 10d. **Custom-rubric scoring.** When step 4a parsed at least one
     bullet criterion, score each one in addition to the standard
     rubric. For each criterion:

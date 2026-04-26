@@ -63,6 +63,16 @@ A good brief names specific passages to change, not vague moods.
    - `## Specific rewrites` (before → after snippets where the source
      suggested them)
    - `## Voice guardrails` (bulleted — preserve from voice.md Part 2)
+   - `## Weak scenes` *(only when the eval log's
+     `beat_coverage.weakest_scenes` array has any entries)* — for
+     each entry, write one bullet naming the scene by index, the
+     missing beat(s) (goal / conflict / disaster_or_decision /
+     consequence), and the prescription verbatim from the eval log
+     (or a sharpened version). This is what turns "tighten chapter
+     8" into "scene 8.2 needs a decision before the break" — the
+     single most surgical brief surface. Quote the scene's
+     `opening_line` so the rewrite knows exactly which scene to
+     touch. Omit the section when no scenes are weak.
    - `## Stability check` *(only when the eval log's
      `irreversible_change` score is below 7)* — name the chapter's
      final scene, name what reverted (board reset to opening / change

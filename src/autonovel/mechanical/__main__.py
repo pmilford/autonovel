@@ -8,6 +8,7 @@ Subcommands:
   audio-validate <script> [<v>]    Validate a parsed audiobook script.
   audio-chunk <script> <voices>    Pack segments into TTS-budget chunks.
   audio-marks <rows> [--pause S]   Compute cumulative chapter marks.
+  scenes <path> [--full]           Split a chapter into scenes by *** / --- breaks.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
 
 All subcommands print a single JSON object to stdout. Commands invoke
@@ -31,6 +32,7 @@ from .audio import (
 from .cliches import cliche_density, cliche_hits
 from .cuts import VALID_TYPES, apply_cuts
 from .latex import build_chapters_tex
+from .scenes import split_scenes
 from .sensory import channel_balance
 from .slop import period_ban_hits, slop_score
 from .spine import cover_spec
@@ -159,6 +161,26 @@ def _cmd_sensory(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_scenes(args: argparse.Namespace) -> int:
+    text = Path(args.path).read_text(encoding="utf-8")
+    scenes = split_scenes(text)
+    payload = {
+        "path": args.path,
+        "scene_count": len(scenes),
+        "total_words": sum(s["word_count"] for s in scenes),
+        # `text` field is heavy and the LLM judge in evaluate.md
+        # already has the chapter file open; emit only the lightweight
+        # index per scene by default. `--full` opts back in to the prose.
+        "scenes": [
+            ({k: v for k, v in s.items() if k != "text"} if not args.full else s)
+            for s in scenes
+        ],
+    }
+    json.dump(payload, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_build_tex(args: argparse.Namespace) -> int:
     chapters_dir = Path(args.chapters_dir)
     art_dir = Path(args.art_dir) if args.art_dir else None
@@ -250,6 +272,12 @@ def main(argv: list[str] | None = None) -> int:
     sens.add_argument("--dominance-threshold", type=float, default=0.70,
                       help="Single-channel fraction above which the channel is flagged dominant (default 0.70).")
     sens.set_defaults(func=_cmd_sensory)
+
+    sc = sub.add_parser("scenes", help="Split a chapter into scenes by *** / --- breaks.")
+    sc.add_argument("path")
+    sc.add_argument("--full", action="store_true",
+                    help="Include each scene's full prose in the output (heavy; default off).")
+    sc.set_defaults(func=_cmd_scenes)
 
     bt = sub.add_parser("build-tex", help="Build chapters_content.tex from a chapters dir.")
     bt.add_argument("chapters_dir")

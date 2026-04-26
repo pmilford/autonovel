@@ -248,11 +248,24 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   the "softening qualifier" pattern (`maybe`, `kind of`, `a little`)
   inside short retorts where it neutralises tension. Lives in
   `src/autonovel/mechanical/dialogue.py`. Tier-1 testable.
-- **Scene-level beat coverage in `evaluate.py`.** Score every scene
-  against four beats (goal / conflict / disaster-or-decision /
-  consequence) and surface scenes that are missing two or more.
-  Catches the "drifting middle" failure mode the reader-panel test
-  flagged in Bells.
+- ~~**Scene-level beat coverage in `evaluate.py`.**~~ **Shipped
+  2026-04-25.** New `autonovel mechanical scenes <chapter>` helper
+  splits a chapter into scenes by `***` / `---` / `* * *` breaks
+  (Tier-1 testable; 14 tests covering frontmatter strip, surrounding
+  whitespace tolerance, phantom-empty-scene drops, opening/closing
+  edge cases, CLI round-trip with and without `--full`). evaluate.md
+  step 10e walks the per-scene index and scores each scene 0/1 on
+  goal / conflict / disaster_or_decision / consequence; aggregates
+  to per-chapter `beat_coverage` block with `weakest_scenes` list
+  (any scene missing 2+ beats), each entry carrying a one-sentence
+  prescription naming the missed beat and what to add. Single-scene
+  chapters get the "split into two scenes around the midpoint
+  decision" suggestion. `--full` mode aggregates to
+  `book_beat_coverage_score` + `weak_beat_coverage_chapters` list,
+  which catches the "drifting middle" Bells failure mode. brief.md
+  walks `weakest_scenes` and turns "tighten chapter 8" into "scene
+  8.2 needs a decision before the break" with the scene's
+  `opening_line` quoted for surgical targeting.
 - ~~**Cliché bigram/trigram scanner.**~~ **Shipped 2026-04-25** —
   `autonovel mechanical cliches <path>` returns a curated bigram
   scan; `evaluate.md` invokes it for `--chapter` and `--full`,
