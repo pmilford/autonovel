@@ -216,31 +216,25 @@ When TO use this:
             via autonovel rollback.
 
       5. PROMOTE CANON (skip if --no-promote):
-         **inline the file operations — DO NOT invoke
-         /autonovel:promote-canon as a slash-command.**
-         The parent draft-pass holds the in-progress lock; the
-         slash-command's preamble would try to acquire the same
-         lock and fail with "parent holds the lock", silently
-         leaving pending_canon entries unmerged into
-         shared/canon.md and letting chapter N+1 read stale
-         canon. Instead, do the file operations directly:
-           - file_read books/{book}/pending_canon.md (per-chapter
-             scope — the parent runs a final sweep over all books
-             at end);
-           - file_read shared/canon.md, world.md, characters.md
-             for de-dup + contradiction detection;
-           - classify each candidate per
-             commands/promote-canon.md step 4 (research-tagged
-             entries win contradictions);
-           - file_write the survivors to shared/canon.md under a
-             `## Promoted <UTC-date>` heading; emit
-             `## Superseded` blocks for research-tagged
-             supersedures;
-           - file_write pending_canon.md with either the
-             structured `# Conflicts` block (per
-             promote-canon.md step 8) or `no new facts`.
-         Capture the count of entries promoted to feed P in the
-         status line below.
+         **invoke the safe in-sweep helper via Bash:**
+
+           autonovel _promote-canon --book {book} --no-lock --format json
+
+         The --no-lock flag is load-bearing — the parent
+         draft-pass holds the in-progress lock, so the helper
+         must skip the lock check. Without --no-lock it would
+         refuse to run and per-chapter canon promotion would
+         silently fail (author bug-report 2026-04-26). DO NOT
+         invoke /autonovel:promote-canon as a slash-command —
+         that routes through the slash-command's preamble and
+         hits the same lock collision.
+
+         The helper does the full de-dup / contradiction /
+         research-tagged-supersedure / conflict-block pipeline
+         atomically (same logic the slash-command runs; see
+         commands/promote-canon.md). Parse the JSON output;
+         books[0].promoted is the P count for the status line
+         below.
 
       Return EXACTLY this single line as your final message
       (nothing else):

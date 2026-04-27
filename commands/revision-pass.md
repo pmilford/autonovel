@@ -173,61 +173,42 @@ chapter the sweep touched in one shot.
       (only if both are non-None; otherwise leave as "—"). This
       is display-only — no file written.
 
-   f. **promote-canon** *(skippable via --no-promote)*: do the
-      promote-canon file operations **inline**, NOT by invoking
-      the `/autonovel:promote-canon` slash-command.
+   f. **promote-canon** *(skippable via --no-promote)*: invoke
+      the safe in-sweep helper via `Bash`:
 
-      > **CRITICAL — do NOT invoke `/autonovel:promote-canon`
-      > here. The parent revision-pass holds the in-progress
-      > lock; the slash-command's own preamble (`autonovel
-      > _begin`) would try to acquire the same lock and fail
-      > with "parent holds the lock". Author bug-report
-      > 2026-04-26: the symptom is a per-chapter promote-canon
-      > silently failing, leaving pending_canon entries
-      > unmerged into shared/canon.md, so chapter N+1's revise
-      > reads stale canon and may re-introduce the very fact
-      > chapter N just corrected. The fix is to inline the
-      > file operations.**
+      ```
+      autonovel _promote-canon --book {book} --no-lock --format json
+      ```
 
-      Concretely, perform these steps as direct file_read /
-      file_write tool calls — NOT by spawning the slash-command:
+      The `--no-lock` flag is **load-bearing** — the parent
+      revision-pass holds `.autonovel/in-progress.lock`, so the
+      helper must skip the lock check. Without `--no-lock` the
+      helper would refuse to run with "another autonovel command
+      is in progress" and per-chapter canon promotion would
+      silently fail (author bug-report 2026-04-26).
 
-      i.   `file_read` `books/{book}/pending_canon.md` — parse
-           every non-empty bulleted line as a candidate. Skip
-           `no new facts`.
-      ii.  `file_read` `shared/canon.md`, `shared/world.md`,
-           `shared/characters.md` for de-dup + contradiction
-           detection.
-      iii. For each candidate, classify as Duplicate, Contradiction,
-           or Survivor (per the rules in
-           `commands/promote-canon.md` step 4 — including the
-           research-tagged-wins-contradictions exception).
-      iv.  `file_write` to append the survivors to
-           `shared/canon.md` under a `## Promoted <UTC-date>`
-           heading. Research-tagged entries that supersede an
-           existing canon line also emit a `## Superseded
-           <UTC-date>` block per `promote-canon.md` step 4's
-           exception clause.
-      v.   `file_write` to rewrite `books/{book}/pending_canon.md`
-           with either (a) the structured `# Conflicts —
-           resolve before next promote-canon` block per
-           `promote-canon.md` step 8, or (b) `no new facts` when
-           no conflicts remain.
+      DO NOT invoke `/autonovel:promote-canon` as a slash-command
+      from inside this sub-agent — that would route through the
+      slash-command's preamble (`autonovel _begin`) and hit the
+      same lock collision. Always use the bare CLI with `--no-lock`.
 
-      Mirrors the per-chapter promote-canon that draft-pass
-      adopted in `aea1511` — without it, revisions that discover
-      new canon facts (a clarified date, a character revelation,
-      a corrected name) leave them in pending_canon.md until the
-      *end* of the sweep, so chapter N+1's revise reads the
-      *pre-revision* shared/canon.md and can re-introduce the
-      same inconsistency the chapter-N revise just fixed.
-      Per-chapter inline promotion lets each revision's
-      discoveries land before the next chapter's revise reads
+      Parse the JSON output. The `books[0].promoted` field is the
+      `<P>` count for the per-chapter status line below. The
+      helper does the full de-dup / contradiction-detection /
+      research-tagged-supersedure / conflict-block-emission
+      pipeline atomically — same logic the slash-command's body
+      runs (see `commands/promote-canon.md`) — so per-chapter
+      inline promotion lets each revision's discoveries land in
+      `shared/canon.md` before the next chapter's revise reads
       canon.
 
-      Capture the count of entries promoted and the count of
-      conflicts encountered to feed the per-chapter status line
-      (`canon: +<P>`).
+      Mirrors the per-chapter promote-canon that draft-pass
+      adopted in `aea1511`. Without it, revisions that discover
+      new canon facts (a clarified date, a character revelation,
+      a corrected name) leave them in pending_canon.md until the
+      *end* of the sweep, and chapter N+1's revise reads the
+      pre-revision `shared/canon.md` — re-introducing the very
+      inconsistency the chapter-N revise just fixed.
 
    **Critical: do NOT call `autonovel _begin` or `autonovel _end`
    for any sub-step.** This command holds the series lock for the

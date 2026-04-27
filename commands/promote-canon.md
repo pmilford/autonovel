@@ -41,13 +41,47 @@ pending files, so `autonovel rollback` undoes the whole promotion.
 </purpose>
 
 <workflow>
+> **Implementation note (2026-04-26):** the entire de-dup /
+> contradiction-detection / supersedure / conflict-block logic is
+> implemented in `src/autonovel/promote_canon.py` and exposed as
+> the hidden CLI subcommand `autonovel _promote-canon`. This
+> command's body simply invokes the helper (with the lock acquired
+> by the standard preamble); the prose below describes the
+> behaviour the helper implements, NOT a separate inline workflow
+> the LLM should reproduce. The same helper is invoked by sweep
+> sub-agents with `--no-lock` (see `revision-pass.md` step 3f and
+> `draft-pass.md` step 5) so there's exactly one source of truth
+> for the file-operation semantics.
+
 1. Parse `$ARGUMENTS`. `--book <short-name>` restricts the sweep to
    one book's pending file. `--dry-run` prints what would be
    promoted without writing. No positional arguments.
 
-2. Use `file_read` on `project.yaml` to list every book in the
-   series. If `--book` is passed, keep only that one; fail with
-   `unknown book: <name>` if it is not listed.
+2. **Invoke the helper.** Use the `Bash` tool to run:
+
+   ```
+   autonovel _promote-canon [--book <name>] [--dry-run] --format json
+   ```
+
+   The CLI does steps 3–8 inline (parse pending, classify against
+   canon/world/characters, emit `## Promoted` and `## Superseded`
+   blocks in `shared/canon.md`, rewrite `pending_canon.md` with
+   either the structured `# Conflicts` block or `no new facts`).
+   Parse the JSON output for the per-book counts to feed step 9's
+   summary. Steps 3–8 below remain authoritative descriptions of
+   the helper's behaviour for review purposes — they are NOT a
+   separate inline workflow.
+
+   When `--book` is omitted, the helper iterates every book in
+   `project.yaml`. When `--dry-run` is passed, no files are
+   modified — the JSON report names what would have happened.
+
+   The slash-command's preamble already acquired the in-progress
+   lock; the helper runs without `--no-lock`. Sub-agents in
+   sweeps invoke the same helper with `--no-lock` (see
+   `revision-pass.md` step 3f and `draft-pass.md` step 5) which
+   bypasses the lock check — that's the safe in-sweep entry point
+   for the same logic.
 
 3. For each selected book, use `file_read` on
    `books/{book}/pending_canon.md`. Parse it as a plain bullet list

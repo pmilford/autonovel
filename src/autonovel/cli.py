@@ -167,6 +167,19 @@ def _build_parser() -> argparse.ArgumentParser:
     _end.add_argument("--wrote", action="append", default=[])
     _end.set_defaults(func=_cmd_end)
 
+    _pc = sub.add_parser("_promote-canon", help=argparse.SUPPRESS)
+    _pc.add_argument("--book", default=None,
+                     help="Book name to promote; default: every book in project.yaml.")
+    _pc.add_argument("--no-lock", action="store_true",
+                     help="Do not check in-progress.lock — for use inside a sweep "
+                          "subagent whose parent already holds the lock. Without this "
+                          "flag the helper refuses to run when a lock is held.")
+    _pc.add_argument("--dry-run", action="store_true",
+                     help="Print what would be promoted without writing.")
+    _pc.add_argument("--format", choices=("json", "human"), default="human",
+                     help="Output format (default: human).")
+    _pc.set_defaults(func=_cmd_promote_canon)
+
     return p
 
 
@@ -544,6 +557,61 @@ def _cmd_end(args: argparse.Namespace) -> int:
         print(result.footer)
     else:
         print(f"_end: status={args.status}; log updated")
+    return 0
+
+
+def _cmd_promote_canon(args: argparse.Namespace) -> int:
+    """Hidden subcommand: promote pending canon entries into
+    shared/canon.md atomically. Slash-command body and sweep
+    sub-agents both call this; --no-lock lets sweep sub-agents
+    bypass the in-progress lock that the parent already holds."""
+    import json as _json
+    from . import lock as lock_mod, promote_canon as pc
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    if not args.no_lock:
+        # Refuse if the lock is held by another process, mirroring
+        # what `_begin` would have done at the slash-command's
+        # preamble. With --no-lock the caller is asserting "I know
+        # the parent holds the lock; just do the file ops."
+        info = lock_mod.read(series.lock_file)
+        if info is not None and not lock_mod.is_stale(series.lock_file):
+            print(
+                f"error: another autonovel command is in progress "
+                f"(PID {info.pid}, command {info.command!r}). "
+                f"Pass --no-lock if invoking from inside that command's sub-agent.",
+                file=sys.stderr,
+            )
+            return 3
+    try:
+        report = pc.promote(
+            series,
+            book=args.book,
+            dry_run=args.dry_run,
+            no_lock=args.no_lock,
+        )
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 4
+    if args.format == "json":
+        _json.dump(report.to_dict(), sys.stdout, indent=2, default=str)
+        sys.stdout.write("\n")
+    else:
+        for br in report.books:
+            print(f"book: {br.book}")
+            print(f"  promoted:    {br.promoted}")
+            print(f"  duplicates:  {br.duplicates}")
+            print(f"  conflicts:   {br.conflicts}")
+            print(f"  supersedures: {br.supersedures}")
+            for sup in br.supersedure_records:
+                print(f"  superseded:  `{sup.superseded_line}` ← `{sup.new_entry.fact_text}` ({sup.rationale})")
+            for cr in br.conflict_records:
+                print(f"  conflict:    `{cr.candidate.fact_text}` vs `{cr.existing_line}` in {cr.existing_file}")
+        if args.dry_run:
+            print("(dry-run — no files written)")
     return 0
 
 
