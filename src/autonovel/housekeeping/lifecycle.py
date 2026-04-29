@@ -82,12 +82,19 @@ class EndResult:
 
 
 def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
-        series: SeriesLayout | None = None) -> EndResult:
+        series: SeriesLayout | None = None,
+        usage: dict | None = None) -> EndResult:
+    """`usage` carries optional telemetry from the runtime session
+    (model, tier, input/output/cache tokens, estimated USD cost).
+    Each field lands on the command-log entry so `autonovel cost`
+    can roll it up. Missing keys land as None — mechanical-only
+    commands typically pass the dict empty."""
     series = series or load_series()
     cmd = _load_command(command_name)
     ctx = _parse_arguments(cmd, arg_string)
     ctx = _infer_book(ctx, series)
     book = ctx.get("book")
+    usage = usage or {}
 
     if status != "ok":
         lock.mark_interrupted(series.lock_file)
@@ -98,6 +105,8 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
             status=status,
             wrote=list(wrote),
             note="workflow reported failure",
+            book=book,
+            **_usage_kwargs(usage),
         )
         return EndResult(last_action=None, footer="")
 
@@ -135,11 +144,24 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
         status="ok",
         wrote=list(wrote),
         note=log_note,
+        book=book,
+        **_usage_kwargs(usage),
     )
     footer = _render_footer(command_name, arg_string, wrote, la)
     if verify is not None and verify.warnings:
         footer = footer.rstrip() + "\n\n" + _render_verify_warning(verify)
     return EndResult(last_action=la, footer=footer, verify_report=verify)
+
+
+def _usage_kwargs(usage: dict) -> dict:
+    """Forward only the recognised usage keys to command_log.append.
+    Unknown keys are dropped silently so future telemetry shape
+    changes don't break existing log entries."""
+    keys = (
+        "model", "tier", "input_tokens", "output_tokens",
+        "cache_read_tokens", "cache_creation_tokens", "cost_usd",
+    )
+    return {k: usage.get(k) for k in keys}
 
 
 def _verify_writes(series: SeriesLayout, command_name: str,

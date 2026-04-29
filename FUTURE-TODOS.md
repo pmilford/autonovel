@@ -801,9 +801,44 @@ prose ≈ 8 / 10, with investigation-heavy plots).
 
 ## Maintenance
 
-- **Token + cost tracking.** Log per-command estimated input/output
-  tokens to `.autonovel/command-log.jsonl` and surface a budget
-  estimate in `autonovel status`. Carry-over from PRs 5–8.
+- ~~**Token + cost tracking.**~~ **Shipped 2026-04-28.**
+  `command_log.LogEntry` gains optional fields: `book`, `model`,
+  `tier`, `input_tokens`, `output_tokens`, `cache_read_tokens`,
+  `cache_creation_tokens`, `cost_usd`. All optional — emitted
+  to JSON only when populated so historical entries stay
+  readable. `autonovel _end` accepts matching CLI flags
+  (`--tier`, `--input-tokens`, `--output-tokens`,
+  `--cache-read-tokens`, `--cache-creation-tokens`,
+  `--cost-usd`); the postamble template instructs the runtime
+  to forward whatever the session's usage report exposes.
+  `lifecycle.end` now accepts a `usage` dict and threads it
+  through to `command_log.append`. New `autonovel cost` CLI
+  subcommand + `src/autonovel/cost.py` helper roll up
+  per-book / per-tier / per-command totals with markdown +
+  JSON output. Mechanical-only commands count as $0 runs and
+  are surfaced separately from heavy / standard / light. 18
+  Tier-1 tests covering log round-trip, partial telemetry
+  (tokens but no cost), aggregation by book / tier / command,
+  unknown-cost runs, error-runs, mechanical-runs, render
+  shapes, lifecycle wiring, CLI happy paths. Tier 1+2: 1056 →
+  1074.
+
+- **Token + cost tracking — pricing table follow-up.** The 2026-04-28
+  shipment surfaces whatever the runtime reports. Not yet
+  done: an in-repo pricing table that maps (model, tier) →
+  USD/1Mtok so a postamble can compute `--cost-usd` even
+  when the runtime omits it. Hold for now — manual cost
+  estimation is brittle and varies across plans
+  (subscription vs API; with vs without prompt caching);
+  better to display exactly what the runtime reports.
+
+- **Token + cost tracking — `autonovel status` budget surface
+  follow-up.** The 2026-04-28 shipment delivers `autonovel cost`
+  (separate command). A natural extension is a one-line cost
+  summary in `autonovel status` so the daily-checkpoint flow
+  surfaces it without a second invocation. Cheap (~30 min):
+  call `cost.build_report` from inside `_cmd_status` and add a
+  one-liner like "spent $X.XX across N runs (M today)".
 - **Bells Tier-4 fixture populate.** Copy the final Bells chapters
   from the `autonovel/bells` branch into
   `tests/fixtures/bells-reference/` and freeze `scores.json`.

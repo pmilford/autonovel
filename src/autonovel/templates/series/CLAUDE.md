@@ -142,6 +142,10 @@ each of these and the workaround is in the codebase:
   perception filters, narrator labels). Suggestion list — the
   LLM judge in `/autonovel:evaluate` produces the actual show-
   vs-tell ratio.
+- Run `autonovel cost` (CLI, not slash-command) for the token
+  + cost rollup across the whole series. Estimates only — the
+  runtime's session-usage report is the source. Mechanical-only
+  commands count as $0 runs.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

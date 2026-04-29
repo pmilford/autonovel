@@ -85,6 +85,20 @@ def _build_parser() -> argparse.ArgumentParser:
     st.add_argument("--series", default=None)
     st.set_defaults(func=_cmd_status)
 
+    cs = sub.add_parser(
+        "cost",
+        help="Roll up token + cost figures from .autonovel/command-log.jsonl.",
+        description=(
+            "Read every entry in the series command-log and aggregate "
+            "by book / tier / command. Token counts and cost figures "
+            "are LLM-self-reported estimates, not invoices. Mechanical-"
+            "only commands count as $0 runs."
+        ),
+    )
+    cs.add_argument("--series", default=None)
+    cs.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    cs.set_defaults(func=_cmd_cost)
+
     doc = sub.add_parser("doctor", help="Sanity-check a series directory.")
     doc.add_argument("--series", default=None)
     doc.add_argument("--fix", action="store_true", help="Recreate missing directories")
@@ -220,6 +234,21 @@ def _build_parser() -> argparse.ArgumentParser:
     _end.add_argument("--args", default="")
     _end.add_argument("--status", default="ok")
     _end.add_argument("--wrote", action="append", default=[])
+    # Token + cost telemetry — populated by the postamble when the
+    # runtime exposes its session's usage report. All optional;
+    # missing fields land as None in the command log.
+    _end.add_argument("--model", default=None,
+                       help="Provider model id used for this run (telemetry).")
+    _end.add_argument("--tier", default=None,
+                       help="Resolved model tier — heavy / standard / light / mechanical.")
+    _end.add_argument("--input-tokens", dest="input_tokens", type=int, default=None)
+    _end.add_argument("--output-tokens", dest="output_tokens", type=int, default=None)
+    _end.add_argument("--cache-read-tokens", dest="cache_read_tokens",
+                       type=int, default=None)
+    _end.add_argument("--cache-creation-tokens", dest="cache_creation_tokens",
+                       type=int, default=None)
+    _end.add_argument("--cost-usd", dest="cost_usd", type=float, default=None,
+                       help="Estimated USD cost (NOT authoritative).")
     _end.set_defaults(func=_cmd_end)
 
     _na = sub.add_parser("_next-actions", help=argparse.SUPPRESS)
@@ -329,6 +358,24 @@ def _cmd_import_book(args: argparse.Namespace) -> int:
         )
     if args.dry_run:
         print("(dry-run — no files modified)")
+    return 0
+
+
+def _cmd_cost(args: argparse.Namespace) -> int:
+    """Roll up token + cost figures from the series command log."""
+    import json as _json
+    from . import cost as cost_mod
+    try:
+        series = _resolve_series(args.series)
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    report = cost_mod.build_report(series.command_log_file)
+    if args.format == "json":
+        _json.dump(report.to_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(cost_mod.render_markdown(report))
     return 0
 
 
@@ -716,7 +763,17 @@ def _cmd_end(args: argparse.Namespace) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     result = lifecycle.end(
-        args.command, args.args, status=args.status, wrote=list(args.wrote), series=series
+        args.command, args.args, status=args.status,
+        wrote=list(args.wrote), series=series,
+        usage={
+            "model": args.model,
+            "tier": args.tier,
+            "input_tokens": args.input_tokens,
+            "output_tokens": args.output_tokens,
+            "cache_read_tokens": args.cache_read_tokens,
+            "cache_creation_tokens": args.cache_creation_tokens,
+            "cost_usd": args.cost_usd,
+        },
     )
     if args.status == "ok" and result.footer:
         print(result.footer)

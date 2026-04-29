@@ -134,6 +134,24 @@ stop after step 1:
    standard next step, and appends a JSON line to
    `.autonovel/command-log.jsonl`.
 
+   **Telemetry (token + cost tracking).** When the runtime exposes
+   the session's usage report — Claude Code's
+   `[!@usage]`-style block, an Anthropic SDK `Usage` object, etc.
+   — also pass:
+     - `--tier {cmd.model_tier}` (this command's resolved tier)
+     - `--input-tokens <N>` (or whatever the runtime calls it)
+     - `--output-tokens <N>`
+     - `--cache-read-tokens <N>` (if reported)
+     - `--cache-creation-tokens <N>` (if reported)
+     - `--cost-usd <decimal>` (when the runtime estimates a cost)
+   These are best-effort: pass what the runtime reports, omit
+   the rest. The `autonovel cost` rollup tolerates partial
+   data. Mechanical-only commands (no LLM call) skip every
+   token / cost flag — this command is `model_tier:
+   {cmd.model_tier}`, so light-tier commands without LLM work
+   should still pass `--tier mechanical` so the rollup
+   classifies them correctly.
+
    The bash output of this call IS the user-facing footer. It looks
    roughly like:
 

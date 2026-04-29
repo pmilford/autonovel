@@ -1062,6 +1062,22 @@ pipeline next step (from the prior command's footer) appears at
 the bottom; situational actions take precedence over it. Cheap
 to call repeatedly; pure mechanical, no LLM.
 
+Or, for the cost-and-token side of "where am I":
+
+```bash
+autonovel cost                      # CLI: token + cost rollup
+autonovel cost --format json        # machine-readable for scripts
+```
+
+`autonovel cost` reads `.autonovel/command-log.jsonl` and rolls up
+per-book / per-tier / per-command totals. Token counts and USD
+costs are LLM-self-reported (whatever the runtime's session-usage
+report exposes) — treat them as estimates, not invoices. Mechanical-
+only commands (no LLM call) count as $0 runs and are surfaced
+separately from heavy / standard / light tiers. The postamble
+forwards usage automatically when the runtime reports it; the
+fields are best-effort, so partial data degrades cleanly.
+
 Or in your status bar (if you ran `autonovel statusline-setup`):
 
 ```

@@ -366,6 +366,24 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (token + cost tracking; FUTURE-TODOS Token+Cost
+  entry): `command_log.LogEntry` gains optional fields book /
+  model / tier / input_tokens / output_tokens /
+  cache_read_tokens / cache_creation_tokens / cost_usd. Empty
+  fields omitted from rendered JSON so historical entries stay
+  readable. `autonovel _end` accepts `--tier` /
+  `--input-tokens` / `--output-tokens` / `--cache-read-tokens`
+  / `--cache-creation-tokens` / `--cost-usd` flags; postamble
+  template (Claude adapter) instructs the runtime to forward
+  whatever the session's usage report exposes.
+  `lifecycle.end()` accepts a `usage: dict | None` and threads
+  it through to `command_log.append`. New `autonovel cost` CLI
+  subcommand + `src/autonovel/cost.py` helper roll up
+  per-book / per-tier / per-command totals (markdown + JSON).
+  Mechanical-only commands count as $0 runs and are surfaced
+  separately from heavy/standard/light. 18 Tier-1 tests + 0
+  contract pickups (no new slash-command — CLI-only). Tier
+  1+2: 1056 → 1074.
 - 2026-04-28 (research at the front of the foundation — final
   step; FUTURE-TODOS Research entry): the third sub-item closes
   out the multi-step shipment. `commands/gen-world.md` step 3a
@@ -895,7 +913,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1056
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1074
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2
