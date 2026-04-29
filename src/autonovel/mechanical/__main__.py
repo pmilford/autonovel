@@ -9,6 +9,7 @@ Subcommands:
   audio-chunk <script> <voices>    Pack segments into TTS-budget chunks.
   audio-marks <rows> [--pause S]   Compute cumulative chapter marks.
   scenes <path> [--full]           Split a chapter into scenes by *** / --- breaks.
+  motifs <book> [--format]         Per-chapter motif density (reads books/<book>/motifs.md).
   chapter-summary <book> [--format] One-line-per-chapter overview (date/POV/score/cast/plot).
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
@@ -40,6 +41,7 @@ from .cuts import VALID_TYPES, apply_cuts
 from .epub import build_epub_md
 from .front_matter import build_front_matter_tex
 from .latex import build_chapters_tex
+from .motifs import build_report as build_motif_report, render_markdown as render_motif_md
 from .scenes import split_scenes
 from .sensory import channel_balance
 from .slop import period_ban_hits, slop_score
@@ -187,6 +189,18 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     }
     json.dump(payload, sys.stdout, indent=2)
     sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_motifs(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    report = build_motif_report(book_root)
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_motif_md(report, book=book_root.name))
     return 0
 
 
@@ -376,6 +390,13 @@ def main(argv: list[str] | None = None) -> int:
     sc.add_argument("--full", action="store_true",
                     help="Include each scene's full prose in the output (heavy; default off).")
     sc.set_defaults(func=_cmd_scenes)
+
+    mt = sub.add_parser("motifs",
+                        help="Per-chapter motif density tracker (reads books/<book>/motifs.md).")
+    mt.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    mt.add_argument("--format", choices=("markdown", "json"), default="markdown",
+                    help="Output format (default: markdown table).")
+    mt.set_defaults(func=_cmd_motifs)
 
     em = sub.add_parser("build-epub-md",
                         help="Concatenate ch_NN.md files into one pandoc-ready markdown.")

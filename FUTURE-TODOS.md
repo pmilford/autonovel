@@ -387,10 +387,21 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   to safe, round-edged endings; pacing ≈ 7 plateau on
   investigation-heavy plots") now has a measurement and a
   prescription.
-- **Per-chapter motif tracker.** Some books reward repetition of a
-  central image (the bell, the apothecary's mortar). Track motif
-  density per chapter and warn when one drops to zero in the back
-  half.
+- ~~**Per-chapter motif tracker.**~~ **Shipped 2026-04-28.**
+  New mechanical helper `src/autonovel/mechanical/motifs.py` reads
+  `books/<book>/motifs.md` (one bullet per motif: `- slug:
+  keyword1, keyword2, keyword3`), strips YAML frontmatter from each
+  chapter before counting (so `events: [bell-toll]` doesn't inflate
+  the bell density), and matches keywords on word boundaries
+  case-insensitively. Emits a markdown table with one row per
+  chapter and one column per motif (zero-hit cells render as `·`).
+  Back-half drop warnings fire only when the motif was used at
+  least once in the front half — silent when a declared motif was
+  never used (avoids noise). Books under 4 chapters skip warning
+  logic entirely. CLI subcommand `autonovel mechanical motifs
+  <book_root> [--format markdown|json]`. New slash-command
+  `/autonovel:motifs` wraps it. 17 Tier-1 tests + 5 contract
+  pickups; Tier 1+2: 747 → 769.
 - **Show-don't-tell judge upgrade.** Current rule is a regex sweep
   for "felt", "knew", "realised". A separate LLM pass that classifies
   every emotion line as direct / indirect / hybrid and scores the

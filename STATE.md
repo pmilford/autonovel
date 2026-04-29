@@ -366,6 +366,19 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (per-chapter motif tracker; FUTURE-TODOS #22): new
+  mechanical helper `src/autonovel/mechanical/motifs.py` reads
+  per-book `motifs.md` (bullet shape `- slug: kw1, kw2, kw3`),
+  strips YAML frontmatter from each chapter before counting,
+  matches keywords on word boundaries case-insensitively, emits
+  a per-chapter markdown table (zero-hit cells `·`). Back-half
+  drop warnings fire only when the motif was used at least once
+  in the front half — silent for declared-but-never-used motifs
+  (avoids noise). Books under 4 chapters skip warning logic.
+  CLI subcommand `autonovel mechanical motifs <book_root>` and
+  slash-command `/autonovel:motifs` (light tier, pure mechanical).
+  17 new Tier-1 tests + 5 contract auto-pickups for the new
+  command. Tier 1+2: 747 → 769.
 - 2026-04-28 (pipx-isolated install Tier-3 test; FUTURE-TODOS #5.3):
   new file `tests/smoke/test_pipx_install.py` builds a wheel via
   `pipx install <repo>` against an isolated `PIPX_HOME` /
@@ -629,11 +642,12 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **747
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **769
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2
-  (multi-stage pipeline integration tests) added 7.
+  added 7; #22 (per-chapter motif tracker) added 17 + 5 contract
+  pickups for the new slash-command.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-26 — **674
   passing** (`pytest tests/deterministic tests/contracts`). The
   2026-04-25 PM and 2026-04-26 waves added 223 tests across the
