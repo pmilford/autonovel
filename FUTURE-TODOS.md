@@ -147,15 +147,20 @@ to start.
      which already handles all three naming conventions.
      Tier 1+2: 723 → 740.
 
-  2. **Multi-stage integration tests** (deterministic, no LLM).
-     Today each command has a unit test in isolation. Real bugs hit
-     the *seams between commands*: draft writes a summary file →
-     count rolls forward → next-step decides → evaluate runs →
-     score lands → next-step decides again. Add a Tier-1 integration
-     suite that stitches these by simulating the on-disk state each
-     command would have produced (no actual LLM call), and asserts
-     the next-step recommendation at each seam. Prevents the kind
-     of "evaluate kept recommending evaluate" bug we hit today.
+  2. ~~**Multi-stage integration tests** (deterministic, no LLM).~~
+     **Shipped 2026-04-28.** New file
+     `tests/deterministic/test_integration_pipeline.py` walks the
+     real seams: foundation chain (world → characters → voice →
+     canon → outline → drafting); first-draft → evaluate → advance
+     vs revise (with the timestamped eval shape that #5.1 fixed);
+     low-score → revise → re-eval → advance; pending-canon gate
+     (draft → pending entry appears → next-step says
+     promote-canon → run real `promote_canon.promote` →
+     pending file rewritten → gate releases → advance);
+     situational `next_actions` shifts as state evolves; canonical
+     pipeline action surfaced at the bottom; eval-score indexer
+     resolves all three production naming conventions. 7 new
+     Tier-1 tests; Tier 1+2: 740 → 747.
 
   3. **pipx-isolated install test (Tier-3).** Spin up a clean tmp
      pipx home, `pipx install <repo>`, then verify

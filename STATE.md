@@ -366,6 +366,18 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (multi-stage pipeline integration tests; FUTURE-TODOS
+  #5.2): new file
+  `tests/deterministic/test_integration_pipeline.py` walks the
+  seams that unit-tested-in-isolation commands miss — foundation
+  chain → first-draft → evaluate → advance/revise; low-score →
+  revise → re-eval → advance; pending-canon gate (real
+  `promote_canon.promote` round-trip releases the gate); situational
+  `next_actions.enumerate_actions` shifts across pipeline stages;
+  canonical pipeline action surfaces at the bottom of the
+  `/autonovel:next` output; eval-score indexer resolves all three
+  production naming conventions in a single test. 7 new Tier-1
+  tests; Tier 1+2: 740 → 747.
 - 2026-04-28 (realistic late-stage fixtures + lifecycle bug fix;
   FUTURE-TODOS #5.1): two new conftest fixtures —
   `mid_revision_book` (8 chapters, ch02+ch03 below threshold with
@@ -605,13 +617,11 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **740
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **747
   passing** (`pytest tests/deterministic tests/contracts`).
-  FUTURE-TODOS #1 (promote-canon helper) added 22 tests on
-  2026-04-26; FUTURE-TODOS #2 (dynamic /autonovel:next) added 27
-  tests on 2026-04-28; FUTURE-TODOS #5.1 (realistic-shape state-
-  machine coverage + the lifecycle._last_eval_score bug fix it
-  caught) added 17 tests on 2026-04-28.
+  FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
+  a real lifecycle._last_eval_score glob bug along the way); #5.2
+  (multi-stage pipeline integration tests) added 7.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-26 — **674
   passing** (`pytest tests/deterministic tests/contracts`). The
   2026-04-25 PM and 2026-04-26 waves added 223 tests across the
