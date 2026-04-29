@@ -78,6 +78,7 @@ def begin(command_name: str, arg_string: str, *, runtime: str = "claude",
 class EndResult:
     last_action: last_action.LastAction | None
     footer: str
+    verify_report: checkpoints.WriteVerificationReport | None = None
 
 
 def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
@@ -100,6 +101,12 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
         )
         return EndResult(last_action=None, footer="")
 
+    # Verify the LLM's `--wrote` claims against the checkpoint
+    # snapshot. The LLM can pass `--wrote books/x/y.md` without
+    # having actually invoked Write / Edit. Compare each claimed
+    # path against the begin-time backup and warn on mismatches.
+    verify = _verify_writes(series, command_name, wrote)
+
     lock.release(series.lock_file)
 
     ns = _next_step_for(series, book) if book else None
@@ -113,14 +120,64 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
         next_rationale=ns.rationale if ns else None,
         sidequests=_default_sidequests(command_name, ctx),
     )
+
+    log_note: str | None = None
+    if verify is not None and verify.warnings:
+        names = ", ".join(w.path for w in verify.warnings[:5])
+        log_note = (
+            f"verify-writes: {len(verify.warnings)} claimed path(s) "
+            f"unchanged or missing — {names}"
+        )
     command_log.append(
         series.command_log_file,
         command=command_name,
         args=shlex.split(arg_string) if arg_string else [],
         status="ok",
         wrote=list(wrote),
+        note=log_note,
     )
-    return EndResult(last_action=la, footer=_render_footer(command_name, arg_string, wrote, la))
+    footer = _render_footer(command_name, arg_string, wrote, la)
+    if verify is not None and verify.warnings:
+        footer = footer.rstrip() + "\n\n" + _render_verify_warning(verify)
+    return EndResult(last_action=la, footer=footer, verify_report=verify)
+
+
+def _verify_writes(series: SeriesLayout, command_name: str,
+                    claimed: list[str]) -> checkpoints.WriteVerificationReport | None:
+    """Find the most recent checkpoint that matches `command_name`
+    in the series's checkpoint dir and verify the claimed writes
+    against it. Returns None when no checkpoint can be located —
+    e.g. when the command has empty `writes:` and `begin` skipped
+    checkpoint creation."""
+    if not claimed:
+        return None
+    cps = checkpoints.list_checkpoints(series.checkpoints)
+    if not cps:
+        return None
+    # Most recent first. Match on command name to skip checkpoints
+    # from earlier commands (e.g. nested sub-agent invocations).
+    matching = [cp for cp in reversed(cps) if cp.command == command_name]
+    cp = matching[0] if matching else cps[-1]
+    return checkpoints.verify_writes(cp, series.root, claimed)
+
+
+def _render_verify_warning(report: "checkpoints.WriteVerificationReport") -> str:
+    """User-facing block surfaced in the postamble footer when one
+    or more `--wrote` claims couldn't be verified against the
+    checkpoint."""
+    lines = ["⚠️  verify-writes:"]
+    for w in report.warnings:
+        if w.status == "missing":
+            lines.append(f"  - {w.path}: claimed created but file does not exist")
+        elif w.status == "unchanged":
+            lines.append(f"  - {w.path}: claimed modified but bytes match the checkpoint")
+        else:
+            lines.append(f"  - {w.path}: {w.status}")
+    lines.append(
+        "  These are LLM self-reports that don't match the disk. "
+        "If the command's contract required these writes, re-run."
+    )
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

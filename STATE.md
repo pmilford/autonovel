@@ -366,6 +366,22 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (verify-writes auditor; FUTURE-TODOS Verify-Writes
+  entry): postamble's `--wrote` flags are LLM self-reports — LLM
+  can claim a write without invoking Write/Edit. New
+  `checkpoints.verify_writes(cp, series_root, claimed)` returns
+  a `WriteVerificationReport` with one item per claim and
+  statuses created / modified / deleted / unchanged / missing /
+  outside-checkpoint. `lifecycle.end` invokes it after lock
+  release, surfaces `unchanged` and `missing` as warnings in
+  the postamble footer (`⚠️ verify-writes:`) and records a
+  one-line summary on the command-log entry's `note` field for
+  audit. Paths with unresolved `{book}` placeholders or paths
+  outside the checkpoint are classified `outside-checkpoint`
+  (informational, not warnings). Doc sync in
+  docs/troubleshooting.md. 13 new Tier-1 tests covering each
+  status path + lifecycle integration + command-log audit
+  trail. Tier 1+2: 884 → 897.
 - 2026-04-28 (postamble compliance watchdog; FUTURE-TODOS
   Postamble Watchdog entry): `lock.acquire_with_takeover` gains
   `expire_after_seconds` parameter (default 30 min via
@@ -748,7 +764,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **884
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **897
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

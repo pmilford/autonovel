@@ -136,6 +136,36 @@ lives), launch `claude` again, retry.
 
 ---
 
+## A `/autonovel:*` command's footer says `⚠️ verify-writes:`
+
+The postamble caught a self-report mismatch. The LLM passed
+`--wrote <path>` to `autonovel _end` for one or more files, but
+the on-disk state doesn't match the claim:
+
+- `claimed created but file does not exist` — the LLM said it
+  created a file but never invoked the `Write` tool. Re-run the
+  command; if it fails twice, look at the command body for a
+  step that should be writing the file.
+- `claimed modified but bytes match the checkpoint` — the LLM
+  said it edited a file but the bytes are identical to the
+  begin-time backup. The command may have decided no edits were
+  needed (legitimate; ignore the warning) or skipped the edit
+  step (re-run).
+
+The warning is informational — the command exited `ok` and the
+lock has been released. Decide whether to re-run based on the
+command's contract: if the command is *required* to produce a
+specific file (e.g. `/autonovel:gen-world` writes
+`shared/world.md`), re-run when it shows up missing. If the
+write was conditional (e.g. `pending_canon.md` only grows when
+new facts are discovered), the warning is fine.
+
+The same warnings get logged to
+`.autonovel/command-log.jsonl`'s `note` field so an audit trail
+outlives the postamble print.
+
+---
+
 ## PDF shows the first sentence of each chapter as a page header / alternating heading
 
 Two distinct bugs combined to produce this — both fixed 2026-04-28

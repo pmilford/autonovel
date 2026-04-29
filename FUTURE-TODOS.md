@@ -393,10 +393,22 @@ Max $200/month. Full narrative + rationale in
   pre-2026-04-28 PID-only semantics. New `is_expired(lock_path,
   max_age_seconds)` predicate. 7 new Tier-1 tests including
   end-to-end through `lifecycle.begin`. Tier 1+2: 877 → 884.
-- **Verify `writes:` files were actually modified.** Postamble
-  trusts `--wrote` paths; the LLM can claim it wrote a file without
-  having invoked `Write`. Compare modification time / size against
-  the checkpointed snapshot before declaring success.
+- ~~**Verify `writes:` files were actually modified.**~~
+  **Shipped 2026-04-28.** New
+  `checkpoints.verify_writes(cp, series_root, claimed)` returns a
+  `WriteVerificationReport` with one item per claim and statuses
+  `created` / `modified` / `deleted` / `unchanged` / `missing` /
+  `outside-checkpoint`. `lifecycle.end` invokes it after release,
+  surfaces `unchanged` and `missing` as warnings in the
+  postamble footer (`⚠️ verify-writes:`) and records a one-line
+  summary on the command-log entry's `note` field for audit
+  trail. Catches the bug class where the LLM passes `--wrote
+  <path>` without invoking Write/Edit. Paths still containing
+  `{book}` placeholders or paths outside the checkpoint are
+  classified `outside-checkpoint` (informational, not warnings).
+  Doc sync in docs/troubleshooting.md. 13 new Tier-1 tests
+  covering each status path + lifecycle integration. Tier 1+2:
+  884 → 897.
 - **Canon-vs-outline cross-consistency in `/autonovel:evaluate`.**
   When canon says X arrived in 1473 and the outline says 1471, the
   user shouldn't have to spot the contradiction manually. evaluate
