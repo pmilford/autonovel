@@ -101,6 +101,19 @@ the whole sweep on a single missing input.
    chapter numbers; resolve `all` to the full list and validate that
    every requested chapter exists.
 
+2a. **Start sweep-progress tracking.** Use `bash` to invoke:
+
+    ```
+    autonovel _sweep-start --command autonovel:revision-pass --book {book} --chapters {N1,N2,...}
+    ```
+
+    Same shape as draft-pass: writes
+    `.autonovel/sweep-progress.json` so `/autonovel:resume` can
+    offer "continue from chapter N" if the sweep is interrupted.
+    Cleared at step 5a after the final promote-canon. After every
+    successful chapter you'll mark it done with
+    `autonovel _sweep-mark-done --chapter N --summary "<line>"`.
+
 3. **Spawn one `task` subagent per chapter.** Per-chapter execution
    runs in a fresh subagent conversation, not in this parent
    conversation. Same context-saving discipline as draft-pass:
@@ -250,6 +263,15 @@ the whole sweep on a single missing input.
    continue to the next chapter — do not abort the whole sweep on
    one chapter's hiccup.
 
+   After each chapter's per-chapter line, use `bash` to mark the
+   chapter complete in the sweep-progress file:
+
+   ```
+   autonovel _sweep-mark-done --chapter N --summary "<the line above>"
+   ```
+
+   Best-effort: don't retry on error.
+
 4. After the loop completes, print a summary table that includes
    the score movement so the user sees at a glance which chapters
    the revise lifted, which it left flat, and which it regressed:
@@ -282,6 +304,10 @@ the whole sweep on a single missing input.
    any other book's pending file in a multi-book series). Idempotent
    — if every per-chapter promote already consumed everything, this
    call is a no-op summary line.
+
+5a. **Clear sweep-progress tracking.** Use `bash` to invoke
+    `autonovel _sweep-clear`. The sweep is over;
+    `.autonovel/sweep-progress.json` is no longer needed.
 
 6. **Postamble: write a multi-line `next_standard_step` reflecting
    what the sweep just produced.** The default

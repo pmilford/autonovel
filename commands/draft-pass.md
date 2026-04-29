@@ -141,6 +141,20 @@ that stalled long sweeps around chapter 8-10.
    defined; resolve `all` to outlined chapters that lack a chapter
    file.
 
+2a. **Start sweep-progress tracking.** Use `bash` to invoke:
+
+    ```
+    autonovel _sweep-start --command autonovel:draft-pass --book {book} --chapters {N1,N2,...}
+    ```
+
+    This writes `.autonovel/sweep-progress.json` with the full
+    target chapter list. After every successful per-chapter run
+    (step 3.b below) you'll mark the chapter done; the file gets
+    cleared at step 7. If the sweep is interrupted (power loss,
+    /clear, budget exhaustion), `/autonovel:resume` reads the file
+    and offers a precise "continue from chapter N" with the
+    remaining chapter list.
+
 3. **For each chapter N in the resolved range, in ascending order,
    spawn a `task` subagent.**
 
@@ -261,6 +275,16 @@ that stalled long sweeps around chapter 8-10.
       progress list (you will print these in the summary at step
       6). Print the line immediately so the user has live progress.
 
+      Then use `bash` to mark the chapter complete in the sweep-
+      progress file:
+
+      ```
+      autonovel _sweep-mark-done --chapter N --summary "<the one-line return>"
+      ```
+
+      This is best-effort — if the helper errors (e.g. the file
+      was deleted), don't retry; continue to the next chapter.
+
    c. Move to chapter N+1. The subagent terminates; its working
       memory (the chapter prose, the eval JSON, the brief, etc.)
       is discarded — only the one-line summary persists in your
@@ -314,6 +338,12 @@ that stalled long sweeps around chapter 8-10.
    review highlights — top 3 panel concerns, top 3 review items —
    plus the chapter list each one flags. This is the user's
    shopping list for the next revision-pass.
+
+6a. **Clear sweep-progress tracking.** Use `bash` to invoke
+    `autonovel _sweep-clear`. The sweep is over;
+    `.autonovel/sweep-progress.json` is no longer needed. (If
+    `/autonovel:resume` finds the file from this point on, that
+    means a *new* sweep started and was interrupted.)
 
 7. **Postamble: write a multi-line `next_standard_step` reflecting
    what the sweep just produced.** A multi-chapter draft sweep

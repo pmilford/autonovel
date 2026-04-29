@@ -9,6 +9,7 @@ allowed-tools:
 reads:
   - .autonovel/in-progress.lock
   - .autonovel/checkpoints/*
+  - .autonovel/sweep-progress.json
 writes: []
 context_mode: none
 ---
@@ -21,16 +22,33 @@ the user explicitly picks one.
 </purpose>
 
 <workflow>
-1. Use `file_read` on `.autonovel/in-progress.lock`. If absent, say
-   "nothing to resume; run `/autonovel:next` for the standard next step"
-   and stop.
+1. **Sweep-progress check first.** Use `bash` to invoke
+   `autonovel _sweep-status --format human`. If a sweep is in
+   flight (`.autonovel/sweep-progress.json` exists), the helper
+   prints the original command, the target chapter list, the
+   completed chapters, and the **remaining chapters**. Print this
+   verbatim — it tells the user the precise "continue from
+   chapter N" command to re-run, with the remaining list already
+   formatted. Sweep tracking is independent of the lock: a
+   `/clear` mid-sweep wipes the lock without clearing
+   sweep-progress, so this signal works exactly when the
+   `in-progress.lock` check below would say nothing to do.
 
-2. Check whether the recorded PID is still live. Use `bash` with
+   When sweep-progress is present, also fall through to the
+   lock + checkpoint check below — the user may want to inspect
+   the lock state separately before re-running the sweep.
+
+2. Use `file_read` on `.autonovel/in-progress.lock`. If absent, say
+   "nothing to resume; run `/autonovel:next` for the standard next step"
+   (and skip the rest of this workflow if sweep-progress was also
+   absent in step 1).
+
+3. Check whether the recorded PID is still live. Use `bash` with
    `autonovel doctor` (it reports stale locks) or `kill -0 <pid>` as a
    fallback. If the PID is live, refuse — another autonovel command is
    genuinely running.
 
-3. If the lock is stale, print:
+4. If the lock is stale, print:
    - the command and args that were in flight,
    - the paths that were about to be written (from the matching manifest
      under `.autonovel/checkpoints/`), and
@@ -40,7 +58,7 @@ the user explicitly picks one.
            files untouched. The user will continue manually.
        [3] Inspect — show what would change and exit without doing anything.
 
-4. Wait for explicit user input. Do not take any destructive action without
+5. Wait for explicit user input. Do not take any destructive action without
    it. Option [1] uses `bash` to run `autonovel rollback --to <timestamp>`;
    option [2] uses `bash` to remove `.autonovel/in-progress.lock`; option
    [3] does nothing.

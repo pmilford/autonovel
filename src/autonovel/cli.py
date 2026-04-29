@@ -258,6 +258,32 @@ def _build_parser() -> argparse.ArgumentParser:
                      help="Output format (default: human markdown).")
     _na.set_defaults(func=_cmd_next_actions)
 
+    _sp_start = sub.add_parser("_sweep-start", help=argparse.SUPPRESS)
+    _sp_start.add_argument("--command", required=True,
+                            help="The sweep command name, e.g. autonovel:draft-pass.")
+    _sp_start.add_argument("--book", default=None,
+                            help="Book name; defaults to current book if inferable.")
+    _sp_start.add_argument("--chapters", required=True,
+                            help="Comma-separated chapter list, e.g. 5,6,7,8 or a range like 5-8.")
+    _sp_start.set_defaults(func=_cmd_sweep_start)
+
+    _sp_done = sub.add_parser("_sweep-mark-done", help=argparse.SUPPRESS)
+    _sp_done.add_argument("--chapter", required=True, type=int)
+    _sp_done.add_argument("--summary", default="")
+    _sp_done.set_defaults(func=_cmd_sweep_mark_done)
+
+    _sp_fail = sub.add_parser("_sweep-mark-fail", help=argparse.SUPPRESS)
+    _sp_fail.add_argument("--chapter", required=True, type=int)
+    _sp_fail.add_argument("--error", default="")
+    _sp_fail.set_defaults(func=_cmd_sweep_mark_fail)
+
+    _sp_status = sub.add_parser("_sweep-status", help=argparse.SUPPRESS)
+    _sp_status.add_argument("--format", choices=("human", "json"), default="human")
+    _sp_status.set_defaults(func=_cmd_sweep_status)
+
+    _sp_clear = sub.add_parser("_sweep-clear", help=argparse.SUPPRESS)
+    _sp_clear.set_defaults(func=_cmd_sweep_clear)
+
     _pc = sub.add_parser("_promote-canon", help=argparse.SUPPRESS)
     _pc.add_argument("--book", default=None,
                      help="Book name to promote; default: every book in project.yaml.")
@@ -805,6 +831,115 @@ def _cmd_next_actions(args: argparse.Namespace) -> int:
         sys.stdout.write("\n")
     else:
         sys.stdout.write(next_actions.render_human(actions, canonical=canonical))
+    return 0
+
+
+def _parse_chapter_list(spec: str) -> list[int]:
+    """Accept `5,6,7,8` or `5-8` or mixed `1,3,5-8,10`. Returns a
+    sorted, deduplicated list. Raises ValueError on garbage input."""
+    out: set[int] = set()
+    for token in spec.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        if "-" in token:
+            lo, hi = token.split("-", 1)
+            for i in range(int(lo), int(hi) + 1):
+                out.add(i)
+        else:
+            out.add(int(token))
+    return sorted(out)
+
+
+def _cmd_sweep_start(args: argparse.Namespace) -> int:
+    from .housekeeping import sweep_progress
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    try:
+        chapters = _parse_chapter_list(args.chapters)
+    except ValueError as e:
+        print(f"error: bad --chapters value: {e}", file=sys.stderr)
+        return 2
+    progress = sweep_progress.start(
+        series, command=args.command, book=args.book, chapters=chapters,
+    )
+    print(f"Sweep tracking started: {progress.command} on {chapters}")
+    return 0
+
+
+def _cmd_sweep_mark_done(args: argparse.Namespace) -> int:
+    from .housekeeping import sweep_progress
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    progress = sweep_progress.mark_done(
+        series, args.chapter, summary=args.summary,
+    )
+    if progress is None:
+        # No sweep in flight — silent no-op so a stray call doesn't
+        # fail a chapter run.
+        return 0
+    rem = sweep_progress.remaining(progress)
+    print(f"Marked chapter {args.chapter} done. Remaining: {rem}")
+    return 0
+
+
+def _cmd_sweep_mark_fail(args: argparse.Namespace) -> int:
+    from .housekeeping import sweep_progress
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    progress = sweep_progress.mark_failed(
+        series, args.chapter, args.error,
+    )
+    if progress is None:
+        return 0
+    print(f"Marked chapter {args.chapter} failed.")
+    return 0
+
+
+def _cmd_sweep_status(args: argparse.Namespace) -> int:
+    import json as _json
+    from .housekeeping import sweep_progress
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    progress = sweep_progress.read(series)
+    if progress is None:
+        if args.format == "json":
+            _json.dump({"in_flight": False}, sys.stdout)
+            sys.stdout.write("\n")
+        else:
+            print("No sweep in flight.")
+        return 0
+    if args.format == "json":
+        payload = {"in_flight": True, **progress.to_dict(),
+                    "remaining": sweep_progress.remaining(progress)}
+        _json.dump(payload, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(sweep_progress.render_human(progress))
+    return 0
+
+
+def _cmd_sweep_clear(args: argparse.Namespace) -> int:
+    from .housekeeping import sweep_progress
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    sweep_progress.clear(series)
+    print("Sweep tracking cleared.")
     return 0
 
 
