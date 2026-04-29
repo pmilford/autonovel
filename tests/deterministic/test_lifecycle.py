@@ -59,6 +59,36 @@ def test_end_releases_lock_and_writes_last_action(demo_series: SeriesLayout) -> 
     assert any(e.command == "autonovel:draft" and e.status == "ok" for e in log_entries)
 
 
+def test_end_footer_includes_postamble_hint(demo_series: SeriesLayout) -> None:
+    """Every successful command postamble appends a one-line "💡"
+    hint after the Next: line. On a fresh series no situational
+    signal applies, so the hint falls back to the general pool."""
+    lifecycle.begin("autonovel:draft", "5 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft",
+        "5 --book one",
+        status="ok",
+        wrote=["books/one/chapters/ch_05.md"],
+        series=demo_series,
+    )
+    assert "💡" in result.footer
+
+
+def test_end_footer_no_hint_on_error(demo_series: SeriesLayout) -> None:
+    """On status=error the postamble must not emit a hint —
+    suggesting a follow-up while the command itself failed is
+    misleading."""
+    lifecycle.begin("autonovel:draft", "5 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft",
+        "5 --book one",
+        status="error",
+        wrote=[],
+        series=demo_series,
+    )
+    assert "💡" not in result.footer
+
+
 def test_end_error_marks_interrupted_and_skips_last_action(demo_series: SeriesLayout) -> None:
     lifecycle.begin("autonovel:draft", "5 --book one", series=demo_series)
     lifecycle.end(

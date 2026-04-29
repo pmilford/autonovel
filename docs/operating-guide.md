@@ -1068,6 +1068,16 @@ it gets demoted to a "book appears complete — try `/autonovel:evaluate
 --full`" suggestion. Cheap to call repeatedly; pure mechanical,
 no LLM.
 
+You'll also see a one-line **💡 Maybe try:** hint in every
+command's postamble footer (right after `**Next:**`). It's the
+top situational signal pulled from the same enumerator
+`/autonovel:next` uses, so most of the time you don't need to
+call `/autonovel:next` at all — the hint already points at the
+work the situational state demands. When no situational signal
+applies, it falls back to a rotating "Did you know?" hint from
+a small pool of less-known commands. Decorative, never blocking
+— a crash in the hint path doesn't fail the command.
+
 Or, for the cost-and-token side of "where am I":
 
 ```bash

@@ -572,6 +572,80 @@ def _past_end_of_book_replacement(series: SeriesLayout, book: str | None,
     )
 
 
+# --------------------------------------------------------- postamble hint
+
+
+# Small rotating pool of general "did you know" hints. Used when no
+# situational signal applies. Indexed by a stable hash of the just-ran
+# command name so a user pressing the same command twice doesn't see
+# the same general hint, but a single command run is deterministic.
+_GENERAL_HINTS: tuple[str, ...] = (
+    "`/autonovel:summaries --where 'score < 7'` filters chapters by score "
+    "without firing evaluate",
+    "`/autonovel:dashboard` re-renders the latest evaluate output (sparklines "
+    "+ tension drops) for free",
+    "`/autonovel:talk --book <name> \"<question>\"` lets you ask the book "
+    "questions or queue revise-suggestions inline",
+    "`/autonovel:syntax-drift` flags chapters drifting from the voice "
+    "baseline by Flesch-Kincaid grade",
+    "`/autonovel:next` shows every situational signal autonovel knows "
+    "about — pending conflicts, regressions, fresh briefs, stale reports",
+    "`autonovel cost` rolls up token + USD spend per book / per tier "
+    "/ per command from the command log",
+)
+
+
+def top_hint(series: SeriesLayout, *, just_ran: str | None = None,
+              book: str | None = None) -> str | None:
+    """One-line "💡 Maybe try:" suggestion for the postamble footer.
+
+    Prefer situational: read every action `enumerate_actions` would
+    surface and pick the highest-priority one with a runnable
+    command. Skip actions whose command is `just_ran` (so we don't
+    suggest re-running the same command — the canonical Next: line
+    already covers the legitimate "next sequential step" case).
+
+    Fall back to a small rotating pool of general hints when no
+    situational signal applies. Selection is deterministic on
+    `just_ran` so the user sees variety across commands but not
+    randomness within one command.
+
+    Returns None when no command-bearing signal exists (rare; only
+    on a brand-new series with no chapters drafted) — caller should
+    skip the hint line entirely.
+    """
+    actions = enumerate_actions(series, book=book)
+    for a in actions:
+        if a.command is None:
+            continue
+        if just_ran and _action_command_targets(a.command, just_ran):
+            continue
+        return f"💡 Maybe try: `{a.command}` *({_short_reason(a)})*"
+    return _general_hint(just_ran=just_ran)
+
+
+def _action_command_targets(command: str, just_ran: str) -> bool:
+    """Did `command` (an action's recommended invocation) target the
+    same slash-command name as `just_ran`? `just_ran` is bare
+    (`autonovel:revise`); `command` includes the slash and args
+    (`/autonovel:revise --chapter 2 --book x`)."""
+    bare = just_ran.lstrip("/").strip()
+    return f"/{bare}" in command or f"/autonovel:{bare}" in command
+
+
+def _short_reason(a: NextAction) -> str:
+    """Compress the action's rationale into a half-sentence postamble
+    fragment. Use the title (already short) when no obvious shorter
+    form exists."""
+    return a.title.lower()
+
+
+def _general_hint(*, just_ran: str | None) -> str:
+    seed = just_ran or ""
+    idx = sum(ord(c) for c in seed) % len(_GENERAL_HINTS)
+    return f"💡 Did you know? {_GENERAL_HINTS[idx]}"
+
+
 # ------------------------------------------------------------- render
 
 

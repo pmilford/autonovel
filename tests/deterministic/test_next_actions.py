@@ -454,6 +454,73 @@ def test_canonical_pipeline_action_filtered_by_book(series_root: Path) -> None:
     assert next_actions.canonical_pipeline_action(layout, book="other-book") is not None
 
 
+# --------------------------------------------------------- postamble hint
+
+
+def test_top_hint_prefers_situational_over_general(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Fresh brief on ch02 → top_hint should suggest revise, not a
+    'did you know'."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    older = time.time() - 1000
+    os.utime(book_root / "chapters" / "ch_02.md", (older, older))
+    os.utime(book_root / "briefs" / "ch02.md", (time.time(), time.time()))
+    hint = next_actions.top_hint(_layout(series), just_ran="autonovel:brief", book=book)
+    assert hint is not None
+    assert "Maybe try" in hint
+    assert "revise --chapter 2" in hint
+
+
+def test_top_hint_skips_just_ran_command(series_root: Path) -> None:
+    """If the only situational signal points at the same command we
+    just ran, fall back to a general hint instead of suggesting the
+    user run the command they just finished."""
+    layout = _layout(series_root)
+    # Only signal will be the git-backup MEDIUM (no command — it's a
+    # multi-step). top_hint must skip it (a.command is None) and
+    # produce a general hint.
+    hint = next_actions.top_hint(layout, just_ran="autonovel:next")
+    assert hint is not None
+    assert "Did you know" in hint
+
+
+def test_top_hint_general_hint_is_deterministic_per_command(
+    series_root: Path,
+) -> None:
+    """Same just_ran value → same general hint each call. Different
+    just_ran → potentially different hint (rotation)."""
+    layout = _layout(series_root)
+    a1 = next_actions.top_hint(layout, just_ran="autonovel:draft")
+    a2 = next_actions.top_hint(layout, just_ran="autonovel:draft")
+    assert a1 == a2  # determinism
+    # Across many command names the pool rotates — at least one pair
+    # should differ. Not a hard guarantee but very likely with 6 hints.
+    distinct = {
+        next_actions.top_hint(layout, just_ran=f"autonovel:cmd{i}")
+        for i in range(20)
+    }
+    assert len(distinct) >= 2
+
+
+def test_top_hint_skips_situational_targeting_just_ran_command(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """When we just ran revise, the brief→revise signal would be the
+    top action — but we should skip it (the user just did revise)
+    and fall back to either the next-priority signal or general."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    older = time.time() - 1000
+    os.utime(book_root / "chapters" / "ch_02.md", (older, older))
+    os.utime(book_root / "briefs" / "ch02.md", (time.time(), time.time()))
+    hint = next_actions.top_hint(_layout(series), just_ran="autonovel:revise", book=book)
+    assert hint is not None
+    # Must not suggest revise again.
+    assert "revise --chapter 2" not in hint
+
+
 # --------------------------------------------------------- render
 
 

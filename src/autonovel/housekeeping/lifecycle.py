@@ -17,6 +17,7 @@ from .. import checkpoints, command_log, last_action, lock, project as project_m
 from ..adapters.base import CommandDef, discover_commands
 from ..adapters.installer import _commands_source_dir
 from ..paths import SeriesLayout, load_series
+from . import next_actions
 from .next_step import PipelineState, next_step
 
 
@@ -147,7 +148,7 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
         book=book,
         **_usage_kwargs(usage),
     )
-    footer = _render_footer(command_name, arg_string, wrote, la)
+    footer = _render_footer(command_name, arg_string, wrote, la, series)
     if verify is not None and verify.warnings:
         footer = footer.rstrip() + "\n\n" + _render_verify_warning(verify)
     return EndResult(last_action=la, footer=footer, verify_report=verify)
@@ -677,7 +678,8 @@ def _default_sidequests(command_name: str, ctx: dict[str, str]) -> list[dict[str
 
 
 def _render_footer(command_name: str, arg_string: str, wrote: list[str],
-                   la: last_action.LastAction) -> str:
+                   la: last_action.LastAction,
+                   series: SeriesLayout | None = None) -> str:
     lines = [
         "",
         "---",
@@ -689,6 +691,9 @@ def _render_footer(command_name: str, arg_string: str, wrote: list[str],
         lines.append(f"**Next:** {la.next_standard_step}")
         if la.next_rationale:
             lines.append(f"  *({la.next_rationale})*")
+    hint = _build_postamble_hint(command_name, la.book, series)
+    if hint is not None:
+        lines.append(hint)
     if la.sidequests:
         lines.append("")
         lines.append("Other options (see `/autonovel:sidequest` for the full list):")
@@ -697,3 +702,19 @@ def _render_footer(command_name: str, arg_string: str, wrote: list[str],
             if sq.get("why"):
                 lines.append(f"    *{sq['why']}*")
     return "\n".join(lines)
+
+
+def _build_postamble_hint(command_name: str, book: str | None,
+                           series: SeriesLayout | None) -> str | None:
+    """Wrap `next_actions.top_hint` with belt-and-suspenders so a
+    crash in the hint path never breaks postamble rendering. The
+    hint is decorative — no command should fail because we couldn't
+    suggest a follow-up."""
+    if series is None:
+        return None
+    try:
+        return next_actions.top_hint(
+            series, just_ran=command_name, book=book
+        )
+    except Exception:  # noqa: BLE001 — hint is decorative
+        return None
