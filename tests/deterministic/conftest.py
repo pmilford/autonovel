@@ -98,3 +98,128 @@ def late_stage_book(tmp_path: Path) -> tuple[Path, str]:
     )
 
     return series, book
+
+
+@pytest.fixture
+def mid_revision_book(tmp_path: Path) -> tuple[Path, str]:
+    """A book mid-revision-pass: all 8 chapters drafted, all evaluated,
+    chapters 2-3 below threshold with briefs written, reader-panel run
+    once but stale relative to chapters 2-3 (the briefs come from the
+    panel report). Used to test that state-machine code routes a user
+    in this shape to revision rather than re-evaluate or re-panel.
+    """
+    res = scaffold.new_series(tmp_path / "mid-revision-project",
+                              series_name="mid-revision-project")
+    scaffold.new_book(res.series, book_name="the-book", pov="Ana")
+    series = res.series.root
+    book = "the-book"
+    book_root = series / "books" / book
+
+    long = "Real content. " * 30
+    (series / "shared" / "world.md").write_text(f"# World\n\n{long}\n", encoding="utf-8")
+    (series / "shared" / "characters.md").write_text(f"# Characters\n\n{long}\n", encoding="utf-8")
+    (series / "shared" / "canon.md").write_text(
+        f"# Canon\n\nHard facts.\n\n{long}\n- [seat] x.\n", encoding="utf-8",
+    )
+    (book_root / "voice.md").write_text(f"# Voice\n\n{long}\n", encoding="utf-8")
+    (book_root / "outline.md").write_text(f"# Outline\n\n{long}\n", encoding="utf-8")
+
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    for n in range(1, 9):
+        (chapters / f"ch_{n:02d}.md").write_text(
+            f"---\nbook: {book}\nchapter: {n}\npov: Ana\nstory_time: 2020-01-{n:02d}\n"
+            f"events: []\nstatus: drafted\nword_count: 3000\n---\n\n"
+            + (f"Prose for chapter {n}. " * 100),
+            encoding="utf-8",
+        )
+        (chapters / f"ch_{n:02d}.summary.md").write_text(
+            f"Plot: ch{n}. POV: Ana.\n", encoding="utf-8",
+        )
+
+    # Eval logs: all 8 chapters scored. ch02 + ch03 below the 7.0
+    # threshold (the targets of the in-progress revision).
+    eval_dir = book_root / "eval_logs"
+    eval_dir.mkdir(exist_ok=True)
+    scores = {1: 7.4, 2: 6.4, 3: 5.9, 4: 7.6, 5: 7.2, 6: 7.5, 7: 7.0, 8: 7.3}
+    for n, score in scores.items():
+        (eval_dir / f"20260415_120000_ch{n:02d}_eval.json").write_text(
+            json.dumps({"overall_score": score, "weakest_dimension": "pacing"}),
+            encoding="utf-8",
+        )
+
+    # Briefs already exist for ch02 and ch03 (the user just ran brief
+    # generation; revise hasn't run yet).
+    briefs = book_root / "briefs"
+    briefs.mkdir(exist_ok=True)
+    (briefs / "ch02.md").write_text("# Brief\n\n- Tighten pacing.\n", encoding="utf-8")
+    (briefs / "ch03.md").write_text("# Brief\n\n- Cut explainer.\n", encoding="utf-8")
+
+    # Reader panel ran; the report is older than chapters 2 and 3
+    # (which were just re-touched by the brief writer). This makes the
+    # panel report STALE — a real /autonovel:next should recommend
+    # re-running the panel after revision finishes.
+    edit_logs = book_root / "edit_logs"
+    edit_logs.mkdir(exist_ok=True)
+    panel = edit_logs / "reader_panel.json"
+    panel.write_text(json.dumps({"flagged": [2, 3]}), encoding="utf-8")
+    import os, time
+    older = time.time() - 10000
+    os.utime(panel, (older, older))
+
+    return series, book
+
+
+@pytest.fixture
+def review_phase_book(tmp_path: Path) -> tuple[Path, str]:
+    """All chapters drafted + revised + above threshold, panel + opus
+    review reports recent, no pending canon. The shape a book should
+    have right before /autonovel:typeset.
+    """
+    res = scaffold.new_series(tmp_path / "review-phase-project",
+                              series_name="review-phase-project")
+    scaffold.new_book(res.series, book_name="the-book", pov="Ana")
+    series = res.series.root
+    book = "the-book"
+    book_root = series / "books" / book
+
+    long = "Real content. " * 30
+    (series / "shared" / "world.md").write_text(f"# World\n\n{long}\n", encoding="utf-8")
+    (series / "shared" / "characters.md").write_text(f"# Characters\n\n{long}\n", encoding="utf-8")
+    (series / "shared" / "canon.md").write_text(
+        f"# Canon\n\n{long}\n- [seat] x.\n", encoding="utf-8")
+    (book_root / "voice.md").write_text(f"# Voice\n\n{long}\n", encoding="utf-8")
+    (book_root / "outline.md").write_text(f"# Outline\n\n{long}\n", encoding="utf-8")
+
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    for n in range(1, 11):
+        (chapters / f"ch_{n:02d}.md").write_text(
+            f"---\nbook: {book}\nchapter: {n}\npov: Ana\nstory_time: 2020-01-{n:02d}\n"
+            f"events: []\nstatus: drafted\nword_count: 3000\n---\n\n"
+            + (f"Prose for chapter {n}. " * 100),
+            encoding="utf-8",
+        )
+        (chapters / f"ch_{n:02d}.summary.md").write_text(
+            f"Plot: ch{n}. POV: Ana.\n", encoding="utf-8",
+        )
+
+    # All chapters scored above threshold.
+    eval_dir = book_root / "eval_logs"
+    eval_dir.mkdir(exist_ok=True)
+    for n in range(1, 11):
+        (eval_dir / f"20260420_120000_ch{n:02d}_eval.json").write_text(
+            json.dumps({"overall_score": 7.5, "weakest_dimension": "pacing"}),
+            encoding="utf-8",
+        )
+
+    # Panel and Opus review reports newer than every chapter. Touch
+    # them last so their mtimes win.
+    edit_logs = book_root / "edit_logs"
+    edit_logs.mkdir(exist_ok=True)
+    panel = edit_logs / "reader_panel.json"
+    panel.write_text(json.dumps({"flagged": []}), encoding="utf-8")
+    review = edit_logs / "opus_review.md"
+    review.write_text("# Opus review\n\nNo flags.\n", encoding="utf-8")
+
+    return series, book

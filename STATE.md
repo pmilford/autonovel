@@ -366,6 +366,24 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (realistic late-stage fixtures + lifecycle bug fix;
+  FUTURE-TODOS #5.1): two new conftest fixtures —
+  `mid_revision_book` (8 chapters, ch02+ch03 below threshold with
+  briefs written, deliberately stale panel report) and
+  `review_phase_book` (10 chapters above threshold, panel +
+  review newer than every chapter). New test file
+  `tests/deterministic/test_state_machine_realistic.py` runs
+  `iter_chapter_files`, `_infer_phase`, `_next_step_for`, and
+  `next_actions.enumerate_actions` against each shape (parametrised
+  where invariants apply across all three). The realistic-fixture
+  pass found a real bug in `lifecycle._last_eval_score`: glob
+  `ch{NN}*.json` only matched plain `chNN_eval.json`, missing the
+  timestamped `<ts>_chNN.json` form `evaluate.md` writes — so
+  after `/autonovel:evaluate --chapter N` the next-step inference
+  saw no score and looped on evaluate. Helper now delegates to
+  `mechanical.chapter_summary._index_latest_per_chapter_eval` which
+  already handles all three production naming conventions. 17 new
+  Tier-1 tests. Tier 1+2: 723 → 740.
 - 2026-04-28 (`/autonovel:next` made dynamic; FUTURE-TODOS #2):
   state-aware action enumerator at
   `src/autonovel/housekeeping/next_actions.py`. Inspects live
@@ -587,11 +605,13 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **723
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **740
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 (promote-canon helper) added 22 tests on
   2026-04-26; FUTURE-TODOS #2 (dynamic /autonovel:next) added 27
-  tests on 2026-04-28.
+  tests on 2026-04-28; FUTURE-TODOS #5.1 (realistic-shape state-
+  machine coverage + the lifecycle._last_eval_score bug fix it
+  caught) added 17 tests on 2026-04-28.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-26 — **674
   passing** (`pytest tests/deterministic tests/contracts`). The
   2026-04-25 PM and 2026-04-26 waves added 223 tests across the

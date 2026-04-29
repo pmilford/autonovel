@@ -327,25 +327,23 @@ def _next_step_for(series: SeriesLayout, book: str) -> object:
 
 
 def _last_eval_score(book_root: Path, chapter: int) -> float | None:
-    """Return the most recent `overall_score` recorded for `chapter` in
-    `books/<book>/eval_logs/`, or None if no eval has run yet."""
-    eval_dir = book_root / "eval_logs"
-    if not eval_dir.is_dir():
-        return None
-    candidates = sorted(eval_dir.glob(f"ch{chapter:02d}*.json"))
-    if not candidates:
-        return None
-    import json
-    latest = max(candidates, key=lambda p: p.stat().st_mtime)
-    try:
-        data = json.loads(latest.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
-        return None
-    score = data.get("overall_score")
-    try:
-        return float(score) if score is not None else None
-    except (TypeError, ValueError):
-        return None
+    """Return the most recent `overall_score` recorded for `chapter`
+    in `books/<book>/eval_logs/`, or None if no eval has run yet.
+
+    Delegates to the chapter-summary indexer so the three production
+    naming conventions all resolve identically: `<ts>_chNN_eval.json`
+    (draft-pass / revision-pass timestamped), `<ts>_chNN.json`
+    (evaluate.md timestamped), and plain `chNN_eval.json` (legacy
+    paired with mtime ordering). Bug fixed 2026-04-28: the prior
+    `glob('chNN*.json')` only caught the third shape, so after a
+    user ran `/autonovel:evaluate --chapter N` (which writes the
+    timestamped form) `/autonovel:next` saw no score and looped on
+    "evaluate" — exactly the regression the realistic-fixture pass
+    was supposed to catch.
+    """
+    from ..mechanical.chapter_summary import _index_latest_per_chapter_eval
+    index = _index_latest_per_chapter_eval(book_root / "eval_logs")
+    return index.get(chapter)
 
 
 @dataclass

@@ -126,13 +126,26 @@ to start.
   pattern revealed three structural test gaps that let
   late-stage / multi-stage / install-time bugs slip past Tier 1+2:
 
-  1. **Realistic late-stage fixtures.** The `late_stage_book`
-     conftest fixture (committed today) is one example — book with
-     5 chapters, paired summaries, eval logs, briefs, edit logs,
-     pending canon. Extend this pattern: every test of state-machine
-     or filesystem-counting code should have a matching test
-     against the realistic shape, not just the synthetic 0–2-chapter
-     case. Convert existing tests opportunistically.
+  1. ~~**Realistic late-stage fixtures.**~~ **Shipped 2026-04-28.**
+     Two new conftest fixtures join `late_stage_book`:
+     `mid_revision_book` (8 chapters, all evaluated, ch02+ch03
+     below threshold with briefs written, panel report deliberately
+     stale) and `review_phase_book` (10 chapters, all above
+     threshold, panel + Opus review newer than every chapter — the
+     shape right before typeset). New test file
+     `tests/deterministic/test_state_machine_realistic.py`
+     parametrises across all three fixtures and asserts shape
+     invariants (chapter count, phase rolls forward, no foundation
+     regression, situational action coverage). The realistic-fixture
+     pass surfaced and fixed a real bug in
+     `lifecycle._last_eval_score`: its glob `ch{NN}*.json` matched
+     only the plain `chNN_eval.json` shape, missing the timestamped
+     `<ts>_chNN.json` form `evaluate.md` writes — so after running
+     `/autonovel:evaluate --chapter N` the next-step inference saw
+     no score and looped recommending evaluate again. Helper now
+     delegates to `mechanical.chapter_summary._index_latest_per_chapter_eval`
+     which already handles all three naming conventions.
+     Tier 1+2: 723 → 740.
 
   2. **Multi-stage integration tests** (deterministic, no LLM).
      Today each command has a unit test in isolation. Real bugs hit
