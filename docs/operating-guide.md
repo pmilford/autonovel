@@ -720,6 +720,26 @@ features (e.g. the per-book Custom rubric, per-character voice
 fingerprints, irreversible-change scorer, scene-beat coverage that
 shipped 2026-04-25); your novel never gets clobbered.
 
+**Typeset templates need a separate refresh.** `autonovel install`
+does not touch `<series-root>/typeset/novel.tex` (or other typeset
+template files), because those were copied into your series at
+`autonovel new-series` time and you might have hand-edited them.
+When a fix lands in the package's typeset templates — e.g. the
+2026-04-25 PDF running-header fix and the 2026-04-28 chapter-title
+fix that together stop the first sentence of each chapter being
+used as an "alternating page header" — pull it into your series with:
+
+```bash
+autonovel refresh-templates              # default: only typeset/
+autonovel refresh-templates --dry-run    # preview; writes nothing
+```
+
+The command only touches files that exist in the package template;
+your local-only files (custom macros, hand-tuned overrides) are
+preserved and listed under `local-only (preserved)` in the report.
+Pass `--only typeset --only shared` to also pull research seeds /
+shared template updates.
+
 ### 3b.1. Upgrading an existing book to use new voice.md sections
 
 When autonovel ships new voice.md surfaces (Parts 3 and 4 shipped

@@ -146,6 +146,84 @@ def new_book(series: SeriesLayout, *, book_name: str, pov: str | None = None,
     return NewBookResult(book_root=book_root, created=created)
 
 
+@dataclass
+class RefreshTemplatesResult:
+    updated: list[Path]   # files copied (content differs from current)
+    unchanged: list[Path] # files identical to package version
+    extra: list[Path]     # files present locally with no package version
+    skipped: list[Path]   # subtrees excluded from refresh by `--only`
+
+
+def refresh_templates(
+    series: SeriesLayout,
+    *,
+    only: tuple[str, ...] = ("typeset",),
+    dry_run: bool = False,
+) -> RefreshTemplatesResult:
+    """Re-copy package-shipped series templates over the live series.
+
+    By default, only refreshes `typeset/` (the directory the
+    2026-04-25 / 2026-04-28 PDF-header fixes live in). `only` can be
+    set to a different tuple of subtree names — e.g. `("typeset",
+    "shared")` to refresh research seeds — but the *default is
+    minimal* on purpose, because most other template files (CLAUDE.md,
+    `.gitignore`) the user is allowed to hand-edit and we don't want
+    to clobber.
+
+    Returns a report listing files updated, unchanged, and any local-
+    only extras (typeset overrides the user has added themselves). On
+    `dry_run`, no files are written but the lists are populated as
+    if they had been.
+    """
+    tmpl_root = _template_root("series")
+    updated: list[Path] = []
+    unchanged: list[Path] = []
+    extra: list[Path] = []
+    skipped: list[Path] = []
+
+    series_root = series.root
+    for subdir in only:
+        src_subtree = tmpl_root / subdir
+        if not src_subtree.is_dir():
+            continue
+        dst_subtree = series_root / subdir
+        dst_subtree.mkdir(parents=True, exist_ok=True)
+        # Refresh every package file. Track local-only extras for the
+        # report so the user can see what they've added.
+        package_rel: set[Path] = set()
+        for item in sorted(src_subtree.rglob("*")):
+            if item.is_dir():
+                continue
+            rel = item.relative_to(src_subtree)
+            package_rel.add(rel)
+            target = dst_subtree / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            new_bytes = item.read_bytes()
+            if target.is_file() and target.read_bytes() == new_bytes:
+                unchanged.append(target)
+                continue
+            if not dry_run:
+                target.write_bytes(new_bytes)
+            updated.append(target)
+        # Local extras — present but not in the package template.
+        if dst_subtree.is_dir():
+            for item in sorted(dst_subtree.rglob("*")):
+                if item.is_dir():
+                    continue
+                rel = item.relative_to(dst_subtree)
+                if rel not in package_rel:
+                    extra.append(item)
+
+    # Subtrees explicitly skipped (everything not listed in `only`).
+    for child in sorted(tmpl_root.iterdir()):
+        if child.is_dir() and child.name not in only:
+            skipped.append(child)
+
+    return RefreshTemplatesResult(
+        updated=updated, unchanged=unchanged, extra=extra, skipped=skipped,
+    )
+
+
 def _write_autonovel_state(series: SeriesLayout) -> None:
     import json
     series.state_file.write_text(

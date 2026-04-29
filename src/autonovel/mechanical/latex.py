@@ -133,6 +133,47 @@ def _chapter_title(raw: str) -> str:
     return t
 
 
+def _extract_chapter_title(text_with_frontmatter: str) -> str:
+    """Pull a chapter title from a chapter file in priority order:
+
+      1. `title:` field in YAML frontmatter — the explicit slot.
+      2. A markdown `# Heading` on the first content line after the
+         frontmatter — the legacy convention from before the
+         frontmatter `title` field existed.
+      3. Empty string — `\\titleformat{\\chapter}` already prints
+         "chapter <Roman>" as the heading, so an empty `\\chapter{}`
+         renders cleanly. Returning the first prose line was the
+         2026-04-25/28 bug: it became a large italic block at every
+         chapter's title page (visually identical to a "running
+         header") and was fed into `\\chaptermark`'s `\\markboth`,
+         which old `novel.tex` files surfaced as alternating page
+         headers via `\\textit{\\leftmark}`.
+    """
+    # YAML title field. Cheap parse — a single `title:` line in the
+    # frontmatter is enough to recognise. Avoids a hard dependency on
+    # PyYAML at LaTeX-build time.
+    if text_with_frontmatter.startswith("---"):
+        lines = text_with_frontmatter.splitlines()
+        for i in range(1, len(lines)):
+            line = lines[i]
+            if line.strip() == "---":
+                break
+            if line.startswith("title:"):
+                value = line.split(":", 1)[1].strip()
+                # Strip surrounding quotes if present.
+                if (value.startswith('"') and value.endswith('"')) or \
+                   (value.startswith("'") and value.endswith("'")):
+                    value = value[1:-1]
+                if value:
+                    return value
+    # Heading-after-frontmatter fallback.
+    body = strip_yaml_frontmatter(text_with_frontmatter).lstrip("\n")
+    first_line = body.split("\n", 1)[0].strip() if body else ""
+    if first_line.startswith("#"):
+        return _chapter_title(first_line)
+    return ""
+
+
 def find_ornament(art_dir: Path, chapter: int) -> Path | None:
     """Prefer a vectorised `art/pdf/ornament_chNN.pdf` over the raster PNG.
 
@@ -185,10 +226,20 @@ def build_chapters_tex(
         # frontmatter field (book, chapter, pov, word_count, …) leaks
         # into the chapter prose at typeset time. Bug observed
         # 2026-04-25 against the live novel.
-        text = strip_yaml_frontmatter(ch_path.read_text(encoding="utf-8"))
+        raw = ch_path.read_text(encoding="utf-8")
+        title = _extract_chapter_title(raw)
+        text = strip_yaml_frontmatter(raw)
         lines = text.strip().split("\n")
-        title = _chapter_title(lines[0]) if lines else f"Chapter {num}"
-        body = "\n".join(lines[1:]).strip()
+        # If the first content line was a `# Heading`, drop it from
+        # the body so it's not duplicated as prose. Otherwise the
+        # body is the whole post-frontmatter text — the previous
+        # implementation always dropped lines[0], which silently
+        # ate the first sentence of any chapter file without a
+        # heading (the production shape).
+        if lines and lines[0].lstrip().startswith("#"):
+            body = "\n".join(lines[1:]).strip()
+        else:
+            body = "\n".join(lines).strip()
         latex_body = md_to_latex(body)
         latex_body = make_drop_cap(latex_body)
         ornament_tex = ""

@@ -11,38 +11,34 @@ to start.
 
 ## Near-term — pull into the next PR
 
-- **PDF page-header still leaks chapter prose (regression of the
-  2026-04-25 fix).** `novel.tex` already uses
-  `\fancyhead[RO]{\small\textsc{Chapter \thechapter}}` and
-  `\fancyhead[LE]{\small\textsc{@TITLE@}}` — so the running header
-  *should* be `Chapter <number>` on right pages, the book title on
-  left. Author reports 2026-04-28 that a freshly-typeset PDF is
-  STILL using the first sentence of the chapter as an alternating
-  page header. Debug paths to follow:
-   1. Check the `\chapter{}` invocation in `chapters_content.tex`
-      (built by `mechanical/latex.py::build_chapters_tex`) — if
-      it's emitting `\chapter[<short>]{<long>}` with `<long>`
-      computed from chapter prose, that's `\leftmark`'s source.
-   2. Check `\titleformat{\chapter}` in `novel.tex` — a
-      `titlesec` reformat can also bleed into running heads.
-   3. Check whether `fancyhdr` is being clobbered by a later
-      package include (e.g. `\pagestyle{empty}` resetting things
-      that re-enter active state on the first chapter page).
-   4. Confirm the user's series has the *new* `novel.tex` and not
-      a stale one carried over from before the 2026-04-25 fix —
-      `autonovel install` may not refresh `series/typeset/` files
-      automatically the way it refreshes `commands/`. If not,
-      add a `--refresh-templates` flag to `autonovel install` (or
-      a separate `autonovel refresh-typeset --book <name>`
-      housekeeping subcommand) so users with in-flight series can
-      pull template updates without manual file copying.
-   Add a Tier-1 contract test that asserts the rendered
-   `chapters_content.tex` for a fixture chapter uses
-   `\chapter{<title>}` (not `\chapter[<short>]{<long>}` derived
-   from prose) and that the rendered `novel.tex` keeps
-   `\fancyhead[RO]{...Chapter \thechapter}` verbatim. Confidence
-   that "the fix is in" should come from a green Tier-1 check on
-   every commit, not from the LaTeX shape happening to compile.
+- ~~**PDF page-header still leaks chapter prose (regression of the
+  2026-04-25 fix).**~~ **Shipped 2026-04-28.** Two distinct bugs,
+  both fixed:
+   1. `mechanical/latex.py::build_chapters_tex` was reading
+      `lines[0]` of the post-frontmatter body as the chapter title.
+      Real chapter files (per `commands/draft.md`) are YAML
+      frontmatter + prose only — no `# Title` heading after the
+      frontmatter. So `lines[0]` = first sentence of prose, which
+      became `\chapter{<sentence>}` and rendered as a large italic
+      block at every chapter title page. Fixed: new
+      `_extract_chapter_title()` honours an optional
+      `title:` frontmatter field, falls back to a real `# Heading`
+      if present, otherwise emits empty `\chapter{}` so
+      `\titleformat{\chapter}` prints `chapter <Roman>` alone.
+      The empty-title case is the production shape and is now
+      Tier-1 locked.
+   2. Even with the new `mechanical/latex.py`, users with
+      in-flight series carry a stale `<series-root>/typeset/novel.tex`
+      from before the 2026-04-25 fix (`autonovel install` doesn't
+      refresh typeset templates). New housekeeping subcommand
+      `autonovel refresh-templates [--only typeset] [--dry-run]`
+      re-copies package-shipped templates over the live series,
+      preserves local-only files (custom macros etc.), and reports
+      which files were updated vs unchanged vs preserved as
+      local-only. Default is `typeset/` only — minimal blast
+      radius. Operating-guide §3b includes the new section
+      "Typeset templates need a separate refresh".
+  Tier 1+2: 774 → 785.
 
 - **Talk-with-the-book mode.** A conversational query+suggest
   layer over the finished prose. The user types natural-language

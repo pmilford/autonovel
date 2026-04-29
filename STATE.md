@@ -366,6 +366,25 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (PDF page-header regression — two-bug fix; FUTURE-TODOS
+  PDF entry): **Bug A**: `mechanical/latex.py::build_chapters_tex`
+  read `lines[0]` of the post-frontmatter body as the chapter title;
+  real chapter files (per `commands/draft.md`) have no `# Heading`
+  line so `lines[0]` was the first sentence of prose, which became
+  `\chapter{<sentence>}` and rendered as a large italic block at
+  every chapter title page. Fix: new `_extract_chapter_title()`
+  honours an optional `title:` frontmatter field, falls back to a
+  real `# Heading` if present, otherwise emits empty `\chapter{}`
+  so `\titleformat` prints `chapter <Roman>` alone. **Bug B**:
+  even with the latex fix, in-flight series carry a stale
+  `<series-root>/typeset/novel.tex` from before the 2026-04-25
+  running-header fix (`autonovel install` doesn't refresh typeset
+  templates). New `autonovel refresh-templates [--only typeset]
+  [--dry-run]` housekeeping subcommand re-copies package templates
+  over the live series, preserves local-only files, reports
+  updated / unchanged / preserved-extra. Default is `typeset/`
+  only. Operating-guide §3b updated. 11 new Tier-1 tests (2
+  latex regression + 9 refresh-templates); Tier 1+2: 774 → 785.
 - 2026-04-28 (per-chapter art prompts as first-class artifacts;
   FUTURE-TODOS #3): new light-tier command `/autonovel:art-prompts
   --book <name> [--chapters <range>] [--surface
@@ -659,13 +678,15 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **774
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **785
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2
   added 7; #22 (per-chapter motif tracker) added 17 + 5 contract
   pickups; #3 (`/autonovel:art-prompts`) added 5 contract pickups
-  for the new slash-command.
+  for the new slash-command. PDF page-header regression fix added
+  2 latex regression tests + 9 `autonovel refresh-templates`
+  tests.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-26 — **674
   passing** (`pytest tests/deterministic tests/contracts`). The
   2026-04-25 PM and 2026-04-26 waves added 223 tests across the

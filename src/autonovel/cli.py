@@ -59,6 +59,24 @@ def _build_parser() -> argparse.ArgumentParser:
     doc.add_argument("--fix", action="store_true", help="Recreate missing directories")
     doc.set_defaults(func=_cmd_doctor)
 
+    rt = sub.add_parser(
+        "refresh-templates",
+        help="Refresh package-shipped templates (default: typeset/) over the live series.",
+        description=(
+            "Re-copy package-shipped series templates over the live "
+            "series. Default refreshes only `typeset/` — that's where "
+            "the PDF page-header fixes live and the only subtree the "
+            "user is unlikely to have hand-edited. Pass `--only` to "
+            "refresh a different set of subtrees."
+        ),
+    )
+    rt.add_argument("--series", default=None)
+    rt.add_argument("--only", action="append", default=None,
+                    help="Subtree to refresh (repeatable). Default: typeset.")
+    rt.add_argument("--dry-run", action="store_true",
+                    help="Print what would change; write no files.")
+    rt.set_defaults(func=_cmd_refresh_templates)
+
     rb = sub.add_parser("rollback", help="List checkpoints and restore one.")
     rb.add_argument("--series", default=None)
     rb.add_argument("--to", default=None, help="Checkpoint timestamp (default: interactive pick)")
@@ -250,6 +268,38 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     report = doctor.run(series.root, fix=args.fix)
     print(doctor.render(report))
     return 0 if report.ok else 1
+
+
+def _cmd_refresh_templates(args: argparse.Namespace) -> int:
+    """Re-copy package-shipped series templates over the live series.
+
+    Catches the bug class where a user runs `autonovel new-series`,
+    a fix later lands in the package's `templates/series/typeset/`,
+    and the user's series carries the stale copy forever — the
+    2026-04-25 PDF running-header fix and the 2026-04-28 chapter-title
+    fix were both invisible to in-flight series until refresh.
+    """
+    try:
+        series = _resolve_series(args.series)
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    only = tuple(args.only) if args.only else ("typeset",)
+    result = scaffold.refresh_templates(series, only=only, dry_run=args.dry_run)
+    verb = "would update" if args.dry_run else "updated"
+    print(f"{verb}: {len(result.updated)} file(s)")
+    for p in result.updated:
+        print(f"  {p.relative_to(series.root)}")
+    if result.unchanged:
+        print(f"unchanged: {len(result.unchanged)} file(s)")
+    if result.extra:
+        print(f"local-only (preserved): {len(result.extra)} file(s)")
+        for p in result.extra:
+            print(f"  {p.relative_to(series.root)}")
+    if result.skipped:
+        print(f"subtrees not refreshed (use --only to include): "
+              + ", ".join(c.name for c in result.skipped))
+    return 0
 
 
 def _cmd_rollback(args: argparse.Namespace) -> int:

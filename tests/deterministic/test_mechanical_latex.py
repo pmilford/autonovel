@@ -193,6 +193,80 @@ class TestBuildChaptersTex:
         assert "First sentence of actual prose." in content
         assert reports[0].title == "The Real Chapter Title"
 
+    def test_chapter_without_title_heading_emits_empty_chapter_arg(
+        self, tmp_path: Path
+    ) -> None:
+        """Regression for the 2026-04-28 PDF bug: real chapter files
+        produced by `/autonovel:draft` are YAML frontmatter + prose
+        only, NO `# Title` heading. The previous implementation took
+        `lines[0]` of the post-frontmatter body — i.e. the first
+        sentence of prose — and rendered it as `\\chapter{<sentence>}`,
+        producing a large italic block at every chapter's title page
+        and (with stale novel.tex) feeding `\\markboth` so old
+        templates surfaced it as alternating page headers via
+        `\\textit{\\leftmark}`. Lock the fix: when there's no title,
+        emit `\\chapter{}` and let `\\titleformat` print "chapter
+        <Roman>" alone."""
+        ch_dir = tmp_path / "chapters"
+        ch_dir.mkdir()
+        first_sentence = (
+            "Tommaso looked up at the apothecary's broken sign and "
+            "wondered when the rain would stop."
+        )
+        (ch_dir / "ch_01.md").write_text(
+            "---\n"
+            "book: tiny\n"
+            "chapter: 1\n"
+            "pov: Tommaso\n"
+            "story_time: 1521-12-04\n"
+            "events: []\n"
+            "status: drafted\n"
+            "word_count: 3245\n"
+            "---\n\n"
+            f"{first_sentence}\n\nMore prose here.\n",
+            encoding="utf-8",
+        )
+        content, reports = build_chapters_tex(ch_dir)
+        assert "\\chapter{}" in content, (
+            "no-title chapter should render \\chapter{} so titleformat "
+            "prints 'chapter <Roman>' alone; instead got: "
+            + content[:400]
+        )
+        # The body of the first sentence (post-drop-cap) MUST appear
+        # after the \chapter{} block — not inside its argument.
+        body_tail = "ommaso} looked up at the apothecary's broken sign"
+        assert body_tail in content
+        idx_chapter = content.index("\\chapter")
+        idx_close = content.index("}", idx_chapter)
+        assert body_tail not in content[idx_chapter:idx_close + 1]
+        # Crucially: NO chunk of the original first-sentence prose
+        # ends up inside the chapter title argument.
+        assert "looked up at the apothecary" not in content[
+            idx_chapter:idx_close + 1
+        ]
+        assert reports[0].title == ""
+
+    def test_title_field_in_frontmatter_wins_over_heading(
+        self, tmp_path: Path
+    ) -> None:
+        """The 2026-04-28 fix added a `title:` slot in chapter
+        frontmatter. When set, it wins over a `# Heading` first
+        line and over the empty fallback."""
+        ch_dir = tmp_path / "chapters"
+        ch_dir.mkdir()
+        (ch_dir / "ch_01.md").write_text(
+            "---\n"
+            "chapter: 1\n"
+            "title: \"The Glassblower's Lament\"\n"
+            "---\n\n"
+            "# Some markdown heading the writer left behind\n\n"
+            "Prose.\n",
+            encoding="utf-8",
+        )
+        content, reports = build_chapters_tex(ch_dir)
+        assert "\\chapter{The Glassblower's Lament}" in content
+        assert reports[0].title == "The Glassblower's Lament"
+
 
 class TestCli:
     def test_build_tex_cli_writes_output(self, tmp_path: Path) -> None:
