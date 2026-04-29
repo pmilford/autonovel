@@ -113,6 +113,12 @@ each of these and the workaround is in the codebase:
   shape — score / tension sparklines, aggregates, and tension-
   drop alarms re-rendered from the latest eval log without
   firing another evaluate.
+- Run `/autonovel:summaries --book <name> --where '<expr>'` to
+  filter the chapter-summary index. Pure mechanical query DSL
+  (no LLM): `pov == "Lucia"`, `cast contains Niccolò`,
+  `story_time >= "1521-11"`, `chapter in 5..12`,
+  `score < 7.0 and word_count > 3000`. Distinct from
+  `/autonovel:talk` (LLM Q+A) by being free + scriptable.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

@@ -50,6 +50,11 @@ from .entity_track import (
     render_markdown as render_entity_md,
 )
 from .motifs import build_report as build_motif_report, render_markdown as render_motif_md
+from .summary_query import (
+    QueryError,
+    filter_rows as summary_filter_rows,
+    render_markdown as render_summary_query_md,
+)
 from .scenes import split_scenes
 from .sensory import channel_balance
 from .slop import period_ban_hits, slop_score
@@ -197,6 +202,44 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     }
     json.dump(payload, sys.stdout, indent=2)
     sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_summary_query(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    rows = summarize_chapters(book_root)
+    try:
+        filtered = summary_filter_rows(rows, args.where or "")
+    except QueryError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        json.dump(
+            {
+                "book_root": str(book_root),
+                "expr": args.where,
+                "matched": len(filtered),
+                "rows": [
+                    {
+                        "chapter": r.chapter,
+                        "pov": r.pov,
+                        "story_time": r.story_time,
+                        "score": r.score,
+                        "word_count": r.word_count,
+                        "location": r.location,
+                        "plot": r.plot,
+                        "cast": r.cast,
+                        "status": r.status,
+                    } for r in filtered
+                ],
+            },
+            sys.stdout, indent=2,
+        )
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_summary_query_md(
+            filtered, expr=args.where, book=book_root.name,
+        ))
     return 0
 
 
@@ -429,6 +472,15 @@ def main(argv: list[str] | None = None) -> int:
     mt.add_argument("--format", choices=("markdown", "json"), default="markdown",
                     help="Output format (default: markdown table).")
     mt.set_defaults(func=_cmd_motifs)
+
+    sq = sub.add_parser("summary-query",
+                        help="Filter the chapter-summary table by a small DSL (pov / score / story_time / cast / etc.).")
+    sq.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    sq.add_argument("--where", default=None,
+                    help="Filter expression, e.g. 'pov == \"Lucia\" and score < 7.0'.")
+    sq.add_argument("--format", choices=("markdown", "json"), default="markdown",
+                    help="Output format (default: markdown).")
+    sq.set_defaults(func=_cmd_summary_query)
 
     db = sub.add_parser("dashboard",
                         help="Per-book dashboard re-renders eval log + augments mechanical dimensions; no LLM call.")

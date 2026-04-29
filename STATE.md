@@ -366,6 +366,21 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (structured summary queries; FUTURE-TODOS Summary
+  Queries entry): new light-tier command `/autonovel:summaries
+  [--book <name>] [--where '<expr>'] [--format markdown|json]`
+  over a small mechanical query DSL. Supports `==/!=/<=/>=/</>`
+  numeric/lexical compare on `pov`, `score`, `story_time`,
+  `word_count`, `cast`, `plot`, `location`, `chapter`, `status`,
+  plus `<field> contains <literal>`, `<field> in <num>..<num>`,
+  and `and` / `or` / `not` / parenthesisation. Hand-written
+  tokeniser + recursive-descent parser (no `eval()` — safer +
+  user-friendly error messages naming the offending token).
+  Helper at `src/autonovel/mechanical/summary_query.py` + CLI
+  subcommand `autonovel mechanical summary-query <book_root>`.
+  Distinct from `/autonovel:talk` by being free, scriptable,
+  stable. 32 Tier-1 tests + 5 contract pickups. Tier 1+2:
+  840 → 877.
 - 2026-04-28 (per-book pacing/tension dashboard; FUTURE-TODOS
   Dashboard entry): new light-tier command `/autonovel:dashboard
   [--book <name>] [--threshold <float>] [--format markdown|json]`
@@ -716,7 +731,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **840
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **877
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

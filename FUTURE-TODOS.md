@@ -88,28 +88,24 @@ to start.
   + 4 contract auto-pickups for the new command. Tier 1+2:
   803 → 840.
 
-- **Easy way to interact and query the chapter summaries.** Today
-  `/autonovel:chapter-summary` prints the full table and asks the
-  user to scan it; `/autonovel:talk` (above) plans to handle the
-  semantic Q+A path via the LLM. The lightweight middle ground —
-  a structured query DSL with no LLM cost — is missing. Examples:
-  - `autonovel summaries --book b --where 'pov == "Lucia"'`
-  - `autonovel summaries --book b --where 'story_time >= "1521-11"
-    and story_time <= "1522-02"'`
-  - `autonovel summaries --book b --cast-includes Niccolò`
-  - `autonovel summaries --book b --threads-opened 'mint fire'`
-  - `autonovel summaries --book b --score-below 7.0`
-  Implementation: a small DSL (or pandas-style filter on the
-  already-structured `ch_NN.summary.md` fields) over the existing
-  chapter-summary index. The `summarize_chapters()` helper
-  already returns structured rows; add `mechanical/summary_query.py`
-  that filters them and renders the surviving rows as a markdown
-  table or JSON. New mechanical CLI subcommand `autonovel
-  mechanical summary-query` + a `/autonovel:summaries
-  [--filter ...]` slash-command wrapper. Tier-1 tests for the
-  DSL parser. Distinct from `/autonovel:talk` because it is
-  pure mechanical, free, scriptable, and has stable semantics
-  (no LLM drift). Cost: ~3 hrs.
+- ~~**Easy way to interact and query the chapter summaries.**~~
+  **Shipped 2026-04-28.** New light-tier command
+  `/autonovel:summaries [--book <name>] [--where '<expr>']
+  [--format markdown|json]` filters the structured chapter-
+  summary index via a small DSL. Supports comparison operators
+  (`==`, `!=`, `<`, `<=`, `>`, `>=`) on `pov`, `score`,
+  `story_time`, `word_count`, `cast`, `plot`, `location`,
+  `chapter`, `status`, plus `<field> contains <literal>`,
+  `<field> in <num>..<num>`, and `and` / `or` / `not` /
+  parenthesisation. Numeric on numeric fields; lexicographic on
+  the rest (works for ISO dates). New helper
+  `src/autonovel/mechanical/summary_query.py` with a hand-
+  written tokeniser + recursive-descent parser (deliberately
+  not `eval()` — safer and more user-friendly errors). CLI
+  subcommand `autonovel mechanical summary-query <book_root>`.
+  Distinct from `/autonovel:talk` (LLM-mediated Q+A) by being
+  free, scriptable, and stable — no LLM drift. 32 Tier-1 tests
+  + 5 contract pickups. Tier 1+2: 840 → 877.
 
 
 

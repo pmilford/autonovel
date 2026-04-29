@@ -471,10 +471,11 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   with back-half drop warnings (configure
   `books/{book}/motifs.md`); `talk` — a conversational
   query+suggest layer where you ask the book questions or queue
-  edits that the next `revise` picks up automatically; and
+  edits that the next `revise` picks up automatically;
   `dashboard` — score / tension / pacing curve / aggregates with
   sparklines, re-rendered from existing eval logs without firing
-  another evaluate.
+  another evaluate; and `summaries --where '<expr>'` for a
+  pure-mechanical query DSL over the chapter-summary index.
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
   `title`, `introduction`, `landing`, `package`. The art family
   now includes `art-prompts` — author per-chapter art prompt
