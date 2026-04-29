@@ -125,6 +125,59 @@ lives), launch `claude` again, retry.
 
 ---
 
+## PDF shows the first sentence of each chapter as a page header / alternating heading
+
+Two distinct bugs combined to produce this — both fixed 2026-04-28
+but the typeset half is invisible to in-flight series unless you
+refresh the templates explicitly.
+
+What you should see in a clean PDF: each chapter opens with
+"chapter <Roman>" as the heading, no further chapter text in the
+running header. Verso (left) page header is the book title, recto
+(right) is "Chapter <Roman>". The first sentence of the chapter
+is plain prose with a drop cap on the first letter, NOT a large
+italic block at the chapter title page.
+
+If yours doesn't look like that:
+
+```bash
+# 1. Pull the latest autonovel and reinstall.
+( cd ~/autonovel && git pull && pipx reinstall . ) && autonovel install
+
+# 2. Refresh the typeset template in your series.
+cd ~/<your-series-root>
+autonovel refresh-templates              # default refreshes typeset/ only
+                                          # add `--dry-run` to preview
+
+# 3. Rebuild the PDF.
+/autonovel:typeset --book <your-book>
+```
+
+The two underlying causes (for the curious / for future
+debugging):
+
+1. `mechanical/latex.py::build_chapters_tex` was using the first
+   prose line as the chapter title argument when chapters had no
+   `# Heading` after the YAML frontmatter (the production shape).
+   The fix emits an empty `\chapter{}` so `\titleformat` prints
+   "chapter <Roman>" alone.
+
+2. The shared `<series-root>/typeset/novel.tex` template is
+   copied at `autonovel new-series` time and never updated by
+   `autonovel install`. The 2026-04-25 fix that switched the
+   running header from `\textit{\leftmark}` (which renders the
+   chapter title arg from #1) to `\fancyhead[RO]{Chapter
+   \thechapter}` only takes effect after `autonovel
+   refresh-templates`.
+
+If `refresh-templates` reports your `novel.tex` under "local-only
+(preserved)" instead of "updated", you've hand-edited the file —
+diff your version against the package template at
+`<autonovel-repo>/src/autonovel/templates/series/typeset/novel.tex`
+and re-apply your customisations on top of the new shape.
+
+---
+
 ## `tectonic: command not found` (or `pandoc`, `potrace`, `ffmpeg`)
 
 You're trying to run an export command (`/autonovel:typeset`,

@@ -94,11 +94,21 @@ each of these and the workaround is in the codebase:
 
 ## When in doubt
 
-- Run `/autonovel:next` to see the standard next step.
+- Run `/autonovel:next` to see the prioritised state-aware action
+  list (pending conflicts, regressions, stale review reports,
+  backup status, plus the canonical pipeline next step).
 - Run `/autonovel:resume` if a previous command left an
   `.autonovel/in-progress.lock` behind.
 - Run `/autonovel:sidequest` for the menu of non-standard operations
   (rename character, split chapter, deepen character, etc.).
+- Run `/autonovel:talk --book <name> "<question>"` to ask the book
+  questions or queue edits. Three modes (Q+A / Suggest-and-stage
+  / Mechanical+suggest); queued edits get folded into the brief
+  by the next `/autonovel:revise <chapter>` automatically.
+- Run `/autonovel:motifs --book <name>` for a per-chapter motif
+  density table (configure `books/<name>/motifs.md` first).
+- Run `/autonovel:chapter-summary --book <name>` for the
+  one-line-per-chapter overview.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

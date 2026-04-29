@@ -48,6 +48,8 @@ Every editing command falls into one of four roles:
 | `/autonovel:reader-panel` | Whole-book reviewer | Four-persona panel (Editor / Genre Reader / Writer / First Reader). Writes `edit_logs/reader_panel.json`. **Does NOT modify chapters.** |
 | `/autonovel:review` | Whole-book reviewer | Opus dual-persona deep review (literary critic + professor of fiction). Writes `edit_logs/opus_review.md`. **Does NOT modify chapters.** |
 | `/autonovel:chapter-summary` | Mechanical helper | One-line-per-chapter overview table — Date / POV / Score / Words / Cast / Plot (with location prefix). Pure mechanical, no LLM. The right tool for "which chapters happen in <date range>?" or "where does <character> appear?" before a revision pass. **Does NOT modify chapters.** |
+| `/autonovel:motifs` | Mechanical helper | Per-chapter motif density tracker. Reads `books/{book}/motifs.md` (one bullet per motif: `- slug: keyword1, keyword2`). Flags motifs that drop to zero in the back half of a book they were established in earlier — catches "set up an image, never paid it off". Pure mechanical. **Does NOT modify chapters.** |
+| `/autonovel:talk` | Conversational layer | Ask the book questions or queue edits in natural language. Three modes: **Q+A** (cites chapter+line, no edit), **Suggest-and-stage** (queues an edit in `briefs/conversation.md`), **Mechanical+suggest** (runs `entity-track` first, then queues a structured cut-list). Queued turns get folded into the brief by the next `/autonovel:revise <N>`. |
 
 ### The crucial insight: `brief` is the synthesiser
 
@@ -1041,8 +1043,16 @@ autonovel status                    # CLI: phase, scores, last command, lock sta
 Or in Claude Code:
 
 ```text
-/autonovel:next                     # what to type next
+/autonovel:next                     # state-aware action list
 ```
+
+`/autonovel:next` inspects the live filesystem — pending canon
+conflicts, chapter regressions, stale reader-panel / Opus review
+reports, missing front matter, missing book title, GitHub backup
+state — and emits a prioritised action list. The canonical
+pipeline next step (from the prior command's footer) appears at
+the bottom; situational actions take precedence over it. Cheap
+to call repeatedly; pure mechanical, no LLM.
 
 Or in your status bar (if you ran `autonovel statusline-setup`):
 

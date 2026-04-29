@@ -467,9 +467,18 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   `revision-pass` that loop those across many chapters. Plus
   `chapter-summary` for a one-line-per-chapter overview table
   ("which chapters happen in <date range>?", "where does
-  <character> appear?").
+  <character> appear?"); `motifs` for per-chapter motif density
+  with back-half drop warnings (configure
+  `books/{book}/motifs.md`); and `talk` — a conversational
+  query+suggest layer where you ask the book questions or queue
+  edits that the next `revise` picks up automatically.
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
-  `title`, `introduction`, `landing`, `package`.
+  `title`, `introduction`, `landing`, `package`. The art family
+  now includes `art-prompts` — author per-chapter art prompt
+  files (one `.md` per chapter+surface) under
+  `books/{book}/art/prompts/` for hand-editing or feeding to a
+  different generator. `art-ornaments-all` reads them when
+  present.
 
 Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 `revoice`, `split-chapter`, `merge-chapters`, `reorder`,
