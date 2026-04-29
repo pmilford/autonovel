@@ -478,7 +478,10 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   pure-mechanical query DSL over the chapter-summary index; and
   three pre-flight scanners — `dialogue` (adverb tags / said-
   bookisms / stutters), `period-register` (period-bans roll-up),
-  `pov-bleed` (interiority verbs attached to non-POV characters).
+  `pov-bleed` (interiority verbs attached to non-POV characters);
+  and `import-book` to bring an externally-written manuscript into
+  the pipeline (`mode: edit-imported` flips draft to refuse-mode
+  so the import isn't accidentally overwritten).
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
   `title`, `introduction`, `landing`, `package`. The art family
   now includes `art-prompts` — author per-chapter art prompt

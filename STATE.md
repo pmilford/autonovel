@@ -366,6 +366,22 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (edit-imported manuscript mode Phase 1; FUTURE-TODOS
+  edit-imported entry): new `autonovel import-book <name> --from
+  <path>` CLI subcommand and `/autonovel:import-book` slash-
+  command. Splits a directory of `*.md` files (one chapter per
+  file) OR a single combined manuscript (split on `^# `, fallback
+  `^## `, fallback whole file). `--split-on '<regex>'` overrides.
+  Strips pre-existing frontmatter, writes autonovel-shape
+  `ch_NN.md` with `status: imported` + `imported_from:` for
+  audit, flips `project.yaml :: books[].mode` to
+  `edit-imported`. New `BookEntry.mode` field (default `draft`,
+  omitted from YAML to keep existing files clean).
+  `commands/draft.md` step 1a refuses to overwrite an
+  edit-imported book without `--force`. Helper at
+  `src/autonovel/import_book.py`. Phase 2 (foundation reverse-
+  engineering from prose) still queued. 26 Tier-1 tests +
+  contract pickups. Tier 1+2: 974 → 1005.
 - 2026-04-28 (quality scanners — dialogue + period-register +
   pov-bleed): three pure-mechanical pre-flight scanners. All
   read-only, light-tier, run in milliseconds.
@@ -833,7 +849,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **974
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1005
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

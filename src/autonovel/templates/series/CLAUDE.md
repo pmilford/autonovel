@@ -127,6 +127,12 @@ each of these and the workaround is in the codebase:
 - Run `/autonovel:pov-bleed --book <name>` for a heuristic POV-
   bleed scan. Suggestion list, not a gate — false positives are
   common.
+- Run `/autonovel:import-book --book <name> --from <path>` to
+  import an externally-written manuscript. Flips the book to
+  `mode: edit-imported`; the rest of the pipeline (evaluate /
+  revise / panel / review / typeset) is unchanged. After
+  importing, run `/autonovel:summarize-chapter --all --book
+  <name>` so revise/brief have continuity summaries to read.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

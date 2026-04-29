@@ -48,10 +48,27 @@ required reads — surface the error and stop, don't retry.
 
 1. Parse `$ARGUMENTS`. Expect `<chapter-number> --book <short-name>`. If the
    chapter number or `--book` is missing, stop and print a one-line usage
-   reminder. Do not touch disk.
+   reminder. Do not touch disk. Accept an optional `--force` flag (used
+   below in step 1a).
 
-2. Use `file_read` on `project.yaml`. Resolve the book entry, its `pov`, and
-   the defaults block (`chapter_target_words`, `chapter_threshold`).
+1a. **Edit-imported guard.** Use `file_read` on `project.yaml`.
+    If `books[<book>].mode == "edit-imported"` and `--force` is
+    not in `$ARGUMENTS`, stop with this message:
+
+    ```
+    refusing to draft chapter <N> — book is in `edit-imported`
+    mode (the prose was supplied via /autonovel:import-book).
+    Pass --force to add a new chapter anyway, or use
+    /autonovel:revise <N> --book <book> if you meant to edit
+    the existing chapter.
+    ```
+
+    The user's manuscript is the load-bearing input in
+    edit-imported mode; running draft would clobber it.
+
+2. Use `file_read` on `project.yaml` again (or reuse from step 1a).
+   Resolve the book entry, its `pov`, and the defaults block
+   (`chapter_target_words`, `chapter_threshold`).
 
 3. Use `file_read` on `books/{book}/outline.md`. Locate the entry for chapter
    `{chapter}`. Capture its beats, its `story_time`, and any events it

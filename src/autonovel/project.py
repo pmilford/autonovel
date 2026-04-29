@@ -25,6 +25,14 @@ class BookEntry:
     title: str | None = None
     subtitle: str | None = None
     author: str | None = None
+    # Authoring mode (FUTURE-TODOS edit-imported):
+    #   "draft" (default): autonovel writes chapters via /autonovel:draft.
+    #   "edit-imported": prose was supplied by the user via
+    #     /autonovel:import-book; /autonovel:draft refuses without
+    #     --force so we don't accidentally overwrite the import.
+    # Future modes welcome (e.g. "translate-imported") under the same
+    # field; downstream commands check for "draft" specifically.
+    mode: str = "draft"
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name}
@@ -39,6 +47,8 @@ class BookEntry:
             d["subtitle"] = self.subtitle
         if self.author is not None:
             d["author"] = self.author
+        if self.mode != "draft":
+            d["mode"] = self.mode
         return d
 
     def display_title(self, fallback: str | None = None) -> str:
@@ -160,6 +170,7 @@ def _from_dict(raw: dict[str, Any]) -> ProjectConfig:
                 title=b.get("title"),
                 subtitle=b.get("subtitle"),
                 author=b.get("author"),
+                mode=b.get("mode", "draft"),
             )
         )
 

@@ -55,6 +55,7 @@ Every editing command falls into one of four roles:
 | `/autonovel:dialogue` | Mechanical helper | Per-chapter dialogue-mechanics linter — adverb-heavy speech tags, said-bookisms, repeated speech-verb stutters. Fast pre-flight before a heavy-tier evaluate run. **Does NOT modify chapters.** |
 | `/autonovel:period-register` | Mechanical helper | Per-book roll-up of every period-bans hit across every chapter, with worst-offenders ranking. **Does NOT modify chapters.** |
 | `/autonovel:pov-bleed` | Mechanical helper | Heuristic POV-bleed scan — flag interiority verbs / nouns attached to non-POV characters. Suggestion list, not a gate (false positives are common). **Does NOT modify chapters.** |
+| `/autonovel:import-book` | Setup | Import an externally-written manuscript. Splits a directory of `*.md` files or a single combined manuscript into autonovel-shape `ch_NN.md` files; flips `project.yaml :: books[].mode` to `edit-imported` so `/autonovel:draft` refuses to overwrite. The rest of the pipeline (evaluate / brief / revise / panel / review / typeset) treats imported chapters identically to drafted ones. |
 
 ### The crucial insight: `brief` is the synthesiser
 

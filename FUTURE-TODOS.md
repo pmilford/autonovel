@@ -11,7 +11,29 @@ to start.
 
 ## Near-term — pull into the next PR
 
-- **Edit-and-revise mode for an externally-written manuscript.** The
+- ~~**Edit-and-revise mode for an externally-written manuscript —
+  Phase 1 (import + mode flip).**~~ **Shipped 2026-04-28.** New
+  `autonovel import-book <name> --from <path>` CLI subcommand and
+  `/autonovel:import-book` slash-command. Splits a directory of
+  `*.md` files (one chapter per file) OR a single combined
+  manuscript (split on `^# `, fallback `^## `, fallback whole
+  file) — `--split-on '<regex>'` overrides with a custom pattern.
+  Strips pre-existing YAML frontmatter from each section, writes
+  autonovel-shape `ch_NN.md` with `status: imported` and
+  `imported_from: <source>` for audit, and flips
+  `project.yaml :: books[].mode` to `edit-imported`. New
+  `BookEntry.mode` field (default `draft`, omitted from YAML to
+  keep existing files clean). `commands/draft.md` step 1a refuses
+  to overwrite an edit-imported book without `--force`. New
+  helper at `src/autonovel/import_book.py`. 26 Tier-1 tests
+  covering directory + single-file splits, frontmatter stripping,
+  custom regex split, fallback titles, writer skip-existing,
+  dry-run, append-after-existing chapter numbering, BookEntry
+  YAML round-trip, CLI happy path / dry-run / unknown-book. Tier
+  1+2: 974 → 1005. Phase 2 (reverse-engineered foundation) is
+  still queued: see follow-up entry below.
+
+- **Edit-and-revise mode — Phase 2 (foundation reverse-engineering).** The
   pipeline today assumes autonovel drafted the book itself. New use
   case 2026-04-28: a user has a finished or partial manuscript
   (their own, an estate's, a public-domain text they're modernising)

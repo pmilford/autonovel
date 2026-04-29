@@ -50,6 +50,37 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     new_book.set_defaults(func=_cmd_new_book)
 
+    imp = sub.add_parser(
+        "import-book",
+        help="Import an externally-written manuscript into a book's chapters/.",
+        description=(
+            "Split a directory of `*.md` files OR a single combined "
+            "manuscript file into autonovel-shape ch_NN.md files. "
+            "Marks the book as `mode: edit-imported` so /autonovel:draft "
+            "refuses to overwrite without --force."
+        ),
+    )
+    imp.add_argument("name", help="Book name (must already exist in project.yaml).")
+    imp.add_argument("--series", default=None, help="Series name or path; default: walk up from cwd")
+    imp.add_argument("--from", dest="source", required=True,
+                      help="Path to a manuscript file or directory of *.md files.")
+    imp.add_argument("--split-on", dest="split_on", default=None,
+                      help="Regex (multiline) to split a single-file manuscript on. "
+                            "Default: split on `^# ` then `^## ` headings.")
+    imp.add_argument("--start", dest="start_at", type=int, default=None,
+                      help="Chapter number to start at (default: append after existing).")
+    imp.add_argument("--pov", default=None,
+                      help="POV name to write into the imported chapters' frontmatter "
+                            "(default: `inferred`).")
+    imp.add_argument("--keep-mode", dest="keep_mode", action="store_true",
+                      help="Leave project.yaml :: books[].mode untouched. Default flips "
+                            "the book to `mode: edit-imported`.")
+    imp.add_argument("--overwrite", action="store_true",
+                      help="Overwrite chapter files that already exist at the target paths.")
+    imp.add_argument("--dry-run", dest="dry_run", action="store_true",
+                      help="Print what would be written without touching disk.")
+    imp.set_defaults(func=_cmd_import_book)
+
     st = sub.add_parser("status", help="Show series status.")
     st.add_argument("--series", default=None)
     st.set_defaults(func=_cmd_status)
@@ -251,6 +282,53 @@ def _cmd_new_book(args: argparse.Namespace) -> int:
         return 2
     print(f"Created {result.book_root.relative_to(series.root.parent)}/")
     print(f"Edit {result.book_root.name}/seed.txt, then open the series in your runtime.")
+    return 0
+
+
+def _cmd_import_book(args: argparse.Namespace) -> int:
+    """Import an externally-written manuscript into a book's chapters/."""
+    from . import import_book as import_book_mod
+    try:
+        series = _resolve_series(args.series)
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    source = Path(args.source).expanduser().resolve()
+    try:
+        result = import_book_mod.import_manuscript(
+            series.root,
+            book_name=args.name,
+            source=source,
+            split_on=args.split_on,
+            start_at=args.start_at,
+            pov=args.pov,
+            keep_mode=args.keep_mode,
+            overwrite_existing=args.overwrite,
+            dry_run=args.dry_run,
+        )
+    except import_book_mod.ImportError_ as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+
+    verb = "would write" if args.dry_run else "wrote"
+    print(f"{verb} {len(result.chapters_written)} chapter file(s) "
+          f"into books/{args.name}/chapters/:")
+    for path in result.chapters_written:
+        print(f"  + {path.relative_to(series.root)}")
+    if result.skipped_existing:
+        print(f"skipped (already exist; pass --overwrite to replace): "
+              f"{len(result.skipped_existing)}")
+        for path in result.skipped_existing:
+            print(f"  · {path.relative_to(series.root)}")
+    if result.mode_set == "edit-imported":
+        print(
+            "project.yaml: book mode set to `edit-imported`. "
+            "/autonovel:draft will refuse without --force; the rest of the "
+            "pipeline (evaluate / brief / revise / panel / review / typeset) "
+            "treats imported chapters identically to drafted ones."
+        )
+    if args.dry_run:
+        print("(dry-run — no files modified)")
     return 0
 
 
