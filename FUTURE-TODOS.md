@@ -591,12 +591,15 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   edge cases (frontmatter strip, plain-said unflagged, stutter
   window boundaries), render shapes, and CLI round-trip.
 
-- **Dialogue mechanics linter (legacy entry).** A new mechanical scanner that flags
-  dialogue tics LLMs over-use: every line with an action beat (`she
-  laughed`, `he frowned`), unattributed dialogue when ≥3 speakers, and
-  the "softening qualifier" pattern (`maybe`, `kind of`, `a little`)
-  inside short retorts where it neutralises tension. Lives in
-  `src/autonovel/mechanical/dialogue.py`. Tier-1 testable.
+- **Dialogue mechanics — extension follow-ups.** The 2026-04-28
+  shipment covers adverb tags, said-bookisms, and stutters. Not
+  yet covered (queue for a future scanner expansion):
+  every line with an action beat (`she laughed`, `he frowned`)
+  used as a tag, unattributed dialogue when ≥3 speakers are on
+  stage, and the "softening qualifier" pattern (`maybe`, `kind
+  of`, `a little`) inside short retorts where it neutralises
+  tension. Same module — extend
+  `src/autonovel/mechanical/dialogue.py` rather than a new file.
 - ~~**Scene-level beat coverage in `evaluate.py`.**~~ **Shipped
   2026-04-25.** New `autonovel mechanical scenes <chapter>` helper
   splits a chapter into scenes by `***` / `---` / `* * *` breaks
@@ -638,11 +641,15 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   aggregation, render shapes (with/without `--summary-only`,
   no-bans message, no-chapters message), and CLI round-trip.
 
-- **Period register lock (legacy entry).** For period fiction, surface every
-  sentence whose Flesch-Kincaid grade or syllable-per-word average
-  drifts above the seed's 95th percentile — catches the "anachronistic
-  register" failure that period-bans cannot (e.g. modern syntax in
-  period-correct vocabulary).
+- **Period register — extension follow-up.** The 2026-04-28
+  scanner covers literal period-bans hits across the book. Not
+  yet covered: sentences whose Flesch-Kincaid grade or
+  syllable-per-word average drifts above the seed's 95th
+  percentile — catches anachronistic *register* (modern syntax
+  in period-correct vocabulary) which the literal-bans scanner
+  cannot. Add as a second pass in
+  `src/autonovel/mechanical/period_register.py` or as a sibling
+  module.
 - ~~**POV bleed scanner.**~~ **Shipped 2026-04-28.** New helper
   `src/autonovel/mechanical/pov_bleed.py` flags lines where a
   cast member who is NOT the chapter's POV is named with an
@@ -661,10 +668,14 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   patterns, POV-self-exclusion, no-cast / no-cast-override
   paths, render shapes, and CLI round-trip.
 
-- **POV bleed scanner (legacy entry).** Flag close-third sentences that name
-  knowledge the POV cannot have at the moment of narration. Hard to
-  do well; cheap version: search for "the woman / the man" referring
-  to a named character the POV already knows.
+- **POV bleed — knowledge-edge follow-up.** The 2026-04-28 scanner
+  catches interiority (`Niccolò thought`, `Lucia's mind raced`).
+  Not yet covered: knowledge edges where the POV references a
+  fact they couldn't have at that moment ("the woman who would
+  later betray him") — needs cross-chapter knowledge tracking
+  to do well. Cheap interim version: search for "the woman / the
+  man" referring to a named character the POV already knows
+  (de-anonymising drift).
 - ~~**Bell's "irreversible change" scorer.**~~ **Shipped 2026-04-25.**
   evaluate.md gains an `irreversible_change` dimension on
   `--chapter` mode and `irreversible_change_arc` on `--full` mode.
