@@ -94,7 +94,10 @@ diagnoses this with `pwd` and `ls project.yaml`.
 ## `error: another command is already in flight` from `autonovel _begin`
 
 A previous command exited without releasing
-`.autonovel/in-progress.lock`. Inside Claude Code:
+`.autonovel/in-progress.lock`. There are three recovery paths
+depending on how stuck you are.
+
+**Recommended (Claude Code):**
 
 ```
 /autonovel:resume
@@ -103,7 +106,15 @@ A previous command exited without releasing
 It will detect the stale lock, show you what command was running,
 and offer to redo / keep partial / inspect.
 
-If the runtime crashed and you want to clear the lock manually:
+**Wait for the watchdog (since 2026-04-28):** locks older than
+30 minutes are automatically taken over by the next command's
+`_begin`. So if you ran a command, it errored without `_end`,
+and you wait half an hour, the next command runs cleanly with
+a one-line "took over expired lock from <prior command>" note.
+This catches the bug class where an LLM skips the postamble in
+the same Claude Code session.
+
+**Manual clear (runtime crashed, no resume available):**
 
 ```bash
 cat .autonovel/in-progress.lock        # see what was running

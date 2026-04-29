@@ -378,10 +378,21 @@ Max $200/month. Full narrative + rationale in
   over the per-command `model:` field. If yes, decide between (i)
   leaving as-is, (ii) dropping the `model:` line, (iii) making it
   opt-out via `project.yaml :: llm.honor_session_model`.
-- **Postamble compliance watchdog.** LLMs still occasionally skip
-  `autonovel _end`. A wall-clock timeout in `_begin` that
-  auto-marks the lock as `abandoned` after N minutes would catch
-  this without needing the LLM to cooperate.
+- ~~**Postamble compliance watchdog.**~~ **Shipped 2026-04-28.**
+  `lock.acquire_with_takeover` gains an `expire_after_seconds`
+  parameter (default 30 min via `DEFAULT_LOCK_EXPIRE_SECONDS`).
+  Any lock older than the threshold is silently taken over at
+  the next `_begin`, with the abandoned LockInfo surfaced via
+  the existing `BeginResult.abandoned_lock` channel so the
+  postamble can warn the user. Independent of PID liveness —
+  catches the same-Claude-Code-session case where the LLM
+  skipped `_end`. Lock age comes from the `started_at` ISO
+  timestamp in the lock JSON, with mtime fallback when that
+  field is corrupted. Pass `expire_after_seconds=None` or `0`
+  to disable for callers that explicitly want the
+  pre-2026-04-28 PID-only semantics. New `is_expired(lock_path,
+  max_age_seconds)` predicate. 7 new Tier-1 tests including
+  end-to-end through `lifecycle.begin`. Tier 1+2: 877 → 884.
 - **Verify `writes:` files were actually modified.** Postamble
   trusts `--wrote` paths; the LLM can claim it wrote a file without
   having invoked `Write`. Compare modification time / size against

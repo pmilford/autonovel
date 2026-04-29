@@ -366,6 +366,23 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (postamble compliance watchdog; FUTURE-TODOS
+  Postamble Watchdog entry): `lock.acquire_with_takeover` gains
+  `expire_after_seconds` parameter (default 30 min via
+  `DEFAULT_LOCK_EXPIRE_SECONDS`). Any lock older than threshold
+  is silently taken over at the next `_begin`, with the
+  abandoned LockInfo surfaced via the existing
+  `BeginResult.abandoned_lock` channel. Independent of PID
+  liveness — catches the same-Claude-Code-session case where
+  the LLM skipped `_end` (PID is still alive but the lock is
+  stale anyway). Lock age comes from `started_at` ISO timestamp
+  in the lock JSON, with mtime fallback when corrupted. New
+  `is_expired(lock_path, max_age_seconds)` predicate.
+  `expire_after_seconds=None` or `0` reverts to pre-2026-04-28
+  PID-only behaviour. Doc sync in docs/troubleshooting.md
+  "another command is already in flight" entry. 7 new Tier-1
+  tests including end-to-end through `lifecycle.begin`. Tier
+  1+2: 877 → 884.
 - 2026-04-28 (structured summary queries; FUTURE-TODOS Summary
   Queries entry): new light-tier command `/autonovel:summaries
   [--book <name>] [--where '<expr>'] [--format markdown|json]`
@@ -731,7 +748,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **877
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **884
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2
