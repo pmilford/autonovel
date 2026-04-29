@@ -87,10 +87,30 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
    `geography_and_culture`, `lore_interconnection`, `iceberg_depth`,
    `character_depth`, `character_distinctiveness`, `character_secrets`,
    `outline_completeness`, `foreshadowing_balance`,
-   `internal_consistency`, `voice_clarity`, `canon_coverage`. For each
-   dimension emit `{score, gap, fix, note}`. Weighting: lore 40%,
-   character 30%, structure 20%, craft 10%. Include `overall_score`,
-   `lore_score`, `weakest_dimension`, `top_3_improvements`.
+   `internal_consistency`, `voice_clarity`, `canon_coverage`,
+   `canon_outline_consistency`. For each dimension emit `{score,
+   gap, fix, note}`. Weighting: lore 40%, character 30%, structure
+   20%, craft 10%. Include `overall_score`, `lore_score`,
+   `weakest_dimension`, `top_3_improvements`.
+
+   **`canon_outline_consistency` — cross-check canon.md against
+   outline.md.** Read both files. Find every fact that appears in
+   BOTH (a date, a character name, a location, an event). When
+   the canon and outline disagree on the value (e.g. canon says
+   `[Anselmo arrived] 1473` but outline ch 4 says "Anselmo
+   arrives in 1471"), score this dimension low and emit a
+   `canon_outline_conflicts` array with one entry per conflict:
+   `{fact, canon_value, outline_value, recommendation}`. The
+   recommendation says which side is authoritative for this
+   project — usually canon (since `/autonovel:promote-canon` is
+   the process by which facts harden), so the outline is the
+   side that should change. When canon and outline agree on
+   every fact mentioned in both, score the dimension 9-10 and
+   emit `canon_outline_conflicts: []`. This catches the bug
+   class where an outline plant in chapter 4 contradicts a
+   canon entry that hardened from a different chapter's
+   research, leaving downstream chapters drafted against a
+   silently-wrong date or name.
 
 6. Mode `--chapter <N>`: use `file_read` on
    `books/{book}/chapters/ch_{chapter}.md`. If the file is missing or

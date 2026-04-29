@@ -409,7 +409,19 @@ to start.
   automatically and visibly.
 
 
-- **Drafter must degrade gracefully when reading prior chapter
+- ~~**Drafter must degrade gracefully when reading prior chapter
+  files.**~~ **Shipped 2026-04-28.** Each drafter command body
+  (`commands/draft.md`, `commands/revise.md`,
+  `commands/draft-pass.md`, `commands/revision-pass.md`) gains an
+  explicit **Read-failure policy** preamble at the top of its
+  `<workflow>`: do NOT retry on `file_read` errors for non-load-
+  bearing inputs (prior summaries, eval logs, prior-chapter
+  quotes); note the gap and proceed. The single hard-stop is the
+  chapter file at `revise` step 6 — that's the load-bearing input
+  we're rewriting. Catches the 2026-04-25 retry-loop bug class
+  that stalled long sweeps around chapter 8-10 when a single
+  summary file was missing or had a different shape than expected.
+
   context fails.** ~~Open~~ **Fixed 2026-04-25.** `commands/draft.md`
   step 7 and `commands/revise.md` step 6 now mark the prior-chapter
   read as best-effort with explicit "do not retry on failure"
@@ -463,11 +475,28 @@ These surfaced during a real first-run on a Chromebook + WSL on Claude
 Max $200/month. Full narrative + rationale in
 `docs/lessons-from-author-testing.md`.
 
-- **Per-command `model:` override on `[1m]` session models.** Verify
-  whether Claude Code's session-level `[1m]` selection silently wins
-  over the per-command `model:` field. If yes, decide between (i)
-  leaving as-is, (ii) dropping the `model:` line, (iii) making it
-  opt-out via `project.yaml :: llm.honor_session_model`.
+- ~~**Per-command `model:` override on `[1m]` session models —
+  recovery path.**~~ **Shipped 2026-04-28.** New CLI flag
+  `autonovel install --no-model-pin` re-renders every command
+  file with the `model:` frontmatter field omitted, so the
+  runtime's session model wins on every invocation. Recovery
+  path for users on a `[1m]` session model whose per-command pin
+  silently downshifts them to the non-`[1m]` variant. Adapter
+  signature gains `pin_model: bool = True` parameter; installer
+  inspects the adapter signature and only forwards the flag to
+  adapters that accept it (so Codex/Gemini stay no-op until they
+  opt in). Doc sync in docs/troubleshooting.md "My session
+  model is `[1m]`" section. The longer-term fix
+  (`project.yaml :: llm.honor_session_model` to make pinning
+  per-project opt-out) is still tracked but not blocking now
+  that the recovery flag exists.
+
+- **Per-command `model:` override — per-project opt-out.** The
+  `--no-model-pin` install flag (shipped 2026-04-28 above) is the
+  recovery path; the long-term fix is per-project opt-out via
+  `project.yaml :: llm.honor_session_model = true` so users can
+  pick the policy per-series rather than at install time. Lower
+  priority now that the recovery path exists.
 - ~~**Postamble compliance watchdog.**~~ **Shipped 2026-04-28.**
   `lock.acquire_with_takeover` gains an `expire_after_seconds`
   parameter (default 30 min via `DEFAULT_LOCK_EXPIRE_SECONDS`).
@@ -499,15 +528,35 @@ Max $200/month. Full narrative + rationale in
   Doc sync in docs/troubleshooting.md. 13 new Tier-1 tests
   covering each status path + lifecycle integration. Tier 1+2:
   884 → 897.
-- **Canon-vs-outline cross-consistency in `/autonovel:evaluate`.**
+- ~~**Canon-vs-outline cross-consistency in `/autonovel:evaluate`.**~~
+  **Shipped 2026-04-28.** `commands/evaluate.md` `--phase
+  foundation` mode gains a new `canon_outline_consistency`
+  dimension. The judge reads both `shared/canon.md` and
+  `books/<book>/outline.md`, finds every fact mentioned in
+  BOTH, and emits a `canon_outline_conflicts` array with one
+  entry per disagreement (canon says ch4 is in 1473, outline
+  ch4 says 1471 → flagged). Recommendation defaults to "canon
+  wins; revise the outline" since `/autonovel:promote-canon`
+  is the process by which facts harden. Catches the bug class
+  where outline plants contradict canon entries that hardened
+  from a different chapter's research, leaving downstream
+  chapters drafted against silently-wrong dates or names.
+
+- **Canon-vs-outline cross-consistency — Python-side helper.** Today
   When canon says X arrived in 1473 and the outline says 1471, the
   user shouldn't have to spot the contradiction manually. evaluate
   --phase foundation could date-compare references.
 - **`autonovel install --dry-run`** so users can preview what would
   be written into `~/.claude/commands/` before mutating it.
-- **`autonovel _begin` should echo a "running from `<dir>`" banner.**
-  Wrong-cwd launches are the #1 silent-failure mode for the runtime;
-  surfacing the cwd in the transcript would make the cause obvious.
+- ~~**`autonovel _begin` should echo a "running from `<dir>`" banner.**~~
+  **Shipped 2026-04-28.** `_cmd_begin` prints a one-line
+  banner `_begin: running from series root \`<name>\`` (or
+  `... (cwd: <relative-path>)` when the user launched the
+  runtime from below the series root). Catches the
+  wrong-cwd-launch failure mode before the command silently
+  misroutes paths. Two new Tier-1 tests cover the at-root and
+  below-root cases. Tier 1+2: 907 → 912.
+
 
 ## Output writing quality
 

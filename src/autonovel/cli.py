@@ -90,6 +90,12 @@ def _build_parser() -> argparse.ArgumentParser:
     inst.add_argument("--only", default=None, choices=["claude", "codex", "gemini"])
     inst.add_argument("--path", default=None,
                       help="Override the install root (default: the adapter's default).")
+    inst.add_argument("--no-model-pin", dest="no_model_pin", action="store_true",
+                      help=("Omit the `model:` frontmatter field so the runtime's "
+                             "session model wins. Recovery path for Claude Code "
+                             "users on `[1m]` whose per-command pin silently "
+                             "downshifts to the non-`[1m]` variant. See "
+                             "docs/troubleshooting.md."))
     inst.set_defaults(func=_cmd_install)
 
     uninst = sub.add_parser("uninstall", help="Uninstall /autonovel:* commands.")
@@ -361,9 +367,14 @@ def _cmd_install(args: argparse.Namespace) -> int:
         )
         return 2
     path = Path(args.path).resolve() if args.path else None
+    pin_model = not getattr(args, "no_model_pin", False)
     for adapter in adapters:
-        result = installer_mod.install(adapter, install_root=path)
+        result = installer_mod.install(
+            adapter, install_root=path, pin_model=pin_model,
+        )
         print(f"installed [{result.adapter_name}] → {result.install_root}")
+        if not pin_model:
+            print("  (model: frontmatter omitted — session model wins)")
         for w in result.written:
             print(f"  + {w.relative_to(result.install_root)}")
     return 0
@@ -577,6 +588,25 @@ def _cmd_begin(args: argparse.Namespace) -> int:
     except SeriesNotFound as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
+    # Banner: name the series root we resolved + the cwd we're running
+    # from. Catches the "I launched claude from inside books/<book>"
+    # mistake before the command silently fails because shared/ paths
+    # look one folder too deep. Bug class observed during 2026-04-25
+    # author testing — the cause was a wrong-cwd launch but the
+    # symptom was a command that "ran but wrote nothing".
+    import os
+    cwd = Path(os.getcwd())
+    series_label = series.root.name
+    cwd_rel = ""
+    try:
+        cwd_rel = str(cwd.resolve().relative_to(series.root.resolve()))
+    except ValueError:
+        cwd_rel = "(outside series)"
+    if cwd_rel == "." or cwd_rel == "":
+        loc_hint = f"series root `{series_label}`"
+    else:
+        loc_hint = f"series root `{series_label}` (cwd: `{cwd_rel}`)"
+    print(f"_begin: running from {loc_hint}")
     try:
         result = lifecycle.begin(args.command, args.args, runtime=args.runtime, series=series)
     except lifecycle.BeginError as e:

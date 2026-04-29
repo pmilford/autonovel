@@ -46,6 +46,39 @@ def test_rollback_list_on_empty_is_clean(series_root: Path, monkeypatch) -> None
     assert rc == 0
 
 
+def test_begin_prints_running_from_banner(tmp_path: Path, monkeypatch, capsys) -> None:
+    """`_begin` must print a banner naming the series root + cwd
+    so the wrong-cwd-launch failure mode is visible up front."""
+    monkeypatch.chdir(tmp_path)
+    _run(["new-series", "demo"])
+    monkeypatch.chdir(tmp_path / "demo")
+    capsys.readouterr()  # discard scaffold output
+    rc = _run(["_begin", "--command", "autonovel:next", "--args", ""])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "running from" in out
+    assert "demo" in out
+
+
+def test_begin_banner_flags_cwd_below_series_root(tmp_path: Path, monkeypatch, capsys) -> None:
+    """When `claude` was launched from inside `books/<book>` instead
+    of the series root, the banner surfaces the relative cwd so the
+    mistake is obvious before the command silently misroutes paths."""
+    monkeypatch.chdir(tmp_path)
+    _run(["new-series", "demo"])
+    monkeypatch.chdir(tmp_path / "demo")
+    _run(["new-book", "one"])
+    monkeypatch.chdir(tmp_path / "demo" / "books" / "one")
+    capsys.readouterr()
+    rc = _run(["_begin", "--command", "autonovel:next", "--args", ""])
+    assert rc == 0
+    out = capsys.readouterr().out
+    # The banner shows the non-root cwd hint so the user spots
+    # the wrong launch directory.
+    assert "cwd:" in out
+    assert "books/one" in out
+
+
 def test_autonovel_mechanical_subcommand_dispatches(tmp_path):
     """Tier-1: `autonovel mechanical slop <file>` must work end-to-end
     via the top-level CLI. Author 2026-04-25: pipx install isolates the

@@ -44,6 +44,7 @@ class ClaudeCodeAdapter(RuntimeAdapter):
         cmd: CommandDef,
         *,
         model_map: dict[str, str] | None = None,
+        pin_model: bool = True,
     ) -> str:
         tools = [CLAUDE_TOOL_MAP[t] for t in cmd.allowed_tools]
         for implicit in IMPLICIT_TOOLS:
@@ -57,7 +58,15 @@ class ClaudeCodeAdapter(RuntimeAdapter):
         if cmd.argument_hint:
             lines.append(f"argument-hint: {cmd.argument_hint}")
         lines.append(f"allowed-tools: {', '.join(tools)}")
-        lines.append(f"model: {model}")
+        # When `pin_model` is False (CLI flag `--no-model-pin`),
+        # omit the `model:` field entirely so Claude Code's session
+        # model always wins. Recovery path for users on a session-
+        # level `[1m]` model where the per-command pin would
+        # silently downshift them to the non-`[1m]` variant of the
+        # same tier. See docs/troubleshooting.md "1M context billing
+        # gate" + docs/lessons-from-author-testing.md §8.
+        if pin_model:
+            lines.append(f"model: {model}")
         lines.append("---")
         lines.append("")
         lines.append(_preamble(cmd))

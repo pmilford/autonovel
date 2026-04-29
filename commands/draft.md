@@ -34,6 +34,18 @@ off-limits.
 </purpose>
 
 <workflow>
+**Read-failure policy.** When `file_read` errors (file not found,
+permission denied, encoding error) on any input that's NOT the
+load-bearing chapter file, do NOT retry. Note the gap in your
+working memory + the postamble's eval-log write, and proceed
+without that input. The author hit retry-loops 2026-04-25 on
+non-existent prior chapters and on summary files that hadn't
+been backfilled yet; the right response is "this prose-context
+input is missing, draft anyway with what's available". The single
+exception is reads that load the chapter we're writing-against
+(`/autonovel:revise` step 6); those are the *only* truly
+required reads — surface the error and stop, don't retry.
+
 1. Parse `$ARGUMENTS`. Expect `<chapter-number> --book <short-name>`. If the
    chapter number or `--book` is missing, stop and print a one-line usage
    reminder. Do not touch disk.

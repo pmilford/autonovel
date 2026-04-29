@@ -35,6 +35,13 @@ target, not a mental "safe" overshoot.
 </purpose>
 
 <workflow>
+**Read-failure policy.** When `file_read` errors on any input
+EXCEPT the chapter file at step 6, do NOT retry — note the gap
+and proceed. The chapter file at step 6 is load-bearing (we're
+rewriting it); failure to read it is a hard stop. Catches the
+2026-04-25 retry-loop bug class where a single missing summary
+file blocked a full revision-pass.
+
 1. Parse `$ARGUMENTS`. Expect `<chapter-number> --book <short-name>`.
    Missing args are a usage error — stop with a one-line reminder.
 

@@ -366,6 +366,32 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (reliability batch — drafter graceful-read +
+  canon-vs-outline + `_begin` cwd banner + `--no-model-pin`):
+  four small reliability fixes from the FUTURE-TODOS reliability
+  group.
+  (1) Drafter commands (draft / revise / draft-pass /
+  revision-pass) gain explicit "Read-failure policy" preambles
+  at the top of `<workflow>` — no retry on non-load-bearing
+  reads, hard-stop only on revise's chapter-file read. Catches
+  the 2026-04-25 retry-loop bug class.
+  (2) `commands/evaluate.md` `--phase foundation` mode adds a
+  new `canon_outline_consistency` dimension that emits a
+  `canon_outline_conflicts` array naming every fact where canon
+  and outline disagree.
+  (3) `_cmd_begin` prints a `_begin: running from series root
+  \`<name>\`` banner (or `(cwd: <relative>)` when launched from
+  below the root) so wrong-cwd launches are visible up front.
+  Two new Tier-1 tests.
+  (4) New `autonovel install --no-model-pin` flag re-renders
+  every command without the `model:` frontmatter field — recovery
+  path for [1m]-session-model users whose per-command pin
+  silently downshifts. ClaudeCodeAdapter.render gains
+  `pin_model: bool = True`. Installer signature-inspects the
+  adapter so Codex/Gemini stay no-op until they opt in. Three
+  new Tier-1 tests. docs/troubleshooting.md gains both the
+  "[1m] downshifting" entry and a tweak to the lock-flight
+  recovery section. Tier 1+2: 907 → 912.
 - 2026-04-28 (property-based tests via hypothesis; FUTURE-TODOS
   Property-Based-Tests entry): new
   `tests/deterministic/test_property_based.py` uses `hypothesis`
@@ -780,7 +806,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **907
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **912
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

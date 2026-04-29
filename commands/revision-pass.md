@@ -71,6 +71,15 @@ chapter the sweep touched in one shot.
 </purpose>
 
 <workflow>
+**Read-failure policy across the sweep.** Per-chapter sub-agents
+inherit `/autonovel:revise`'s read-failure policy: do NOT retry
+on `file_read` errors for prior summaries, eval logs,
+adversarial-edit reports, or panel JSON. Note the gap in the
+per-chapter brief and proceed. The hard stop is a missing
+chapter file at revise step 6 — that's the load-bearing input.
+This prevents the 2026-04-25 retry-loop bug class from stalling
+the whole sweep on a single missing input.
+
 1. Parse `$ARGUMENTS`. Required: `--chapters <range>`. The range
    can be `N-M` (inclusive), `N,M,K` (comma-separated), or `all`
    (every drafted chapter). `--book` defaults via `_begin`.

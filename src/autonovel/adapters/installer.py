@@ -52,17 +52,35 @@ def install(
     install_root: Path | None = None,
     commands_dir: Path | None = None,
     model_map: dict[str, str] | None = None,
+    pin_model: bool = True,
 ) -> InstallResult:
+    """Render every command into the runtime's install dir.
+
+    `pin_model=False` omits the `model:` frontmatter field — for
+    Claude Code, this is the recovery path when the user's session
+    model is `[1m]` and the per-command pin silently downshifts.
+    Codex / Gemini adapters accept the kwarg for symmetry but may
+    not honour it (their model resolution rules differ); see each
+    adapter's `render()` for behaviour.
+    """
     root = install_root or adapter.default_install_root()
     src = commands_dir or _commands_source_dir()
     cmds = discover_commands(src)
 
     root.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
+    render_kwargs: dict = {"model_map": model_map}
+    # Pass pin_model only to adapters that accept it. Inspecting via
+    # signature avoids breaking the Codex/Gemini adapters until they
+    # opt in.
+    import inspect
+    sig = inspect.signature(adapter.render)
+    if "pin_model" in sig.parameters:
+        render_kwargs["pin_model"] = pin_model
     for cmd in cmds:
         target = adapter.target_path(root, cmd)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(adapter.render(cmd, model_map=model_map), encoding="utf-8")
+        target.write_text(adapter.render(cmd, **render_kwargs), encoding="utf-8")
         written.append(target)
 
     return InstallResult(adapter_name=adapter.name, install_root=root, written=written)

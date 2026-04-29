@@ -136,6 +136,31 @@ lives), launch `claude` again, retry.
 
 ---
 
+## My session model is `[1m]` and per-command pinning silently downshifts me
+
+When you select a `[1m]`-context model in Claude Code (e.g.
+`claude-opus-4-7[1m]`), each `/autonovel:*` command's frontmatter
+`model: claude-opus-4-7` (no `[1m]`) appears to win — silently
+downshifting your session out of 1M context. Recovery path:
+
+```bash
+autonovel install --no-model-pin
+```
+
+This re-renders every command file *without* the `model:` field,
+so the runtime's session model wins on every invocation. You give
+up per-command tier intent (e.g. cheap Haiku for light commands,
+expensive Opus for heavy ones) in exchange for never losing 1M
+context. If you want to switch back, run `autonovel install` (no
+flag — the default re-pins).
+
+The lessons-from-author-testing doc §8 has the longer narrative
+on why the interaction is non-obvious. FUTURE-TODOS continues to
+track a more granular fix where pinning is per-tier opt-out via
+project.yaml.
+
+---
+
 ## A `/autonovel:*` command's footer says `⚠️ verify-writes:`
 
 The postamble caught a self-report mismatch. The LLM passed
