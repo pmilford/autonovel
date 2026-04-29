@@ -977,7 +977,17 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1123
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 (PM) —
+  **1207 passing** (`pytest tests/deterministic tests/contracts`).
+  Workflow-guidance batch (six commits): brief-newer-than-chapter
+  signal + past-end guard in `/autonovel:next` (+7); postamble
+  "💡 Maybe try:" hints (+6); `/autonovel:impact-of` (kills the
+  ls/grep workflow after promote-canon, +21+5 contract pickups);
+  research-notes index + `/autonovel:research --query` mode (+13);
+  sweep-progress checkpoint for `/autonovel:resume` continuation
+  (+18); edit-imported Phase 2 foundation reverse-engineering (+14
+  + 1 contract pickup). Single-session delta: 1123 → 1207 (+84).
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 (AM) — **1123
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2
