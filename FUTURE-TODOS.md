@@ -11,6 +11,140 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **PDF page-header still leaks chapter prose (regression of the
+  2026-04-25 fix).** `novel.tex` already uses
+  `\fancyhead[RO]{\small\textsc{Chapter \thechapter}}` and
+  `\fancyhead[LE]{\small\textsc{@TITLE@}}` — so the running header
+  *should* be `Chapter <number>` on right pages, the book title on
+  left. Author reports 2026-04-28 that a freshly-typeset PDF is
+  STILL using the first sentence of the chapter as an alternating
+  page header. Debug paths to follow:
+   1. Check the `\chapter{}` invocation in `chapters_content.tex`
+      (built by `mechanical/latex.py::build_chapters_tex`) — if
+      it's emitting `\chapter[<short>]{<long>}` with `<long>`
+      computed from chapter prose, that's `\leftmark`'s source.
+   2. Check `\titleformat{\chapter}` in `novel.tex` — a
+      `titlesec` reformat can also bleed into running heads.
+   3. Check whether `fancyhdr` is being clobbered by a later
+      package include (e.g. `\pagestyle{empty}` resetting things
+      that re-enter active state on the first chapter page).
+   4. Confirm the user's series has the *new* `novel.tex` and not
+      a stale one carried over from before the 2026-04-25 fix —
+      `autonovel install` may not refresh `series/typeset/` files
+      automatically the way it refreshes `commands/`. If not,
+      add a `--refresh-templates` flag to `autonovel install` (or
+      a separate `autonovel refresh-typeset --book <name>`
+      housekeeping subcommand) so users with in-flight series can
+      pull template updates without manual file copying.
+   Add a Tier-1 contract test that asserts the rendered
+   `chapters_content.tex` for a fixture chapter uses
+   `\chapter{<title>}` (not `\chapter[<short>]{<long>}` derived
+   from prose) and that the rendered `novel.tex` keeps
+   `\fancyhead[RO]{...Chapter \thechapter}` verbatim. Confidence
+   that "the fix is in" should come from a green Tier-1 check on
+   every commit, not from the LaTeX shape happening to compile.
+
+- **Talk-with-the-book mode.** A conversational query+suggest
+  layer over the finished prose. The user types natural-language
+  questions or change requests; the command resolves them to
+  either a read-only answer (citing chapter + line) or a
+  staged edit (added to `books/{book}/briefs/conversation.md`
+  for the next revise pass). Examples from author 2026-04-28:
+  - **Q+A**: *"Explain to me why Jakob decided to open the book
+    of accounts."* → answer cites the chapter, the proximate
+    motive line, the prior setup, the consequence.
+  - **Suggest-and-stage**: *"Add some more details — the book of
+    accounts looked like it had been recently opened and
+    hurriedly returned to its place as it was out of alignment
+    with the other books."* → command writes a structured edit
+    suggestion to `briefs/conversation.md` with the target
+    chapter + scene + a one-line rationale. Next
+    `/autonovel:revise <chapter>` reads `briefs/conversation.md`
+    as additional brief input.
+  - **Mechanical+suggest**: *"Check how many times Jakob added
+    an entry to his cipher diary, and how many times he referred
+    to each entry. I think he made too many that were not later
+    mentioned. Reduce the number of entries and make sure
+    almost all entries are referred to at least once."* → first
+    runs the mechanical scanner (a generalisation of `motifs.py`:
+    "track named entity X across chapters; correlate occurrences
+    of X with mentions of X's prior occurrences"), surfaces the
+    table, then writes a structured cut-list to
+    `briefs/conversation.md` for revise.
+  Right shape: new heavy-tier command `/autonovel:talk --book
+  <name>` that runs as an interactive REPL inside the runtime;
+  each turn either prints an answer or appends to
+  `books/{book}/briefs/conversation.md` (idempotent — the file
+  is the conversation transcript + edit queue). Reads the same
+  context the rest of the pipeline does (chapters, summaries,
+  outline, canon, voice). Wire `/autonovel:revise` and
+  `/autonovel:revision-pass` to read `conversation.md` as a
+  brief-equivalent input. The mechanical-scan side benefits
+  from a reusable "named entity tracker" (extension of
+  `motifs.py`); break that out as `mechanical/entity_track.py`
+  early so `/autonovel:talk` and a future
+  `/autonovel:character-arc` can both call it.
+  Cost: ~6-10 hrs (REPL command + entity-tracker helper + brief
+  integration + Tier-1 tests + docs).
+
+- **Per-book tension/pacing visualisation — beyond the existing
+  `--full` table.** The author asked 2026-04-28 whether a tension
+  graph or table per chapter and per book exists. It partly does:
+  `/autonovel:evaluate --full` already emits a markdown table
+  with per-chapter `words / score / tension / dialogue% / scenes
+  / beats-hit` (shipped 2026-04-25). Gaps:
+   1. The table is only emitted as part of an evaluate run,
+      buried in the eval log. Add a standalone light-tier
+      `/autonovel:dashboard --book <name>` that re-renders the
+      same numbers without re-running evaluate (reads the latest
+      eval log + chapter frontmatter + chapter-summary index).
+   2. Add an ASCII sparkline column so the tension curve is
+      visible at a glance (`▁▂▃▅▇▆▄▂▁` per chapter).
+   3. Per-book aggregates (mean, median, range, longest
+      sub-7 streak) so multi-book series surface "Book Two has
+      a flat back third" without the author manually scanning
+      ten chapters.
+   4. Other dimensions worth tracking the same way:
+      `irreversible_change` per chapter (does the book
+      *actually* deliver consequence, or stall?);
+      `cast_size` per chapter (a sudden balloon in named cast
+      is usually a control problem); `scene_count` per chapter
+      (pacing proxy that's noisier than tension but
+      complementary); `dialogue_density` per chapter
+      (proportion of dialogue lines vs prose lines — set
+      pieces vs interiority); `motif_density` from
+      `motifs.md` (already rendered standalone by
+      `/autonovel:motifs` — surface it here as well).
+   Right shape: extend the existing `evaluate --full` table
+   shape into a re-renderable command + a per-book aggregate
+   block + sparklines + the new dimensions above. Cost: ~3-4
+   hrs. Pure mechanical; no new LLM call.
+
+- **Easy way to interact and query the chapter summaries.** Today
+  `/autonovel:chapter-summary` prints the full table and asks the
+  user to scan it; `/autonovel:talk` (above) plans to handle the
+  semantic Q+A path via the LLM. The lightweight middle ground —
+  a structured query DSL with no LLM cost — is missing. Examples:
+  - `autonovel summaries --book b --where 'pov == "Lucia"'`
+  - `autonovel summaries --book b --where 'story_time >= "1521-11"
+    and story_time <= "1522-02"'`
+  - `autonovel summaries --book b --cast-includes Niccolò`
+  - `autonovel summaries --book b --threads-opened 'mint fire'`
+  - `autonovel summaries --book b --score-below 7.0`
+  Implementation: a small DSL (or pandas-style filter on the
+  already-structured `ch_NN.summary.md` fields) over the existing
+  chapter-summary index. The `summarize_chapters()` helper
+  already returns structured rows; add `mechanical/summary_query.py`
+  that filters them and renders the surviving rows as a markdown
+  table or JSON. New mechanical CLI subcommand `autonovel
+  mechanical summary-query` + a `/autonovel:summaries
+  [--filter ...]` slash-command wrapper. Tier-1 tests for the
+  DSL parser. Distinct from `/autonovel:talk` because it is
+  pure mechanical, free, scriptable, and has stable semantics
+  (no LLM drift). Cost: ~3 hrs.
+
+
+
 - ~~**`autonovel _promote-canon` Python helper for safe in-sweep
   canon promotion.**~~ **Shipped 2026-04-26.** Hidden CLI
   subcommand `autonovel _promote-canon --book <name>
