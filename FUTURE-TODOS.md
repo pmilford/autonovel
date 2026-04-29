@@ -747,14 +747,25 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   ratio) is queued separately. 18 Tier-1 tests + 5 contract
   pickups. Tier 1+2: 1026 → 1049.
 
-- **Show-don't-tell — LLM-judge ratio upgrade follow-up.** The
-  pre-flight scanner above surfaces candidates; the LLM-side
-  scoring step is still queued: a separate evaluate dimension
-  that classifies each scanner-flagged line as direct vs
-  indirect vs hybrid and emits a per-chapter
-  show_vs_tell_ratio. Hold for now — the pre-flight already
-  feeds revise with concrete line targets, which is the
-  load-bearing fix.
+- ~~**Show-don't-tell — LLM-judge ratio upgrade follow-up.**~~
+  **Shipped 2026-04-29.** `commands/evaluate.md` `--chapter`
+  mode gains the `show_dont_tell_ratio` dimension; `--full`
+  mode gains `show_dont_tell_arc`. Both invoke the mechanical
+  pre-flight scanner via `bash`, classify each candidate
+  line as **direct** (bare proposition, no anchor),
+  **indirect** (anchored by sensory / behavioural evidence),
+  or **hybrid** (legitimate direct telling — interior
+  summary, time compression, register-mark in close-third).
+  Per-chapter ratio = `(indirect + hybrid) / total`; mapped
+  linearly to 0-10 with a penalty when raw `direct_count`
+  exceeds `chapter_word_count / 500`. `worst_offenders` array
+  surfaces the top-5 direct-classified lines with one-line
+  embodiment suggestions for brief / revise. `--full`
+  aggregates a `tell_heavy_chapters` list (ratio < 0.6) so a
+  sweep brief can target them. Zero-candidates chapters score
+  9.0 (not 10.0) to flag the suspicious case where the
+  scanner found nothing. 7 Tier-1 regression locks lock the
+  contract surfaces in `evaluate.md`. Tier 1+2: 1074 → 1081.
 
 ## Reader interest / reading experience
 

@@ -366,6 +366,22 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-29 (show-don't-tell LLM-judge upgrade; FUTURE-TODOS
+  Show-don't-tell follow-up): `commands/evaluate.md`
+  `--chapter` mode gains `show_dont_tell_ratio` dimension;
+  `--full` mode gains `show_dont_tell_arc`. Body invokes the
+  existing mechanical pre-flight scanner via `bash`,
+  classifies each candidate as direct (bare proposition,
+  unanchored), indirect (sensory/behavioural anchor), or
+  hybrid (legitimate direct telling — interior summary,
+  register-mark in close-third). Per-chapter
+  `(indirect + hybrid) / total` ratio mapped to 0-10 with a
+  raw-direct-count penalty. `worst_offenders` array surfaces
+  top-5 direct lines with embodiment suggestions for revise.
+  `--full` adds `tell_heavy_chapters` list (ratio < 0.6) for
+  sweep targeting. Zero-candidates chapters score 9.0 (not
+  10.0) to flag the suspicious case. 7 Tier-1 regression
+  locks. Tier 1+2: 1074 → 1081.
 - 2026-04-28 (token + cost tracking; FUTURE-TODOS Token+Cost
   entry): `command_log.LogEntry` gains optional fields book /
   model / tier / input_tokens / output_tokens /
@@ -913,7 +929,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1074
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1081
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

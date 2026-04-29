@@ -120,11 +120,69 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
    zero-padded). Score the dimensions: `voice_adherence`, `beat_coverage`,
    `character_voice`, `plants_seeded`, `prose_quality`, `continuity`,
    `canon_compliance`, `lore_integration`, `engagement`,
-   `irreversible_change`. Each emits `{score, weakest_moment, fix,
-   note}`. Include `three_weakest_sentences`,
-   `three_strongest_sentences`, `ai_patterns_detected`,
-   `overall_score`, `weakest_dimension`, `top_3_revisions`,
-   `new_canon_entries`.
+   `irreversible_change`, `show_dont_tell_ratio`. Each emits
+   `{score, weakest_moment, fix, note}`. Include
+   `three_weakest_sentences`, `three_strongest_sentences`,
+   `ai_patterns_detected`, `overall_score`, `weakest_dimension`,
+   `top_3_revisions`, `new_canon_entries`.
+
+   **`show_dont_tell_ratio` (the LLM-judge upgrade to the
+   pre-flight scanner).** Run the mechanical scanner first via
+   the `Bash` tool:
+
+   ```
+   autonovel mechanical show-dont-tell books/{book} --format json
+   ```
+
+   Filter the JSON's `chapters` array for the chapter under
+   evaluation. Each `candidates` entry is one suspect line
+   (kind ∈ {emotion-state, interiority, perception-filter,
+   narrator-label}, with a snippet). For every candidate,
+   classify the line as one of:
+
+     - **direct**: the narrator names the emotion / mental
+       state without rendering it through body, action, or
+       perception. *"She felt sad."* / *"He knew his brother
+       had betrayed him."* (bare proposition, no anchor).
+     - **indirect**: the line *appears* to tell but is anchored
+       by sensory or behavioural evidence on either side, OR
+       names the state through a body-line (autonomic
+       response, micro-action). *"Her shoulders dropped. She
+       was tired."* (the body line earns the label.)
+     - **hybrid**: legitimate direct telling that's load-
+       bearing — interior summary, time compression, a POV
+       confession, register-mark in close-third. *"He had
+       known the way home since he was six."* The narrator's
+       voice is supposed to do this work.
+
+   Compute:
+   - `direct_count`, `indirect_count`, `hybrid_count` —
+     totals across all candidates the scanner flagged for this
+     chapter.
+   - `show_dont_tell_ratio = (indirect + hybrid) / total` to
+     two decimals (or `1.0` when total == 0). Higher is
+     better — a chapter that anchors or earns every flagged
+     line is doing show-don't-tell well.
+   - `tell_score`: 0–10. Map `show_dont_tell_ratio` linearly
+     to the 0–10 band, but penalise raw `direct_count` >
+     `chapter_word_count / 500` (more than ~1 direct-tell per
+     500 words is "telling-heavy" regardless of ratio).
+   - `worst_offenders`: array of up to 5 entries naming the
+     `direct`-classified lines with highest weight (longest
+     bare-proposition direct tells; emotion-state lines beat
+     interiority lines beat narrator-labels). Each entry:
+     `{line_no, kind, snippet, why}` — `why` is one short
+     sentence on what to embody instead.
+
+   Record the dimension as `{score: tell_score, ratio,
+   direct_count, indirect_count, hybrid_count, worst_offenders}`.
+   `weakest_moment` for this dimension is the worst_offenders[0]
+   snippet; `fix` is its `why`.
+
+   When the scanner returned no candidates (rare; small chapter
+   or no tell patterns at all), score `tell_score = 9.0` and
+   note `"no tell candidates flagged"` rather than emitting a
+   misleading 10/10.
 
    **`irreversible_change` (Stability Trap antidote).** This is
    the named ceiling failure from the Bells production: AI
@@ -168,8 +226,20 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
    chars, word count, any outline beats marked rendered) and score novel
    dimensions: `arc_completion`, `pacing_curve`, `theme_coherence`,
    `foreshadowing_resolution`, `world_consistency`, `voice_consistency`,
-   `overall_engagement`, `irreversible_change_arc`. Include
-   `novel_score`, `weakest_dimension`, `weakest_chapter`, `top_suggestion`.
+   `overall_engagement`, `irreversible_change_arc`,
+   `show_dont_tell_arc`. Include `novel_score`, `weakest_dimension`,
+   `weakest_chapter`, `top_suggestion`.
+
+   **`show_dont_tell_arc` (whole-book show-vs-tell)**: run the
+   mechanical scanner once (`autonovel mechanical show-dont-tell
+   books/{book} --format json`), classify every candidate across
+   the book the same way `--chapter` mode does (direct /
+   indirect / hybrid), and aggregate to a per-chapter
+   `show_dont_tell_ratio_per_chapter[N]` array plus a book-level
+   ratio. Surface the chapters whose ratio drops below 0.6 as
+   `tell_heavy_chapters` so the brief / revise loop has a target
+   list. Score 0–10 the same way `--chapter` does, scaled for
+   the book.
 
    **`irreversible_change_arc` (whole-book Stability Trap check).**
    Walk every chapter pair (N → N+1) and ask: "Could chapter N+1
