@@ -11,6 +11,7 @@ Subcommands:
   scenes <path> [--full]           Split a chapter into scenes by *** / --- breaks.
   motifs <book> [--format]         Per-chapter motif density (reads books/<book>/motifs.md).
   chapter-summary <book> [--format] One-line-per-chapter overview (date/POV/score/cast/plot).
+  impact-of <book> [--source N]    Grep chapters for tokens unique to superseded canon facts.
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
   build-front-matter-tex <book>    Build front_matter.tex from preface.md + introduction.md.
@@ -52,6 +53,10 @@ from .dialogue import (
 from .entity_track import (
     build_report as build_entity_report,
     render_markdown as render_entity_md,
+)
+from .impact import (
+    build_impact_report,
+    render_impact_markdown,
 )
 from .period_register import (
     build_report as build_period_report,
@@ -350,6 +355,29 @@ def _cmd_summary_query(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_impact_of(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    series_root = Path(args.series_root) if args.series_root else None
+    report = build_impact_report(
+        book_root,
+        series_root=series_root,
+        source_command=args.source,
+    )
+    if args.format == "json":
+        json.dump(
+            {
+                "book_root": str(book_root),
+                "series_root": str(series_root) if series_root else None,
+                **report.to_dict(),
+            },
+            sys.stdout, indent=2,
+        )
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_impact_markdown(report, book=book_root.name))
+    return 0
+
+
 def _cmd_dashboard(args: argparse.Namespace) -> int:
     book_root = Path(args.book_root)
     report = build_dashboard(book_root, threshold=args.threshold)
@@ -640,6 +668,17 @@ def main(argv: list[str] | None = None) -> int:
     sq.add_argument("--format", choices=("markdown", "json"), default="markdown",
                     help="Output format (default: markdown).")
     sq.set_defaults(func=_cmd_summary_query)
+
+    io = sub.add_parser("impact-of",
+                        help='"What should I revise after promote-canon?" — grep chapters for tokens unique to superseded canon facts.')
+    io.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    io.add_argument("--series-root", default=None,
+                     help="Series root for shared/canon.md (default: book_root.parent.parent).")
+    io.add_argument("--source", choices=("promote-canon",), default="promote-canon",
+                     help="Which command's impact to analyse (only promote-canon supported today).")
+    io.add_argument("--format", choices=("markdown", "json"), default="markdown",
+                     help="Output format (default: markdown).")
+    io.set_defaults(func=_cmd_impact_of)
 
     db = sub.add_parser("dashboard",
                         help="Per-book dashboard re-renders eval log + augments mechanical dimensions; no LLM call.")

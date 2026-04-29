@@ -405,6 +405,23 @@ sequence that catches the things a sweep can silently break:
    top (three labelled paths). Re-run `/autonovel:promote-canon`
    after editing.
 
+   **After `/autonovel:promote-canon` runs cleanly**, if any facts
+   were superseded (research-tagged entries that beat prior canon),
+   the question "which chapters reference the now-wrong fact?"
+   used to require manual `ls` + `grep`. It doesn't anymore:
+
+   ```text
+   /autonovel:impact-of --book <book>
+   ```
+
+   parses every `## Superseded <date>` block in `shared/canon.md`,
+   greps each chapter for tokens unique to the prior value, and
+   prints a per-chapter action checklist of `/autonovel:revise
+   --chapter N` calls with line-snippet evidence. Mechanical
+   candidate generator — some matches are false positives (a year
+   that coincides with the flipped fact in unrelated context),
+   so skim each snippet before revising. Cheap, no LLM.
+
 3. **Re-run reader-panel + review on the revised book**
    *(15-30 min compute, 30 min reading)*.
    You changed many chapters; any prior `reader_panel.json` and
