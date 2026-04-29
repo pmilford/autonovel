@@ -483,7 +483,10 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   the pipeline (`mode: edit-imported` flips draft to refuse-mode
   so the import isn't accidentally overwritten); and
   `series-arc` for the cross-book scoreboard once your series
-  has ≥2 books.
+  has ≥2 books; and `show-dont-tell` to surface every
+  tell-candidate line (emotion states, interiority verbs,
+  perception filters, narrator labels) for line-level revise
+  targeting.
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
   `title`, `introduction`, `landing`, `package`. The art family
   now includes `art-prompts` — author per-chapter art prompt

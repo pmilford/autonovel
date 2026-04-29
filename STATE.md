@@ -366,6 +366,22 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (show-don't-tell pre-flight scanner; FUTURE-TODOS
+  show-dont-tell entry): new helper
+  `src/autonovel/mechanical/show_dont_tell.py` + slash-command
+  `/autonovel:show-dont-tell` cast a wider net than the existing
+  slop regex. Four pattern families: emotion-state
+  (`<X> was/felt/seemed <emotion>` against ~50-word curated
+  emotion list), interiority verbs (`knew`/`realised`/`thought`
+  /`believed`/`wondered`/`hoped`/`feared`/`wished`/…),
+  perception filters (`<Y> looked/sounded <adverb>` against
+  curated filter-adverb list), narrator labels (`It was
+  <emotion>`, `There was <emotion>`). Per-chapter table + per-
+  line hits with snippets + density-per-1000 column. CLI
+  subcommand `autonovel mechanical show-dont-tell`. The LLM-
+  judge ratio scoring upgrade (direct/indirect/hybrid
+  classification) is queued separately as a follow-up. 18
+  Tier-1 tests + 5 contract pickups. Tier 1+2: 1026 → 1049.
 - 2026-04-28 (series-arc score; FUTURE-TODOS series-arc entry):
   new helper `src/autonovel/mechanical/series_arc.py` + slash-
   command `/autonovel:series-arc` cross-book scoreboard for
@@ -864,7 +880,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1026
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1049
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

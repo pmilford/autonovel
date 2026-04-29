@@ -732,10 +732,30 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   <book_root> [--format markdown|json]`. New slash-command
   `/autonovel:motifs` wraps it. 17 Tier-1 tests + 5 contract
   pickups; Tier 1+2: 747 → 769.
-- **Show-don't-tell judge upgrade.** Current rule is a regex sweep
-  for "felt", "knew", "realised". A separate LLM pass that classifies
-  every emotion line as direct / indirect / hybrid and scores the
-  ratio per chapter is more accurate.
+- ~~**Show-don't-tell — pre-flight scanner.**~~ **Shipped 2026-04-28.**
+  New helper `src/autonovel/mechanical/show_dont_tell.py` casts a
+  wider net than the existing slop regex. Four pattern families:
+  emotion-state (`<X> was/felt/seemed <emotion>` against a curated
+  ~50-word emotion list), interiority verbs (`knew`, `realised`,
+  `understood`, `recognised`, `decided`, `thought`, `believed`,
+  `wondered`, `hoped`, `feared`, `wished`, …), perception filters
+  (`<Y> looked/sounded <adverb>` against a curated filter-adverb
+  list), narrator labels (`It was <emotion>`, `There was
+  <emotion>`). Per-chapter table + per-line hits with snippets;
+  density-per-1000-words column for normalisation. Slash-command
+  `/autonovel:show-dont-tell`. The LLM-judge ratio scoring
+  upgrade (direct/indirect/hybrid classification + per-chapter
+  ratio) is queued separately. 18 Tier-1 tests + 5 contract
+  pickups. Tier 1+2: 1026 → 1049.
+
+- **Show-don't-tell — LLM-judge ratio upgrade follow-up.** The
+  pre-flight scanner above surfaces candidates; the LLM-side
+  scoring step is still queued: a separate evaluate dimension
+  that classifies each scanner-flagged line as direct vs
+  indirect vs hybrid and emits a per-chapter
+  show_vs_tell_ratio. Hold for now — the pre-flight already
+  feeds revise with concrete line targets, which is the
+  load-bearing fix.
 
 ## Reader interest / reading experience
 

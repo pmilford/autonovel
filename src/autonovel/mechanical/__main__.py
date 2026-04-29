@@ -65,6 +65,10 @@ from .series_arc import (
     build_report as build_series_arc_report,
     render_markdown as render_series_arc_md,
 )
+from .show_dont_tell import (
+    build_report as build_show_dont_tell_report,
+    render_markdown as render_show_dont_tell_md,
+)
 from .motifs import build_report as build_motif_report, render_markdown as render_motif_md
 from .summary_query import (
     QueryError,
@@ -245,6 +249,21 @@ def _cmd_period_register(args: argparse.Namespace) -> int:
     else:
         sys.stdout.write(render_period_md(report, book=book_root.name,
                                             show_hits=not args.summary_only))
+    return 0
+
+
+def _cmd_show_dont_tell(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    report = build_show_dont_tell_report(book_root)
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_show_dont_tell_md(
+            report, book=book_root.name,
+            show_hits=not args.summary_only,
+        ))
     return 0
 
 
@@ -557,6 +576,14 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("--format", choices=("markdown", "json"), default="markdown")
     pr.add_argument("--summary-only", action="store_true")
     pr.set_defaults(func=_cmd_period_register)
+
+    sdt = sub.add_parser("show-dont-tell",
+                          help="Per-chapter pre-flight scanner for tell-candidate lines.")
+    sdt.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    sdt.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    sdt.add_argument("--summary-only", action="store_true",
+                      help="Skip the per-line block; emit only the per-chapter table.")
+    sdt.set_defaults(func=_cmd_show_dont_tell)
 
     sa = sub.add_parser("series-arc",
                          help="Series-arc score across ≥2 books — completion, cross-book cast, story-time discipline, unresolved threads.")

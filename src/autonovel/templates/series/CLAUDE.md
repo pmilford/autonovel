@@ -137,6 +137,11 @@ each of these and the workaround is in the codebase:
   has ≥2 books for the cross-book scoreboard — completion,
   cross-book cast, story-time discipline, unresolved threads,
   composite arc score 0-10.
+- Run `/autonovel:show-dont-tell --book <name>` for the wider-
+  net tell-candidate scanner (emotion-state, interiority verbs,
+  perception filters, narrator labels). Suggestion list — the
+  LLM judge in `/autonovel:evaluate` produces the actual show-
+  vs-tell ratio.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

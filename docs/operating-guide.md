@@ -57,6 +57,7 @@ Every editing command falls into one of four roles:
 | `/autonovel:pov-bleed` | Mechanical helper | Heuristic POV-bleed scan — flag interiority verbs / nouns attached to non-POV characters. Suggestion list, not a gate (false positives are common). **Does NOT modify chapters.** |
 | `/autonovel:import-book` | Setup | Import an externally-written manuscript. Splits a directory of `*.md` files or a single combined manuscript into autonovel-shape `ch_NN.md` files; flips `project.yaml :: books[].mode` to `edit-imported` so `/autonovel:draft` refuses to overwrite. The rest of the pipeline (evaluate / brief / revise / panel / review / typeset) treats imported chapters identically to drafted ones. |
 | `/autonovel:series-arc` | Mechanical helper | Cross-book scoreboard for series with ≥2 books — per-book completion, cross-book cast, story-time discipline, unresolved threads, composite arc score. Pure mechanical, no LLM call. **Does NOT modify chapters.** |
+| `/autonovel:show-dont-tell` | Mechanical helper | Per-chapter pre-flight scanner for tell-candidate lines (emotion-state, interiority verbs, perception filters, narrator labels). Wider net than the existing slop regex; surfaces line-level review targets. **Does NOT modify chapters.** |
 
 ### The crucial insight: `brief` is the synthesiser
 
