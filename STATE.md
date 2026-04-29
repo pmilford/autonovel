@@ -366,6 +366,33 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (quality scanners — dialogue + period-register +
+  pov-bleed): three pure-mechanical pre-flight scanners. All
+  read-only, light-tier, run in milliseconds.
+  (1) `mechanical/dialogue.py` flags adverb-heavy speech tags
+  (`said quietly`), said-bookisms (`exclaimed`, `murmured`,
+  `whispered`, …), and stutters (same non-said verb 3+ times in
+  a 10-line window). Per-chapter counts + per-line snippets.
+  Slash-command `/autonovel:dialogue`. 16 Tier-1 tests.
+  (2) `mechanical/period_register.py` rolls the existing
+  `slop.period_ban_hits` scanner across every chapter, emits
+  per-chapter table + worst-offenders ranking. Slash-command
+  `/autonovel:period-register`. 16 Tier-1 tests covering bans
+  loading (comments / blanks), word-boundary matching,
+  frontmatter strip, summary aggregation, render shapes, CLI.
+  (3) `mechanical/pov_bleed.py` flags lines where a cast member
+  who is NOT the chapter's POV is named with an interiority
+  verb (`thought`, `felt`, `knew`, `realised`, `wondered`, …)
+  or possessive interiority (`Niccolò's mind`, `Lucia's
+  heart`). Reads `shared/characters.md` for cast (bullet or
+  heading form). Output is a review list, not a gate. Slash-
+  command `/autonovel:pov-bleed`. 19 Tier-1 tests.
+  Doc sync in same commit per the keep-docs-in-sync rule:
+  docs/commands.md (3 new rows), docs/operating-guide.md §0
+  (3 new mechanical-helper rows), README.md (drafting/revision
+  bucket gains the three pre-flight scanners), series-template
+  CLAUDE.md "When in doubt" (3 new affordances). Tier 1+2:
+  912 → 974.
 - 2026-04-28 (reliability batch — drafter graceful-read +
   canon-vs-outline + `_begin` cwd banner + `--no-model-pin`):
   four small reliability fixes from the FUTURE-TODOS reliability
@@ -806,7 +833,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **912
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **974
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

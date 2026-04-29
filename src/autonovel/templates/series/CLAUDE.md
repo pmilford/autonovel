@@ -119,6 +119,14 @@ each of these and the workaround is in the codebase:
   `story_time >= "1521-11"`, `chapter in 5..12`,
   `score < 7.0 and word_count > 3000`. Distinct from
   `/autonovel:talk` (LLM Q+A) by being free + scriptable.
+- Run `/autonovel:dialogue --book <name>` for the dialogue-
+  mechanics linter (adverb tags, said-bookisms, stutters).
+- Run `/autonovel:period-register --book <name>` for a roll-up
+  of period-bans hits across every chapter — useful before
+  typeset.
+- Run `/autonovel:pov-bleed --book <name>` for a heuristic POV-
+  bleed scan. Suggestion list, not a gate — false positives are
+  common.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

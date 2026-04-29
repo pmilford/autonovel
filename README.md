@@ -474,8 +474,11 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   edits that the next `revise` picks up automatically;
   `dashboard` — score / tension / pacing curve / aggregates with
   sparklines, re-rendered from existing eval logs without firing
-  another evaluate; and `summaries --where '<expr>'` for a
-  pure-mechanical query DSL over the chapter-summary index.
+  another evaluate; `summaries --where '<expr>'` for a
+  pure-mechanical query DSL over the chapter-summary index; and
+  three pre-flight scanners — `dialogue` (adverb tags / said-
+  bookisms / stutters), `period-register` (period-bans roll-up),
+  `pov-bleed` (interiority verbs attached to non-POV characters).
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
   `title`, `introduction`, `landing`, `package`. The art family
   now includes `art-prompts` — author per-chapter art prompt

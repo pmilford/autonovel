@@ -45,9 +45,21 @@ from .dashboard import (
     build_dashboard,
     render_markdown as render_dashboard_md,
 )
+from .dialogue import (
+    build_report as build_dialogue_report,
+    render_markdown as render_dialogue_md,
+)
 from .entity_track import (
     build_report as build_entity_report,
     render_markdown as render_entity_md,
+)
+from .period_register import (
+    build_report as build_period_report,
+    render_markdown as render_period_md,
+)
+from .pov_bleed import (
+    build_report as build_pov_bleed_report,
+    render_markdown as render_pov_bleed_md,
 )
 from .motifs import build_report as build_motif_report, render_markdown as render_motif_md
 from .summary_query import (
@@ -202,6 +214,47 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     }
     json.dump(payload, sys.stdout, indent=2)
     sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_dialogue(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    report = build_dialogue_report(book_root)
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_dialogue_md(report, book=book_root.name,
+                                              show_hits=not args.summary_only))
+    return 0
+
+
+def _cmd_period_register(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    series_root = Path(args.series_root) if args.series_root else None
+    report = build_period_report(book_root, series_root=series_root)
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_period_md(report, book=book_root.name,
+                                            show_hits=not args.summary_only))
+    return 0
+
+
+def _cmd_pov_bleed(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    series_root = Path(args.series_root) if args.series_root else None
+    report = build_pov_bleed_report(book_root, series_root=series_root)
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_pov_bleed_md(report, book=book_root.name,
+                                               show_hits=not args.summary_only))
     return 0
 
 
@@ -472,6 +525,32 @@ def main(argv: list[str] | None = None) -> int:
     mt.add_argument("--format", choices=("markdown", "json"), default="markdown",
                     help="Output format (default: markdown table).")
     mt.set_defaults(func=_cmd_motifs)
+
+    dlg = sub.add_parser("dialogue",
+                          help="Per-chapter dialogue-mechanics linter (adverb tags, said-bookisms, stutters).")
+    dlg.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    dlg.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    dlg.add_argument("--summary-only", action="store_true",
+                      help="Skip the per-hit lines block; emit only the per-chapter table.")
+    dlg.set_defaults(func=_cmd_dialogue)
+
+    pr = sub.add_parser("period-register",
+                         help="Per-chapter period-bans hits across the whole book.")
+    pr.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    pr.add_argument("--series-root", default=None,
+                     help="Series root for shared/period_bans.txt (default: book_root.parent.parent).")
+    pr.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    pr.add_argument("--summary-only", action="store_true")
+    pr.set_defaults(func=_cmd_period_register)
+
+    pb = sub.add_parser("pov-bleed",
+                         help="Heuristic POV-bleed scan — flag interiority lines naming non-POV characters.")
+    pb.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    pb.add_argument("--series-root", default=None,
+                     help="Series root for shared/characters.md (default: book_root.parent.parent).")
+    pb.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    pb.add_argument("--summary-only", action="store_true")
+    pb.set_defaults(func=_cmd_pov_bleed)
 
     sq = sub.add_parser("summary-query",
                         help="Filter the chapter-summary table by a small DSL (pov / score / story_time / cast / etc.).")

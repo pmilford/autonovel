@@ -52,6 +52,9 @@ Every editing command falls into one of four roles:
 | `/autonovel:talk` | Conversational layer | Ask the book questions or queue edits in natural language. Three modes: **Q+A** (cites chapter+line, no edit), **Suggest-and-stage** (queues an edit in `briefs/conversation.md`), **Mechanical+suggest** (runs `entity-track` first, then queues a structured cut-list). Queued turns get folded into the brief by the next `/autonovel:revise <N>`. |
 | `/autonovel:dashboard` | Mechanical helper | Per-book at-a-glance dashboard — re-renders the latest `--full` eval log + mechanical augmentations (cast size, scene count, dialogue density, motif density), plus score and tension sparklines, per-book aggregates, and tension-drop alarms. Re-runs without firing an LLM evaluate pass. **Does NOT modify chapters.** |
 | `/autonovel:summaries` | Mechanical helper | Filter the chapter-summary index by a small DSL — `pov == "Lucia"`, `cast contains Niccolò`, `story_time >= "1521-11"`, `chapter in 5..12`, `score < 7.0 and word_count > 3000`. Pure mechanical, no LLM, free, scriptable. The right tool when you know exactly which chapters you want; `/autonovel:talk` is the LLM-mediated path for fuzzy questions. **Does NOT modify chapters.** |
+| `/autonovel:dialogue` | Mechanical helper | Per-chapter dialogue-mechanics linter — adverb-heavy speech tags, said-bookisms, repeated speech-verb stutters. Fast pre-flight before a heavy-tier evaluate run. **Does NOT modify chapters.** |
+| `/autonovel:period-register` | Mechanical helper | Per-book roll-up of every period-bans hit across every chapter, with worst-offenders ranking. **Does NOT modify chapters.** |
+| `/autonovel:pov-bleed` | Mechanical helper | Heuristic POV-bleed scan — flag interiority verbs / nouns attached to non-POV characters. Suggestion list, not a gate (false positives are common). **Does NOT modify chapters.** |
 
 ### The crucial insight: `brief` is the synthesiser
 

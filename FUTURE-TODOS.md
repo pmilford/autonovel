@@ -579,7 +579,19 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   violation quoted in `weakest_moment`. Solo-cast / single-speaker
   books fall back to Part 2 cleanly (the threshold rule skips Part
   4 generation; the placeholder comment stays).
-- **Dialogue mechanics linter.** A new mechanical scanner that flags
+- ~~**Dialogue mechanics linter.**~~ **Shipped 2026-04-28.** New
+  mechanical helper `src/autonovel/mechanical/dialogue.py` flags
+  adverb-heavy speech tags (`said quietly`, `murmured softly`),
+  said-bookisms (`exclaimed`, `murmured`, `whispered`,
+  `growled`, …), and repeated-speech-verb stutters (the same
+  non-`said` verb 3+ times within a 10-line window). Per-chapter
+  counts + per-line hits with snippets. New CLI subcommand
+  `autonovel mechanical dialogue <book_root>` and slash-command
+  `/autonovel:dialogue`. 16 Tier-1 tests covering each pattern,
+  edge cases (frontmatter strip, plain-said unflagged, stutter
+  window boundaries), render shapes, and CLI round-trip.
+
+- **Dialogue mechanics linter (legacy entry).** A new mechanical scanner that flags
   dialogue tics LLMs over-use: every line with an action beat (`she
   laughed`, `he frowned`), unattributed dialogue when ≥3 speakers, and
   the "softening qualifier" pattern (`maybe`, `kind of`, `a little`)
@@ -613,12 +625,43 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   fractions (visual/auditory/olfactory/gustatory/tactile) and a
   `dominant_channel` flag when one channel >70%. `evaluate.md`
   surfaces dominance as a chapter `weakest_moment` callout.
-- **Period register lock.** For period fiction, surface every
+- ~~**Period register lock.**~~ **Shipped 2026-04-28.** New
+  helper `src/autonovel/mechanical/period_register.py` rolls
+  the existing `slop.period_ban_hits` scanner across every
+  chapter and emits a per-chapter hit table + a worst-offenders
+  ranking by total occurrences. Useful before typeset to confirm
+  the manuscript stays in period across the full run. CLI
+  subcommand `autonovel mechanical period-register <book_root>`
+  and slash-command `/autonovel:period-register`. 16 Tier-1
+  tests covering bans loading (comments + blanks), word-boundary
+  case-insensitive matching, frontmatter stripping, summary
+  aggregation, render shapes (with/without `--summary-only`,
+  no-bans message, no-chapters message), and CLI round-trip.
+
+- **Period register lock (legacy entry).** For period fiction, surface every
   sentence whose Flesch-Kincaid grade or syllable-per-word average
   drifts above the seed's 95th percentile — catches the "anachronistic
   register" failure that period-bans cannot (e.g. modern syntax in
   period-correct vocabulary).
-- **POV bleed scanner.** Flag close-third sentences that name
+- ~~**POV bleed scanner.**~~ **Shipped 2026-04-28.** New helper
+  `src/autonovel/mechanical/pov_bleed.py` flags lines where a
+  cast member who is NOT the chapter's POV is named with an
+  interiority verb (`thought`, `felt`, `knew`, `realised`,
+  `wondered`, `remembered`, `hoped`, `feared`, `believed`, …)
+  or possessive interiority (`Niccolò's mind`, `Lucia's heart`).
+  Cast comes from `shared/characters.md` (parsed in `**Name**`
+  bullet form OR `## Name` heading form); chapter POV from the
+  YAML frontmatter `pov:` field. False-positive caveat is
+  documented inline in the rendered report — non-POV characters
+  CAN have their interiority legitimately reported by another
+  character, so output is a review list not a gate. CLI
+  subcommand `autonovel mechanical pov-bleed <book_root>` and
+  slash-command `/autonovel:pov-bleed`. 19 Tier-1 tests covering
+  cast parsing (both shapes + missing file), verb / possessive
+  patterns, POV-self-exclusion, no-cast / no-cast-override
+  paths, render shapes, and CLI round-trip.
+
+- **POV bleed scanner (legacy entry).** Flag close-third sentences that name
   knowledge the POV cannot have at the moment of narration. Hard to
   do well; cheap version: search for "the woman / the man" referring
   to a named character the POV already knows.
