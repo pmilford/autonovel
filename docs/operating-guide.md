@@ -1056,12 +1056,17 @@ Or in Claude Code:
 ```
 
 `/autonovel:next` inspects the live filesystem — pending canon
-conflicts, chapter regressions, stale reader-panel / Opus review
-reports, missing front matter, missing book title, GitHub backup
-state — and emits a prioritised action list. The canonical
-pipeline next step (from the prior command's footer) appears at
-the bottom; situational actions take precedence over it. Cheap
-to call repeatedly; pure mechanical, no LLM.
+conflicts, chapter regressions, briefs newer than their chapters
+(the brief→revise pair is the most common situational signal),
+stale reader-panel / Opus review reports, missing front matter,
+missing book title, GitHub backup state — and emits a prioritised
+action list. The canonical pipeline next step (from the prior
+command's footer) appears at the bottom; situational actions take
+precedence over it. Past-end-of-book guard: when the canonical
+line points to a draft chapter beyond what exists by more than 1,
+it gets demoted to a "book appears complete — try `/autonovel:evaluate
+--full`" suggestion. Cheap to call repeatedly; pure mechanical,
+no LLM.
 
 Or, for the cost-and-token side of "where am I":
 

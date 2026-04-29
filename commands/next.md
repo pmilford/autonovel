@@ -1,6 +1,6 @@
 ---
 name: autonovel:next
-description: Show state-aware next actions — pending conflicts, regressions, panel/review staleness, backup status, plus the canonical pipeline next step.
+description: Show state-aware next actions — pending conflicts, regressions, fresh briefs, panel/review staleness, backup status, plus the canonical pipeline next step.
 argument-hint: "[--book <short-name>]"
 model_tier: light
 allowed-tools:
@@ -10,6 +10,7 @@ reads:
   - .autonovel/last-action.json
   - books/{book}/pending_canon.md
   - books/{book}/eval_logs/*.json
+  - books/{book}/briefs/ch*.md
   - books/{book}/edit_logs/reader_panel.json
   - books/{book}/edit_logs/opus_review.md
   - books/{book}/typeset/*.pdf
@@ -48,6 +49,10 @@ repeatedly.
      - `books/{book}/pending_canon.md` for `## Conflict N` blocks
      - `books/{book}/eval_logs/*.json` for chapter regressions
        (latest score below prior best by ≥0.3)
+     - `books/{book}/briefs/ch*.md` mtimes vs the corresponding
+       `books/{book}/chapters/ch_*.md` mtimes — a brief newer than
+       its chapter is the signal that the brief was written but
+       revise hasn't run yet (HIGH)
      - `books/{book}/edit_logs/reader_panel.json` and
        `opus_review.md` mtimes vs `books/{book}/chapters/ch_*.md`
        mtimes (staleness)
@@ -57,12 +62,15 @@ repeatedly.
      - `books/{book}/preface.md` and `introduction.md` presence
      - `git status` + remote for backup state
      - `.autonovel/last-action.json` for the canonical pipeline
-       next step
+       next step. Past-end-of-book guard: when the canonical line
+       says draft chapter `N` and `N` exceeds the count of existing
+       chapters by more than 1, it gets demoted to "book appears
+       complete — try evaluate --full / typeset" (INFO).
 
    It returns a prioritised markdown action list (HIGH for data-
-   integrity issues like conflicts and regressions, MEDIUM for
-   review staleness and backup, LOW for polish, then the canonical
-   pipeline next step at the bottom).
+   integrity issues like conflicts, regressions, and fresh briefs;
+   MEDIUM for review staleness and backup; LOW for polish; then
+   the canonical pipeline next step at the bottom).
 
 3. Print the helper's stdout verbatim. Do not editorialise.
 

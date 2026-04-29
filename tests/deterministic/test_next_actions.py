@@ -129,6 +129,108 @@ def test_chapter_regression_handles_timestamped_naming(series_root: Path) -> Non
     assert any("9" in a.title for a in regressions)
 
 
+# --------------------------------------------------------- brief newer than chapter
+
+
+def test_brief_newer_than_chapter_flags_revise(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Brief at briefs/ch02.md exists in the fixture; force its mtime
+    to be newer than the chapter and confirm we recommend revise."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    chapter = book_root / "chapters" / "ch_02.md"
+    brief = book_root / "briefs" / "ch02.md"
+    older = time.time() - 1000
+    os.utime(chapter, (older, older))
+    newer = time.time()
+    os.utime(brief, (newer, newer))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    revise = [a for a in actions if "fresh brief" in a.title.lower()]
+    assert len(revise) == 1
+    assert revise[0].priority == "HIGH"
+    assert revise[0].command is not None
+    # Single chapter → revise --chapter 2.
+    assert "revise --chapter 2" in revise[0].command
+
+
+def test_brief_older_than_chapter_silent(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Brief older than its chapter (the chapter has been revised
+    against it already) → no signal."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    chapter = book_root / "chapters" / "ch_02.md"
+    brief = book_root / "briefs" / "ch02.md"
+    older = time.time() - 1000
+    os.utime(brief, (older, older))
+    newer = time.time()
+    os.utime(chapter, (newer, newer))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("fresh brief" in a.title.lower() for a in actions)
+
+
+def test_multiple_fresh_briefs_recommend_revision_pass(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Three fresh briefs → revision-pass with comma-list of chapters."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    briefs_dir = book_root / "briefs"
+    older = time.time() - 1000
+    newer = time.time()
+    for n in (1, 3, 5):
+        chapter = book_root / "chapters" / f"ch_{n:02d}.md"
+        os.utime(chapter, (older, older))
+        brief = briefs_dir / f"ch{n:02d}.md"
+        brief.write_text(f"# Brief for ch {n}\n\n- Tighten.\n", encoding="utf-8")
+        os.utime(brief, (newer, newer))
+    # Also touch the existing ch02 brief to be older so it doesn't fire.
+    os.utime(briefs_dir / "ch02.md", (older - 1, older - 1))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    revise = [a for a in actions if "fresh brief" in a.title.lower()]
+    assert len(revise) == 1
+    assert "1,3,5" in revise[0].title
+    assert "revision-pass" in (revise[0].command or "")
+
+
+def test_brief_without_matching_chapter_silent(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Stray brief for a chapter that doesn't exist → silent (no
+    chapter to compare mtimes against)."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    (book_root / "briefs" / "ch99.md").write_text("orphan brief", encoding="utf-8")
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    titles = " | ".join(a.title for a in actions)
+    assert "ch 99" not in titles.lower() and "ch99" not in titles.lower()
+
+
+def test_conversation_md_does_not_trigger_brief_signal(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """briefs/conversation.md is the talk-queue, not a per-chapter
+    brief. Must not match the regex."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    conversation = book_root / "briefs" / "conversation.md"
+    conversation.write_text("Status: queued\nTarget: chapter 2\n",
+                             encoding="utf-8")
+    # Make sure conversation.md is newer than every chapter so it
+    # would fire if the regex were broken.
+    older = time.time() - 1000
+    for ch_path in (book_root / "chapters").glob("ch_*.md"):
+        os.utime(ch_path, (older, older))
+    os.utime(conversation, (time.time(), time.time()))
+    # Also reset the existing ch02 brief older so the legitimate signal
+    # doesn't fire.
+    os.utime(book_root / "briefs" / "ch02.md", (older - 1, older - 1))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("fresh brief" in a.title.lower() for a in actions)
+
+
 # --------------------------------------------------------- panel / review staleness
 
 
@@ -291,6 +393,50 @@ def test_canonical_pipeline_action_none_when_no_last_action(
 ) -> None:
     canon = next_actions.canonical_pipeline_action(_layout(series_root))
     assert canon is None
+
+
+def test_canonical_pipeline_action_past_end_replaced(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Late-stage fixture has 5 chapters. Canonical action says draft
+    25 → past end → replaced with 'book may be complete' INFO action
+    pointing at evaluate --full."""
+    series, book = late_stage_book
+    layout = _layout(series)
+    last_action_mod.write(
+        layout.last_action_file,
+        command="autonovel:brief",
+        args=["--chapter", "5"],
+        book=book,
+        next_standard_step=f"/autonovel:draft 25 --book {book}",
+        next_rationale="next chapter in the pipeline",
+    )
+    canon = next_actions.canonical_pipeline_action(layout, book=book)
+    assert canon is not None
+    assert "appears complete" in canon.title.lower()
+    assert "/autonovel:evaluate --full" in (canon.command or "")
+    assert canon.priority == "INFO"
+
+
+def test_canonical_pipeline_action_next_sequential_passes_through(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Late-stage fixture has 5 chapters. draft 6 (= existing+1) is
+    legitimate — the guard must not fire."""
+    series, book = late_stage_book
+    layout = _layout(series)
+    last_action_mod.write(
+        layout.last_action_file,
+        command="autonovel:evaluate",
+        args=["--chapter", "5"],
+        book=book,
+        next_standard_step=f"/autonovel:draft 6 --book {book}",
+        next_rationale="next chapter",
+    )
+    canon = next_actions.canonical_pipeline_action(layout, book=book)
+    assert canon is not None
+    assert "appears complete" not in canon.title.lower()
+    assert "/autonovel:draft 6" in (canon.command or "")
 
 
 def test_canonical_pipeline_action_filtered_by_book(series_root: Path) -> None:

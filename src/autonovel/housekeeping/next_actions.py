@@ -84,6 +84,7 @@ def _actions_for_book(series: SeriesLayout, cfg: project_mod.ProjectConfig,
     out: list[NextAction] = []
     out.extend(_pending_canon_conflict_actions(book_root, book))
     out.extend(_chapter_regression_actions(book_root, book))
+    out.extend(_brief_newer_than_chapter_actions(book_root, book))
     out.extend(_panel_staleness_actions(book_root, book))
     out.extend(_review_staleness_actions(book_root, book))
     out.extend(_typeset_staleness_actions(book_root, book, series.root))
@@ -191,6 +192,59 @@ def _chapter_regression_actions(book_root: Path, book: str) -> list[NextAction]:
             f"not better. Re-run the brief→revise cycle (without "
             f"--enrich-with this time) so the brief reconsiders from "
             f"cuts/eval evidence alone."
+        ),
+        book=book,
+    )]
+
+
+def _brief_newer_than_chapter_actions(book_root: Path, book: str) -> list[NextAction]:
+    """Brief files are written by `/autonovel:brief` and consumed by
+    `/autonovel:revise`. When a brief's mtime is newer than the
+    chapter it targets, the obvious next step is to revise that
+    chapter — but the canonical pipeline default keeps marching
+    forward instead. Surface this as a HIGH situational action.
+
+    Brief files live at `books/<book>/briefs/ch{NN:02d}.md`. We skip
+    `briefs/conversation.md` (a different shape — that's `talk`'s
+    queue, consumed by revise's per-chapter loop, not a per-chapter
+    brief).
+    """
+    briefs_dir = book_root / "briefs"
+    if not briefs_dir.is_dir():
+        return []
+    chapters_dir = book_root / "chapters"
+    pending: list[int] = []
+    for path in sorted(briefs_dir.iterdir()):
+        if not path.is_file():
+            continue
+        m = re.match(r"^ch(?P<ch>\d+)\.md$", path.name)
+        if not m:
+            continue
+        ch_num = int(m.group("ch"))
+        chapter_path = chapters_dir / f"ch_{ch_num:02d}.md"
+        if not chapter_path.is_file():
+            continue
+        if path.stat().st_mtime > chapter_path.stat().st_mtime:
+            pending.append(ch_num)
+    if not pending:
+        return []
+    pending.sort()
+    chapters_str = ",".join(str(c) for c in pending)
+    if len(pending) == 1:
+        command = f"/autonovel:revise --chapter {pending[0]} --book {book}"
+    else:
+        command = f"/autonovel:revision-pass --chapters {chapters_str} --book {book}"
+    return [NextAction(
+        priority="HIGH",
+        title=f"Revise chapter(s) with fresh briefs: {chapters_str}",
+        command=command,
+        rationale=(
+            f"books/{book}/briefs/ has {len(pending)} brief file(s) "
+            f"newer than their chapters (ch {chapters_str}). The brief "
+            f"is the input revise consumes — until revise runs, the "
+            f"work the brief captures isn't applied to the prose. "
+            f"For non-contiguous chapters, run `/autonovel:revise "
+            f"--chapter <N>` per chapter (revision-pass takes a range)."
         ),
         book=book,
     )]
@@ -436,12 +490,25 @@ def canonical_pipeline_action(series: SeriesLayout, *, book: str | None = None) 
     """Read the most recent last-action.json and return its
     next_standard_step as an INFO-priority action. This is the
     pipeline-canonical "if nothing more urgent applies, do this"
-    line. None when no last-action.json exists yet (fresh series)."""
+    line. None when no last-action.json exists yet (fresh series).
+
+    Past-end-of-book guard: when the next_standard_step is a draft
+    command targeting a chapter beyond `existing_chapters + 1`, the
+    canonical line is misleading (the book is at or past its planned
+    end). Replace with a "book appears complete" suggestion pointing
+    at evaluate --full / typeset.
+    """
     la = last_action_mod.read(series.last_action_file)
     if la is None or not la.next_standard_step:
         return None
     if book is not None and la.book and la.book != book:
         return None
+    target_book = la.book or book
+    guard = _past_end_of_book_replacement(
+        series, target_book, la.next_standard_step
+    )
+    if guard is not None:
+        return guard
     return NextAction(
         priority="INFO",
         title="Pipeline-standard next step (from last command's footer)",
@@ -455,6 +522,53 @@ def canonical_pipeline_action(series: SeriesLayout, *, book: str | None = None) 
             f"precedence.)"
         ),
         book=la.book,
+    )
+
+
+_DRAFT_TARGET_RE = re.compile(
+    r"/autonovel:draft\b.*?(?:--chapter\s+|\s)(?P<n>\d+)\b"
+)
+
+
+def _past_end_of_book_replacement(series: SeriesLayout, book: str | None,
+                                   command: str) -> NextAction | None:
+    """If `command` is a draft command targeting a chapter beyond
+    `existing_chapters + 1` for `book`, return a replacement
+    "book may be complete" INFO action. Otherwise None.
+
+    The +1 slack lets the legitimate "draft the next chapter" case
+    pass through (existing 24 chapters → draft 25 is fine; existing
+    24 chapters → draft 30 is past the end).
+    """
+    if book is None:
+        return None
+    m = _DRAFT_TARGET_RE.search(command)
+    if m is None:
+        return None
+    target = int(m.group("n"))
+    book_root = series.books / book
+    chapters_dir = book_root / "chapters"
+    if not chapters_dir.is_dir():
+        return None
+    existing = len(list(iter_chapter_files(chapters_dir)))
+    if target <= existing + 1:
+        return None
+    return NextAction(
+        priority="INFO",
+        title=f"Book {book} appears complete — try evaluate or typeset",
+        command=f"/autonovel:evaluate --full --book {book}",
+        rationale=(
+            f"The pipeline-canonical next step says draft chapter "
+            f"{target}, but books/{book}/chapters/ already has "
+            f"{existing} chapter(s) — chapter {target} is past the "
+            f"end. The book likely doesn't need another draft; "
+            f"`/autonovel:evaluate --full --book {book}` for whole-"
+            f"book scoring or `/autonovel:typeset --book {book}` to "
+            f"build the PDF + ePub. If the book really should grow, "
+            f"`/autonovel:draft {existing + 1} --book {book}` is the "
+            f"next sequential chapter."
+        ),
+        book=book,
     )
 
 
