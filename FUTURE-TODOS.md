@@ -162,14 +162,23 @@ to start.
      resolves all three production naming conventions. 7 new
      Tier-1 tests; Tier 1+2: 740 → 747.
 
-  3. **pipx-isolated install test (Tier-3).** Spin up a clean tmp
-     pipx home, `pipx install <repo>`, then verify
-     `autonovel mechanical slop <file>` and
-     `autonovel _tail-chapter --book ...` work from a shell whose
-     `python` is the system python (not the project venv). This
-     catches the `python -m autonovel.mechanical doesn't import`
-     class of bug we hit today. ~30 min of work; opt-in marker
-     so it doesn't run on every commit.
+  3. ~~**pipx-isolated install test (Tier-3).**~~
+     **Shipped 2026-04-28.** New file
+     `tests/smoke/test_pipx_install.py` builds a wheel via
+     `pipx install <repo>` against an isolated `PIPX_HOME` /
+     `PIPX_BIN_DIR` (so the install never touches the user's real
+     pipx state). Falls back to `python -m pipx` when `pipx` isn't
+     on `$PATH`, skips cleanly when neither works. Then exercises
+     the CLI surfaces that have historically broken under wheel
+     packaging: `autonovel --help`, `_next-actions --help`,
+     `mechanical slop --help`, `_promote-canon --help`, and an
+     end-to-end `new-series` + `doctor` round-trip — the last is
+     the strongest check for `templates/` packaging since
+     `new-series` writes from `src/autonovel/templates/` and a
+     missing force-include in pyproject would fail there. Marked
+     `smoke + pipx_install` so it can be excluded independently
+     (`-m "smoke and not pipx_install"`). Runs in ~6s on the
+     dev box.
 
 - **Bells Tier-4 fixture populate.** Still parked since PR 4. The
   harness is built; the chapters from `autonovel/bells` branch

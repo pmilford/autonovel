@@ -366,6 +366,18 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (pipx-isolated install Tier-3 test; FUTURE-TODOS #5.3):
+  new file `tests/smoke/test_pipx_install.py` builds a wheel via
+  `pipx install <repo>` against an isolated `PIPX_HOME` /
+  `PIPX_BIN_DIR`, falling back to `python -m pipx` when the binary
+  isn't on `$PATH`. Exercises the CLI surfaces that historically
+  break under wheel packaging — `--help`, `_next-actions --help`,
+  `mechanical slop --help`, `_promote-canon --help`, plus an
+  end-to-end `new-series` + `doctor` round-trip (the strongest
+  check for `templates/` packaging). Marked `smoke +
+  pipx_install` so it can be excluded with
+  `-m "smoke and not pipx_install"`. Adds a `pipx_install`
+  marker registration to `pyproject.toml`.
 - 2026-04-28 (multi-stage pipeline integration tests; FUTURE-TODOS
   #5.2): new file
   `tests/deterministic/test_integration_pipeline.py` walks the

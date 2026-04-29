@@ -63,4 +63,5 @@ markers = [
     "smoke: Tier-3 smoke tests (costs money; opt-in)",
     "regression: Tier-4 evaluator regression (costs money; opt-in)",
     "genre(name): mark a smoke test with a genre label",
+    "pipx_install: Tier-3 install test against a clean pipx home (slow; opt-in)",
 ]
