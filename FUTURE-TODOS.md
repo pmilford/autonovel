@@ -40,48 +40,34 @@ to start.
       "Typeset templates need a separate refresh".
   Tier 1+2: 774 → 785.
 
-- **Talk-with-the-book mode.** A conversational query+suggest
-  layer over the finished prose. The user types natural-language
-  questions or change requests; the command resolves them to
-  either a read-only answer (citing chapter + line) or a
-  staged edit (added to `books/{book}/briefs/conversation.md`
-  for the next revise pass). Examples from author 2026-04-28:
-  - **Q+A**: *"Explain to me why Jakob decided to open the book
-    of accounts."* → answer cites the chapter, the proximate
-    motive line, the prior setup, the consequence.
-  - **Suggest-and-stage**: *"Add some more details — the book of
-    accounts looked like it had been recently opened and
-    hurriedly returned to its place as it was out of alignment
-    with the other books."* → command writes a structured edit
-    suggestion to `briefs/conversation.md` with the target
-    chapter + scene + a one-line rationale. Next
-    `/autonovel:revise <chapter>` reads `briefs/conversation.md`
-    as additional brief input.
-  - **Mechanical+suggest**: *"Check how many times Jakob added
-    an entry to his cipher diary, and how many times he referred
-    to each entry. I think he made too many that were not later
-    mentioned. Reduce the number of entries and make sure
-    almost all entries are referred to at least once."* → first
-    runs the mechanical scanner (a generalisation of `motifs.py`:
-    "track named entity X across chapters; correlate occurrences
-    of X with mentions of X's prior occurrences"), surfaces the
-    table, then writes a structured cut-list to
-    `briefs/conversation.md` for revise.
-  Right shape: new heavy-tier command `/autonovel:talk --book
-  <name>` that runs as an interactive REPL inside the runtime;
-  each turn either prints an answer or appends to
-  `books/{book}/briefs/conversation.md` (idempotent — the file
-  is the conversation transcript + edit queue). Reads the same
-  context the rest of the pipeline does (chapters, summaries,
-  outline, canon, voice). Wire `/autonovel:revise` and
-  `/autonovel:revision-pass` to read `conversation.md` as a
-  brief-equivalent input. The mechanical-scan side benefits
-  from a reusable "named entity tracker" (extension of
-  `motifs.py`); break that out as `mechanical/entity_track.py`
-  early so `/autonovel:talk` and a future
-  `/autonovel:character-arc` can both call it.
-  Cost: ~6-10 hrs (REPL command + entity-tracker helper + brief
-  integration + Tier-1 tests + docs).
+- ~~**Talk-with-the-book mode.**~~ **Shipped 2026-04-28.** New
+  heavy-tier command `/autonovel:talk --book <name>
+  "<question-or-suggestion>" [--target <chapter>]`. Three modes
+  it classifies from the prompt:
+   - **Q+A** — *"explain why Jakob opened the book of accounts"*
+     → answers with chapter+line citations.
+   - **Suggest-and-stage** — *"add some details about the book of
+     accounts being out of alignment"* → writes a structured
+     turn to `books/{book}/briefs/conversation.md` with `Status:
+     queued`.
+   - **Mechanical+suggest** — *"how many cipher-diary entries
+     are referred to later? Cut the orphans"* → first calls
+     `autonovel mechanical entity-track`, surfaces the per-
+     chapter table, performs the semantic added-vs-referred
+     pairing, queues a structured cut-list.
+  `commands/revise.md` reads `briefs/conversation.md`, folds
+  every queued turn with `Target: chapter <N>` into the brief,
+  flips them to `Status: applied` after the rewrite. The same
+  conversation-fold contract is exposed in
+  `commands/revision-pass.md` so sweeps pick up queued turns
+  for every chapter in range automatically. New mechanical
+  helper `src/autonovel/mechanical/entity_track.py` is the
+  reusable named-entity tracker the Mechanical+suggest mode
+  drives; it's a generalisation of `motifs.py` that resolves
+  entities from `books/<book>/entities.md` first, falls back
+  to `[shortname]` heads in `shared/canon.md`. Tier 1+2:
+  785 → 803 (13 entity-track tests + 5 contract auto-pickups
+  for `/autonovel:talk`).
 
 - **Per-book tension/pacing visualisation — beyond the existing
   `--full` table.** The author asked 2026-04-28 whether a tension

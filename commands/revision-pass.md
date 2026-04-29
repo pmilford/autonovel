@@ -21,9 +21,11 @@ reads:
   - books/{book}/chapters/ch_*.summary.md
   - books/{book}/edit_logs/ch{chapter:02d}_anachronism.md
   - books/{book}/eval_logs/ch{chapter:02d}_eval.json
+  - books/{book}/briefs/conversation.md
 writes:
   - books/{book}/edit_logs/ch{chapter:02d}_anachronism.md
   - books/{book}/briefs/ch{chapter:02d}.md
+  - books/{book}/briefs/conversation.md
   - books/{book}/chapters/ch_{chapter}.md
   - books/{book}/chapters/ch_{chapter}.summary.md
   - books/{book}/eval_logs/ch{chapter:02d}_eval.json
@@ -39,7 +41,10 @@ runs:
 
   1. `check-anachronism` (period-vocabulary + LLM semantic check)
   2. `brief --from auto` (synthesize revision brief from cuts/eval/panel)
-  3. `revise` (rewrite chapter against the brief; regenerates the summary)
+  3. `revise` (rewrite chapter against the brief; regenerates the
+     summary; folds queued `briefs/conversation.md` entries
+     targeting this chapter into the brief and flips them to
+     `Status: applied`)
   4. `evaluate --chapter N` (score the revised version)
 
 This is the "I have 3 drafted chapters, I want them all revised in

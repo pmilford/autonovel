@@ -366,6 +366,29 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (talk-with-the-book mode + named-entity tracker;
+  FUTURE-TODOS Talk-mode entry): new heavy-tier command
+  `/autonovel:talk --book <name> "<question or suggestion>"
+  [--target <chapter>]`. Three modes classified from the user's
+  prompt — **Q+A** (cites chapter+line, no edit pending),
+  **Suggest-and-stage** (queues a structured turn in
+  `books/{book}/briefs/conversation.md` for the next revise),
+  **Mechanical+suggest** (calls `autonovel mechanical
+  entity-track` first, then queues a cut-list grounded in the
+  scan). The conversation log is append-only — each invocation
+  reads the existing log + processes one new turn + appends a
+  six-field block (`Question / suggestion`, `Mode`, `Target`,
+  `Answer / suggestion`, `Status`). `commands/revise.md` step 3a
+  reads the log and folds every queued turn with
+  `Target: chapter <N>` into the brief; step 11 flips them to
+  `Status: applied`. `commands/revision-pass.md` declares the
+  same files in reads/writes so sweeps inherit the contract.
+  New helper `src/autonovel/mechanical/entity_track.py` (the
+  named-entity generalisation of `motifs.py`): per-book
+  `entities.md` config first, fallback to `[shortname]` heads
+  in `shared/canon.md`. CLI subcommand `autonovel mechanical
+  entity-track <book_root>` and 13 Tier-1 tests covering the
+  parse/scan/build/CLI paths. Tier 1+2: 785 → 803.
 - 2026-04-28 (PDF page-header regression — two-bug fix; FUTURE-TODOS
   PDF entry): **Bug A**: `mechanical/latex.py::build_chapters_tex`
   read `lines[0]` of the post-frontmatter body as the chapter title;
@@ -678,7 +701,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **785
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **803
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2
@@ -686,7 +709,8 @@
   pickups; #3 (`/autonovel:art-prompts`) added 5 contract pickups
   for the new slash-command. PDF page-header regression fix added
   2 latex regression tests + 9 `autonovel refresh-templates`
-  tests.
+  tests. Talk-mode added 13 entity-track tests + 5 contract
+  pickups for `/autonovel:talk`.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-26 — **674
   passing** (`pytest tests/deterministic tests/contracts`). The
   2026-04-25 PM and 2026-04-26 waves added 223 tests across the

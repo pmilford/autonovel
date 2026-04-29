@@ -41,6 +41,10 @@ from .cuts import VALID_TYPES, apply_cuts
 from .epub import build_epub_md
 from .front_matter import build_front_matter_tex
 from .latex import build_chapters_tex
+from .entity_track import (
+    build_report as build_entity_report,
+    render_markdown as render_entity_md,
+)
 from .motifs import build_report as build_motif_report, render_markdown as render_motif_md
 from .scenes import split_scenes
 from .sensory import channel_balance
@@ -189,6 +193,19 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     }
     json.dump(payload, sys.stdout, indent=2)
     sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_entity_track(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    series_root = Path(args.series_root) if args.series_root else None
+    report = build_entity_report(book_root, series_root=series_root)
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_entity_md(report, book=book_root.name))
     return 0
 
 
@@ -397,6 +414,15 @@ def main(argv: list[str] | None = None) -> int:
     mt.add_argument("--format", choices=("markdown", "json"), default="markdown",
                     help="Output format (default: markdown table).")
     mt.set_defaults(func=_cmd_motifs)
+
+    et = sub.add_parser("entity-track",
+                        help="Per-chapter named-entity tracker (reads books/<book>/entities.md or shared/canon.md).")
+    et.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    et.add_argument("--series-root", default=None,
+                    help="Series root for canon.md fallback (default: parent of book_root's parent).")
+    et.add_argument("--format", choices=("markdown", "json"), default="markdown",
+                    help="Output format (default: markdown table).")
+    et.set_defaults(func=_cmd_entity_track)
 
     em = sub.add_parser("build-epub-md",
                         help="Concatenate ch_NN.md files into one pandoc-ready markdown.")

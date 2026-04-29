@@ -13,12 +13,14 @@ reads:
   - shared/canon.md
   - books/{book}/voice.md
   - books/{book}/briefs/ch{chapter:02d}.md
+  - books/{book}/briefs/conversation.md
   - books/{book}/chapters/ch_{chapter}.md
   - books/{book}/chapters/ch_{prev}.md
 writes:
   - books/{book}/chapters/ch_{chapter}.md
   - books/{book}/chapters/ch_{chapter}.summary.md
   - books/{book}/pending_canon.md
+  - books/{book}/briefs/conversation.md
 context_mode: book
 ---
 
@@ -42,6 +44,17 @@ target, not a mental "safe" overshoot.
 3. Use `file_read` on `books/{book}/briefs/ch{chapter:02d}.md`. If the
    brief is missing, stop and surface:
    "run `/autonovel:brief {chapter} --book {book}` first".
+
+3a. **Fold queued conversation suggestions into the brief.**
+    Use `file_read` on `books/{book}/briefs/conversation.md` if it
+    exists. Find every turn block where `Target: chapter {chapter}`
+    AND `Status: queued`. Treat each such block's
+    `Answer / suggestion:` body as additional brief content,
+    appended to the main brief in your working memory. The
+    conversation log entries are first-class brief input — they
+    came from the author hand-curating edits via
+    `/autonovel:talk`. If the file is missing or no queued entries
+    target this chapter, proceed normally.
 
 4. Use `file_read` on the shared canon: `shared/world.md`,
    `shared/characters.md`, `shared/canon.md`. These are guardrails, not
@@ -130,6 +143,15 @@ target, not a mental "safe" overshoot.
     line if the rewrite established nothing new). Never edit
     `shared/canon.md` directly — that is what `/autonovel:promote-canon`
     is for.
+
+11. **Mark folded conversation entries as applied.** If step 3a
+    found queued turns targeting this chapter, use `file_write` to
+    rewrite `books/{book}/briefs/conversation.md` with each of
+    those turn blocks' `Status:` line changed from `queued` to
+    `applied`. Other turns and other fields must be preserved
+    byte-for-byte — only the matching `Status: queued` lines flip
+    to `Status: applied`. If no entries were folded, do not touch
+    the file.
 </workflow>
 
 <acceptance>
@@ -142,4 +164,7 @@ target, not a mental "safe" overshoot.
   draft).
 - `books/{book}/pending_canon.md` grows by at least one line (either a
   candidate fact or the explicit `no new facts` marker).
+- Any `briefs/conversation.md` entries with
+  `Target: chapter {chapter}` + `Status: queued` are flipped to
+  `Status: applied` exactly once. Untouched turns are byte-identical.
 </acceptance>
