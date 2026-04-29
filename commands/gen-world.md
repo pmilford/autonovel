@@ -10,6 +10,7 @@ reads:
   - project.yaml
   - books/*/seed.txt
   - shared/world.md
+  - shared/research/notes/*.md
 writes:
   - shared/world.md
 context_mode: series
@@ -35,6 +36,20 @@ sparingly through canon promotion rather than wholesale rewrites.
 3. Use `file_read` on every `books/*/seed.txt`. Each seed is one to three
    paragraphs about a book in the series. Read all of them — the world has
    to support every book, not just the first.
+
+3a. **Read research notes when present.** Use `bash` with
+   `ls shared/research/notes/*.md 2>/dev/null` to enumerate any
+   research notes. For each file, `file_read` the whole thing and
+   treat its **Cited facts** + **Sources** sections as
+   *primary* over the LLM's general knowledge. Period
+   projects (those with `project.yaml :: period.start` set)
+   should have research notes; if the directory is empty for a
+   period project, surface a one-line nudge in stdout: "no
+   research notes — run `/autonovel:research --from-seed` first
+   so the world is built on cited dates" — but proceed if the
+   user is consciously skipping research. Cite the research-
+   note slugs in the world bible's Sources section so the
+   provenance trail is visible to gen-canon.
 
 4. Use `file_read` on `shared/world.md`. If it contains more than the
    template placeholder comment and `--force` was not supplied, stop; this

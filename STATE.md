@@ -366,6 +366,21 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (research at the front of the foundation — final
+  step; FUTURE-TODOS Research entry): the third sub-item closes
+  out the multi-step shipment. `commands/gen-world.md` step 3a
+  and `commands/gen-canon.md` step 2a now read every populated
+  `shared/research/notes/*.md` as primary source of truth, cite
+  slug provenance in the world bible's Sources section, surface
+  a one-line nudge to run `/autonovel:research --from-seed`
+  when a period project has no research notes, and (gen-canon)
+  preserve the `[research:<slug>]` citation tag through to
+  canon bullets so promote-canon's tagged-survives-untagged
+  conflict resolution stays correct (research entries beat
+  draft-derived contradictions). New `tests/deterministic/
+  test_research_at_front.py` adds 7 regression locks covering
+  reads-declarations, body mentions, recovery-path nudges, and
+  tag preservation. Tier 1+2: 1049 → 1056.
 - 2026-04-28 (show-don't-tell pre-flight scanner; FUTURE-TODOS
   show-dont-tell entry): new helper
   `src/autonovel/mechanical/show_dont_tell.py` + slash-command
@@ -880,7 +895,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1049
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1056
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

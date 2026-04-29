@@ -11,6 +11,7 @@ reads:
   - shared/world.md
   - shared/characters.md
   - shared/events.md
+  - shared/research/notes/*.md
   - books/*/outline.md
   - shared/canon.md
 writes:
@@ -33,6 +34,26 @@ drafted chapters. This command sets the initial state.
 2. Use `file_read` on `project.yaml`, `shared/world.md`,
    `shared/characters.md`, `shared/events.md`, and every
    `books/*/outline.md` that exists.
+
+2a. **Read research notes when present.** Use `bash` with
+    `ls shared/research/notes/*.md 2>/dev/null` to enumerate any
+    research notes. For each file, `file_read` it and treat its
+    **Cited facts** + **Sources** sections as the *primary*
+    source of truth for dates / names / events that conflict
+    with the LLM's general knowledge. Period projects with
+    `project.yaml :: period.start` set should have research
+    notes by this point; if the directory is empty for a
+    period project, surface a one-line nudge: "no research
+    notes — gen-canon may invent dates that conflict with later
+    research" — but proceed when the user has consciously
+    chosen to skip research.
+
+    Carry the citation token (`[research:<slug>]`) through every
+    canon bullet whose fact came from a research note. The
+    promote-canon helper already honours that tag for tagged-
+    survives-untagged conflict resolution; preserving it here
+    means a future `/autonovel:research` rerun that updates a
+    note can supersede the canon entry cleanly.
 
 3. Use `file_read` on `shared/canon.md`. If it contains more than the
    template placeholder comment and `--force` was not supplied, stop.
