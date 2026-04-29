@@ -88,6 +88,96 @@ to start.
   walkthrough). Opens up a meaningful adjacent use case without
   changing the rest of the pipeline.
 
+- **`/autonovel:next` — brief-newer-than-chapter signal + full
+  audit of situational gaps.** Surfaced 2026-04-29 by author
+  testing: ran `/autonovel:brief` for chapters 1, 2, 3, 5, 10 of
+  an active book; `/autonovel:next` then said "draft chapter 25"
+  (past end of book) instead of "revise chapters with fresh
+  briefs." The canonical-pipeline default ("draft the next
+  chapter") wins because no situational signal fires for the
+  brief→revise pair. Concrete gaps:
+   1. **brief newer than chapter → revise.** When
+      `books/<book>/briefs/ch{NN}_brief.md` mtime > the
+      corresponding `chapters/ch_{NN}.md` mtime, surface a HIGH
+      situational action recommending `/autonovel:revise
+      --chapter {NN}` (or `revision-pass --chapters {range}` for
+      contiguous runs). Same shape as the existing regression /
+      pending-canon checks in
+      `housekeeping/next_actions.py::enumerate_actions`.
+   2. **Audit every other situational case.** Walk each branch
+      in `enumerate_actions` and confirm: (a) the trigger fires
+      reliably on the realistic fixtures, (b) the recommended
+      command's `argument-hint` matches what the action prints,
+      (c) the priority is right (HIGH for data integrity,
+      MEDIUM for staleness, LOW for polish). Property-based
+      tests (`test_property_based.py`) verify shape but not
+      semantic correctness of every branch.
+   3. **Past-end-of-book guard on the canonical next step.**
+      When the canonical pipeline says `draft <N>` and `N >
+      planned_chapter_count + 1` (or > a configured ceiling),
+      demote the line to INFO and surface a "book appears
+      complete — try `/autonovel:evaluate --full` or
+      `/autonovel:typeset`" suggestion instead.
+  Add Tier-1 tests under
+  `tests/deterministic/test_next_actions_situational.py`. Cost:
+  ~3-4 hr (signal + audit + guard + tests).
+
+- **Situational-aware help hints in command output.** Surfaced
+  2026-04-29 by author testing: "I'm generally lost on next
+  steps, especially when the software is giving incorrect
+  guidance." Today the postamble's `next_standard_step` is the
+  only hint, and `/autonovel:next` is a separate call.
+  Proposal: every command postamble appends a "💡 Maybe try:"
+  line inferred from the same `next_actions` enumerator that
+  powers `/autonovel:next`, with a max of 1-2 suggestions
+  ranked by priority. Examples:
+   - After `brief` → "💡 Maybe try: `/autonovel:revise
+     --chapter <N>` (brief is fresher than the chapter)."
+   - After `evaluate --chapter N` with score < threshold →
+     "💡 Maybe try: `/autonovel:brief --chapter N` then
+     `/autonovel:revise --chapter N`."
+   - After `promote-canon` if conflicts remain → "💡 Maybe try:
+     resolve `## Conflict` blocks in
+     `shared/canon.md`, then re-run `/autonovel:promote-canon`."
+  Prefer situational; fall back to a small randomised pool of
+  general "did you know" hints (e.g. "💡 Did you know? `/autonovel:
+  summaries --where 'score < 7'` filters chapters") only when
+  no situational hint applies. Implementation: extend
+  `next_actions.enumerate_actions` to expose a `top_hint(state,
+  just_ran=<command>)` API; postamble in `_end` calls it and
+  prints the line. Suppress when `--quiet` or when the command
+  itself errored. Cost: ~3 hr (API + postamble wiring + Tier-1
+  tests + the small general-hints pool).
+
+- **Query/grep helper for `shared/research/notes/`.** Surfaced
+  2026-04-29: author has research notes for Jakob Fugger,
+  Maximilian I, Charles V and wants a structured way to
+  recall what's there + ask follow-up cross-character questions
+  ("how did Fugger and Maximilian's relationship evolve?")
+  without reading every file. Today the only paths are
+  `Read shared/research/notes/<slug>.md` (one at a time) or
+  `grep -r '<term>'`. Two complementary surfaces:
+   1. **`autonovel mechanical research-index <series_root>`**
+      (free, mechanical) — emits a markdown table: slug,
+      title, source count, citation count, word count,
+      last-updated. Optional `--grep '<pattern>'` filters by
+      keyword across notes. Optional `--cites '<URL-or-DOI>'`
+      shows which notes cite a given source.
+   2. **`/autonovel:research --query "<question>"`** (LLM,
+      cheap) — reads every file under `shared/research/notes/`,
+      answers the question with inline citations to the source
+      slugs, and writes nothing (read-only Q+A). Distinct from
+      `/autonovel:talk` by querying *research* rather than
+      *prose*. Distinct from `/autonovel:research "<topic>"`
+      by NOT firing live web search — pure synthesis over
+      what's already in `notes/`.
+  The mechanical surface is the cheap "what's even in there"
+  view; the LLM surface answers cross-character questions
+  that need synthesis. Cost: ~4-5 hr for both.
+  Open question: does adding new notes from a `--query`
+  follow-up belong here too, or stay in
+  `/autonovel:research "<topic>"` as today?
+
 
 
 - ~~**PDF page-header still leaks chapter prose (regression of the
