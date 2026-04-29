@@ -12,6 +12,7 @@ Subcommands:
   motifs <book> [--format]         Per-chapter motif density (reads books/<book>/motifs.md).
   chapter-summary <book> [--format] One-line-per-chapter overview (date/POV/score/cast/plot).
   impact-of <book> [--source N]    Grep chapters for tokens unique to superseded canon facts.
+  research-index <series>          Per-note metadata table for shared/research/notes/.
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
   build-front-matter-tex <book>    Build front_matter.tex from preface.md + introduction.md.
@@ -57,6 +58,10 @@ from .entity_track import (
 from .impact import (
     build_impact_report,
     render_impact_markdown,
+)
+from .research_index import (
+    build_index as build_research_index,
+    render_markdown as render_research_index_md,
 )
 from .period_register import (
     build_report as build_period_report,
@@ -378,6 +383,30 @@ def _cmd_impact_of(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_research_index(args: argparse.Namespace) -> int:
+    series_root = Path(args.series_root)
+    index = build_research_index(series_root)
+    if args.format == "json":
+        from .research_index import filter_index
+        rows = filter_index(index, grep=args.grep, cites_match=args.cites)
+        json.dump(
+            {
+                "series_root": str(series_root),
+                "filters": {"grep": args.grep, "cites": args.cites},
+                "notes": [n.to_dict() for n in rows],
+                "total_notes": len(index.notes),
+            },
+            sys.stdout, indent=2,
+        )
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_research_index_md(
+            index, grep=args.grep, cites_match=args.cites,
+            series_root=series_root,
+        ))
+    return 0
+
+
 def _cmd_dashboard(args: argparse.Namespace) -> int:
     book_root = Path(args.book_root)
     report = build_dashboard(book_root, threshold=args.threshold)
@@ -668,6 +697,17 @@ def main(argv: list[str] | None = None) -> int:
     sq.add_argument("--format", choices=("markdown", "json"), default="markdown",
                     help="Output format (default: markdown).")
     sq.set_defaults(func=_cmd_summary_query)
+
+    ri = sub.add_parser("research-index",
+                        help='Per-note metadata table for `shared/research/notes/` (slug / title / sources / citations / words).')
+    ri.add_argument("series_root", help="Path to the series root (parent of shared/).")
+    ri.add_argument("--grep", default=None,
+                     help="Filter to notes containing this substring (case-insensitive, full body).")
+    ri.add_argument("--cites", default=None,
+                     help="Filter to notes whose ## Sources block contains this substring (URL or DOI).")
+    ri.add_argument("--format", choices=("markdown", "json"), default="markdown",
+                     help="Output format (default: markdown).")
+    ri.set_defaults(func=_cmd_research_index)
 
     io = sub.add_parser("impact-of",
                         help='"What should I revise after promote-canon?" — grep chapters for tokens unique to superseded canon facts.')

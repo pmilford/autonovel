@@ -1,7 +1,7 @@
 ---
 name: autonovel:research
-description: Research a real-world topic with live web search and write sourced notes into shared/research/notes/.
-argument-hint: "\"<topic>\" | --from-seed [--book <name>]"
+description: Research a real-world topic with live web search and write sourced notes; or `--query` to ask cross-source questions over existing notes without firing web search.
+argument-hint: "\"<topic>\" | --from-seed [--book <name>] | --query \"<question>\""
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -83,8 +83,36 @@ Design rules:
      yields more than 2 named people/places, pick the 2 most central
      to the plot per the seed's pitch.
 
-   Missing topic and no `--from-seed` → stop with a one-line reminder:
-   `usage: /autonovel:research "<topic>"  OR  /autonovel:research --from-seed [--book <name>]`.
+   **(c) Query-existing-notes.** `--query "<question>"` reads every
+   `shared/research/notes/*.md` (no web search, no `web_fetch`),
+   answers the question with inline `[shortname]` citations, and
+   writes nothing. Distinct from `/autonovel:talk` (queries prose)
+   and modes (a)/(b) (live research). Cheap; the right tool for
+   "how did Fugger and Maximilian I interact?" or "which notes
+   mention the Council of Ten?" Use the
+   `autonovel mechanical research-index` CLI for the structural
+   "what's even in there" view first; use `--query` for synthesis.
+
+   When mode (c) fires:
+     1. Use `bash` to invoke `autonovel mechanical research-index
+        <series_root>` so the user sees the available notes inline
+        in the response (this lets them spot when a relevant note
+        is missing and could be researched live).
+     2. Use `file_read` on every `shared/research/notes/*.md` (or a
+        subset narrowed by keyword overlap with the question — your
+        judgement). Read the actual prose, not just titles.
+     3. Answer the question in 2-5 paragraphs. Every claim must
+        carry a `[shortname]` citation pulled directly from the
+        source notes. When a question has no support in the notes,
+        say so explicitly and recommend
+        `/autonovel:research "<sub-topic>"` to fill the gap.
+     4. End with a `## Sources read` list — slug names, not URLs —
+        so the user can drill into specific notes if the answer
+        is interesting.
+
+   Missing topic and no `--from-seed`/`--query` → stop with a
+   one-line reminder:
+   `usage: /autonovel:research "<topic>"  OR  /autonovel:research --from-seed [--book <name>]  OR  /autonovel:research --query "<question>"`.
 
 2. Slugify the topic (lowercase, non-alphanumerics → `-`, collapse
    repeats, trim). Example: `"Venetian apothecaries 1520"` →
