@@ -366,6 +366,21 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (series-arc score; FUTURE-TODOS series-arc entry):
+  new helper `src/autonovel/mechanical/series_arc.py` + slash-
+  command `/autonovel:series-arc` cross-book scoreboard for
+  series with ≥2 books. Per-book completion (summary / eval /
+  above-threshold + earliest/latest story_time), cross-book
+  cast (characters in ≥2 books), backwards story-time jumps
+  (chapters where story_time regresses — legitimate for
+  flashbacks), unresolved threads (Threads opened with no
+  Threads closed substring match later), composite arc score
+  0-10 blending coverage + above-threshold fraction +
+  story-time discipline penalty + unresolved-thread penalty.
+  CLI subcommand `autonovel mechanical series-arc
+  <series_root>`. LLM-judge upgrade for arc *quality* still
+  queued. 16 Tier-1 tests + 5 contract pickups. Tier 1+2:
+  1005 → 1026.
 - 2026-04-28 (edit-imported manuscript mode Phase 1; FUTURE-TODOS
   edit-imported entry): new `autonovel import-book <name> --from
   <path>` CLI subcommand and `/autonovel:import-book` slash-
@@ -849,7 +864,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1005
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **1026
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

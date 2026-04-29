@@ -133,6 +133,10 @@ each of these and the workaround is in the codebase:
   revise / panel / review / typeset) is unchanged. After
   importing, run `/autonovel:summarize-chapter --all --book
   <name>` so revise/brief have continuity summaries to read.
+- Run `/autonovel:series-arc` (no `--book`) when the series
+  has ≥2 books for the cross-book scoreboard — completion,
+  cross-book cast, story-time discipline, unresolved threads,
+  composite arc score 0-10.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

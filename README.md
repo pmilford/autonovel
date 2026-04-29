@@ -479,9 +479,11 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   three pre-flight scanners — `dialogue` (adverb tags / said-
   bookisms / stutters), `period-register` (period-bans roll-up),
   `pov-bleed` (interiority verbs attached to non-POV characters);
-  and `import-book` to bring an externally-written manuscript into
+  `import-book` to bring an externally-written manuscript into
   the pipeline (`mode: edit-imported` flips draft to refuse-mode
-  so the import isn't accidentally overwritten).
+  so the import isn't accidentally overwritten); and
+  `series-arc` for the cross-book scoreboard once your series
+  has ≥2 books.
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
   `title`, `introduction`, `landing`, `package`. The art family
   now includes `art-prompts` — author per-chapter art prompt

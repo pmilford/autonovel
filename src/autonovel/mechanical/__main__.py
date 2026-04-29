@@ -61,6 +61,10 @@ from .pov_bleed import (
     build_report as build_pov_bleed_report,
     render_markdown as render_pov_bleed_md,
 )
+from .series_arc import (
+    build_report as build_series_arc_report,
+    render_markdown as render_series_arc_md,
+)
 from .motifs import build_report as build_motif_report, render_markdown as render_motif_md
 from .summary_query import (
     QueryError,
@@ -241,6 +245,17 @@ def _cmd_period_register(args: argparse.Namespace) -> int:
     else:
         sys.stdout.write(render_period_md(report, book=book_root.name,
                                             show_hits=not args.summary_only))
+    return 0
+
+
+def _cmd_series_arc(args: argparse.Namespace) -> int:
+    series_root = Path(args.series_root)
+    report = build_series_arc_report(series_root, threshold=args.threshold)
+    if args.format == "json":
+        json.dump(report.to_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_series_arc_md(report))
     return 0
 
 
@@ -542,6 +557,14 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("--format", choices=("markdown", "json"), default="markdown")
     pr.add_argument("--summary-only", action="store_true")
     pr.set_defaults(func=_cmd_period_register)
+
+    sa = sub.add_parser("series-arc",
+                         help="Series-arc score across ≥2 books — completion, cross-book cast, story-time discipline, unresolved threads.")
+    sa.add_argument("series_root", help="Path to the series root (parent of books/).")
+    sa.add_argument("--threshold", type=float, default=7.0,
+                     help="Chapter score threshold for ≥thr count (default 7.0).")
+    sa.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    sa.set_defaults(func=_cmd_series_arc)
 
     pb = sub.add_parser("pov-bleed",
                          help="Heuristic POV-bleed scan — flag interiority lines naming non-POV characters.")

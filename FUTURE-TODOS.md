@@ -752,10 +752,33 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   `/autonovel:evaluate --chapter 1` adds a separate
   `hook_strength` score over the first 250 words; surfaces it on
   its own line in the summary; flags below 6.0 as a real concern.
-- **Series-arc score.** When `project.yaml` declares ≥2 books, score
-  cross-book arcs (does the series have a question that resolves in
-  the final book? do early-book setups pay off in late books?). Today
-  the outline ledger tracks plants/payoffs per book only.
+- ~~**Series-arc score.**~~ **Shipped 2026-04-28.** New helper
+  `src/autonovel/mechanical/series_arc.py` and slash-command
+  `/autonovel:series-arc` deliver a cross-book scoreboard:
+  per-book completion (summary / eval / above-threshold counts
+  + earliest/latest story_time), cross-book cast (characters
+  appearing in ≥2 books, ranked by spread), backwards story-
+  time jumps (chapter where `story_time` regresses from prior
+  — legitimate for flashbacks but worth surfacing), unresolved
+  threads (chapter `Threads opened:` with no later
+  `Threads closed:` substring match), and a composite 0-10 arc
+  score blending completion + above-threshold fraction +
+  story-time discipline penalty + unresolved-thread penalty.
+  CLI subcommand `autonovel mechanical series-arc <series_root>`
+  + slash-command. 16 Tier-1 tests + 5 contract pickups. Tier
+  1+2: 1005 → 1026.
+
+- **Series-arc — LLM-judge upgrade follow-up.** The 2026-04-28
+  helper covers the structural scoreboard. Not yet covered: an
+  LLM judge that scores arc *quality* (does the series have a
+  question that resolves in the final book? do early-book
+  setups pay off in late books?). Right shape: a new
+  `--phase series` mode in `/autonovel:evaluate` that reads
+  every book's outline + summary + eval logs and emits one
+  arc-quality dimension per book pair plus an overall
+  `series_arc_quality` score. Hold for now — the structural
+  scoreboard already catches the load-bearing failure modes;
+  arc-quality is a craft polish.
 
 ## Maintenance
 
