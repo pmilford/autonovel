@@ -79,6 +79,14 @@ def _build_parser() -> argparse.ArgumentParser:
                       help="Overwrite chapter files that already exist at the target paths.")
     imp.add_argument("--dry-run", dest="dry_run", action="store_true",
                       help="Print what would be written without touching disk.")
+    imp.add_argument("--reverse-engineer", dest="reverse_engineer",
+                      action="store_true",
+                      help="After import, scan the imported prose for candidate "
+                            "character names and write/append `shared/characters.md` "
+                            "with auto-detected entries. Mechanical only; voice "
+                            "and outline reverse-engineering belong in the "
+                            "follow-up LLM commands (voice-discovery / "
+                            "summarize-chapter / gen-outline).")
     imp.set_defaults(func=_cmd_import_book)
 
     st = sub.add_parser("status", help="Show series status.")
@@ -382,6 +390,29 @@ def _cmd_import_book(args: argparse.Namespace) -> int:
             "pipeline (evaluate / brief / revise / panel / review / typeset) "
             "treats imported chapters identically to drafted ones."
         )
+    if args.reverse_engineer and not args.dry_run:
+        from . import import_foundation
+        book_root = series.root / "books" / args.name
+        re_result = import_foundation.reverse_engineer(
+            series.root, book_root, dry_run=args.dry_run,
+        )
+        print()
+        print(f"Reverse-engineered foundation candidates: "
+              f"{len(re_result.candidates)} character name(s) detected.")
+        if re_result.candidates:
+            for c in re_result.candidates[:10]:
+                print(f"  · {c.name} ({c.occurrences}x in "
+                      f"{len(c.sample_chapters)} chapter(s))")
+            if len(re_result.candidates) > 10:
+                print(f"  · … and {len(re_result.candidates) - 10} more "
+                      f"(see `shared/characters.md`).")
+        print(f"`shared/characters.md`: {re_result.characters_md_action}.")
+        print()
+        print("Next steps:")
+        for i, step in enumerate(re_result.next_steps, 1):
+            print(f"  {i}. {step}")
+    elif args.reverse_engineer and args.dry_run:
+        print("(--reverse-engineer is a no-op under --dry-run)")
     if args.dry_run:
         print("(dry-run — no files modified)")
     return 0

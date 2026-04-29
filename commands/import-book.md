@@ -1,7 +1,7 @@
 ---
 name: autonovel:import-book
 description: Import an externally-written manuscript into a book's chapters/. Splits a directory or single-file source into autonovel-shape ch_NN.md files.
-argument-hint: "--book <short-name> --from <path> [--split-on <regex>] [--start <N>] [--pov <name>] [--keep-mode] [--overwrite] [--dry-run]"
+argument-hint: "--book <short-name> --from <path> [--split-on <regex>] [--start <N>] [--pov <name>] [--keep-mode] [--overwrite] [--reverse-engineer] [--dry-run]"
 model_tier: light
 allowed-tools:
   - bash
@@ -72,6 +72,14 @@ Pure mechanical. No LLM call. Light tier — runs in milliseconds.
      untouched. Default: flip to `edit-imported`.
    - `--overwrite` — replace existing `ch_NN.md` files at the
      target paths. Default: skip with a warning.
+   - `--reverse-engineer` — after the import, scan the imported
+     prose for high-frequency capitalised tokens (candidate
+     character names) and either write a stub
+     `shared/characters.md` (when missing) or append a
+     "Candidate cast (auto-detected)" block (when present). Pure
+     mechanical — voice and outline reverse-engineering belong in
+     the LLM follow-ups (`voice-discovery` / `summarize-chapter`
+     / `gen-outline`), printed as a numbered next-step list.
    - `--dry-run` — print what would be written; touch nothing.
 
 3. Use the `Bash` tool to call the housekeeping CLI (this is
@@ -81,7 +89,7 @@ Pure mechanical. No LLM call. Light tier — runs in milliseconds.
    ```
    autonovel import-book {book} --from {path} \
      [--split-on '<regex>'] [--start N] [--pov <name>] \
-     [--keep-mode] [--overwrite] [--dry-run]
+     [--keep-mode] [--overwrite] [--reverse-engineer] [--dry-run]
    ```
 
    The CLI validates the book exists, runs the splitter, writes
