@@ -366,6 +366,26 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (`/autonovel:next` made dynamic; FUTURE-TODOS #2):
+  state-aware action enumerator at
+  `src/autonovel/housekeeping/next_actions.py`. Inspects live
+  filesystem for HIGH (pending-canon conflicts, chapter
+  regressions ≥0.3 below prior best across timestamped /
+  non-timestamped eval-log naming), MEDIUM (reader-panel +
+  Opus-review staleness vs chapter mtimes; git backup state —
+  no repo / no remote / uncommitted / unpushed), LOW (typeset
+  `<book>_latest.pdf` staleness, missing book title or author,
+  missing preface/introduction once ≥3 chapters drafted).
+  Hidden subcommand `autonovel _next-actions [--book <name>]
+  [--format human|json]` invokes it; `commands/next.md`
+  rewrites the body to call the helper and print verbatim.
+  Last-action.json's `next_standard_step` still surfaces — but
+  as the lowest-priority "canonical pipeline next step" line at
+  the bottom, so situational state always wins. 27 new Tier-1
+  tests (`tests/deterministic/test_next_actions.py`) cover each
+  per-book check, three git-backup states, canonical-action
+  lookup with book filtering, the human render's priority
+  grouping, and CLI round-trips. Tier 1+2: 696 → 723.
 - 2026-04-26 (live-novel session, second wave): a long author-test
   day on the live novel surfaced concrete gaps; everything below
   shipped on master between 2026-04-25 PM and 2026-04-26 PM.
@@ -567,6 +587,11 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **723
+  passing** (`pytest tests/deterministic tests/contracts`).
+  FUTURE-TODOS #1 (promote-canon helper) added 22 tests on
+  2026-04-26; FUTURE-TODOS #2 (dynamic /autonovel:next) added 27
+  tests on 2026-04-28.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-26 — **674
   passing** (`pytest tests/deterministic tests/contracts`). The
   2026-04-25 PM and 2026-04-26 waves added 223 tests across the

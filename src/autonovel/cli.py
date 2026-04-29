@@ -167,6 +167,13 @@ def _build_parser() -> argparse.ArgumentParser:
     _end.add_argument("--wrote", action="append", default=[])
     _end.set_defaults(func=_cmd_end)
 
+    _na = sub.add_parser("_next-actions", help=argparse.SUPPRESS)
+    _na.add_argument("--book", default=None,
+                     help="Restrict to one book; default: every book in project.yaml.")
+    _na.add_argument("--format", choices=("human", "json"), default="human",
+                     help="Output format (default: human markdown).")
+    _na.set_defaults(func=_cmd_next_actions)
+
     _pc = sub.add_parser("_promote-canon", help=argparse.SUPPRESS)
     _pc.add_argument("--book", default=None,
                      help="Book name to promote; default: every book in project.yaml.")
@@ -557,6 +564,32 @@ def _cmd_end(args: argparse.Namespace) -> int:
         print(result.footer)
     else:
         print(f"_end: status={args.status}; log updated")
+    return 0
+
+
+def _cmd_next_actions(args: argparse.Namespace) -> int:
+    """Hidden subcommand: enumerate state-aware next actions for
+    /autonovel:next. Reads filesystem state directly; never replays
+    last-action.json (that's a separate input, surfaced as the
+    canonical pipeline action at the bottom of the output)."""
+    import json as _json
+    from .housekeeping import next_actions
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    actions = next_actions.enumerate_actions(series, book=args.book)
+    canonical = next_actions.canonical_pipeline_action(series, book=args.book)
+    if args.format == "json":
+        payload = {
+            "actions": [a.to_dict() for a in actions],
+            "canonical": canonical.to_dict() if canonical else None,
+        }
+        _json.dump(payload, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(next_actions.render_human(actions, canonical=canonical))
     return 0
 
 

@@ -1,0 +1,405 @@
+"""Tier-1 tests for the state-aware next-actions enumerator.
+
+Covers each per-book check (pending-canon conflicts, regressions,
+panel/review/typeset staleness, missing title/author, missing front
+matter), the series-wide git-backup states, the canonical pipeline
+action lookup, the human render, and a CLI round-trip via
+`autonovel _next-actions`.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+from autonovel import last_action as last_action_mod
+from autonovel.housekeeping import next_actions
+from autonovel.housekeeping.next_actions import NextAction
+from autonovel.paths import SeriesLayout
+
+
+# --------------------------------------------------------- per-book helpers
+
+
+def _layout(series_root: Path) -> SeriesLayout:
+    return SeriesLayout(root=series_root)
+
+
+def _write_chapter(book_root: Path, n: int, content: str = "Prose. " * 100) -> Path:
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    path = chapters / f"ch_{n:02d}.md"
+    path.write_text(
+        f"---\nchapter: {n}\nstatus: drafted\nword_count: 1500\n---\n\n{content}",
+        encoding="utf-8",
+    )
+    return path
+
+
+# --------------------------------------------------------- pending canon conflicts
+
+
+def test_pending_canon_conflict_actions_flags_blocks(late_stage_book: tuple[Path, str]) -> None:
+    series, book = late_stage_book
+    pending = series / "books" / book / "pending_canon.md"
+    pending.write_text(
+        "# Conflicts — resolve before next promote-canon\n\n"
+        "HOW TO RESOLVE A CONFLICT\n... blurb ...\n\n"
+        "## Conflict 1\n- Pending: x\n- Existing: y\n\n"
+        "## Conflict 2\n- Pending: a\n- Existing: b\n",
+        encoding="utf-8",
+    )
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    high = [a for a in actions if a.priority == "HIGH" and "conflict" in a.title.lower()]
+    assert len(high) == 1
+    assert "2" in high[0].title  # 2 conflicts
+
+
+def test_pending_canon_with_no_conflict_header_emits_nothing(
+    late_stage_book: tuple[Path, str]
+) -> None:
+    series, book = late_stage_book
+    # late_stage_book wrote a pending_canon.md without a conflicts header.
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("conflict" in a.title.lower() for a in actions)
+
+
+# --------------------------------------------------------- chapter regressions
+
+
+def test_chapter_regression_actions_flags_drop_at_or_above_threshold(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    series, book = late_stage_book
+    eval_dir = series / "books" / book / "eval_logs"
+    # Chapter 7: prior best 7.5, latest 7.0 — delta 0.5 ≥ 0.3 → flagged.
+    (eval_dir / "20260101_120000_ch07_eval.json").write_text(
+        json.dumps({"overall_score": 7.5}), encoding="utf-8"
+    )
+    (eval_dir / "20260102_120000_ch07_eval.json").write_text(
+        json.dumps({"overall_score": 7.0}), encoding="utf-8"
+    )
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    regressions = [a for a in actions if "regressed" in a.title.lower()]
+    assert len(regressions) == 1
+    assert "7" in regressions[0].title
+    assert "revision-pass" in (regressions[0].command or "")
+
+
+def test_chapter_regression_ignores_small_drops(late_stage_book: tuple[Path, str]) -> None:
+    series, book = late_stage_book
+    eval_dir = series / "books" / book / "eval_logs"
+    # Drop 7.5 → 7.3 = 0.2 < 0.3 → ignored.
+    (eval_dir / "20260101_120000_ch08_eval.json").write_text(
+        json.dumps({"overall_score": 7.5}), encoding="utf-8"
+    )
+    (eval_dir / "20260102_120000_ch08_eval.json").write_text(
+        json.dumps({"overall_score": 7.3}), encoding="utf-8"
+    )
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("regressed" in a.title.lower() for a in actions)
+
+
+def test_chapter_regression_handles_timestamped_naming(series_root: Path) -> None:
+    """Timestamped `<ts>_chNN_eval.json` shape (the production
+    naming) — flag a regression on chapter 9."""
+    book = "the-book"
+    book_root = series_root / "books" / book
+    eval_dir = book_root / "eval_logs"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    (eval_dir / "20260101_120000_ch09_eval.json").write_text(
+        json.dumps({"overall_score": 7.8}), encoding="utf-8"
+    )
+    (eval_dir / "20260201_120000_ch09_eval.json").write_text(
+        json.dumps({"overall_score": 7.0}), encoding="utf-8"
+    )
+    # Wire the book into project.yaml so the per-book pass scans it.
+    from autonovel import project as project_mod
+    cfg = project_mod.load(_layout(series_root).project_file)
+    cfg.books.append(project_mod.BookEntry(name=book, status="drafting"))
+    project_mod.dump(cfg, _layout(series_root).project_file)
+    actions = next_actions.enumerate_actions(_layout(series_root), book=book)
+    regressions = [a for a in actions if "regressed" in a.title.lower()]
+    assert any("9" in a.title for a in regressions)
+
+
+# --------------------------------------------------------- panel / review staleness
+
+
+def test_panel_staleness_actions_when_chapter_newer(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    series, book = late_stage_book
+    edit_logs = series / "books" / book / "edit_logs"
+    edit_logs.mkdir(exist_ok=True)
+    panel = edit_logs / "reader_panel.json"
+    panel.write_text(json.dumps({"flagged": []}), encoding="utf-8")
+    # Reset panel mtime to a fixed time, then touch a chapter newer.
+    older = time.time() - 1000
+    os.utime(panel, (older, older))
+    _write_chapter(series / "books" / book, 6)
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    panel_actions = [a for a in actions if "reader-panel" in a.title.lower()]
+    assert len(panel_actions) == 1
+    assert panel_actions[0].priority == "MEDIUM"
+
+
+def test_panel_staleness_skipped_when_no_report(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    series, book = late_stage_book
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("reader-panel" in a.title.lower() for a in actions)
+
+
+def test_review_staleness_actions(late_stage_book: tuple[Path, str]) -> None:
+    series, book = late_stage_book
+    edit_logs = series / "books" / book / "edit_logs"
+    edit_logs.mkdir(exist_ok=True)
+    review = edit_logs / "opus_review.md"
+    review.write_text("# Opus review\n\nFlagged.\n", encoding="utf-8")
+    older = time.time() - 1000
+    os.utime(review, (older, older))
+    _write_chapter(series / "books" / book, 7)
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    review_actions = [a for a in actions if "opus review" in a.title.lower()]
+    assert len(review_actions) == 1
+
+
+# --------------------------------------------------------- typeset staleness
+
+
+def test_typeset_staleness_actions(late_stage_book: tuple[Path, str]) -> None:
+    series, book = late_stage_book
+    typeset = series / "books" / book / "typeset"
+    typeset.mkdir(exist_ok=True)
+    pdf = typeset / f"{book}_latest.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    older = time.time() - 1000
+    os.utime(pdf, (older, older))
+    _write_chapter(series / "books" / book, 8)
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    typeset_actions = [a for a in actions if "rebuild pdf" in a.title.lower()]
+    assert len(typeset_actions) == 1
+    assert typeset_actions[0].priority == "LOW"
+
+
+def test_typeset_skipped_when_no_pdf(late_stage_book: tuple[Path, str]) -> None:
+    series, book = late_stage_book
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("rebuild pdf" in a.title.lower() for a in actions)
+
+
+# --------------------------------------------------------- title/author + front matter
+
+
+def test_missing_title_action(late_stage_book: tuple[Path, str]) -> None:
+    series, book = late_stage_book
+    # Default scaffolded book has no title set.
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    title_actions = [a for a in actions if "display" in a.title.lower()]
+    assert len(title_actions) == 1
+    assert "title" in title_actions[0].rationale.lower()
+
+
+def test_title_set_silences_action(late_stage_book: tuple[Path, str]) -> None:
+    from autonovel import project as project_mod
+    series, book = late_stage_book
+    cfg = project_mod.load(_layout(series).project_file)
+    entry = cfg.book_by_name(book)
+    assert entry is not None
+    entry.title = "The Real Title"
+    cfg.author = "A. Author"
+    project_mod.dump(cfg, _layout(series).project_file)
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("display" in a.title.lower() for a in actions)
+
+
+def test_missing_front_matter_when_three_chapters_drafted(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    series, book = late_stage_book
+    # late_stage_book has 5 chapters drafted, no preface or intro.
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    fm = [a for a in actions if "preface or introduction" in a.title.lower()]
+    assert len(fm) == 1
+
+
+def test_front_matter_action_silenced_when_preface_exists(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    series, book = late_stage_book
+    (series / "books" / book / "preface.md").write_text("# Preface\n\nText.\n", encoding="utf-8")
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("preface or introduction" in a.title.lower() for a in actions)
+
+
+def test_front_matter_skipped_below_three_chapters(series_root: Path) -> None:
+    """Newly-scaffolded series with no chapters → no front-matter
+    nag."""
+    actions = next_actions.enumerate_actions(_layout(series_root))
+    assert not any("preface or introduction" in a.title.lower() for a in actions)
+
+
+# --------------------------------------------------------- git backup states
+
+
+def test_git_backup_no_repo_state(series_root: Path) -> None:
+    actions = next_actions.enumerate_actions(_layout(series_root))
+    backup = [a for a in actions if "back up" in a.title.lower()]
+    assert len(backup) == 1
+    assert backup[0].priority == "MEDIUM"
+
+
+def test_git_backup_no_remote_state(series_root: Path) -> None:
+    subprocess.run(["git", "-C", str(series_root), "init", "-q"], check=True)
+    actions = next_actions.enumerate_actions(_layout(series_root))
+    backup = [a for a in actions if "remote" in a.title.lower() and "github" in a.title.lower()]
+    assert len(backup) == 1
+
+
+# --------------------------------------------------------- canonical pipeline action
+
+
+def test_canonical_pipeline_action_present_when_last_action_set(
+    series_root: Path,
+) -> None:
+    layout = _layout(series_root)
+    layout.autonovel.mkdir(exist_ok=True)
+    last_action_mod.write(
+        layout.last_action_file,
+        command="autonovel:draft",
+        args=["1"],
+        book="b",
+        next_standard_step="/autonovel:evaluate --chapter 1 --book b",
+        next_rationale="evaluate the new chapter",
+    )
+    canon = next_actions.canonical_pipeline_action(layout)
+    assert canon is not None
+    assert canon.priority == "INFO"
+    assert "/autonovel:evaluate" in (canon.command or "")
+
+
+def test_canonical_pipeline_action_none_when_no_last_action(
+    series_root: Path,
+) -> None:
+    canon = next_actions.canonical_pipeline_action(_layout(series_root))
+    assert canon is None
+
+
+def test_canonical_pipeline_action_filtered_by_book(series_root: Path) -> None:
+    layout = _layout(series_root)
+    layout.autonovel.mkdir(exist_ok=True)
+    last_action_mod.write(
+        layout.last_action_file,
+        command="autonovel:draft",
+        args=[],
+        book="other-book",
+        next_standard_step="/autonovel:evaluate",
+        next_rationale="...",
+    )
+    assert next_actions.canonical_pipeline_action(layout, book="this-book") is None
+    assert next_actions.canonical_pipeline_action(layout, book="other-book") is not None
+
+
+# --------------------------------------------------------- render
+
+
+def test_render_human_empty_returns_clean_message() -> None:
+    out = next_actions.render_human([], canonical=None)
+    assert "clean" in out.lower()
+
+
+def test_render_human_groups_by_priority() -> None:
+    actions = [
+        NextAction(priority="LOW", title="low thing", command=None, rationale="lo"),
+        NextAction(priority="HIGH", title="high thing", command="cmd", rationale="hi"),
+    ]
+    out = next_actions.render_human(actions, canonical=None)
+    # HIGH section appears before LOW section in the rendered output.
+    assert out.index("HIGH priority") < out.index("LOW priority")
+    assert "high thing" in out
+    assert "low thing" in out
+
+
+def test_render_human_includes_canonical_block() -> None:
+    canon = NextAction(
+        priority="INFO", title="canonical", command="/autonovel:x", rationale="why"
+    )
+    out = next_actions.render_human([], canonical=canon)
+    assert "Canonical pipeline next step" in out
+    assert "/autonovel:x" in out
+
+
+def test_enumerate_sorts_high_before_medium_before_low(series_root: Path) -> None:
+    """Sanity: a synthetic series that triggers HIGH (conflicts) +
+    MEDIUM (git backup absent) + LOW (missing title) emits them in
+    priority order."""
+    book = "demo-book"
+    book_root = series_root / "books" / book
+    book_root.mkdir(parents=True, exist_ok=True)
+    # HIGH: pending_canon conflict block.
+    (book_root / "pending_canon.md").write_text(
+        "# Conflicts — resolve before next promote-canon\n\n## Conflict 1\n- Pending: x\n",
+        encoding="utf-8",
+    )
+    # Wire the book into project.yaml so book_by_name finds it.
+    from autonovel import project as project_mod
+    cfg = project_mod.load(_layout(series_root).project_file)
+    cfg.books.append(project_mod.BookEntry(name=book, status="drafting"))
+    project_mod.dump(cfg, _layout(series_root).project_file)
+
+    actions = next_actions.enumerate_actions(_layout(series_root))
+    priorities = [a.priority for a in actions]
+    # Confirm HIGH appears before any MEDIUM / LOW.
+    high_idx = next((i for i, p in enumerate(priorities) if p == "HIGH"), None)
+    medium_idx = next((i for i, p in enumerate(priorities) if p == "MEDIUM"), None)
+    assert high_idx is not None
+    if medium_idx is not None:
+        assert high_idx < medium_idx
+
+
+# --------------------------------------------------------- CLI round-trip
+
+
+def test_cli_next_actions_human_format(late_stage_book: tuple[Path, str]) -> None:
+    series, _ = late_stage_book
+    proc = subprocess.run(
+        [sys.executable, "-m", "autonovel.cli", "_next-actions", "--format", "human"],
+        cwd=series, capture_output=True, text=True, check=True,
+    )
+    # Late-stage fixture has no title set + no front matter + no git
+    # repo, so we always have at least one MEDIUM (backup) and at
+    # least one LOW (title) action.
+    assert "priority" in proc.stdout.lower()
+
+
+def test_cli_next_actions_json_format(late_stage_book: tuple[Path, str]) -> None:
+    series, _ = late_stage_book
+    proc = subprocess.run(
+        [sys.executable, "-m", "autonovel.cli", "_next-actions", "--format", "json"],
+        cwd=series, capture_output=True, text=True, check=True,
+    )
+    payload = json.loads(proc.stdout)
+    assert "actions" in payload
+    assert isinstance(payload["actions"], list)
+    assert "canonical" in payload
+
+
+def test_cli_next_actions_book_filter(late_stage_book: tuple[Path, str]) -> None:
+    series, book = late_stage_book
+    proc = subprocess.run(
+        [sys.executable, "-m", "autonovel.cli", "_next-actions",
+         "--book", book, "--format", "json"],
+        cwd=series, capture_output=True, text=True, check=True,
+    )
+    payload = json.loads(proc.stdout)
+    # Every per-book action is for `book`; series-wide ones have book=None.
+    for a in payload["actions"]:
+        assert a["book"] in (book, None)

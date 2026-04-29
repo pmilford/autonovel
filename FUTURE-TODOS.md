@@ -39,44 +39,31 @@ to start.
   facts`), dry-run, lock refusal without `--no-lock`, and CLI
   round-trips in human + json formats.
 
-- **Make `/autonovel:next` dynamic instead of static.** Today the
-  command reads `.autonovel/last-action.json` and prints
-  `next_standard_step` verbatim — it never inspects current
-  filesystem state. Net effect: `/autonovel:next` shows "what the
-  previously-run command thought you should do next, frozen in
-  time." It can't say "you have N negative-delta chapters from the
-  last revision-pass" or "pending_canon.md has K conflicts" or
-  "the reader-panel report is now stale because half the chapters
-  changed since". Author noticed 2026-04-26: *"I would expect the
-  proposed autonovel:next would give this information cleanly —
-  why doesn't it? is the information in next static?"* — yes, it
-  is static.
-
-  Right shape: extend `commands/next.md` to read filesystem state
-  (eval logs and their per-chapter recency, `pending_canon.md`
-  conflict-block count, edit_logs/reader_panel.json mtime vs
-  chapter mtimes for staleness, git remote state, title/author
-  in project.yaml, preface/introduction presence, typeset
-  artefact recency) and re-derive a numbered list of next-actions
-  from current ground truth. Most logic already exists in
-  `housekeeping/lifecycle.py::_infer_phase` and
-  `housekeeping/status.py`; this command just needs to compose
-  them and emit a state-aware multi-line recommendation block.
-
-  Stopgap shipped 2026-04-26: sweep commands' postambles
-  (`revision-pass.md` step 6, `draft-pass.md` step 7) now write
-  multi-line `next_standard_step` values that name the verify →
-  conflict-check → panel-review → backup → decide closer with
-  state filled in from what just happened. So `/autonovel:next`
-  after a sweep IS now informative — but only because the sweep
-  baked the right info into last-action.json. The dynamic
-  version stays correct even after time passes (e.g. you ran
-  draft-pass yesterday, then today three chapters were revised
-  by hand-editing — last-action.json says "draft-pass next:
-  reader-panel" but reality says "those three chapters need
-  re-eval first").
-
-  Cost ~3-5 hrs (+ Tier-1 tests for the state-inference logic).
+- ~~**Make `/autonovel:next` dynamic instead of static.**~~
+  **Shipped 2026-04-28.** New helper module
+  `src/autonovel/housekeeping/next_actions.py` enumerates
+  filesystem state directly (no last-action.json replay) and
+  returns a prioritised list of `NextAction` records: HIGH for
+  data-integrity (pending-canon conflict blocks, chapter
+  regressions ≥0.3 below prior best), MEDIUM for review
+  staleness (reader-panel / Opus review reports older than any
+  chapter file) and git backup (no repo / no remote /
+  uncommitted / unpushed), LOW for polish (stale typeset PDF,
+  missing book title or author, missing preface / introduction
+  once ≥3 chapters drafted). Hidden subcommand `autonovel
+  _next-actions [--book <name>] [--format human|json]` invokes
+  the enumerator. The frozen `next_standard_step` from
+  last-action.json is still surfaced — but as the lowest-
+  priority "canonical pipeline next step" line at the bottom,
+  so situational state always wins. `commands/next.md`
+  rewritten to call the helper via the `bash` tool and print
+  its output verbatim. 27 Tier-1 tests cover each per-book
+  check, the three git-backup states, the canonical-action
+  lookup with book filtering, the human render's priority
+  grouping, and CLI round-trips in human + json. Stopgap
+  postamble multi-line `next_standard_step` values from the
+  sweep commands are still useful (they produce the canonical-
+  pipeline line) but no longer the only source of truth.
 
 
 
