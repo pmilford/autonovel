@@ -50,6 +50,7 @@ Every editing command falls into one of four roles:
 | `/autonovel:chapter-summary` | Mechanical helper | One-line-per-chapter overview table — Date / POV / Score / Words / Cast / Plot (with location prefix). Pure mechanical, no LLM. The right tool for "which chapters happen in <date range>?" or "where does <character> appear?" before a revision pass. **Does NOT modify chapters.** |
 | `/autonovel:motifs` | Mechanical helper | Per-chapter motif density tracker. Reads `books/{book}/motifs.md` (one bullet per motif: `- slug: keyword1, keyword2`). Flags motifs that drop to zero in the back half of a book they were established in earlier — catches "set up an image, never paid it off". Pure mechanical. **Does NOT modify chapters.** |
 | `/autonovel:talk` | Conversational layer | Ask the book questions or queue edits in natural language. Three modes: **Q+A** (cites chapter+line, no edit), **Suggest-and-stage** (queues an edit in `briefs/conversation.md`), **Mechanical+suggest** (runs `entity-track` first, then queues a structured cut-list). Queued turns get folded into the brief by the next `/autonovel:revise <N>`. |
+| `/autonovel:dashboard` | Mechanical helper | Per-book at-a-glance dashboard — re-renders the latest `--full` eval log + mechanical augmentations (cast size, scene count, dialogue density, motif density), plus score and tension sparklines, per-book aggregates, and tension-drop alarms. Re-runs without firing an LLM evaluate pass. **Does NOT modify chapters.** |
 
 ### The crucial insight: `brief` is the synthesiser
 

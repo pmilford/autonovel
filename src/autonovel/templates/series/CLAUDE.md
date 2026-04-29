@@ -109,6 +109,10 @@ each of these and the workaround is in the codebase:
   density table (configure `books/<name>/motifs.md` first).
 - Run `/autonovel:chapter-summary --book <name>` for the
   one-line-per-chapter overview.
+- Run `/autonovel:dashboard --book <name>` for the at-a-glance
+  shape — score / tension sparklines, aggregates, and tension-
+  drop alarms re-rendered from the latest eval log without
+  firing another evaluate.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

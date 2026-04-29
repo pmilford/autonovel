@@ -469,9 +469,12 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   ("which chapters happen in <date range>?", "where does
   <character> appear?"); `motifs` for per-chapter motif density
   with back-half drop warnings (configure
-  `books/{book}/motifs.md`); and `talk` — a conversational
+  `books/{book}/motifs.md`); `talk` — a conversational
   query+suggest layer where you ask the book questions or queue
-  edits that the next `revise` picks up automatically.
+  edits that the next `revise` picks up automatically; and
+  `dashboard` — score / tension / pacing curve / aggregates with
+  sparklines, re-rendered from existing eval logs without firing
+  another evaluate.
 - **Export:** `art-*`, `cover-*`, `audiobook-*`, `typeset`,
   `title`, `introduction`, `landing`, `package`. The art family
   now includes `art-prompts` — author per-chapter art prompt

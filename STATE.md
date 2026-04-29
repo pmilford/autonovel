@@ -366,6 +366,21 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (per-book pacing/tension dashboard; FUTURE-TODOS
+  Dashboard entry): new light-tier command `/autonovel:dashboard
+  [--book <name>] [--threshold <float>] [--format markdown|json]`
+  re-renders the latest `<ts>_full.json` eval log without firing
+  another LLM evaluate. Augments with mechanical dimensions
+  (cast size from summary, scene count from `***`/`---` markers,
+  dialogue density from paragraph-opening `"`, motif density
+  from motifs.md when present), ASCII sparklines (▁ to █) for
+  score + tension, per-book aggregates (mean / median / range /
+  stdev, longest sub-threshold streak), tension-drop alarms
+  (≥3 consecutive declines) re-run from existing data. Helper
+  at `src/autonovel/mechanical/dashboard.py` + CLI subcommand
+  `autonovel mechanical dashboard <book_root>`. Output footer
+  names per-column provenance. 32 Tier-1 tests + 4 contract
+  auto-pickups. Tier 1+2: 803 → 840.
 - 2026-04-28 (talk-with-the-book mode + named-entity tracker;
   FUTURE-TODOS Talk-mode entry): new heavy-tier command
   `/autonovel:talk --book <name> "<question or suggestion>"
@@ -701,7 +716,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **803
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **840
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

@@ -69,38 +69,24 @@ to start.
   785 → 803 (13 entity-track tests + 5 contract auto-pickups
   for `/autonovel:talk`).
 
-- **Per-book tension/pacing visualisation — beyond the existing
-  `--full` table.** The author asked 2026-04-28 whether a tension
-  graph or table per chapter and per book exists. It partly does:
-  `/autonovel:evaluate --full` already emits a markdown table
-  with per-chapter `words / score / tension / dialogue% / scenes
-  / beats-hit` (shipped 2026-04-25). Gaps:
-   1. The table is only emitted as part of an evaluate run,
-      buried in the eval log. Add a standalone light-tier
-      `/autonovel:dashboard --book <name>` that re-renders the
-      same numbers without re-running evaluate (reads the latest
-      eval log + chapter frontmatter + chapter-summary index).
-   2. Add an ASCII sparkline column so the tension curve is
-      visible at a glance (`▁▂▃▅▇▆▄▂▁` per chapter).
-   3. Per-book aggregates (mean, median, range, longest
-      sub-7 streak) so multi-book series surface "Book Two has
-      a flat back third" without the author manually scanning
-      ten chapters.
-   4. Other dimensions worth tracking the same way:
-      `irreversible_change` per chapter (does the book
-      *actually* deliver consequence, or stall?);
-      `cast_size` per chapter (a sudden balloon in named cast
-      is usually a control problem); `scene_count` per chapter
-      (pacing proxy that's noisier than tension but
-      complementary); `dialogue_density` per chapter
-      (proportion of dialogue lines vs prose lines — set
-      pieces vs interiority); `motif_density` from
-      `motifs.md` (already rendered standalone by
-      `/autonovel:motifs` — surface it here as well).
-   Right shape: extend the existing `evaluate --full` table
-   shape into a re-renderable command + a per-book aggregate
-   block + sparklines + the new dimensions above. Cost: ~3-4
-   hrs. Pure mechanical; no new LLM call.
+- ~~**Per-book tension/pacing visualisation — beyond the existing
+  `--full` table.**~~ **Shipped 2026-04-28.** New light-tier
+  command `/autonovel:dashboard [--book <name>] [--threshold
+  <float>] [--format markdown|json]` re-renders the latest
+  `<ts>_full.json` eval log without firing another LLM evaluate.
+  Augments with mechanical dimensions (cast size from summary,
+  scene count from `***`/`---` markers, dialogue density from
+  paragraph-opening `"`, motif density from `motifs.md` when
+  present), ASCII sparklines (▁ to █) for the score and tension
+  series, per-book aggregates (mean / median / range / stdev,
+  longest sub-threshold streak), and the tension-drop alarm
+  (≥3 consecutive declines) re-run from the existing data.
+  Output ends with a `_sources_` provenance footer naming where
+  each column came from. New helper
+  `src/autonovel/mechanical/dashboard.py` + CLI subcommand
+  `autonovel mechanical dashboard <book_root>`. 32 Tier-1 tests
+  + 4 contract auto-pickups for the new command. Tier 1+2:
+  803 → 840.
 
 - **Easy way to interact and query the chapter summaries.** Today
   `/autonovel:chapter-summary` prints the full table and asks the

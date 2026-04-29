@@ -41,6 +41,10 @@ from .cuts import VALID_TYPES, apply_cuts
 from .epub import build_epub_md
 from .front_matter import build_front_matter_tex
 from .latex import build_chapters_tex
+from .dashboard import (
+    build_dashboard,
+    render_markdown as render_dashboard_md,
+)
 from .entity_track import (
     build_report as build_entity_report,
     render_markdown as render_entity_md,
@@ -193,6 +197,17 @@ def _cmd_scenes(args: argparse.Namespace) -> int:
     }
     json.dump(payload, sys.stdout, indent=2)
     sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_dashboard(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    report = build_dashboard(book_root, threshold=args.threshold)
+    if args.format == "json":
+        json.dump(report.to_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_dashboard_md(report, threshold=args.threshold))
     return 0
 
 
@@ -414,6 +429,15 @@ def main(argv: list[str] | None = None) -> int:
     mt.add_argument("--format", choices=("markdown", "json"), default="markdown",
                     help="Output format (default: markdown table).")
     mt.set_defaults(func=_cmd_motifs)
+
+    db = sub.add_parser("dashboard",
+                        help="Per-book dashboard re-renders eval log + augments mechanical dimensions; no LLM call.")
+    db.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    db.add_argument("--threshold", type=float, default=7.0,
+                    help="Chapter score threshold for sub-threshold streak (default 7.0).")
+    db.add_argument("--format", choices=("markdown", "json"), default="markdown",
+                    help="Output format (default: markdown).")
+    db.set_defaults(func=_cmd_dashboard)
 
     et = sub.add_parser("entity-track",
                         help="Per-chapter named-entity tracker (reads books/<book>/entities.md or shared/canon.md).")
