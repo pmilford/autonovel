@@ -67,6 +67,7 @@ argument is required when more than one book exists in the series.
 | Command | Tier | Description |
 |---|---|---|
 | `/autonovel:evaluate --phase foundation --book <name>` | heavy | Score the foundation. |
+| `/autonovel:evaluate --phase series` | heavy | Score arc *quality* across ≥2 books. Pairs with `/autonovel:series-arc` (structural scoreboard); this LLM judge scores `series_question`, `early_setup_late_payoff`, `cross_book_character_growth`, `world_evolution_consistency`, `tonal_continuity`. Output includes a `unresolved_thread_payoff_plan` array brief / revise can act on. Eval log lands at `.autonovel/eval_logs/<ts>_series.json`. |
 | `/autonovel:evaluate --chapter <N> --book <name>` | heavy | Score one chapter against the standard rubric plus `irreversible_change` (Stability Trap antidote), `beat_coverage` (per-scene goal/conflict/disaster-or-decision/consequence; surfaces `weakest_scenes` by index), and any criteria in `voice.md` Part 3 (Custom rubric). For chapter 1, also scores `hook_strength` over the first 250 words. |
 | `/autonovel:evaluate --full --book <name>` | heavy | Score the whole book — adds `irreversible_change_arc` (walks every (N→N+1) chapter pair, surfaces `cuttable_chapters`), `book_beat_coverage_score`, and `weak_beat_coverage_chapters`. Emits the per-chapter pacing-curve table + tension-drop alarms. |
 | `/autonovel:evaluate --compare <N>,<M> --book <name>` | heavy | Head-to-head chapter pair. |

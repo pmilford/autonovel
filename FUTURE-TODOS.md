@@ -821,17 +821,28 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   + slash-command. 16 Tier-1 tests + 5 contract pickups. Tier
   1+2: 1005 → 1026.
 
-- **Series-arc — LLM-judge upgrade follow-up.** The 2026-04-28
-  helper covers the structural scoreboard. Not yet covered: an
-  LLM judge that scores arc *quality* (does the series have a
-  question that resolves in the final book? do early-book
-  setups pay off in late books?). Right shape: a new
-  `--phase series` mode in `/autonovel:evaluate` that reads
-  every book's outline + summary + eval logs and emits one
-  arc-quality dimension per book pair plus an overall
-  `series_arc_quality` score. Hold for now — the structural
-  scoreboard already catches the load-bearing failure modes;
-  arc-quality is a craft polish.
+- ~~**Series-arc — LLM-judge upgrade follow-up.**~~
+  **Shipped 2026-04-29.** New `--phase series` mode in
+  `commands/evaluate.md` scores arc *quality* across ≥2 books.
+  Pairs with the structural scoreboard
+  (`/autonovel:series-arc`): the helper provides evidence
+  (cross-book cast, backwards story-time jumps, unresolved
+  threads, structural arc score); the LLM judges quality
+  (does the series open a load-bearing question and resolve
+  it? do early-book setups pay off late? does each cross-book
+  character earn their state changes? does world evolution
+  stay consistent? does tone carry across books?). Five
+  dimensions: `series_question`, `early_setup_late_payoff`,
+  `cross_book_character_growth`, `world_evolution_consistency`,
+  `tonal_continuity`. Top-level outputs include
+  `series_score`, `weakest_book`, `top_3_arc_revisions`, and
+  the load-bearing `unresolved_thread_payoff_plan` array
+  (one entry per `series-arc` thread the LLM rates as a real
+  payoff debt, with a one-sentence "where this should pay
+  off" note that brief / revise can act on). Eval log lands
+  at `.autonovel/eval_logs/<ts>_series.json` (series-level,
+  not per-book). 8 Tier-1 regression locks pin the contract
+  surface. Tier 1+2: 1115 → 1123.
 
 ## Maintenance
 

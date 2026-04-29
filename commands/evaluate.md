@@ -1,7 +1,7 @@
 ---
 name: autonovel:evaluate
 description: Score the foundation, a chapter, the whole book, or a head-to-head chapter pair.
-argument-hint: "--phase foundation --book <name> | --chapter <N> --book <name> | --full --book <name> | --compare <N>,<M> --book <name>"
+argument-hint: "--phase foundation --book <name> | --phase series | --chapter <N> --book <name> | --full --book <name> | --compare <N>,<M> --book <name>"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -18,8 +18,13 @@ reads:
   - books/{book}/outline.md
   - books/{book}/chapters/ch_{chapter}.md
   - books/{book}/chapters/*.md
+  - books/{book}/chapters/ch_*.summary.md
+  - books/*/outline.md
+  - books/*/voice.md
+  - books/*/chapters/ch_*.summary.md
 writes:
   - books/{book}/eval_logs/*.json
+  - .autonovel/eval_logs/*.json
 context_mode: book
 ---
 
@@ -28,22 +33,24 @@ Judge model scores, subtracts a deterministic AI-slop penalty, and writes
 an eval log the rest of the pipeline consumes. This command is the
 successor to the old `evaluate.py` — the mechanical half lives in
 `src/autonovel/mechanical/` and is invoked via `bash`; the LLM-judgement
-half is this command's body. Four modes:
+half is this command's body. Five modes:
 
   --phase foundation   score the planning layer for one book
+  --phase series       score arc *quality* across ≥2 books (no --book)
   --chapter <N>        score a single chapter
   --full               score the whole book holistically
   --compare <N>,<M>    pick a winner between two chapters (successor to
                        the deleted `compare_chapters.py`)
 
-Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.json`.
+Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.json`,
+or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
 </purpose>
 
 <workflow>
 1. Parse `$ARGUMENTS`. Exactly one of `--phase`, `--chapter`, `--full`, or
-   `--compare` must be present; `--book <short-name>` is required in every
-   mode. Anything else is a usage error — print a one-line reminder and
-   stop.
+   `--compare` must be present. `--book <short-name>` is required for
+   every mode EXCEPT `--phase series` (which is whole-series). Anything
+   else is a usage error — print a one-line reminder and stop.
 
 2. Use `file_read` on `project.yaml` to resolve the book entry, its `pov`,
    and `defaults.chapter_target_words` / `defaults.chapter_threshold`. The
@@ -111,6 +118,65 @@ Eval logs are JSON and land under `books/{book}/eval_logs/<timestamp>_<mode>.jso
    canon entry that hardened from a different chapter's
    research, leaving downstream chapters drafted against a
    silently-wrong date or name.
+
+5b. Mode `--phase series`: score arc *quality* across the whole
+    series. Requires `project.yaml :: books` length ≥ 2; refuse
+    cleanly with a one-line message otherwise. This mode pairs
+    with `/autonovel:series-arc` (the structural scoreboard) —
+    that command surfaces *what* is missing; this mode scores
+    *whether the missing thing is load-bearing*. Reads:
+    - `project.yaml` for the books list.
+    - `shared/world.md`, `shared/characters.md`, `shared/canon.md`,
+      `shared/events.md`.
+    - For each book: `books/{name}/outline.md`,
+      `books/{name}/voice.md` Part 1+2, every
+      `books/{name}/chapters/ch_*.summary.md` (the continuity
+      summaries — load these instead of the prose so the
+      context budget fits ≥2 books).
+    - The most recent `--full` eval log per book (when one
+      exists), purely for the `weakest_chapter` and
+      `top_suggestion` fields.
+    - First, run `autonovel mechanical series-arc <series_root>
+      --format json` via the `Bash` tool. Treat its
+      `cross_book_cast`, `backwards_story_time_jumps`,
+      `unresolved_threads`, and `arc_score` as *evidence* —
+      the LLM judges *quality*, the helper provides
+      *structure*.
+
+    Score the dimensions:
+    - `series_question`: does the series open a load-bearing
+      question and resolve it by the final book? 9-10 = a
+      named promise opens in book 1 and pays off; 5-6 = the
+      books cohere thematically but no single question drives
+      across them; 1-3 = each book is a standalone with no
+      arc carry.
+    - `early_setup_late_payoff`: of the threads
+      `series-arc` flagged as unresolved, how many are real
+      payoff debts vs benign loose ends? Flag the worst
+      offenders by name. Score the ratio of paid-off setups
+      to total setups.
+    - `cross_book_character_growth`: for each character in
+      the cross-book cast, do their state changes feel
+      earned across books? Surface the character whose arc
+      is weakest as `weakest_arc_character`.
+    - `world_evolution_consistency`: does the world deepen
+      across books without contradicting itself? Backwards
+      story-time jumps from `series-arc` are evidence here.
+    - `tonal_continuity`: do voice and register match the
+      series's frame across books, or does book N feel like
+      a different series?
+
+    Emit per-dimension `{score, weakest_moment, fix, note}` plus
+    a top-level `series_score`, `weakest_dimension`,
+    `weakest_book`, `top_3_arc_revisions`, and a
+    `unresolved_thread_payoff_plan` array — one entry per
+    `series-arc` unresolved thread the LLM rates as
+    load-bearing, with a one-sentence "where this should pay
+    off" note that brief / revise can act on.
+
+    Write the eval log to
+    `.autonovel/eval_logs/<timestamp>_series.json` (NOT under
+    any single book — this is a series-level artefact).
 
 6. Mode `--chapter <N>`: use `file_read` on
    `books/{book}/chapters/ch_{chapter}.md`. If the file is missing or

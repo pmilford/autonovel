@@ -366,6 +366,25 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-29 (series-arc LLM-judge upgrade; FUTURE-TODOS
+  Series-arc-LLM-judge entry): new `--phase series` mode in
+  `commands/evaluate.md` scores arc *quality* across ≥2 books.
+  Pairs with the structural `/autonovel:series-arc` scoreboard
+  — helper provides evidence (cross-book cast, backwards
+  story-time jumps, unresolved threads, arc_score), LLM scores
+  quality across five dimensions: `series_question`,
+  `early_setup_late_payoff`, `cross_book_character_growth`,
+  `world_evolution_consistency`, `tonal_continuity`. Top-level
+  outputs include `series_score`, `weakest_book`,
+  `top_3_arc_revisions`, and the load-bearing
+  `unresolved_thread_payoff_plan` array brief / revise act on.
+  Eval log lands at `.autonovel/eval_logs/<ts>_series.json`
+  (series-level, not per-book). evaluate.md frontmatter reads
+  expanded to include `books/*/outline.md`,
+  `books/*/voice.md`, `books/*/chapters/ch_*.summary.md`;
+  writes adds `.autonovel/eval_logs/*.json`. 8 Tier-1
+  regression locks pin contract surfaces. Tier 1+2: 1115 →
+  1123.
 - 2026-04-29 (period syntax-drift scanner; FUTURE-TODOS
   Period-register-extension entry): Flesch-Kincaid grade per
   chapter vs voice / seed / median-of-chapters baseline.
@@ -958,7 +977,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1115
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1123
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2
