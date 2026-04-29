@@ -149,6 +149,52 @@ to start.
   itself errored. Cost: ~3 hr (API + postamble wiring + Tier-1
   tests + the small general-hints pool).
 
+- **`/autonovel:impact-of <command>` — answer "what should I
+  revise now?" without ls/grep.** Surfaced 2026-04-29: after
+  `/autonovel:promote-canon` the author asked "what's the next
+  step?" and the only correct answer required (a) reading
+  `## Superseded` blocks in `shared/canon.md`, (b) `grep -ril`
+  for each flipped fact across `books/<book>/chapters/`, (c)
+  cross-referencing the chapter list, (d) running
+  `/autonovel:evaluate --full`, and (e) building a targeted
+  revise list. That is exactly the workflow autonovel exists to
+  collapse — the user said "I should never have to use ls or
+  grep." Same shape recurs after `research`, `add-source`,
+  `voice-discovery`, `gen-canon`, `add-character`,
+  `rename-character`, `merge-chapters`, `reorder`,
+  `remove-chapter`. Each of those mutates a foundation file
+  and downstream chapters may need to be revised; today the
+  user has to do the impact analysis by hand.
+  Proposed command: `/autonovel:impact-of <command>
+  [--book <name>] [--since <git-ref>]` — a light-tier
+  command that:
+   1. Reads what changed (Superseded blocks for promote-canon;
+      `git diff <ref>..HEAD shared/` for the others; new
+      `shared/research/notes/<slug>.md` files for research).
+   2. Walks `books/<book>/chapters/` and finds chapters that
+      reference the changed surfaces — by literal grep for
+      flipped names/dates and by per-chapter LLM scan for
+      semantic dependencies (the cheap `chapter-summary` index
+      already names cast + locations + facts).
+   3. Emits a targeted action plan: a markdown checklist of
+      `/autonovel:revise --chapter N (because <fact>
+      changed)`, ranked by impact (number of references,
+      severity of contradiction).
+   4. Exposes the same plan via `autonovel _impact-of` for
+      `/autonovel:next` to consume — so after `promote-canon`,
+      `next` can lead with the targeted revise list instead of
+      the canonical "draft chapter N+1" line.
+  Generalises the brief→revise signal entry above. The
+  situational-hints entry adds *one-line nudges*; this entry
+  adds *the actionable list with rationale* the user actually
+  needs. Cost: ~5-7 hr (analyzer per command type + LLM per-
+  chapter scan + Tier-1 tests + slash-command + `_impact-of`
+  CLI).
+  Bigger principle: any time the help-flow forces the user
+  into shell commands (`ls`, `grep`, `cat`) to figure out
+  which of N chapters to act on, that's a missing autonovel
+  surface — file an issue.
+
 - **Query/grep helper for `shared/research/notes/`.** Surfaced
   2026-04-29: author has research notes for Jakob Fugger,
   Maximilian I, Charles V and wants a structured way to
