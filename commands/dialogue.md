@@ -12,19 +12,27 @@ context_mode: book
 ---
 
 <purpose>
-Pure-mechanical pre-flight scanner for the small set of dialogue
-patterns that are reliable AI tells: adverb-heavy speech tags
-(*"she said quietly"*), said-bookisms in dense clusters
-(*exclaimed / murmured / whispered* within a few lines), and
-repeated-speech-verb stutters (the same non-`said` verb three
-times within ten lines).
+Pure-mechanical **candidate generator** for dialogue patterns that
+are often AI tells:
 
-This catches the long tail of dialogue tells before they reach a
-heavy-tier evaluate run — the LLM judge already covers them under
-`prose_quality` but only on chapters that have been evaluated. This
-scanner runs over the whole book in milliseconds, costs nothing,
-and surfaces hit lines with location so the user can fix them in a
-fast revise loop.
+- adverb-heavy speech tags (*"she said quietly"*)
+- said-bookisms in dense clusters (`exclaimed`, `murmured`,
+  `whispered` within a few lines)
+- repeated speech-verb stutters (same non-`said` verb 3+ times
+  in a 10-line window)
+- action-beat-as-tag clusters (`she laughed, "..."`)
+- softening qualifiers in short retorts (`"Maybe,"`)
+- unattributed-dialogue runs (≥3 consecutive un-tagged dialogue
+  paragraphs)
+
+**Review list, not a quality gate.** False positives are common
+— fast back-and-forth between two known speakers, intentional
+register shifts, dialect choices. The LLM judge in
+`/autonovel:evaluate`'s `prose_quality` and `voice_adherence`
+dimensions does the actual scoring; this scanner runs over the
+whole book in milliseconds and surfaces line-level candidates so
+brief / revise have concrete targets without a heavy-tier eval
+call.
 
 Pure mechanical. No LLM call. Light tier.
 </purpose>

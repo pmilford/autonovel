@@ -366,6 +366,21 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-29 (dialogue-mechanics extensions; FUTURE-TODOS
+  Dialogue-extensions entry): three new detectors in
+  `mechanical/dialogue.py` — action-beat-as-tag clusters (3+
+  in 10-line window), softening qualifiers in short retorts
+  (under-80-char dialogue with `maybe`/`kind of`/`a little`/
+  etc.), un-tagged-dialogue clusters (≥3 consecutive un-tagged
+  paragraphs). The originally-planned cast-count gate for the
+  un-tagged check was reverted per
+  `feedback_avoid_brittle_python.md`: the cap-token-count
+  proxy broke on Unicode names + sentence-initial capitalised
+  dialogue. Reported as review-list, not a gate. Curated word
+  lists kept short (~25 action-beat verbs, ~13 softening
+  qualifiers). Slash-command body disclaimer updated to name
+  the candidate-generator scope. 11 new Tier-1 tests. Tier 1+2:
+  1081 → 1092.
 - 2026-04-29 (show-don't-tell LLM-judge upgrade; FUTURE-TODOS
   Show-don't-tell follow-up): `commands/evaluate.md`
   `--chapter` mode gains `show_dont_tell_ratio` dimension;
@@ -929,7 +944,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1081
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1092
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

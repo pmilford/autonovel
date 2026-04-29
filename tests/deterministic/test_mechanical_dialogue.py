@@ -187,6 +187,145 @@ def test_cli_dialogue_markdown(tmp_path: Path) -> None:
     assert "quietly" in proc.stdout
 
 
+# ---------------------------------------------------------- action-beat clusters
+
+
+def test_action_beat_cluster_three_in_window_flagged() -> None:
+    body = "\n".join([
+        '"Hello," she laughed.',
+        "",
+        "Some narration line.",
+        "",
+        '"Why?" he chuckled.',
+        "",
+        "More.",
+        "",
+        '"Now!" she smirked.',
+    ])
+    text = _frontmatter_chapter(body)
+    report = scan_chapter(text)
+    assert report.action_beat_cluster_hits >= 1
+
+
+def test_action_beat_single_use_unflagged() -> None:
+    """One action-beat tag is good craft, not a tell."""
+    text = _frontmatter_chapter('"Hello," she laughed.\n\nNarration.\n\n'
+                                  '"Goodbye," she said.')
+    report = scan_chapter(text)
+    assert report.action_beat_cluster_hits == 0
+
+
+def test_action_beat_outside_window_unflagged() -> None:
+    """3 action-beat tags spread across many lines don't cluster."""
+    spacer = "\nFiller line.\n" * 30
+    body = ('"a" she laughed.' + spacer +
+             '"b" he chuckled.' + spacer +
+             '"c" she smirked.')
+    text = _frontmatter_chapter(body)
+    report = scan_chapter(text)
+    assert report.action_beat_cluster_hits == 0
+
+
+# ---------------------------------------------------------- softening qualifiers
+
+
+def test_softening_in_short_dialogue_flagged() -> None:
+    text = _frontmatter_chapter('"Maybe you should go," she said.')
+    report = scan_chapter(text)
+    soft = [h for h in report.hits if h.kind == "softening"]
+    assert len(soft) == 1
+    assert soft[0].verb == "maybe"
+
+
+def test_multiple_softening_qualifiers_each_flag() -> None:
+    text = _frontmatter_chapter(
+        '"Kind of," she said.\n\n"I think so," he replied.\n\n'
+        '"Maybe," she added.'
+    )
+    report = scan_chapter(text)
+    assert report.softening_hits >= 3
+
+
+def test_softening_in_long_dialogue_unflagged() -> None:
+    """Softeners in long lines (over ~80 chars) are typically
+    legitimate hedge in speech rather than retort-flattening AI
+    drift."""
+    long_quote = (
+        '"Maybe, after we have spoken with the magistrate and walked '
+        'all the way back across the bridge to her side of the river '
+        'where the chandler keeps a small shop, we shall see," she said.'
+    )
+    text = _frontmatter_chapter(long_quote)
+    report = scan_chapter(text)
+    assert report.softening_hits == 0
+
+
+def test_softening_outside_dialogue_unflagged() -> None:
+    """A softener in narration ('Maybe she would go.') is fine —
+    only flagged inside dialogue."""
+    text = _frontmatter_chapter("Maybe she would go. Perhaps not.")
+    report = scan_chapter(text)
+    assert report.softening_hits == 0
+
+
+# ---------------------------------------------------------- unattributed clusters
+
+
+def test_unattributed_cluster_three_consecutive_flagged() -> None:
+    """Three consecutive un-tagged dialogue paragraphs flag a
+    cluster regardless of the surrounding cast. The scanner is a
+    candidate generator; the LLM judge in
+    /autonovel:evaluate decides whether the cluster is fine
+    (legitimate fast exchange between two known speakers) or a
+    real attribution gap. Cast-count proxies were tried
+    2026-04-29 and reverted — see
+    feedback_avoid_brittle_python.md."""
+    text = _frontmatter_chapter(
+        '"We need a plan," Tommaso said.\n\n'
+        '"Quickly."\n\n'
+        '"Before dawn."\n\n'
+        '"Or it will be too late."\n'
+    )
+    report = scan_chapter(text)
+    assert report.unattributed_cluster_hits == 1
+
+
+def test_unattributed_cluster_two_paragraphs_unflagged() -> None:
+    """Two un-tagged exchanges are normal; only ≥3 in a row flag."""
+    text = _frontmatter_chapter(
+        '"Plan?" Tommaso asked.\n\n'
+        '"Yes."\n\n'
+        '"When?"\n'
+    )
+    report = scan_chapter(text)
+    assert report.unattributed_cluster_hits == 0
+
+
+def test_unattributed_cluster_with_tags_unflagged() -> None:
+    """Tagged dialogue breaks the streak."""
+    text = _frontmatter_chapter(
+        "Tommaso met Lucia and Niccolò.\n\n"
+        '"Plan?" Tommaso asked.\n\n'
+        '"Yes," Lucia replied.\n\n'
+        '"When?" Niccolò said.\n'
+    )
+    report = scan_chapter(text)
+    assert report.unattributed_cluster_hits == 0
+
+
+# ---------------------------------------------------------- total includes new
+
+
+def test_chapter_report_total_includes_new_kinds() -> None:
+    """The .total property must roll up every kind, not just the
+    original three."""
+    text = _frontmatter_chapter(
+        '"Kind of," she said.\n'  # softening
+    )
+    report = scan_chapter(text)
+    assert report.total == report.softening_hits
+
+
 def test_cli_dialogue_json(tmp_path: Path) -> None:
     chapters = tmp_path / "b" / "chapters"
     chapters.mkdir(parents=True)

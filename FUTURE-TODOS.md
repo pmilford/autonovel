@@ -612,15 +612,25 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   edge cases (frontmatter strip, plain-said unflagged, stutter
   window boundaries), render shapes, and CLI round-trip.
 
-- **Dialogue mechanics — extension follow-ups.** The 2026-04-28
-  shipment covers adverb tags, said-bookisms, and stutters. Not
-  yet covered (queue for a future scanner expansion):
-  every line with an action beat (`she laughed`, `he frowned`)
-  used as a tag, unattributed dialogue when ≥3 speakers are on
-  stage, and the "softening qualifier" pattern (`maybe`, `kind
-  of`, `a little`) inside short retorts where it neutralises
-  tension. Same module — extend
-  `src/autonovel/mechanical/dialogue.py` rather than a new file.
+- ~~**Dialogue mechanics — extension follow-ups.**~~
+  **Shipped 2026-04-29** with the brittle parts deliberately
+  scoped down (see feedback_avoid_brittle_python.md). Three new
+  detectors in `mechanical/dialogue.py`:
+  - **action-beat-as-tag clusters** — 3+ action-beat tags
+    (`she laughed, "..."`) within a 10-line window.
+  - **softening qualifiers in short retorts** — `maybe / kind
+    of / a little / I think / I guess` inside dialogue lines
+    under 80 chars.
+  - **unattributed-dialogue clusters** — ≥3 consecutive un-tagged
+    dialogue paragraphs. Reported as a review list, not a gate;
+    the cast-count gate that 2026-04-29 testing tried to add
+    was reverted because it relied on a brittle proper-noun-
+    counting proxy that broke on Unicode names. The LLM
+    judge's `voice_adherence` dimension is the right place to
+    score this.
+  Word lists kept short and curated (`ACTION_BEAT_VERBS` ~25
+  entries, `SOFTENING_QUALIFIERS` ~13). 11 new Tier-1 tests +
+  command-body disclaimer update. Tier 1+2: 1081 → 1092.
 - ~~**Scene-level beat coverage in `evaluate.py`.**~~ **Shipped
   2026-04-25.** New `autonovel mechanical scenes <chapter>` helper
   splits a chapter into scenes by `***` / `---` / `* * *` breaks
@@ -691,12 +701,16 @@ prose ≈ 8 / 10, with investigation-heavy plots).
 
 - **POV bleed — knowledge-edge follow-up.** The 2026-04-28 scanner
   catches interiority (`Niccolò thought`, `Lucia's mind raced`).
-  Not yet covered: knowledge edges where the POV references a
-  fact they couldn't have at that moment ("the woman who would
-  later betray him") — needs cross-chapter knowledge tracking
-  to do well. Cheap interim version: search for "the woman / the
-  man" referring to a named character the POV already knows
-  (de-anonymising drift).
+  Knowledge edges (POV references a fact they couldn't have)
+  needs cross-chapter tracking and is best done as an LLM-judge
+  dimension, not a mechanical scanner — the cheap "the woman /
+  the man" version was considered 2026-04-29 and rejected per
+  `feedback_avoid_brittle_python.md`: the de-anonymising-drift
+  detector would need a brittle proper-noun heuristic that
+  drifts on Unicode names + sentence-initial caps. Right shape
+  is a future LLM-judge dimension that consumes the existing
+  pov-bleed scanner output and adds knowledge-edge reasoning;
+  hold for now.
 - ~~**Bell's "irreversible change" scorer.**~~ **Shipped 2026-04-25.**
   evaluate.md gains an `irreversible_change` dimension on
   `--chapter` mode and `irreversible_change_arc` on `--full` mode.

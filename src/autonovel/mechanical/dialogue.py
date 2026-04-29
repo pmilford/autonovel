@@ -1,12 +1,25 @@
 """Dialogue-mechanics linter.
 
-Pure-mechanical scanner for the small set of dialogue patterns
-that are reliable AI-tells: adverb-heavy speech tags
-("she said quietly"), said-bookisms in dense clusters
-("she exclaimed", "he murmured", "they whispered" within a few
-lines), spoke-the-pun pattern ("said sadly", "asked drily" — a
-dictionary of the worst offenders), and repeated speech-verb
-stutter (the same non-`said` verb three times within ten lines).
+Pure-mechanical scanner for the dialogue patterns that are
+reliable AI-tells:
+
+  - adverb-heavy speech tags ("she said quietly")
+  - said-bookisms in dense clusters
+  - repeated speech-verb stutter (same non-`said` verb 3+ times
+    in a 10-line window)
+  - **action-beat-as-tag** — dialogue immediately followed by a
+    body-action attribution that's used *in place of* a speech
+    verb (`"...,". She laughed.`). One-off action beats are fine
+    and often preferable to said-bookisms; the helper flags
+    *clusters* of 3+ in a 10-line window.
+  - **softening-qualifier in retorts** — the AI tendency to
+    pad confrontation lines with `maybe`, `kind of`, `a little`
+    where direct speech would land harder. Flagged in dialogue
+    lines under ~80 chars (the retort/comeback length band).
+  - **unattributed dialogue with ≥3 speakers on stage** —
+    when the last 3+ paragraphs of dialogue have no speaker
+    tag at all and the chapter has 3+ named speakers, surface
+    the cluster so the reader doesn't have to guess.
 
 What it does NOT do:
 - Score *quality* — that's the LLM judge in
@@ -69,6 +82,26 @@ SAID_BOOKISMS = {
 SPEECH_VERBS = {"said", "asked", "replied", "answered", *SAID_BOOKISMS}
 
 
+# Action-beat verbs — body / face actions used as a tag in place of
+# a speech verb. One-off use is good craft; clusters of 3+ in a
+# 10-line window are AI-tell territory.
+ACTION_BEAT_VERBS = {
+    "laughed", "chuckled", "smiled", "grinned", "smirked",
+    "frowned", "scowled", "grimaced", "shrugged", "nodded",
+    "shook", "winced", "sighed", "groaned", "gasped",
+    "snorted", "rolled", "tilted", "leaned", "stiffened",
+    "stepped", "turned", "looked", "blinked", "swallowed",
+}
+
+
+# Softening-qualifier patterns that flatten retorts.
+SOFTENING_QUALIFIERS = {
+    "maybe", "perhaps", "kind of", "kinda", "sort of", "sorta",
+    "a little", "a bit", "a tiny bit", "somewhat", "rather",
+    "i guess", "i think", "i suppose",
+}
+
+
 # Speech-tag matcher. Scans for any speech verb in `SPEECH_VERBS`
 # and treats it as a tag when it follows a recently-closed quote
 # OR introduces a quoted phrase. The optional adverb captures the
@@ -106,6 +139,7 @@ def _is_speech_tag_context(line: str, verb_start: int) -> bool:
 class DialogueHit:
     chapter: int
     kind: str           # "adverb" | "bookism" | "stutter"
+                        # | "action-beat-cluster" | "softening" | "unattributed-cluster"
     verb: str
     adverb: str | None
     line_no: int
@@ -119,11 +153,18 @@ class ChapterReport:
     adverb_hits: int
     bookism_hits: int
     stutter_hits: int
+    action_beat_cluster_hits: int = 0
+    softening_hits: int = 0
+    unattributed_cluster_hits: int = 0
     hits: list[DialogueHit] = field(default_factory=list)
 
     @property
     def total(self) -> int:
-        return self.adverb_hits + self.bookism_hits + self.stutter_hits
+        return (
+            self.adverb_hits + self.bookism_hits + self.stutter_hits
+            + self.action_beat_cluster_hits + self.softening_hits
+            + self.unattributed_cluster_hits
+        )
 
 
 @dataclass
@@ -139,6 +180,9 @@ class DialogueReport:
                     "adverb_hits": c.adverb_hits,
                     "bookism_hits": c.bookism_hits,
                     "stutter_hits": c.stutter_hits,
+                    "action_beat_cluster_hits": c.action_beat_cluster_hits,
+                    "softening_hits": c.softening_hits,
+                    "unattributed_cluster_hits": c.unattributed_cluster_hits,
                     "total": c.total,
                     "hits": [
                         {
@@ -217,14 +261,183 @@ def scan_chapter(text: str, *, chapter: int = 1,
                 ))
                 break  # one stutter alarm per verb is enough
 
+    # --- Extension detectors (2026-04-29) -------------------------------
+    action_beat_lines = _scan_action_beats(lines, chapter, hits,
+                                             stutter_window_lines)
+    softening_lines = _scan_softening_qualifiers(lines, chapter, hits)
+    unattributed_lines = _scan_unattributed_dialogue(lines, chapter, hits)
+
     return ChapterReport(
         chapter=chapter,
         word_count=word_count,
         adverb_hits=adverb_hits,
         bookism_hits=bookism_hits,
         stutter_hits=stutter_hits,
+        action_beat_cluster_hits=action_beat_lines,
+        softening_hits=softening_lines,
+        unattributed_cluster_hits=unattributed_lines,
         hits=hits,
     )
+
+
+# ---------------------------------------------------------- extension detectors
+
+
+# Action-beat-as-tag: dialogue closing punctuation immediately
+# followed (same line OR next-line capitalised) by an action-beat
+# verb in `<Subject> <verb>` shape. Conservative — we want to
+# catch the pattern reliably and let the LLM judge sort one-off
+# legitimate uses from clusters.
+_ACTION_BEAT_AFTER_QUOTE_RE = re.compile(
+    r'"[^"\n]*[",.?!\-]\s*'
+    rf"(?:[A-Z][a-zA-Z]+\s+)?(?P<verb>{'|'.join(ACTION_BEAT_VERBS)})\b",
+    re.IGNORECASE,
+)
+
+
+def _scan_action_beats(lines: list[str], chapter: int,
+                        hits: list[DialogueHit],
+                        window: int) -> int:
+    """Cluster detection: 3+ action-beat-as-tag uses within
+    `window` lines. Single uses are fine craft (often
+    preferable to a said-bookism); clusters are AI tells.
+    Returns the number of cluster events recorded."""
+    occurrences: list[tuple[int, str, str]] = []  # (line_no, verb, snippet)
+    for i, line in enumerate(lines, start=1):
+        for m in _ACTION_BEAT_AFTER_QUOTE_RE.finditer(line):
+            verb = m.group("verb").lower()
+            occurrences.append(
+                (i, verb, _snippet(line, m.start()))
+            )
+    if len(occurrences) < 3:
+        return 0
+    cluster_hits = 0
+    seen_starts: set[int] = set()
+    for j in range(len(occurrences) - 2):
+        win = occurrences[j:j + 3]
+        if win[-1][0] - win[0][0] <= window and win[0][0] not in seen_starts:
+            cluster_hits += 1
+            seen_starts.add(win[0][0])
+            hits.append(DialogueHit(
+                chapter=chapter, kind="action-beat-cluster",
+                verb=", ".join(o[1] for o in win),
+                adverb=None, line_no=win[0][0],
+                snippet=(
+                    f"action-beat tags `{', '.join(o[1] for o in win)}` in "
+                    f"lines {win[0][0]}-{win[-1][0]}"
+                ),
+            ))
+    return cluster_hits
+
+
+# Softening qualifier inside a dialogue line under ~80 chars. Capture
+# any quoted substring on the line, count its length, and check for
+# a softening token inside.
+_QUOTED_SUBSTR_RE = re.compile(r'"([^"\n]+)"')
+_SOFTENING_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(q) for q in sorted(
+        SOFTENING_QUALIFIERS, key=len, reverse=True
+    )) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def _scan_softening_qualifiers(lines: list[str], chapter: int,
+                                 hits: list[DialogueHit]) -> int:
+    count = 0
+    for i, line in enumerate(lines, start=1):
+        for m in _QUOTED_SUBSTR_RE.finditer(line):
+            quoted = m.group(1)
+            if len(quoted) > 80:
+                continue
+            soft = _SOFTENING_RE.search(quoted)
+            if soft:
+                count += 1
+                hits.append(DialogueHit(
+                    chapter=chapter, kind="softening",
+                    verb=soft.group(0).lower(),
+                    adverb=None, line_no=i,
+                    snippet=_snippet(line, m.start()),
+                ))
+    return count
+
+
+# Unattributed-dialogue cluster: ≥3 consecutive paragraphs that
+# are pure dialogue (start with `"`) with no speech tag verb on
+# the same paragraph.
+#
+# This is reported as a "review list, not a gate" — the scanner
+# can't reliably tell whether the surrounding narration makes the
+# speakers obvious. Two-speaker exchanges using clean back-and-
+# forth pacing get false positives here. That's the cost of
+# avoiding a cast-count proxy that would itself drift on Unicode
+# names, sentence-initial caps, or unusual narrators (the proxy
+# was tried 2026-04-29 and reverted — see
+# feedback_avoid_brittle_python.md).
+#
+# The LLM judge in /autonovel:evaluate's voice_adherence
+# dimension is the right place to *score* this; the scanner
+# surfaces candidates.
+def _scan_unattributed_dialogue(lines: list[str], chapter: int,
+                                  hits: list[DialogueHit]) -> int:
+    text = "\n".join(lines)
+    paragraphs = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
+    if len(paragraphs) < 3:
+        return 0
+
+    def _is_dialogue_without_tag(para: str) -> bool:
+        stripped = para.lstrip()
+        if not stripped.startswith('"') and not stripped.startswith("“"):
+            return False
+        # If the paragraph contains a known speech verb, it's tagged.
+        for verb in SPEECH_VERBS:
+            if re.search(rf"\b{verb}\b", stripped, re.IGNORECASE):
+                return False
+        return True
+
+    # Find 3+ consecutive un-tagged dialogue paragraphs.
+    cluster_hits = 0
+    streak = 0
+    streak_start_para = -1
+    para_to_line: dict[int, int] = {}
+    line_no = 1
+    for idx, para in enumerate(paragraphs):
+        para_to_line[idx] = line_no
+        line_no += para.count("\n") + 2  # +2 for the blank-line gap
+    for idx, para in enumerate(paragraphs):
+        if _is_dialogue_without_tag(para):
+            if streak == 0:
+                streak_start_para = idx
+            streak += 1
+        else:
+            if streak >= 3:
+                cluster_hits += 1
+                start_line = para_to_line[streak_start_para]
+                hits.append(DialogueHit(
+                    chapter=chapter, kind="unattributed-cluster",
+                    verb=f"{streak} paras",
+                    adverb=None, line_no=start_line,
+                    snippet=(
+                        f"{streak} consecutive un-tagged dialogue paragraphs "
+                        f"(may be a fast back-and-forth between two known "
+                        f"speakers — review list, not a gate)"
+                    ),
+                ))
+            streak = 0
+    # Trailing streak.
+    if streak >= 3:
+        cluster_hits += 1
+        start_line = para_to_line[streak_start_para]
+        hits.append(DialogueHit(
+            chapter=chapter, kind="unattributed-cluster",
+            verb=f"{streak} paras",
+            adverb=None, line_no=start_line,
+            snippet=(
+                f"{streak} consecutive un-tagged dialogue paragraphs "
+                f"(review list, not a gate)"
+            ),
+        ))
+    return cluster_hits
 
 
 def build_report(book_root: Path) -> DialogueReport:
@@ -264,14 +477,21 @@ def render_markdown(report: DialogueReport, *, book: str | None = None,
     if not report.chapters:
         parts.append("_No chapters drafted yet._")
         return "\n".join(parts) + "\n"
-    parts.append("| Ch | Words | Adverb tags | Said-bookisms | Stutters | Total |")
-    parts.append("|---|---|---|---|---|---|")
+    parts.append(
+        "| Ch | Words | Adverb tags | Said-bookisms | Stutters | "
+        "Action-beat clusters | Softening | Unattributed clusters | Total |"
+    )
+    parts.append("|" + "|".join("---" for _ in range(9)) + "|")
     for c in report.chapters:
         parts.append(
-            "| {ch} | {wc} | {a} | {b} | {s} | {t} |".format(
+            "| {ch} | {wc} | {a} | {b} | {s} | {ab} | {sf} | {un} | {t} |".format(
                 ch=c.chapter, wc=c.word_count,
                 a=c.adverb_hits or "·", b=c.bookism_hits or "·",
-                s=c.stutter_hits or "·", t=c.total or "·",
+                s=c.stutter_hits or "·",
+                ab=c.action_beat_cluster_hits or "·",
+                sf=c.softening_hits or "·",
+                un=c.unattributed_cluster_hits or "·",
+                t=c.total or "·",
             )
         )
     if show_hits:
