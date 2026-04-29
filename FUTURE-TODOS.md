@@ -11,6 +11,63 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Edit-and-revise mode for an externally-written manuscript.** The
+  pipeline today assumes autonovel drafted the book itself. New use
+  case 2026-04-28: a user has a finished or partial manuscript
+  (their own, an estate's, a public-domain text they're modernising)
+  and wants to use the eval / revise / panel / review / typeset
+  surfaces against it without re-drafting from scratch. Two
+  sub-modes that share most of the import pipeline:
+
+  1. **Book-only**: user drops a directory of chapter files (any
+     of `.md`, `.txt`, `.docx` via pandoc, `.epub` via pandoc, a
+     single combined manuscript, or a folder of one-file-per-
+     chapter). The new `/autonovel:import --book <name> --from
+     <path>` command:
+      - splits the manuscript into chapters (heading detection,
+        scene-break detection, or explicit `--split-on <regex>`),
+      - writes `books/<name>/chapters/ch_NN.md` with autonovel-
+        shape YAML frontmatter (chapter number + word count,
+        `pov`/`status`/`story_time` left as `inferred` placeholders
+        for the user to fill or for a follow-up
+        `/autonovel:summarize-chapter` LLM pass to backfill),
+      - reverse-engineers a stub foundation by sampling prose
+        across chapters: a draft `voice.md` (Part 1 generic, Part
+        2 derived from prose register), a stub `characters.md`
+        with every named entity that appears more than N times,
+        a stub `outline.md` listing chapter beats inferred from
+        the chapter-summary helper running across the imported
+        prose. None of these are authoritative — they exist so
+        evaluate / revise have something to read against.
+
+  2. **Book + foundation**: user supplies the manuscript AND a
+     seed/voice/world/canon (e.g. they wrote the book against an
+     existing series' conventions). Same import command with
+     `--keep-foundation` skips the reverse-engineering and trusts
+     the user's existing `shared/*` and `books/<name>/voice.md`.
+
+  Cross-cutting:
+  - `project.yaml :: books[].mode = edit-imported` so downstream
+    commands know not to draft new chapters (forbid
+    `/autonovel:draft N` in this mode by default; allow with
+    `--force` for the case where the user wants to add a new
+    chapter to an existing book).
+  - The summary backfill step needs to be cheap; a sweep wrapper
+    `/autonovel:summarize-chapter --all --book <name>` already
+    exists or is one CLI flag away.
+  - Tier-1 tests for the splitter (markdown headings, scene
+    breaks, explicit `--split-on`), frontmatter-stub generation,
+    and reverse-engineered foundation shape.
+  - docs/operating-guide.md gets a §2g "Editing an externally-
+    written book" walkthrough.
+
+  Cost: ~6-10 hr (one new command, one helper file, frontmatter
+  stub generator, reverse-engineering heuristics, Tier-1 tests,
+  walkthrough). Opens up a meaningful adjacent use case without
+  changing the rest of the pipeline.
+
+
+
 - ~~**PDF page-header still leaks chapter prose (regression of the
   2026-04-25 fix).**~~ **Shipped 2026-04-28.** Two distinct bugs,
   both fixed:
@@ -306,19 +363,36 @@ to start.
   10 properties × 25 examples each = ~250 random layouts per
   CI run. Tier 1+2: 897 → 907.
 
-- **Read-only TUI / web dashboard for series state.** Author noted
-  2026-04-25 that NousResearch's earlier autonovel had a richer
-  read-only console showing file artifacts and live progress; the
-  rewrite ships only `autonovel status` (one-shot CLI),
-  `autonovel statusline` (Claude Code status bar), and
-  `.autonovel/command-log.jsonl` (append-only JSON log). A
-  long-running TUI (e.g. via `textual`) or a tiny web server (FastAPI
-  + websockets) that streams the lock state, last-action, recent
+- **Read-only TUI for series state — terminal only, NOT a web
+  server.** Author noted 2026-04-25 that NousResearch's earlier
+  autonovel had a richer read-only console showing file artifacts
+  and live progress; the rewrite ships only `autonovel status`
+  (one-shot CLI), `autonovel statusline` (Claude Code status bar),
+  `.autonovel/command-log.jsonl` (append-only JSON log), and
+  `/autonovel:dashboard` (markdown table — shipped 2026-04-28).
+
+  The next step is a long-running terminal UI via `textual` or
+  `urwid` that streams the lock state, last-action, recent
   command-log entries, per-book phase + chapter scores, and the
-  `pending_canon.md` queue would be a real onboarding win for
-  authors not at home in `cat .autonovel/*.json`. Roughly 1–2 days
-  of work for a TUI; a basic web dashboard ~3 days. Hold for now —
-  current tools cover the same data, just less prettily.
+  `pending_canon.md` queue.
+
+  **Constraint clarified 2026-04-28: must be terminal-native
+  (TUI), not a web server.** Author runs autonovel on
+  WSL / Linux on Chromebook, where a localhost web server is
+  awkward (no direct browser access from the WSL filesystem
+  context; the user has to do port-forwarding gymnastics that
+  defeat the "trivial to start" goal). Same constraint applies
+  to `/autonovel:dashboard`'s output today — markdown table in
+  the runtime's chat is the right surface, NOT a generated HTML
+  file the user is supposed to open. Future enhancements to the
+  dashboard (sparklines per dimension, expandable rows, filter
+  controls) should keep the same shape: print to stdout, render
+  in the terminal, no browser dependency.
+
+  Roughly 1–2 days for a textual TUI. Hold for now — current
+  tools cover the same data and the dashboard fills the
+  highest-value visualisation gap. Pick this up when CLI
+  output becomes the bottleneck.
 
 
 - **Research-from-seed auto-merges into canon (no manual editing).**
