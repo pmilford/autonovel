@@ -354,8 +354,12 @@ claude            # or `codex`, or `gemini`
 
 The simplest pattern: **run one command, then ask `/autonovel:next`
 what to run next.** Repeat until you reach drafting, then revision,
-then export. `/autonovel:next` inspects what's on disk and tells you
-the canonical next command — you do not have to memorise the order.
+then export. `/autonovel:next` inspects what's on disk — pending
+canon conflicts, chapter regressions, stale reader-panel/Opus
+review reports, git backup state, missing title or author, missing
+front matter — and emits a prioritised action list. The canonical
+pipeline next step appears at the bottom; situational actions take
+precedence. You do not have to memorise the order.
 
 For a fresh series, `/autonovel:next` will walk you through the
 foundation in this order:

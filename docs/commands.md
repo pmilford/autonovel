@@ -125,7 +125,7 @@ These don't read or write a book — they show the user what to do next.
 
 | Command | Tier | Description |
 |---|---|---|
-| `/autonovel:next [--book <short-name>]` | light | Show the standard next step and common alternatives. |
+| `/autonovel:next [--book <short-name>]` | light | State-aware action list — pending conflicts, regressions, stale review reports, backup status, missing front matter — plus the canonical pipeline next step at the bottom. |
 | `/autonovel:resume [--book <short-name>]` | light | Detect an in-flight command; offer redo / keep-partial / inspect. |
 | `/autonovel:sidequest` | light | Dispatcher menu for non-standard-path operations. |
 
