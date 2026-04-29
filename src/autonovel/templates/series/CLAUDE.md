@@ -146,6 +146,10 @@ each of these and the workaround is in the codebase:
   + cost rollup across the whole series. Estimates only — the
   runtime's session-usage report is the source. Mechanical-only
   commands count as $0 runs.
+- Run `/autonovel:syntax-drift --book <name>` for per-chapter
+  Flesch-Kincaid grade against the book's voice/seed
+  baseline. Pure math, catches modern syntax in period-
+  correct vocabulary. Review list, not a gate.
 
 ## If you (the agent) hit `API Error: Extra usage is required for 1M context`
 

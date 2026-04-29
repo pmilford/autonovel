@@ -366,6 +366,20 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-29 (period syntax-drift scanner; FUTURE-TODOS
+  Period-register-extension entry): Flesch-Kincaid grade per
+  chapter vs voice / seed / median-of-chapters baseline.
+  Chapters whose absolute grade-delta exceeds `--threshold`
+  (default 1.0) are flagged. Pure math — no curated register
+  dictionaries, no vocabulary lists — so this scanner doesn't
+  drift with the codebase's word lists. New helpers in
+  `mechanical/period_register.py` (`flesch_kincaid_grade`,
+  `_syllables_in_word`, `build_syntax_drift_report`,
+  `render_syntax_drift_markdown`), CLI subcommand `autonovel
+  mechanical syntax-drift`, slash-command
+  `/autonovel:syntax-drift`. Review list, not a gate; LLM
+  judge in `voice_adherence` scores. 18 Tier-1 tests + 5
+  contract pickups. Tier 1+2: 1092 → 1115.
 - 2026-04-29 (dialogue-mechanics extensions; FUTURE-TODOS
   Dialogue-extensions entry): three new detectors in
   `mechanical/dialogue.py` — action-beat-as-tag clusters (3+
@@ -944,7 +958,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1092
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 — **1115
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

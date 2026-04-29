@@ -55,7 +55,9 @@ from .entity_track import (
 )
 from .period_register import (
     build_report as build_period_report,
+    build_syntax_drift_report,
     render_markdown as render_period_md,
+    render_syntax_drift_markdown,
 )
 from .pov_bleed import (
     build_report as build_pov_bleed_report,
@@ -275,6 +277,24 @@ def _cmd_series_arc(args: argparse.Namespace) -> int:
         sys.stdout.write("\n")
     else:
         sys.stdout.write(render_series_arc_md(report))
+    return 0
+
+
+def _cmd_syntax_drift(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    series_root = Path(args.series_root) if args.series_root else None
+    report = build_syntax_drift_report(
+        book_root, series_root=series_root,
+        threshold=args.threshold,
+    )
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_syntax_drift_markdown(
+            report, book=book_root.name,
+        ))
     return 0
 
 
@@ -592,6 +612,16 @@ def main(argv: list[str] | None = None) -> int:
                      help="Chapter score threshold for ≥thr count (default 7.0).")
     sa.add_argument("--format", choices=("markdown", "json"), default="markdown")
     sa.set_defaults(func=_cmd_series_arc)
+
+    sd = sub.add_parser("syntax-drift",
+                          help="Per-chapter Flesch-Kincaid grade vs voice/seed baseline. Catches modern syntax in period-correct vocabulary.")
+    sd.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    sd.add_argument("--series-root", default=None,
+                      help="Series root (default: book_root.parent.parent).")
+    sd.add_argument("--threshold", type=float, default=1.0,
+                      help="Drift threshold in FK grade levels (default 1.0).")
+    sd.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    sd.set_defaults(func=_cmd_syntax_drift)
 
     pb = sub.add_parser("pov-bleed",
                          help="Heuristic POV-bleed scan — flag interiority lines naming non-POV characters.")

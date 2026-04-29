@@ -672,15 +672,24 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   aggregation, render shapes (with/without `--summary-only`,
   no-bans message, no-chapters message), and CLI round-trip.
 
-- **Period register — extension follow-up.** The 2026-04-28
-  scanner covers literal period-bans hits across the book. Not
-  yet covered: sentences whose Flesch-Kincaid grade or
-  syllable-per-word average drifts above the seed's 95th
-  percentile — catches anachronistic *register* (modern syntax
-  in period-correct vocabulary) which the literal-bans scanner
-  cannot. Add as a second pass in
-  `src/autonovel/mechanical/period_register.py` or as a sibling
-  module.
+- ~~**Period register — extension follow-up.**~~
+  **Shipped 2026-04-29.** Per-chapter Flesch-Kincaid grade
+  computed against a voice/seed/median baseline; chapters
+  whose absolute delta exceeds `--threshold` (default 1.0
+  grade level) are flagged. Pure math — no curated word-lists,
+  no register dictionaries — so this scanner doesn't drift
+  with vocabulary. New helper functions in
+  `src/autonovel/mechanical/period_register.py`
+  (`flesch_kincaid_grade`, `_syllables_in_word`,
+  `build_syntax_drift_report`, `render_syntax_drift_markdown`),
+  CLI subcommand `autonovel mechanical syntax-drift
+  <book_root>`, slash-command `/autonovel:syntax-drift`.
+  Reported as a review list — real chapter drift can be
+  intentional register shift (action sequences, dialogue-
+  heavy, modernism homage); the LLM judge in
+  `/autonovel:evaluate`'s `voice_adherence` dimension scores.
+  18 Tier-1 tests + 5 contract pickups. Tier 1+2: 1092 →
+  1115.
 - ~~**POV bleed scanner.**~~ **Shipped 2026-04-28.** New helper
   `src/autonovel/mechanical/pov_bleed.py` flags lines where a
   cast member who is NOT the chapter's POV is named with an
