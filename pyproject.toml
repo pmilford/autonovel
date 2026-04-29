@@ -22,6 +22,12 @@ test = [
     # tests/conftest.py flakiness hook; harmless if absent (hook skips the
     # auto-retry gracefully).
     "pytest-rerunfailures>=14",
+    # Property-based tests in tests/deterministic/test_property_based.py —
+    # generates random book layouts and asserts invariants like
+    # "iter_chapter_files count equals the count of `ch_NN.md`-only files"
+    # and "next_step never returns an empty command". Catches the long
+    # tail of glob/inference bugs that targeted unit tests miss.
+    "hypothesis>=6",
 ]
 # PR 7 export commands that touch images and audio. Users who only draft
 # and revise do not need these; `autonovel doctor` reports any that are

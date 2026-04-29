@@ -366,6 +366,22 @@
   install requirements; doc index; subscription-auth guidance).
   CLAUDE.md rewritten as the agent-side conventions file; AGENTS.md
   and GEMINI.md symlink to it.
+- 2026-04-28 (property-based tests via hypothesis; FUTURE-TODOS
+  Property-Based-Tests entry): new
+  `tests/deterministic/test_property_based.py` uses `hypothesis`
+  (added under `[test]` extras in pyproject.toml) to generate
+  random book layouts (chapter count 0-12, random POV/status/
+  prose/score, summary/eval/motif/entity/pending-canon presence)
+  and assert invariants across them: `iter_chapter_files` count
+  equals chapter-count exactly (no `.summary.md` collisions),
+  `_infer_phase` returns a known phase, `_next_step_for` always
+  returns non-empty command + rationale with no unsubstituted
+  placeholders, `enumerate_actions` priorities valid, summary /
+  dashboard / entity-track / motif builders never crash on
+  arbitrary layouts. Decision table tested independently of
+  disk via PipelineState strategy. 10 properties × 25 examples
+  = ~250 random layouts per run. docs/testing.md Tier-1 row
+  updated. Tier 1+2: 897 → 907.
 - 2026-04-28 (verify-writes auditor; FUTURE-TODOS Verify-Writes
   entry): postamble's `--wrote` flags are LLM self-reports — LLM
   can claim a write without invoking Write/Edit. New
@@ -764,7 +780,7 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **897
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-28 — **907
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
   a real lifecycle._last_eval_score glob bug along the way); #5.2

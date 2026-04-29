@@ -281,14 +281,30 @@ to start.
   would have caught at least the chapter-count and next-step bugs
   before they shipped.
 
-- **Property-based tests for invariants.** Use `hypothesis` to
-  generate random book layouts (varying chapter counts, presence/
-  absence of summaries / eval logs / briefs / etc.) and assert
-  invariants like "chapter count == count of `ch_NN.md` files only",
-  "next-step is one of {evaluate, revise, draft, promote-canon,
-  reader-panel} given drafting phase", "no chapter file is also a
-  summary file". Catches the long tail of glob/inference bugs
-  before they hit production.
+- ~~**Property-based tests for invariants.**~~
+  **Shipped 2026-04-28.** New file
+  `tests/deterministic/test_property_based.py` uses
+  `hypothesis` (added under `[test]` extras) to generate random
+  book layouts (chapter count 0-12, random POV, status, prose,
+  scores, summary/eval-log/motif/entity/pending-canon presence)
+  and assert invariants:
+
+  - `iter_chapter_files` count equals the chapter-count exactly
+    (catches the `.summary.md` glob regression).
+  - `_infer_phase` returns a known phase name for every layout.
+  - `lifecycle._next_step_for` always returns a non-empty
+    command + rationale, namespace `/autonovel:` or `autonovel`,
+    no unsubstituted `{...}` placeholders.
+  - `enumerate_actions` priorities are in {HIGH, MEDIUM, LOW,
+    INFO} with non-empty title + rationale.
+  - `summarize_chapters` row-count matches chapter file count.
+  - `build_dashboard`, `build_entity_report`, `build_motif_report`
+    do not crash on arbitrary layouts.
+  - `next_step.next_step()` decision table returns valid
+    command + rationale for every legal `PipelineState`.
+
+  10 properties × 25 examples each = ~250 random layouts per
+  CI run. Tier 1+2: 897 → 907.
 
 - **Read-only TUI / web dashboard for series state.** Author noted
   2026-04-25 that NousResearch's earlier autonovel had a richer

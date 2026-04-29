@@ -5,7 +5,7 @@ plain CI.
 
 | Tier | Runs in CI | Costs money | What it covers |
 |---|---|---|---|
-| 1 — deterministic | yes | no | Frontmatter shape, mechanical regex modules, adapter golden files, housekeeping CLI, validators |
+| 1 — deterministic | yes | no | Frontmatter shape, mechanical regex modules, adapter golden files, housekeeping CLI, validators. Includes property-based tests under `tests/deterministic/test_property_based.py` (via `hypothesis`) that generate random book layouts and assert glob / phase-inference / next-step / dashboard / motif / entity-track invariants hold across them. |
 | 2 — command contracts | yes | no | `reads:` / `writes:` declared in frontmatter actually appear in the command body; placeholders resolve |
 | 3 — smoke | opt-in | yes | Real runtime invocation against a fixture series; one assertion per command/genre |
 | 4 — Bells regression | opt-in (manual) | yes | `/autonovel:evaluate` on frozen Bells chapters within ±0.5 of reference scores |
