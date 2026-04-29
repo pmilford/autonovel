@@ -12,6 +12,7 @@ reads:
   - books/{book}/art/visual_style.json
   - books/{book}/art/picks.json
   - books/{book}/art/ornament_reference.png
+  - books/{book}/art/prompts/ch*_ornament.md
   - books/{book}/chapters/*.md
 writes:
   - books/{book}/art/ornament_ch*.png
@@ -51,11 +52,20 @@ coherent series. Otherwise plain text-to-image is fine — just noisier.
 5. Enumerate chapter files with `bash`: `ls books/{book}/chapters/ch_*.md`.
    Skip any chapter already in the `--chapters` exclusion if provided.
    For each chapter:
-   - `file_read` the chapter to get its title line and first ~400
-     words. Pick a symbolic motif from that content (e.g. "a cracked
-     bell silhouette", "a wax seal", "a single key laid horizontally").
-   - Build the prompt: motif + `visual_style.json :: art_style` +
-     palette + "symbolic, small, white background, no text".
+   - **Prefer the authored prompt file**:
+     `books/{book}/art/prompts/ch{chapter:02d}_ornament.md`. When
+     this file exists (the user ran `/autonovel:art-prompts` first
+     and either accepted or hand-edited the result), `file_read`
+     it and pull the body of the `## Prompt` section verbatim as
+     the generator input. Do not regenerate the motif from prose —
+     respect the authored prompt as-is.
+   - **Fall back to inline derivation** when no prompt file
+     exists: `file_read` the chapter to get its title line and
+     first ~400 words. Pick a symbolic motif from that content
+     (e.g. "a cracked bell silhouette", "a wax seal", "a single
+     key laid horizontally"). Build the prompt: motif +
+     `visual_style.json :: art_style` + palette + "symbolic,
+     small, white background, no text".
    - Shell out to the provider (image-to-image with the reference PNG
      if available, otherwise text-to-image), save the result to
      `books/{book}/art/ornament_ch{chapter:02d}.png` (two-digit).
@@ -71,7 +81,11 @@ coherent series. Otherwise plain text-to-image is fine — just noisier.
 - For every chapter file under `books/{book}/chapters/ch_*.md` (or the
   `--chapters` subset), a matching
   `books/{book}/art/ornament_ch{chapter:02d}.png` exists on success.
-- The prompt for each chapter is derived from that chapter's own text,
-  not a single series-wide template.
+- The prompt for each chapter is derived from that chapter's own text
+  or from `books/{book}/art/prompts/ch{NN}_ornament.md` when present —
+  not from a single series-wide template.
+- When a per-chapter authored prompt file exists, the command uses
+  its `## Prompt` body verbatim (no re-derivation). Use
+  `/autonovel:art-prompts` to author or hand-edit those files first.
 - If the provider API key is missing, no PNGs are written.
 </acceptance>

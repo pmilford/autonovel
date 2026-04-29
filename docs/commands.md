@@ -101,7 +101,8 @@ checkpoint so `autonovel rollback` undoes the full operation.
 | `/autonovel:art-directions --book <short-name> --surface cover\|ornament\|map\|scene-break [--n 4]` | heavy | Generate N radically different art-direction prompts. |
 | `/autonovel:art-curate --book <short-name> --surface <s> [--provider fal\|replicate\|openai]` | standard | Generate image variants from saved directions. |
 | `/autonovel:art-pick --book <short-name> --surface <s> --variant <N>` | light | Select one variant as the final art. |
-| `/autonovel:art-ornaments-all --book <short-name> [--provider fal] [--chapters <N,M,...>]` | standard | Generate a per-chapter ornament keyed to chapter content. |
+| `/autonovel:art-prompts --book <short-name> [--chapters <range>] [--surface ornament\|plate\|scene-break] [--style lineart\|full\|symbolic] [--force]` | light | Author per-chapter art prompt files (one `.md` per chapter+surface) under `books/{book}/art/prompts/`. Uses outline + summary + `visual_style.json` + world cues. No image generation; writes the prompt as markdown for hand-editing or a different generator. `art-ornaments-all` reads these files when present. |
+| `/autonovel:art-ornaments-all --book <short-name> [--provider fal] [--chapters <N,M,...>]` | standard | Generate a per-chapter ornament keyed to chapter content. Reads `books/{book}/art/prompts/ch{NN}_ornament.md` when authored (via `/autonovel:art-prompts`); falls back to inline derivation from prose otherwise. |
 | `/autonovel:art-vectorize --book <short-name> [--target <stem>]` | light | Convert ornament + scene-break PNGs to SVG via potrace. |
 
 ### Export — cover, audiobook, typeset, landing, package
