@@ -977,6 +977,22 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-30 — **1334
+  passing, 1 skipped** (pydub absent locally;
+  `pytest tests/deterministic tests/contracts`). TUI fixes (cursor
+  preservation across refresh; clearer score-sparkline labels;
+  `p` pause binding; copy/paste guidance in Help tab); `[export]`
+  extras smoke (+2, 1 skip when pydub absent); JSON-schema
+  validation of every commands/*.md frontmatter via jsonschema
+  added to `[test]` extra (+72 parametrized tests, +2 sanity);
+  `/autonovel:impact-of` source extension to `gen-canon` (canon-
+  driven, same logic as promote-canon) and `voice-discovery /
+  add-character / gen-characters / gen-world / add-source`
+  (mtime-driven, lists chapters older than the foundation file)
+  (+10); GitHub Actions workflows for Tier 1+2 (test.yml, every
+  push/PR matrix 3.11/3.12/3.13) and smoke-weekly.yml (cron +
+  workflow_dispatch, supports OAuth or API-key auth, exits 0 with
+  diagnostic when no secret configured) (+7).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 (late PM) —
   **1243 passing** (`pytest tests/deterministic tests/contracts`).
   Three additional commits on the workflow-guidance + tooling

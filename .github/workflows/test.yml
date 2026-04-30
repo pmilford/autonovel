@@ -1,0 +1,34 @@
+# Tier 1 (deterministic) + Tier 2 (contracts) on every push and PR.
+# Fast (~15 s), free, no auth needed. The smoke matrix is in
+# smoke-weekly.yml — different cadence and auth requirements.
+
+name: Tier 1+2
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: pytest tests/deterministic tests/contracts
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install autonovel + test extras
+        run: pip install -e '.[test]'
+
+      - name: Run Tier 1 + Tier 2
+        run: pytest tests/deterministic tests/contracts -q

@@ -1149,8 +1149,29 @@ to refresh on demand. Tabs:
   next-actions list + canonical pipeline step.
 
 Header bar: series name · book selector · lock state · sweep
-progress (live) · cost today + total. Switch books with `b`.
-Quit with `q`.
+progress (live) · cost today + total · `⏸ paused` indicator
+when auto-refresh is suspended. Switch books with `b`. Quit with
+`q`. Pause / resume auto-refresh with `p` — useful when you want
+to read prose or copy text without the cursor jumping around.
+
+**Cursor preservation:** highlighting chapter 14 and walking away
+no longer resets you to chapter 1 on the next refresh — the row
+cursor is restored across each 5 s tick (clamped to the new row
+count if rows are added or removed).
+
+**Score sparkline (Chapters tab):** shows each chapter's overall
+score on a 0-10 scale, where 10 is best. Threshold is 7.0 — any
+chapter below that is a `revise` candidate. The footer line under
+the sparkline reports the range / mean / count below threshold so
+you can read the shape at a glance. `·` blocks mark chapters with
+no eval log yet.
+
+**Copy / paste:** textual captures mouse events; bypass with
+`shift+drag` (works in GNOME Terminal, iTerm2, Windows Terminal,
+kitty, Alacritty). For best results, press `p` first to pause
+auto-refresh so the view doesn't redraw under your selection.
+The Help tab includes the same instructions inline so you don't
+need to context-switch.
 
 Optional dep: requires `textual>=0.70`. Install via `pip install
 'autonovel[tui]'` or `pipx inject autonovel textual`.

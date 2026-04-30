@@ -1,0 +1,112 @@
+# Tier-3 smoke matrix — runs against the real Claude Code runtime
+# weekly on Mondays at 09:00 UTC. Catches runtime-version drift
+# (model deprecations, slash-command picker regressions, frontmatter
+# field semantic changes) before it bites the user mid-draft.
+#
+# Auth: by default, smoke tests strip `ANTHROPIC_API_KEY` from the
+# subprocess environment so Claude Code uses the user's subscription
+# session (per `feedback_no_api_key_dev.md` — subscription auth is
+# fine; paid API credit is not). CI is the exception: a scheduled
+# job has no interactive session to authenticate, so it MUST use a
+# token. The two supported paths:
+#
+#   1. CLAUDE_CODE_OAUTH_TOKEN secret (preferred) — Claude Code's
+#      official non-interactive auth. Set this in repo Settings →
+#      Secrets → Actions. Subscription billing.
+#   2. ANTHROPIC_API_KEY secret + AUTONOVEL_SMOKE_USE_API_KEY=1 —
+#      API-key billing fallback. Use only when (1) isn't an option;
+#      this charges API credit, not the subscription.
+#
+# Without either secret present, the job logs the missing-auth state
+# and exits 0 — it doesn't fail the workflow run, since "no auth
+# configured" is a config issue, not a regression.
+
+name: Smoke (weekly)
+
+on:
+  schedule:
+    # Mondays at 09:00 UTC.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      runtime:
+        description: "Which runtime to smoke (claude only today; codex/gemini follow when their CI auth path lands)"
+        type: choice
+        options:
+          - claude
+        default: claude
+      tier:
+        description: "Skip pipx-install bundle? (smoke = include all; smoke-only = skip pipx_install marker)"
+        type: choice
+        options:
+          - smoke
+          - "smoke and not pipx_install"
+        default: smoke
+
+jobs:
+  claude-smoke:
+    name: Tier-3 against Claude Code (${{ inputs.tier || 'smoke' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install autonovel + test extras
+        run: pip install -e '.[test,export]'
+
+      - name: Install Claude Code CLI
+        run: |
+          curl -fsSL https://claude.ai/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Detect available auth
+        id: auth
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "mode=oauth" >> $GITHUB_OUTPUT
+            echo "✓ CLAUDE_CODE_OAUTH_TOKEN present — running smoke against subscription billing"
+          elif [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "mode=api-key" >> $GITHUB_OUTPUT
+            echo "✓ ANTHROPIC_API_KEY present — running smoke against API-key billing"
+          else
+            echo "mode=missing" >> $GITHUB_OUTPUT
+            echo "⚠ no auth secret configured. Set CLAUDE_CODE_OAUTH_TOKEN (preferred) or ANTHROPIC_API_KEY in repo secrets to enable Tier-3 in CI. Skipping (exit 0) — this is a config gap, not a regression."
+
+      - name: Run Tier-3 smoke (subscription auth)
+        if: steps.auth.outputs.mode == 'oauth'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: pytest tests/smoke -q -m "${{ inputs.tier || 'smoke' }}"
+
+      - name: Run Tier-3 smoke (API-key auth)
+        if: steps.auth.outputs.mode == 'api-key'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AUTONOVEL_SMOKE_USE_API_KEY: "1"
+        run: pytest tests/smoke -q -m "${{ inputs.tier || 'smoke' }}"
+
+      - name: Skip with diagnostic when no auth configured
+        if: steps.auth.outputs.mode == 'missing'
+        run: |
+          echo "No CI auth secret configured. To enable this job:"
+          echo "  1. Generate a Claude Code long-lived token (Subscription → Settings)"
+          echo "  2. Add it to the repo as CLAUDE_CODE_OAUTH_TOKEN"
+          echo "  Or fall back to API-key billing by setting ANTHROPIC_API_KEY."
+          exit 0
+
+      - name: Upload flakiness log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flakiness-log-${{ github.run_id }}
+          path: tests/flakiness.jsonl
+          if-no-files-found: ignore

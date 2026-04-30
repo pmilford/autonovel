@@ -57,7 +57,9 @@ from .entity_track import (
 )
 from .impact import (
     build_impact_report,
+    build_stale_chapters_report,
     render_impact_markdown,
+    render_stale_chapters_markdown,
 )
 from .research_index import (
     build_index as build_research_index,
@@ -360,26 +362,63 @@ def _cmd_summary_query(args: argparse.Namespace) -> int:
     return 0
 
 
+_CANON_DRIVEN_SOURCES = ("promote-canon", "gen-canon")
+_MTIME_DRIVEN_SOURCES = (
+    "voice-discovery", "add-character", "gen-characters", "gen-world",
+    "add-source",
+)
+
+
 def _cmd_impact_of(args: argparse.Namespace) -> int:
     book_root = Path(args.book_root)
     series_root = Path(args.series_root) if args.series_root else None
-    report = build_impact_report(
-        book_root,
-        series_root=series_root,
-        source_command=args.source,
-    )
-    if args.format == "json":
-        json.dump(
-            {
-                "book_root": str(book_root),
-                "series_root": str(series_root) if series_root else None,
-                **report.to_dict(),
-            },
-            sys.stdout, indent=2,
+    if args.source in _CANON_DRIVEN_SOURCES:
+        report = build_impact_report(
+            book_root,
+            series_root=series_root,
+            source_command=args.source,
         )
-        sys.stdout.write("\n")
+        if args.format == "json":
+            json.dump(
+                {
+                    "book_root": str(book_root),
+                    "series_root": str(series_root) if series_root else None,
+                    "report_kind": "canon-driven",
+                    **report.to_dict(),
+                },
+                sys.stdout, indent=2,
+            )
+            sys.stdout.write("\n")
+        else:
+            sys.stdout.write(
+                render_impact_markdown(report, book=book_root.name)
+            )
+    elif args.source in _MTIME_DRIVEN_SOURCES:
+        stale = build_stale_chapters_report(
+            book_root,
+            series_root=series_root,
+            source_command=args.source,
+        )
+        if args.format == "json":
+            json.dump(
+                {
+                    "book_root": str(book_root),
+                    "series_root": str(series_root) if series_root else None,
+                    "report_kind": "mtime-driven",
+                    **stale.to_dict(),
+                },
+                sys.stdout, indent=2,
+            )
+            sys.stdout.write("\n")
+        else:
+            sys.stdout.write(
+                render_stale_chapters_markdown(stale, book=book_root.name)
+            )
     else:
-        sys.stdout.write(render_impact_markdown(report, book=book_root.name))
+        # Should not happen given the argparse choices=, but defend
+        # anyway for direct API callers.
+        print(f"error: unsupported --source {args.source!r}", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -710,12 +749,14 @@ def main(argv: list[str] | None = None) -> int:
     ri.set_defaults(func=_cmd_research_index)
 
     io = sub.add_parser("impact-of",
-                        help='"What should I revise after promote-canon?" — grep chapters for tokens unique to superseded canon facts.')
+                        help='"What should I revise after <foundation-mutation>?" — token-grep for canon supersedures, mtime-stale-detection for voice/character/world/bibliography updates.')
     io.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
     io.add_argument("--series-root", default=None,
                      help="Series root for shared/canon.md (default: book_root.parent.parent).")
-    io.add_argument("--source", choices=("promote-canon",), default="promote-canon",
-                     help="Which command's impact to analyse (only promote-canon supported today).")
+    io.add_argument("--source",
+                     choices=_CANON_DRIVEN_SOURCES + _MTIME_DRIVEN_SOURCES,
+                     default="promote-canon",
+                     help="Which command's impact to analyse. Canon-driven: promote-canon, gen-canon (parse Superseded blocks). Mtime-driven: voice-discovery, add-character, gen-characters, gen-world, add-source (find chapters drafted before the foundation file's last update).")
     io.add_argument("--format", choices=("markdown", "json"), default="markdown",
                      help="Output format (default: markdown).")
     io.set_defaults(func=_cmd_impact_of)

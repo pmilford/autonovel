@@ -669,6 +669,14 @@ pip install -e .[test,export]
 pytest tests/deterministic tests/contracts -q   # Tier 1 + 2 — fast, free
 ```
 
+**CI** runs Tier 1+2 on every push and PR via
+`.github/workflows/test.yml` (matrix: Python 3.11 / 3.12 / 3.13).
+A weekly cron at `.github/workflows/smoke-weekly.yml` runs Tier-3
+against Claude Code if a `CLAUDE_CODE_OAUTH_TOKEN` (preferred) or
+`ANTHROPIC_API_KEY` repo secret is configured; without either, the
+job logs the missing-auth state and exits 0 (config gap, not a
+regression).
+
 ### Project memory and conventions
 
 - [`REWRITE-PLAN.md`](REWRITE-PLAN.md) — the architecture and PR sequence.

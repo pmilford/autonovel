@@ -265,15 +265,21 @@ def build_impact_report(book_root: Path, *, series_root: Path | None = None,
                          source_command: str = "promote-canon") -> ImpactReport:
     """Assemble the per-book impact report.
 
-    For `source_command == "promote-canon"` (the only source supported
-    today), reads `<series_root>/shared/canon.md`, extracts every
-    superseded entry, and greps every `chapters/ch_*.md` for tokens
-    unique to the prior values.
+    Two surfaces share this report shape:
+
+      - `promote-canon` / `gen-canon` — parse `## Superseded` blocks
+        in `shared/canon.md` and grep prior-value tokens out of
+        chapter prose. Same logic; gen-canon is just the regenerate-
+        from-foundation variant of promote-canon and writes the
+        same Superseded blocks when it changes a fact.
+      - Other sources (`voice-discovery`, `add-character`,
+        `add-source`, `research`) — return empty here; callers
+        looking for stale-chapter analysis should use
+        `build_stale_chapters_report` instead, which is mtime-based
+        rather than token-based.
     """
-    if source_command != "promote-canon":
-        # Other sources (research, gen-canon, voice-discovery, etc.)
-        # are FUTURE-TODOS. Return an empty report so callers stay
-        # uniform.
+    canon_sources = {"promote-canon", "gen-canon"}
+    if source_command not in canon_sources:
         return ImpactReport(source_command=source_command, supersedures=[])
     series_root = series_root or book_root.parent.parent
     canon_path = series_root / "shared" / "canon.md"
@@ -293,6 +299,179 @@ def build_impact_report(book_root: Path, *, series_root: Path | None = None,
         matches=matches,
         chapters_with_matches=chapters_with_matches,
     )
+
+
+# ---------------------------------------------- mtime-based stale detection
+
+
+# Source command → foundation file path (relative to series_root for
+# shared files, relative to book_root for per-book files). Tuple is
+# `(rel_to_series, rel_to_book)` — exactly one of the two is set per
+# entry.
+_FOUNDATION_FILE_FOR: dict[str, tuple[str | None, str | None]] = {
+    "voice-discovery": (None, "voice.md"),
+    "add-character": ("shared/characters.md", None),
+    "gen-characters": ("shared/characters.md", None),
+    "gen-world": ("shared/world.md", None),
+    "add-source": ("shared/sources.bib", None),
+    "rename-character": (None, None),  # special-cased below
+}
+
+
+@dataclass
+class StaleChapter:
+    chapter: int
+    chapter_mtime: str    # ISO
+    foundation_mtime: str  # ISO
+
+    def to_dict(self) -> dict:
+        return {
+            "chapter": self.chapter,
+            "chapter_mtime": self.chapter_mtime,
+            "foundation_mtime": self.foundation_mtime,
+        }
+
+
+@dataclass
+class StaleChaptersReport:
+    """For sources where the natural impact signal is "the
+    foundation file changed; chapters drafted before that change
+    haven't been reviewed against the new version" — voice-
+    discovery, add-character, gen-world, add-source.
+    """
+    source_command: str
+    foundation_path: str | None     # path that changed (or None when missing)
+    foundation_mtime: str | None
+    stale_chapters: list[StaleChapter] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "source_command": self.source_command,
+            "foundation_path": self.foundation_path,
+            "foundation_mtime": self.foundation_mtime,
+            "stale_chapters": [s.to_dict() for s in self.stale_chapters],
+        }
+
+
+def build_stale_chapters_report(book_root: Path, *,
+                                  series_root: Path | None = None,
+                                  source_command: str
+                                  ) -> StaleChaptersReport:
+    """Find chapters with mtime older than the relevant foundation
+    file. Used by sources that mutate a foundation surface in a way
+    that doesn't lend itself to token-grep — voice register,
+    character entries, world-bible facts, bibliography.
+    """
+    series_root = series_root or book_root.parent.parent
+    if source_command not in _FOUNDATION_FILE_FOR:
+        return StaleChaptersReport(
+            source_command=source_command,
+            foundation_path=None, foundation_mtime=None,
+        )
+    rel_series, rel_book = _FOUNDATION_FILE_FOR[source_command]
+    foundation: Path | None = None
+    if rel_series:
+        foundation = series_root / rel_series
+    elif rel_book:
+        foundation = book_root / rel_book
+    if foundation is None or not foundation.is_file():
+        return StaleChaptersReport(
+            source_command=source_command,
+            foundation_path=str(foundation) if foundation else None,
+            foundation_mtime=None,
+        )
+    found_mtime = foundation.stat().st_mtime
+    found_iso = _to_iso(found_mtime)
+    stale: list[StaleChapter] = []
+    for ch_path in iter_chapter_files(book_root / "chapters"):
+        ch_mtime = ch_path.stat().st_mtime
+        if ch_mtime >= found_mtime:
+            continue
+        try:
+            ch_num = int(ch_path.stem.split("_")[-1])
+        except ValueError:
+            continue
+        stale.append(StaleChapter(
+            chapter=ch_num,
+            chapter_mtime=_to_iso(ch_mtime),
+            foundation_mtime=found_iso,
+        ))
+    stale.sort(key=lambda s: s.chapter)
+    return StaleChaptersReport(
+        source_command=source_command,
+        foundation_path=str(foundation),
+        foundation_mtime=found_iso,
+        stale_chapters=stale,
+    )
+
+
+def _to_iso(epoch: float) -> str:
+    from datetime import datetime, timezone
+    return datetime.fromtimestamp(epoch, timezone.utc).isoformat(timespec="seconds")
+
+
+def render_stale_chapters_markdown(report: StaleChaptersReport, *,
+                                     book: str = "") -> str:
+    if report.foundation_path is None:
+        return (
+            f"_No foundation file mapped for source "
+            f"`{report.source_command}`. Supported sources: "
+            f"{sorted(_FOUNDATION_FILE_FOR.keys())}._\n"
+        )
+    if report.foundation_mtime is None:
+        return (
+            f"_Foundation file `{report.foundation_path}` does not "
+            f"exist; nothing to stale-check against._\n"
+        )
+    parts: list[str] = []
+    parts.append(f"# Impact of `/autonovel:{report.source_command}`\n")
+    parts.append(
+        f"_Foundation file:_ `{report.foundation_path}` "
+        f"(updated {report.foundation_mtime}).\n"
+    )
+    if not report.stale_chapters:
+        parts.append(
+            "✅ Every chapter is newer than the updated foundation "
+            "file. Nothing to revise.\n"
+        )
+        return "\n".join(parts) + "\n"
+    parts.append(
+        f"⚠️  **{len(report.stale_chapters)} chapter(s)** were drafted "
+        f"BEFORE the foundation file was last updated. Their prose "
+        f"may not reflect what the foundation now says.\n"
+    )
+    parts.append("| ch | drafted | foundation updated |")
+    parts.append("|---:|---|---|")
+    for s in report.stale_chapters:
+        parts.append(f"| {s.chapter} | {s.chapter_mtime} | {s.foundation_mtime} |")
+    parts.append("")
+    parts.append("## Action plan\n")
+    book_arg = f" --book {book}" if book else ""
+    chapters_str = ",".join(str(s.chapter) for s in report.stale_chapters)
+    parts.append(
+        f"Review each stale chapter against the updated foundation. "
+        f"Most cases need a brief + revise pass; a few may be "
+        f"untouched-since-the-foundation-update by coincidence and "
+        f"actually fine.\n"
+    )
+    for s in report.stale_chapters:
+        parts.append(
+            f"- [ ] `/autonovel:revise --chapter {s.chapter}{book_arg}` "
+            f"— reconcile against `{report.foundation_path}`."
+        )
+    parts.append("")
+    parts.append(
+        f"Or sweep the contiguous run with "
+        f"`/autonovel:revision-pass --chapters {chapters_str}{book_arg}`."
+    )
+    parts.append("")
+    parts.append(
+        "_mtime-based candidate generator (per "
+        "feedback_avoid_brittle_python.md). False positives are "
+        "common — a chapter that happens not to reference the "
+        "changed surface is fine as-is. Skim each before revising._"
+    )
+    return "\n".join(parts) + "\n"
 
 
 # ----------------------------------------------------------- render

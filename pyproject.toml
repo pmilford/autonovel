@@ -28,6 +28,11 @@ test = [
     # and "next_step never returns an empty command". Catches the long
     # tail of glob/inference bugs that targeted unit tests miss.
     "hypothesis>=6",
+    # JSON-schema validation for commands/*.md frontmatter shape — used
+    # by tests/deterministic/test_command_schema.py to catch typos in
+    # field names, wrong types, or missing required fields that the
+    # body-text contract tests can't see.
+    "jsonschema>=4",
 ]
 # PR 7 export commands that touch images and audio. Users who only draft
 # and revise do not need these; `autonovel doctor` reports any that are
@@ -71,6 +76,7 @@ packages = ["src/autonovel"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/autonovel/templates" = "autonovel/templates"
+"src/autonovel/validators/command_schema.json" = "autonovel/validators/command_schema.json"
 "commands" = "autonovel/commands"
 
 [tool.pytest.ini_options]

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autonovel.dev/schemas/command-frontmatter.json",
+  "title": "autonovel command frontmatter",
+  "description": "YAML frontmatter contract for every commands/*.md file. Each command's frontmatter is parsed by adapters.base.parse_command and translated to runtime-specific shape by the per-runtime adapter (claude_code, codex, gemini). This schema catches typos and shape drift before runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "description",
+    "model_tier",
+    "allowed-tools"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^autonovel:[a-z][a-z0-9_-]*$",
+      "description": "Slash-command identifier. Always namespaced under `autonovel:`. Lowercase + dashes/underscores only."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "One-line user-facing description. Surfaced in the runtime's slash-command picker."
+    },
+    "argument-hint": {
+      "type": "string",
+      "description": "Argument syntax hint shown in the picker. Use angle brackets for required values, square brackets for optional, pipes for alternatives."
+    },
+    "model_tier": {
+      "type": "string",
+      "enum": ["heavy", "standard", "light"],
+      "description": "Runtime model selection. heavy → Opus-class; standard → Sonnet-class; light → Haiku-class."
+    },
+    "allowed-tools": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "file_read",
+          "file_write",
+          "bash",
+          "task",
+          "web_search",
+          "web_fetch"
+        ]
+      },
+      "description": "Generic tool names the command may invoke. Adapters translate these to runtime-specific names (Read/Write/Bash/Task/etc.)."
+    },
+    "reads": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Paths the command reads. May contain {placeholder} substitutions like {book}, {chapter}, {prev}, {topic}. Tier-2 contract tests verify each path appears in the body."
+    },
+    "writes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Paths the command writes. Same placeholder rules as `reads`. An empty list (or omission) declares the command read-only by contract."
+    },
+    "context_mode": {
+      "type": "string",
+      "enum": ["none", "book", "series"],
+      "description": "How _begin should infer missing arguments. `none` = no inference; `book` = single-book inference allowed; `series` = series-wide inference."
+    }
+  }
+}

@@ -1,7 +1,7 @@
 ---
 name: autonovel:impact-of
 description: After a foundation mutation, list the chapters that reference the old fact and need revising — kills the ls / grep / cat workflow. Mechanical first pass; opt-in LLM classification of false positives.
-argument-hint: "[--book <short-name>] [--source promote-canon|research] [--with-llm] [--format markdown|json]"
+argument-hint: "[--book <short-name>] [--source promote-canon|gen-canon|voice-discovery|add-character|gen-characters|gen-world|add-source|research] [--with-llm] [--format markdown|json]"
 model_tier: light
 allowed-tools:
   - bash
@@ -22,20 +22,32 @@ require manual `ls` + `grep` across `shared/canon.md` Superseded
 blocks and `books/<book>/chapters/`. autonovel exists to collapse
 that investigation into one command.
 
-Two layers, both surfaced from this single slash-command:
+Three mechanical detection shapes, plus an LLM augmentation:
 
-  - **Mechanical (default).** Token-grep candidate generator. Fast,
-    free, no LLM. Works for `--source promote-canon` (parses
-    Superseded blocks, greps prior-value tokens) and is the right
-    starting point most of the time.
-  - **LLM-augmented (`--with-llm`).** After the mechanical pass,
-    a Haiku-tier classifier reads each candidate chapter line in
-    context and labels it `HIGH` (real direct fix needed),
-    `MEDIUM` (implied — needs careful re-read), `LOW` (token
-    coincidence), or `FALSE_POSITIVE`. The action checklist then
-    only includes HIGH/MEDIUM matches; LOW/FALSE_POSITIVE matches
-    drop to a separate "skipped — token coincidence" block. Cuts
-    the false-positive review burden on noisy matches like 4-digit
+  - **Canon-driven** (`--source promote-canon`, `--source gen-canon`).
+    Parses `## Superseded` blocks in `shared/canon.md`, computes
+    tokens unique to each prior_value, greps every chapter for
+    them. Fast, free, no LLM. Same logic for both — gen-canon is
+    the regenerate-from-foundation variant of promote-canon and
+    writes the same Superseded blocks when it changes a fact.
+  - **Mtime-driven** (`--source voice-discovery`, `add-character`,
+    `gen-characters`, `gen-world`, `add-source`). Each maps to a
+    foundation file (`books/<book>/voice.md`,
+    `shared/characters.md`, `shared/world.md`,
+    `shared/sources.bib`); the helper lists chapters whose mtime
+    is older than the foundation's. The natural shape for
+    foundation surfaces that change in ways grep can't see (a
+    new voice fingerprint, a new character entry, a fact in the
+    world bible).
+  - **LLM-augmented** (`--with-llm`, applies to canon-driven
+    sources). After the mechanical pass, a Haiku-tier classifier
+    reads each candidate chapter line in context and labels it
+    `HIGH` (real direct fix needed), `MEDIUM` (implied — needs
+    careful re-read), `LOW` (token coincidence), or
+    `FALSE_POSITIVE`. The action checklist then only includes
+    HIGH/MEDIUM matches; LOW/FALSE_POSITIVE matches drop to a
+    separate "skipped — token coincidence" block. Cuts the
+    false-positive review burden on noisy matches like 4-digit
     years.
 
 Plus the standalone LLM-only mode for sources without a clean
@@ -67,18 +79,29 @@ are read-only by contract.
    LLM by default). `--format markdown|json` (default
    `markdown`).
 
-2. **Mechanical pass — `--source promote-canon`.** Use `bash`
-   to invoke:
+2. **Mechanical pass.** Use `bash` to invoke:
 
    ```
-   autonovel mechanical impact-of books/{book} --source promote-canon --format json
+   autonovel mechanical impact-of books/{book} --source <SOURCE> --format json
    ```
 
-   The helper parses `shared/canon.md` for `## Superseded
-   <UTC-date>` blocks, extracts (prior_value, new_value) pairs,
-   computes tokens unique to prior, and greps every
-   `books/{book}/chapters/ch_*.md` (frontmatter-stripped) for
-   them. JSON output gives you the structured match list.
+   Two helper shapes depending on `--source`:
+
+   - **Canon-driven** (`promote-canon`, `gen-canon`): the helper
+     parses `shared/canon.md` for `## Superseded <UTC-date>`
+     blocks, extracts (prior_value, new_value) pairs, computes
+     tokens unique to prior, and greps every
+     `books/{book}/chapters/ch_*.md` (frontmatter-stripped) for
+     them. JSON output gives you the structured match list with
+     `report_kind: canon-driven`.
+   - **Mtime-driven** (`voice-discovery`, `add-character`,
+     `gen-characters`, `gen-world`, `add-source`): the helper
+     resolves the source command to its foundation file path,
+     lists chapters whose mtime is older than the foundation
+     file's, and emits a stale-chapters list. JSON has
+     `report_kind: mtime-driven`. Action plan: each stale chapter
+     gets a `/autonovel:revise --chapter N` checklist entry to
+     reconcile against the updated foundation.
 
    When `--source research` is set instead, skip step 2 and go
    to step 3 (research mode is LLM-only by default).

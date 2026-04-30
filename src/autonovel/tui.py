@@ -323,6 +323,7 @@ if _TEXTUAL_AVAILABLE:
             Binding("q", "quit", "Quit"),
             Binding("r", "refresh", "Refresh now"),
             Binding("b", "next_book", "Next book"),
+            Binding("p", "toggle_pause", "Pause refresh"),
             Binding("0", "tab(0)", "Help"),
             Binding("1", "tab(1)", "Chapters"),
             Binding("2", "tab(2)", "Research"),
@@ -335,6 +336,7 @@ if _TEXTUAL_AVAILABLE:
         REFRESH_INTERVAL_SECONDS: float = 5.0
 
         active_book: reactive[str] = reactive("")
+        paused: reactive[bool] = reactive(False)
 
         def __init__(self, series: SeriesLayout, *,
                       initial_book: str | None = None,
@@ -389,10 +391,18 @@ if _TEXTUAL_AVAILABLE:
             rt = self.query_one("#research_table", DataTable)
             rt.add_columns("slug", "title", "updated", "words", "sources", "cands")
             self.refresh_state()
-            self.set_interval(self.poll_interval, self.refresh_state)
+            self.set_interval(self.poll_interval, self._on_timer_refresh)
 
         def action_refresh(self) -> None:
             self.refresh_state()
+
+        def action_toggle_pause(self) -> None:
+            """Pause auto-refresh so the user can read prose / copy
+            text out of a panel without the cursor / row order
+            jumping around. Press `p` again to resume; `r` still
+            refreshes manually while paused."""
+            self.paused = not self.paused
+            self._render_status_bar()
 
         def action_next_book(self) -> None:
             if not self._book_names:
@@ -413,6 +423,9 @@ if _TEXTUAL_AVAILABLE:
                 tabs.active = ids[idx]
 
         def refresh_state(self) -> None:
+            # Auto-refresh tick is suppressed while paused; the manual
+            # `r` action calls refresh_state() directly so that path
+            # still works.
             try:
                 state = _load_state(self.series, self.active_book)
             except Exception as e:  # noqa: BLE001 — TUI must not crash
@@ -427,6 +440,13 @@ if _TEXTUAL_AVAILABLE:
             self._render_reviews()
             self._render_commands()
 
+        def _on_timer_refresh(self) -> None:
+            """Timer-driven refresh — skipped while paused so the
+            user can read or copy without the view churning."""
+            if self.paused:
+                return
+            self.refresh_state()
+
         # ------------------------------------------------- renderers
 
         def _render_status_bar(self) -> None:
@@ -434,8 +454,9 @@ if _TEXTUAL_AVAILABLE:
             self.query_one("#status_series", Static).update(
                 f"📚 {s.get('series_name', '?')} / {self.active_book}"
             )
+            paused_marker = "  ⏸ paused" if self.paused else ""
             self.query_one("#status_lock", Static).update(
-                f"⚪ {s.get('lock_state', 'idle')}"
+                f"⚪ {s.get('lock_state', 'idle')}{paused_marker}"
             )
             self.query_one("#status_sweep", Static).update(s.get("sweep", ""))
             today = s.get("cost_today", 0.0)
@@ -446,6 +467,9 @@ if _TEXTUAL_AVAILABLE:
 
         def _render_chapters(self) -> None:
             table = self.query_one("#chapter_table", DataTable)
+            # Preserve the cursor row across refresh so reading a
+            # specific chapter doesn't reset to row 0 every 5 s.
+            prior_cursor = table.cursor_row if table.row_count else 0
             table.clear()
             rows = self._state.get("rows", [])
             for r in rows:
@@ -457,17 +481,38 @@ if _TEXTUAL_AVAILABLE:
                     f"{r['score']:.1f}" if r.get("score") is not None else "—",
                     str(r.get("status", "") or "")[:10],
                 )
-            scores = [r.get("score") for r in rows]
-            spark = _sparkline(scores)
-            self.query_one("#spark_box", Static).update(
-                f"Score:   {spark}\n"
-                f"({sum(1 for s in scores if s is not None)} of "
-                f"{len(scores)} evaluated · pending canon: "
-                f"{self._state.get('pending_canon', 'none')})"
-            )
-            # Initial detail view: first row.
+            # Restore cursor row (clamped to new row count).
             if rows:
-                self._render_chapter_detail(rows[0])
+                target = min(prior_cursor, len(rows) - 1)
+                try:
+                    table.move_cursor(row=target)
+                except Exception:  # noqa: BLE001 — cursor restoration is decorative
+                    pass
+            scores = [r.get("score") for r in rows]
+            real_scores = [s for s in scores if s is not None]
+            spark = _sparkline(scores)
+            n_eval = len(real_scores)
+            n_total = len(scores)
+            below = sum(1 for s in real_scores if s < 7.0)
+            score_summary = ""
+            if real_scores:
+                score_summary = (
+                    f"   range {min(real_scores):.1f}–{max(real_scores):.1f}, "
+                    f"mean {sum(real_scores)/len(real_scores):.2f}, "
+                    f"{below} below 7.0 threshold"
+                )
+            self.query_one("#spark_box", Static).update(
+                f"Score per chapter (0=worst, 10=best; ≥7 = above threshold):\n"
+                f"  {spark}\n"
+                f"  {n_eval} of {n_total} chapters evaluated"
+                + (f"; {score_summary}" if score_summary else "")
+                + f"\n  · = no eval log yet for that chapter."
+                f"\n  Pending canon: {self._state.get('pending_canon', 'none')}."
+            )
+            # Restore detail view to the previously-cursored chapter.
+            if rows:
+                target = min(prior_cursor, len(rows) - 1)
+                self._render_chapter_detail(rows[target])
 
         def _render_chapter_detail(self, row: dict) -> None:
             md = self.query_one("#chapter_detail_md", Markdown)
@@ -501,8 +546,13 @@ if _TEXTUAL_AVAILABLE:
 
         def _render_research(self) -> None:
             rt = self.query_one("#research_table", DataTable)
+            # Preserve cursor row across refresh — same fix as the
+            # chapter table; the user shouldn't lose their place
+            # while reading a note.
+            prior_cursor = rt.cursor_row if rt.row_count else 0
             rt.clear()
-            for n in self._state.get("research_notes", []):
+            notes = self._state.get("research_notes", [])
+            for n in notes:
                 rt.add_row(
                     n["slug"][:30],
                     (n.get("title") or "")[:40],
@@ -511,9 +561,13 @@ if _TEXTUAL_AVAILABLE:
                     str(n.get("sources", 0)),
                     str(n.get("candidates", 0)),
                 )
-            notes = self._state.get("research_notes", [])
             if notes:
-                self._render_research_detail(notes[0])
+                target = min(prior_cursor, len(notes) - 1)
+                try:
+                    rt.move_cursor(row=target)
+                except Exception:  # noqa: BLE001
+                    pass
+                self._render_research_detail(notes[target])
 
         def _render_research_detail(self, note: dict) -> None:
             md = self.query_one("#research_detail_md", Markdown)
@@ -618,9 +672,31 @@ if _TEXTUAL_AVAILABLE:
                 self._append_command_help(parts, canonical, prefix="(default)")
             parts.append(
                 "\n---\n"
-                "_To act on any of these, copy the command into your "
-                "runtime. The TUI will pick up the resulting state on "
-                "the next refresh (5 s) — press `r` to refresh now._\n"
+                "## Keyboard\n\n"
+                "- **`r`** — refresh now (don't wait for the 5 s timer)\n"
+                "- **`p`** — pause / resume auto-refresh. Pause when "
+                "you're reading a note or copying text out of a panel "
+                "so the view doesn't churn under you.\n"
+                "- **`b`** — switch to the next book in the series\n"
+                "- **`0`–`6`** — jump to a tab (Help, Chapters, "
+                "Research, Foundation, Front matter, Reviews, Commands)\n"
+                "- **`q`** — quit\n\n"
+                "## Copy / paste from the TUI\n\n"
+                "Textual captures mouse events by default, which "
+                "blocks normal terminal selection. Two workarounds:\n\n"
+                "1. **Hold `shift` while dragging** — most terminals "
+                "(GNOME Terminal, iTerm2, Windows Terminal, kitty, "
+                "Alacritty) bypass the app's mouse capture under "
+                "shift, so the selection goes through to the terminal "
+                "and Ctrl+Shift+C / Cmd+C copies it. This is the path "
+                "that works everywhere.\n"
+                "2. **Press `p` first** to pause auto-refresh, so the "
+                "view isn't redrawn while you're selecting. Then\n"
+                "   shift+drag, copy, and resume with `p`.\n\n"
+                "_To act on any of the suggested commands above, copy "
+                "the command into your runtime. The TUI will pick up "
+                "the resulting state on the next refresh (5 s) — "
+                "press `r` to refresh now._\n"
             )
             self.query_one("#help_md", Markdown).update(
                 "\n".join(parts)

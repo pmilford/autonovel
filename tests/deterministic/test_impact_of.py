@@ -328,6 +328,188 @@ def test_cli_impact_of_json_format(tmp_path: Path) -> None:
     assert len(data["supersedures"]) == 1
 
 
+# ----------------------------- mtime-driven stale-chapters detector
+
+
+def test_stale_chapters_voice_discovery_flags_old_chapter(
+    tmp_path: Path,
+) -> None:
+    import os
+    series, book_root = _build_series(tmp_path)
+    voice = book_root / "voice.md"
+    voice.write_text("# Voice\n\nFingerprint.\n", encoding="utf-8")
+    # Voice is "newer"; chapter is older.
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    ch1 = book_root / "chapters" / "ch_01.md"
+    ch1.write_text("---\nchapter: 1\n---\n\nProse.\n", encoding="utf-8")
+    os.utime(ch1, (older, older))
+    os.utime(voice, (newer, newer))
+    report = impact_mod.build_stale_chapters_report(
+        book_root, series_root=series,
+        source_command="voice-discovery",
+    )
+    assert report.foundation_path is not None
+    assert "voice.md" in report.foundation_path
+    assert len(report.stale_chapters) == 1
+    assert report.stale_chapters[0].chapter == 1
+
+
+def test_stale_chapters_add_character_uses_shared_path(
+    tmp_path: Path,
+) -> None:
+    import os
+    series, book_root = _build_series(tmp_path)
+    chars = series / "shared" / "characters.md"
+    chars.write_text("# Characters\n\n- **Alice**\n", encoding="utf-8")
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    ch1 = book_root / "chapters" / "ch_01.md"
+    ch1.write_text("---\nchapter: 1\n---\n\n", encoding="utf-8")
+    os.utime(ch1, (older, older))
+    os.utime(chars, (newer, newer))
+    report = impact_mod.build_stale_chapters_report(
+        book_root, series_root=series,
+        source_command="add-character",
+    )
+    assert "characters.md" in (report.foundation_path or "")
+    assert len(report.stale_chapters) == 1
+
+
+def test_stale_chapters_chapter_newer_than_foundation_silent(
+    tmp_path: Path,
+) -> None:
+    """Chapter mtime ≥ foundation mtime → not stale."""
+    import os
+    series, book_root = _build_series(tmp_path)
+    voice = book_root / "voice.md"
+    voice.write_text("# Voice\n", encoding="utf-8")
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    os.utime(voice, (older, older))
+    ch1 = book_root / "chapters" / "ch_01.md"
+    ch1.write_text("---\nchapter: 1\n---\n", encoding="utf-8")
+    os.utime(ch1, (newer, newer))
+    report = impact_mod.build_stale_chapters_report(
+        book_root, series_root=series,
+        source_command="voice-discovery",
+    )
+    assert report.stale_chapters == []
+
+
+def test_stale_chapters_no_foundation_file_emits_empty(
+    tmp_path: Path,
+) -> None:
+    series, book_root = _build_series(tmp_path)
+    # No voice.md.
+    report = impact_mod.build_stale_chapters_report(
+        book_root, series_root=series,
+        source_command="voice-discovery",
+    )
+    assert report.foundation_mtime is None
+    assert report.stale_chapters == []
+
+
+def test_stale_chapters_unknown_source_returns_empty(
+    tmp_path: Path,
+) -> None:
+    series, book_root = _build_series(tmp_path)
+    report = impact_mod.build_stale_chapters_report(
+        book_root, series_root=series,
+        source_command="not-a-real-source",
+    )
+    assert report.foundation_path is None
+
+
+def test_render_stale_chapters_action_plan(tmp_path: Path) -> None:
+    import os
+    series, book_root = _build_series(tmp_path)
+    voice = book_root / "voice.md"
+    voice.write_text("# Voice\n", encoding="utf-8")
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    for n in (1, 3, 5):
+        ch = book_root / "chapters" / f"ch_{n:02d}.md"
+        ch.write_text(f"---\nchapter: {n}\n---\n", encoding="utf-8")
+        os.utime(ch, (older, older))
+    os.utime(voice, (newer, newer))
+    report = impact_mod.build_stale_chapters_report(
+        book_root, series_root=series,
+        source_command="voice-discovery",
+    )
+    md = impact_mod.render_stale_chapters_markdown(report, book="test-book")
+    assert "/autonovel:revise --chapter 1" in md
+    assert "/autonovel:revise --chapter 3" in md
+    assert "/autonovel:revise --chapter 5" in md
+    assert "1,3,5" in md  # revision-pass sweep hint
+
+
+def test_render_stale_chapters_no_stale_says_clean(tmp_path: Path) -> None:
+    import os
+    series, book_root = _build_series(tmp_path)
+    voice = book_root / "voice.md"
+    voice.write_text("# Voice\n", encoding="utf-8")
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    os.utime(voice, (older, older))
+    ch1 = book_root / "chapters" / "ch_01.md"
+    ch1.write_text("---\nchapter: 1\n---\n", encoding="utf-8")
+    os.utime(ch1, (newer, newer))
+    report = impact_mod.build_stale_chapters_report(
+        book_root, series_root=series,
+        source_command="voice-discovery",
+    )
+    md = impact_mod.render_stale_chapters_markdown(report)
+    assert "Every chapter is newer" in md or "Nothing to revise" in md
+
+
+def test_cli_impact_of_voice_discovery_mtime(tmp_path: Path) -> None:
+    """CLI round-trip with --source voice-discovery emits the
+    mtime-driven report shape."""
+    import os
+    series, book_root = _build_series(tmp_path)
+    voice = book_root / "voice.md"
+    voice.write_text("# Voice\n", encoding="utf-8")
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    ch1 = book_root / "chapters" / "ch_01.md"
+    ch1.write_text("---\nchapter: 1\n---\n", encoding="utf-8")
+    os.utime(ch1, (older, older))
+    os.utime(voice, (newer, newer))
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical", "impact-of",
+         str(book_root), "--series-root", str(series),
+         "--source", "voice-discovery", "--format", "json"],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data["report_kind"] == "mtime-driven"
+    assert data["source_command"] == "voice-discovery"
+    assert len(data["stale_chapters"]) == 1
+
+
+def test_cli_impact_of_gen_canon_uses_canon_path(tmp_path: Path) -> None:
+    """gen-canon source shares the canon-driven helper with
+    promote-canon — Superseded blocks drive the report shape."""
+    series, book_root = _build_series(tmp_path)
+    # _build_series writes a canon with a Superseded block.
+    (book_root / "chapters" / "ch_02.md").write_text(
+        "---\nchapter: 2\n---\n\nFugger arrived in 1473.\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical", "impact-of",
+         str(book_root), "--series-root", str(series),
+         "--source", "gen-canon", "--format", "json"],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data["report_kind"] == "canon-driven"
+    assert data["source_command"] == "gen-canon"
+    # Superseded block found; chapter 2 references the prior value.
+    assert data["chapters_with_matches"] == [2]
+
+
 # ----------------------------------- /autonovel:impact-of body locks
 
 
@@ -342,6 +524,17 @@ def test_argument_hint_lists_with_llm_and_source_research(impact_of_cmd) -> None
     hint = impact_of_cmd.argument_hint or ""
     assert "--with-llm" in hint
     assert "research" in hint
+
+
+def test_argument_hint_lists_mtime_driven_sources(impact_of_cmd) -> None:
+    """The Phase-2 source extension added voice-discovery,
+    add-character, gen-characters, gen-world, add-source plus
+    gen-canon. argument-hint must enumerate them so users discover
+    the option."""
+    hint = impact_of_cmd.argument_hint or ""
+    for src in ("gen-canon", "voice-discovery", "add-character",
+                 "gen-world", "add-source"):
+        assert src in hint, f"missing source {src!r} in argument-hint"
 
 
 def test_body_documents_classification_buckets(impact_of_cmd) -> None:
