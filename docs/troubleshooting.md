@@ -285,6 +285,46 @@ revision don't.
 
 ---
 
+## My typeset PDF / ePub is missing parts (cover overlay, preface, glossary, appendix, page numbers, chapter titles)
+
+A 2026-04-30 user session surfaced a cluster of typeset gaps. As of
+that date the fixes are landed; for an existing series, run:
+
+```bash
+autonovel refresh-templates --only typeset
+```
+
+to pick up the updated `novel.tex`, then re-run typeset. The
+specific symptoms each fix addresses:
+
+| Symptom | Fix landed |
+|---|---|
+| **PDF missing title overlay on front cover image** (you see the bare painting; no book title) | `novel.tex` now prefers `cover_titled.png` over the bare `cover.png`. The auto-prepare-art step in typeset auto-runs `/autonovel:cover-composite` if `cover_titled.png` is missing. |
+| **PDF missing preface / introduction / glossary / appendix** | `novel.tex` reads `front_matter.tex` + `back_matter.tex` via `\IfFileExists` guards. They're auto-built by the typeset workflow. **If still missing, check that the source files exist** (`books/<book>/preface.md`, `introduction.md`, `glossary.md`, `appendix.md`). Generate any missing one with `/autonovel:introduction --from both` / `/autonovel:glossary --from auto` / `/autonovel:appendix --from auto`. |
+| **PDF page number missing on full-page image pages** | `mechanical/latex.py` now emits `\thispagestyle{plain}` (footer page number visible) for `before-chapter` / `after-chapter` plates instead of `{empty}` (suppressed). |
+| **First plate (chapter-start placement) too small** | Default width bumped from 0.6× to 0.8× textwidth — matches the published-book convention while leaving margin. Per-plate overrides via plates.yaml are still respected. |
+| **ePub missing glossary / appendix** | typeset.md body's pandoc invocation now includes `<glossary-arg>` and `<appendix-arg>` in the input order: front-matter → preface → introduction → glossary → chapters → appendix → back-cover → colophon. |
+| **TOC reads "Chapter I, II, III…" instead of chapter names** | Run `/autonovel:extract-chapter-titles --book <name>` to backfill 2-6 word evocative titles into chapter frontmatter. typeset reads the `title:` field and renders "Chapter VII — The Apothecary's Mortar". `/autonovel:next` surfaces this as a LOW polish signal. |
+| **ePub missing cover image / chapter ornaments** | The cover comes from pandoc's `--epub-cover-image=cover_titled.png` flag — confirm `books/<book>/art/cover_titled.png` exists. Per-chapter ornament images aren't currently embedded in the ePub (front-cover only); see [FUTURE-TODOS](../FUTURE-TODOS.md) for the planned ePub ornament-embedding work. |
+| **"Back cover square" — what's the back cover concept?** | PDF: typeset doesn't include a back cover (printed-book back covers come from `/autonovel:cover-print --pages <N>` which builds the wraparound). ePub: `typeset/epub_back_cover.md` is the back-of-book section that pandoc weaves in (currently a one-line "Back Cover" placeholder; edit the file to write real back-cover prose). |
+
+For an existing book that hit any of these in a typeset run before
+2026-04-30, the recovery sequence is:
+
+```bash
+# In your series root:
+autonovel refresh-templates --only typeset      # pick up new novel.tex + plate sizing
+
+# In Claude Code (only if these are missing):
+/autonovel:cover-composite --book <name>        # produces cover_titled.png if not there
+/autonovel:extract-chapter-titles --book <name> # backfill chapter titles for the TOC
+/autonovel:glossary --book <name> --from auto   # if you want a glossary
+/autonovel:appendix --book <name> --from auto   # if you want an appendix
+/autonovel:typeset --book <name>                # regenerates with all the fixes
+```
+
+---
+
 ## tectonic typeset spits out long font-lookup output and fails / produces wrong-looking PDF
 
 Symptom: tectonic prints many lines like `(Font: searching for ...)` /

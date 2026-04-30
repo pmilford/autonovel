@@ -166,14 +166,32 @@
 
 \frontmatter
 
-% Full-bleed cover image (if exists)
-\IfFileExists{../art/cover.png}{%
+% Full-bleed cover image (if exists). Prefers `cover_titled.png`
+% (title + author overlaid by `/autonovel:cover-composite`) over the
+% bare `cover.png` — the user 2026-04-30 hit "PDF missing the title
+% overlay on the front cover image" because the template was reading
+% the unoverlaid file. Both checks are guarded so a missing cover
+% silently skips this section (the half-title still renders the
+% title in clean type).
+\IfFileExists{../art/cover_titled.png}{%
   \thispagestyle{empty}
   \newgeometry{margin=0pt}
-  \noindent\includegraphics[width=\paperwidth, height=\paperheight, keepaspectratio]{../art/cover.png}
+  \noindent\includegraphics[width=\paperwidth, height=\paperheight, keepaspectratio]{../art/cover_titled.png}
   \restoregeometry
   \clearpage
-}{}
+}{%
+  \IfFileExists{../art/cover.png}{%
+    \thispagestyle{empty}
+    \newgeometry{margin=0pt}
+    \noindent\includegraphics[width=\paperwidth, height=\paperheight, keepaspectratio]{../art/cover.png}
+    \restoregeometry
+    \clearpage
+    \typeout{*** WARNING: cover.png exists but cover_titled.png does not.}
+    \typeout{*** Run /autonovel:cover-composite --book <name> to overlay}
+    \typeout{*** title + author. The bare cover.png is used as a fallback}
+    \typeout{*** but readers won't see the book title on the cover.}
+  }{}%
+}
 
 % Half title
 \makehalftitle

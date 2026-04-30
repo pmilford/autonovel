@@ -13,6 +13,10 @@ reads:
   - typeset/epub_front_matter.md
   - typeset/epub_back_cover.md
   - typeset/epub_colophon.md
+  - books/{book}/preface.md
+  - books/{book}/introduction.md
+  - books/{book}/glossary.md
+  - books/{book}/appendix.md
   - typeset/epub_metadata.yaml
   - typeset/epub_style.css
   - books/{book}/chapters/*.md
@@ -232,7 +236,9 @@ Light tier — mechanical. No LLM call.
 
    c. **Run pandoc** against the combined file plus front/back
       matter, writing to the timestamped name first; copy to
-      `latest` after pandoc succeeds:
+      `latest` after pandoc succeeds. The full input order
+      (front matter → chapters → back matter → colophon):
+
       ```
       pandoc -o books/{book}/typeset/<timestamped> \
         --metadata-file=books/{book}/typeset/metadata.yaml \
@@ -243,7 +249,9 @@ Light tier — mechanical. No LLM call.
         typeset/epub_front_matter.md \
         <preface-arg> \
         <introduction-arg> \
+        <glossary-arg> \
         books/{book}/typeset/chapters_combined.md \
+        <appendix-arg> \
         typeset/epub_back_cover.md \
         typeset/epub_colophon.md
       cp books/{book}/typeset/<timestamped> \
@@ -255,15 +263,24 @@ Light tier — mechanical. No LLM call.
       sections instead of chapters, which is why earlier ePubs
       had unclear chapter marking).
 
-      `<preface-arg>` and `<introduction-arg>` are the literal
-      paths `books/{book}/preface.md` and
-      `books/{book}/introduction.md` when those files exist (test
-      with `[ -f books/{book}/preface.md ]` etc.); when a file
-      doesn't exist, omit the argument entirely (don't pass an
-      empty path to pandoc — it errors). Pandoc reads each `# …`
-      heading inside preface.md / introduction.md as a top-level
-      division, so they appear in the spine and TOC alongside
-      the chapters.
+      Each of `<preface-arg>` / `<introduction-arg>` /
+      `<glossary-arg>` / `<appendix-arg>` is the literal path to
+      the corresponding source file when it exists, or completely
+      omitted when it doesn't. **Don't pass an empty path** to
+      pandoc — it errors out. Test with `[ -f
+      books/{book}/preface.md ]` etc.
+
+      File-to-pandoc-arg mapping:
+        - `books/{book}/preface.md`       → `<preface-arg>`
+        - `books/{book}/introduction.md`  → `<introduction-arg>`
+        - `books/{book}/glossary.md`      → `<glossary-arg>`
+        - `books/{book}/appendix.md`      → `<appendix-arg>`
+
+      Pandoc reads each `# …` heading inside these files as a
+      top-level division, so they appear in the ePub spine and
+      TOC alongside the chapters in canonical order:
+      Preface → Introduction → Glossary → chapters → Appendix
+      → back-cover note → colophon.
 
       The metadata.yaml for this book is assembled on the fly from
       `project.yaml` + `typeset/epub_metadata.yaml` (template) and

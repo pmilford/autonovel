@@ -133,6 +133,61 @@ def test_build_chapters_tex_weaves_plates(tmp_path: Path, book_root: Path) -> No
     assert plate_idx < chapter_idx, "before-chapter plate must precede the chapter heading"
 
 
+def test_before_chapter_plate_uses_plain_pagestyle(
+    tmp_path: Path, book_root: Path,
+) -> None:
+    """Page numbers on plate pages — user 2026-04-30 reported the
+    page numbers vanished on image pages. Fix uses `\\thispagestyle{plain}`
+    not `{empty}` so the footer page number stays visible."""
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    (chapters / "ch_01.md").write_text(
+        "# The Arrival\n\nProse.\n", encoding="utf-8"
+    )
+    src = _src_image(tmp_path, "venice.png")
+    plates.import_image(
+        book_root, src, chapter=1,
+        placement="before-chapter",
+        caption="Map of Venice.",
+    )
+    manifest = book_root / "typeset" / "plates.yaml"
+    content, _ = build_chapters_tex(chapters, plates_manifest=manifest)
+    # plate block should use pagestyle{plain} (page numbers visible)
+    # rather than {empty} (page numbers suppressed).
+    plate_idx = content.find("venice.png")
+    # Walk back to find the pagestyle directive in the plate block.
+    surrounding = content[max(0, plate_idx - 600):plate_idx]
+    assert "thispagestyle{plain}" in surrounding
+    assert "thispagestyle{empty}" not in surrounding
+
+
+def test_chapter_start_plate_renders_at_0_8_textwidth(
+    tmp_path: Path, book_root: Path,
+) -> None:
+    """User 2026-04-30 reported chapter-1 plate too small. The
+    chapter-start placement bumped from 0.6 to 0.8 textwidth —
+    matches the published-book convention for in-flow opening
+    plates while still leaving margin."""
+    chapters = book_root / "chapters"
+    chapters.mkdir(exist_ok=True)
+    (chapters / "ch_01.md").write_text(
+        "# The Arrival\n\nProse.\n", encoding="utf-8"
+    )
+    src = _src_image(tmp_path, "opening.png")
+    plates.import_image(
+        book_root, src, chapter=1,
+        placement="chapter-start",
+        caption="Opening flourish.",
+    )
+    manifest = book_root / "typeset" / "plates.yaml"
+    content, _ = build_chapters_tex(chapters, plates_manifest=manifest)
+    assert "width=0.8\\textwidth" in content
+    # Old 0.6 should not appear for chapter-start placement.
+    chapter_start_idx = content.find("opening.png")
+    surrounding = content[max(0, chapter_start_idx - 100):chapter_start_idx]
+    assert "0.6\\textwidth" not in surrounding
+
+
 def test_build_chapters_tex_without_manifest(tmp_path: Path, book_root: Path) -> None:
     """No manifest → no plate weaving, no error."""
     chapters = book_root / "chapters"

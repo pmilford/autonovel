@@ -346,9 +346,14 @@ def _render_plate_block(file_abs: str, caption: str, attribution: str, placement
             f"{{\\footnotesize {latex_escape(attribution)}}}"
         )
     if placement in ("before-chapter", "after-chapter"):
+        # Use `plain` not `empty` so the footer's page number stays
+        # visible on plate pages — the user 2026-04-30 reported the
+        # page numbers vanished on image pages, which made
+        # navigation harder. `plain` keeps the footer page number,
+        # drops the running header (cleaner for full-page plates).
         return (
             "\\cleardoublepage\n"
-            "\\thispagestyle{empty}\n"
+            "\\thispagestyle{plain}\n"
             "\\vspace*{\\fill}\n"
             "\\begin{center}\n"
             f"\\includegraphics[width=0.85\\textwidth,height=0.7\\textheight,keepaspectratio]{{{file_abs}}}"
@@ -357,10 +362,16 @@ def _render_plate_block(file_abs: str, caption: str, attribution: str, placement
             "\\vspace*{\\fill}\n"
             "\\cleardoublepage\n"
         )
-    # chapter-start: inline, smaller
+    # chapter-start: inline, sized larger than the prior 0.6 default
+    # — the user 2026-04-30 reported the chapter-1 plate "rendered a
+    # bit too small". 0.8 textwidth is the published-book convention
+    # for in-flow chapter-opening plates while still leaving margin.
+    # Per-plate overrides via plates.yaml are still respected (the
+    # caller can pass a different width if a specific plate needs
+    # smaller).
     return (
         "\\begin{center}\n"
-        f"\\includegraphics[width=0.6\\textwidth,keepaspectratio]{{{file_abs}}}"
+        f"\\includegraphics[width=0.8\\textwidth,keepaspectratio]{{{file_abs}}}"
         f"{caption_tex}{attribution_tex}\n"
         "\\end{center}\n"
         "\\vspace{0.4em}\n"
