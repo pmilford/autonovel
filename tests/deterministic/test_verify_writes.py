@@ -242,6 +242,120 @@ def test_verify_warning_calls_out_chapter_files_specifically(
         assert "chapter file" in footer.lower() or "ch_05.md" in footer
 
 
+def test_unpaired_chapter_writes_finds_missing_summary() -> None:
+    """The structural guard: a chapter file claimed for write
+    without its paired `.summary.md` flags the unpaired-chapter
+    bug class — apply-cuts / lengthen / shorten / etc. modifying
+    the chapter prose but never regenerating the summary."""
+    from autonovel.checkpoints import find_unpaired_chapter_writes
+    unpaired = find_unpaired_chapter_writes([
+        "books/the-book/chapters/ch_05.md",
+        "books/the-book/edit_logs/ch05_cuts.json",  # not a summary
+    ])
+    assert unpaired == ["books/the-book/chapters/ch_05.md"]
+
+
+def test_unpaired_chapter_writes_silent_when_summary_present() -> None:
+    """When the summary IS in the same claim list, no warning."""
+    from autonovel.checkpoints import find_unpaired_chapter_writes
+    unpaired = find_unpaired_chapter_writes([
+        "books/the-book/chapters/ch_05.md",
+        "books/the-book/chapters/ch_05.summary.md",
+    ])
+    assert unpaired == []
+
+
+def test_unpaired_chapter_writes_handles_multi_chapter() -> None:
+    """A sweep claims many chapters; only the ones missing their
+    summary get flagged."""
+    from autonovel.checkpoints import find_unpaired_chapter_writes
+    unpaired = find_unpaired_chapter_writes([
+        "books/b/chapters/ch_01.md",
+        "books/b/chapters/ch_01.summary.md",
+        "books/b/chapters/ch_02.md",  # missing summary
+        "books/b/chapters/ch_03.md",
+        "books/b/chapters/ch_03.summary.md",
+        "books/b/chapters/ch_04.md",  # missing summary
+    ])
+    assert unpaired == [
+        "books/b/chapters/ch_02.md",
+        "books/b/chapters/ch_04.md",
+    ]
+
+
+def test_unpaired_chapter_writes_ignores_non_chapter_paths() -> None:
+    """Outline / world / canon writes don't trigger the guard —
+    the rule is specific to per-chapter summaries."""
+    from autonovel.checkpoints import find_unpaired_chapter_writes
+    unpaired = find_unpaired_chapter_writes([
+        "shared/world.md",
+        "books/b/voice.md",
+        "books/b/outline.md",
+    ])
+    assert unpaired == []
+
+
+def test_unpaired_chapter_writes_surface_in_lifecycle_banner(
+    series_root: Path,
+) -> None:
+    """End-to-end: a command claiming `--wrote ch_NN.md` without
+    `--wrote ch_NN.summary.md` produces a top-of-postamble banner
+    with the regenerate-summary command spelled out."""
+    from autonovel.paths import SeriesLayout
+    series = SeriesLayout(root=series_root)
+    book_root = series_root / "books" / "the-book"
+    chapters = book_root / "chapters"
+    chapters.mkdir(parents=True, exist_ok=True)
+    ch5 = chapters / "ch_05.md"
+    ch5.write_text("---\nchapter: 5\n---\n\nProse.\n", encoding="utf-8")
+    lifecycle.begin("autonovel:apply-cuts", "5 --book the-book", series=series)
+    # Modify the chapter (so verify-writes status is "modified" not
+    # "unchanged") but DON'T claim the summary in --wrote.
+    ch5.write_text("---\nchapter: 5\n---\n\nNew prose.\n", encoding="utf-8")
+    result = lifecycle.end(
+        "autonovel:apply-cuts", "5 --book the-book", status="ok",
+        wrote=["books/the-book/chapters/ch_05.md"],
+        series=series,
+    )
+    assert result.verify_report is not None
+    assert result.verify_report.unpaired_chapter_writes == [
+        "books/the-book/chapters/ch_05.md"
+    ]
+    footer = result.footer
+    assert "VERIFY-WRITES" in footer
+    assert "summarize-chapter 5" in footer
+    assert "--book the-book" in footer
+    # Banner leads the footer, not buried.
+    assert footer.find("VERIFY-WRITES") < footer.find("**Done:**")
+
+
+def test_unpaired_silent_when_summary_also_claimed(series_root: Path) -> None:
+    """Commands that DO regenerate the summary (revise step 9 etc.)
+    don't trigger the guard."""
+    from autonovel.paths import SeriesLayout
+    series = SeriesLayout(root=series_root)
+    book_root = series_root / "books" / "the-book"
+    chapters = book_root / "chapters"
+    chapters.mkdir(parents=True, exist_ok=True)
+    ch5 = chapters / "ch_05.md"
+    sm5 = chapters / "ch_05.summary.md"
+    ch5.write_text("---\nchapter: 5\n---\n\nProse.\n", encoding="utf-8")
+    sm5.write_text("**Plot:** old.\n", encoding="utf-8")
+    lifecycle.begin("autonovel:revise", "5 --book the-book", series=series)
+    ch5.write_text("---\nchapter: 5\n---\n\nNew.\n", encoding="utf-8")
+    sm5.write_text("**Plot:** new.\n", encoding="utf-8")
+    result = lifecycle.end(
+        "autonovel:revise", "5 --book the-book", status="ok",
+        wrote=[
+            "books/the-book/chapters/ch_05.md",
+            "books/the-book/chapters/ch_05.summary.md",
+        ],
+        series=series,
+    )
+    assert result.verify_report is not None
+    assert result.verify_report.unpaired_chapter_writes == []
+
+
 def test_lifecycle_end_clean_when_writes_real(series_root: Path) -> None:
     from autonovel.paths import SeriesLayout
     series = SeriesLayout(root=series_root)

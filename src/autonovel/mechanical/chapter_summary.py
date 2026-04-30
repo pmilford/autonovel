@@ -42,11 +42,43 @@ class ChapterRow:
     plot: str | None = None        # one-sentence pull from Plot
     cast: list[str] = field(default_factory=list)   # names from Cast on stage
     score: float | None = None     # latest overall_score
-    status: str | None = None      # frontmatter status (drafted / revised / etc)
+    status: str | None = None      # canonical: drafted | revised | imported
+    revision_count: int = 0        # how many times the chapter has been re-evaluated
     pov_state: str | None = None       # what POV knows / wants / fears at close
     threads_opened: str | None = None  # mysteries / promises future chapters owe
     threads_closed: str | None = None  # earlier setups this chapter resolved
     summary_stale: bool = False    # True when ch_NN.md mtime > ch_NN.summary.md
+
+    @property
+    def display_status(self) -> str:
+        """Canonical, human-readable status for tables and TUIs.
+        Combines `status` with `revision_count` so the user sees
+        'revised ×6' instead of an ambiguous 'revised'.
+
+        Strict enumeration of returned values:
+          - 'drafted'   — initial draft, never re-evaluated
+          - 'revised ×N' — evaluated N times after initial draft
+                          (N is the post-draft eval count, ≥1)
+          - 'imported'  — externally-imported manuscript
+          - <raw>       — anything else (legacy values like
+                          'revised-v6' from before the canonical
+                          enumeration; fallback so we don't lose
+                          information)
+        """
+        raw = (self.status or "").strip().lower()
+        if raw == "drafted":
+            if self.revision_count > 0:
+                return f"revised ×{self.revision_count}"
+            return "drafted"
+        if raw == "revised":
+            if self.revision_count >= 1:
+                return f"revised ×{self.revision_count}"
+            return "revised"
+        if raw == "imported":
+            return "imported"
+        # Legacy / unrecognised — pass through verbatim so we don't
+        # lose information (e.g. old `revised-v6` shape).
+        return self.status or ""
 
     def to_dict(self) -> dict:
         return {
@@ -59,6 +91,8 @@ class ChapterRow:
             "cast": list(self.cast),
             "score": self.score,
             "status": self.status,
+            "revision_count": self.revision_count,
+            "display_status": self.display_status,
             "pov_state": self.pov_state,
             "threads_opened": self.threads_opened,
             "threads_closed": self.threads_closed,
@@ -77,6 +111,7 @@ def summarize_chapters(book_root: Path) -> list[ChapterRow]:
     chapter_files = iter_chapter_files(chapters_dir)
     eval_dir = book_root / "eval_logs"
     eval_index = _index_latest_per_chapter_eval(eval_dir)
+    eval_counts = _count_evals_per_chapter(eval_dir)
 
     rows: list[ChapterRow] = []
     for ch_path in chapter_files:
@@ -139,6 +174,13 @@ def summarize_chapters(book_root: Path) -> list[ChapterRow]:
                 pass
 
         row.score = eval_index.get(num)
+        # revision_count = post-draft eval count - 1 (the first eval
+        # is the post-draft eval; subsequent ones are post-revise).
+        # Imported chapters skip the count (they don't go through the
+        # autonovel draft→revise cycle).
+        eval_count = eval_counts.get(num, 0)
+        if (row.status or "").lower() != "imported":
+            row.revision_count = max(0, eval_count - 1)
         rows.append(row)
     return rows
 
@@ -307,6 +349,41 @@ _EVAL_FILENAME_RE = re.compile(
 _EVAL_CH_FILENAME_RE = re.compile(
     r"^(?P<ts>\d{8}_\d{6})_ch(?P<chapter>\d+)\.json$"
 )
+
+
+def _count_evals_per_chapter(eval_dir: Path) -> dict[int, int]:
+    """Return {chapter_number: count of distinct eval logs}. Used as
+    a proxy for revision count — each /autonovel:revise run produces
+    a fresh eval log, so post-draft eval count = revise count + 1
+    (the initial post-draft eval). Returns 0 for chapters with no
+    log (also covered by `dict.get(num, 0)`).
+
+    Honest signal vs LLM-self-reported `status: revised-v6`:
+    counting actual eval files on disk can't be hallucinated.
+    """
+    if not eval_dir.is_dir():
+        return {}
+    counts: dict[int, int] = {}
+    for path in eval_dir.iterdir():
+        if not path.is_file() or path.suffix != ".json":
+            continue
+        m = _EVAL_FILENAME_RE.match(path.name) or _EVAL_CH_FILENAME_RE.match(path.name)
+        chapter: int | None = None
+        if m:
+            try:
+                chapter = int(m.group("chapter"))
+            except ValueError:
+                continue
+        else:
+            plain = re.match(r"^ch(\d+)_eval\.json$", path.name)
+            if not plain:
+                continue
+            try:
+                chapter = int(plain.group(1))
+            except ValueError:
+                continue
+        counts[chapter] = counts.get(chapter, 0) + 1
+    return counts
 
 
 def _index_latest_per_chapter_eval(eval_dir: Path) -> dict[int, float]:

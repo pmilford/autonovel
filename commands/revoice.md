@@ -14,6 +14,7 @@ reads:
 writes:
   - books/{book}/briefs/ch{chapter:02d}.md
   - books/{book}/chapters/ch_{chapter}.md
+  - books/{book}/chapters/ch_{chapter}.summary.md
 context_mode: book
 ---
 
@@ -53,6 +54,19 @@ surface changes. One checkpoint.
    plot moves identical. Update YAML frontmatter: `pov` if changed,
    `status: revised`, fresh `word_count`. Use `file_write` to
    overwrite `books/{book}/chapters/ch_{chapter}.md`.
+
+6. **Regenerate the chapter summary** to reflect the rewritten
+   prose. Use `file_write` to overwrite
+   `books/{book}/chapters/ch_{chapter}.summary.md` following the
+   canonical 7-section template defined in `commands/draft.md`
+   step 12 (Location, Plot, POV state, Cast on stage, Threads
+   opened, Threads closed, Story time). 150–250 words total. The
+   per-chapter summary is the rolling-context surface every
+   downstream drafter / reviser reads — skipping this regeneration
+   leaves the summary stale and continuity drifts (the next
+   chapter's drafter sees the OLD cast / threads / POV state).
+   The lifecycle's verify-writes guard catches the unpaired-chapter
+   case and prints a 🔴 banner if you skip; don't skip.
 </workflow>
 
 <acceptance>

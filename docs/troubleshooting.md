@@ -184,6 +184,17 @@ get buried under a long sweep closer.
   have legitimately decided no edits were needed (e.g.
   `pending_canon.md` only grows when new facts surface) — review
   before re-running.
+- `chapter file(s) were modified WITHOUT regenerating their .summary.md` —
+  the new structural unpaired-chapter guard (2026-04-30 PM)
+  catches commands that mutate `chapters/ch_NN.md` without
+  regenerating `chapters/ch_NN.summary.md`. The summary is the
+  rolling-context surface every downstream drafter / reviser
+  reads — when prose drifts from the summary, continuity breaks
+  (the next chapter sees the OLD cast / threads / POV state).
+  The banner spells out the exact `summarize-chapter --force`
+  invocation per chapter; run that to refresh, or accept the
+  `/autonovel:next` nag which surfaces the same shape via the
+  stale-summary HIGH signal.
 
 The banner is informational — the command exited `ok` and the
 lock has been released. Decide whether to re-run based on the

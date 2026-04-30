@@ -341,6 +341,58 @@ def test_summary_stale_when_chapter_newer(tmp_path: Path) -> None:
     assert row.summary_stale is True
 
 
+def test_revision_count_zero_when_one_eval_log(tmp_path: Path) -> None:
+    """A chapter with exactly one eval log = post-draft eval only;
+    no revisions yet → display_status 'drafted'."""
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1, status="drafted")
+    _make_summary(book, 1, plot="Plot.", cast="Tommaso — POV")
+    _make_eval(book, 1, 7.4, timestamp="20260425_154000")
+    row = summarize_chapters(book)[0]
+    assert row.revision_count == 0
+    assert row.display_status == "drafted"
+
+
+def test_revision_count_increments_per_eval(tmp_path: Path) -> None:
+    """Each revise produces a new eval log; revision_count =
+    eval_count - 1 (the first eval is post-draft)."""
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1, status="revised")
+    _make_summary(book, 1, plot="Plot.", cast="Tommaso — POV")
+    for i, ts in enumerate([
+        "20260425_154000",
+        "20260426_120000",
+        "20260427_120000",
+        "20260428_120000",
+    ]):
+        _make_eval(book, 1, 7.0 + 0.1 * i, timestamp=ts)
+    row = summarize_chapters(book)[0]
+    assert row.revision_count == 3  # 4 evals - 1
+    assert row.display_status == "revised ×3"
+
+
+def test_imported_chapter_does_not_count_revisions(tmp_path: Path) -> None:
+    """An imported book hasn't been through autonovel's draft/revise
+    cycle — display 'imported' regardless of eval log count."""
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1, status="imported")
+    _make_summary(book, 1, plot="Plot.", cast="Tommaso — POV")
+    _make_eval(book, 1, 7.0)
+    row = summarize_chapters(book)[0]
+    assert row.revision_count == 0
+    assert row.display_status == "imported"
+
+
+def test_legacy_revised_v6_status_passed_through(tmp_path: Path) -> None:
+    """Pre-canonical `status: revised-v6` shows up verbatim — we
+    don't lose information, but we also don't try to parse it."""
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1, status="revised-v6")
+    _make_summary(book, 1, plot="Plot.", cast="Tommaso — POV")
+    row = summarize_chapters(book)[0]
+    assert row.display_status == "revised-v6"
+
+
 def test_summary_not_stale_when_summary_newer(tmp_path: Path) -> None:
     import os
     book = _make_book(tmp_path)

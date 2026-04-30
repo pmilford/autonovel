@@ -17,6 +17,7 @@ writes:
   - books/{book}/outline.md
   - books/{book}/briefs/ch{chapter:02d}.md
   - books/{book}/chapters/ch_{chapter}.md
+  - books/{book}/chapters/ch_{chapter}.summary.md
 context_mode: book
 ---
 
@@ -66,6 +67,19 @@ subplot machinery: the goal is texture and return, not arc.
    `books/{book}/chapters/ch_{chapter}.md` with the revised
    chapter. Preserve YAML; set `status: revised`; recompute
    `word_count`.
+
+5. **Regenerate the chapter summary** to reflect the rewritten
+   prose. Use `file_write` to overwrite
+   `books/{book}/chapters/ch_{chapter}.summary.md` following the
+   canonical 7-section template defined in `commands/draft.md`
+   step 12 (Location, Plot, POV state, Cast on stage, Threads
+   opened, Threads closed, Story time). 150–250 words total. The
+   per-chapter summary is the rolling-context surface every
+   downstream drafter / reviser reads — skipping this regeneration
+   leaves the summary stale and continuity drifts (the next
+   chapter's drafter sees the OLD cast / threads / POV state).
+   The lifecycle's verify-writes guard catches the unpaired-chapter
+   case and prints a 🔴 banner if you skip; don't skip.
 </workflow>
 
 <acceptance>

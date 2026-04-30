@@ -159,12 +159,21 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
     )
 
     log_note: str | None = None
-    if verify is not None and verify.warnings:
-        names = ", ".join(w.path for w in verify.warnings[:5])
-        log_note = (
-            f"verify-writes: {len(verify.warnings)} claimed path(s) "
-            f"unchanged or missing — {names}"
-        )
+    if verify is not None and verify.has_any_warning:
+        bits: list[str] = []
+        if verify.warnings:
+            names = ", ".join(w.path for w in verify.warnings[:5])
+            bits.append(
+                f"verify-writes: {len(verify.warnings)} claimed path(s) "
+                f"unchanged or missing — {names}"
+            )
+        if verify.unpaired_chapter_writes:
+            bits.append(
+                f"unpaired-chapter-writes: "
+                f"{len(verify.unpaired_chapter_writes)} chapter(s) "
+                f"modified without regenerating their .summary.md"
+            )
+        log_note = "; ".join(bits)
     command_log.append(
         series.command_log_file,
         command=command_name,
@@ -176,15 +185,13 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
         **_usage_kwargs(usage),
     )
     footer = _render_footer(command_name, arg_string, wrote, la, series)
-    if verify is not None and verify.warnings:
-        # Surface the verify-writes warning at the TOP of the
-        # postamble, BEFORE the Done / Wrote / Next block. With a
-        # long multi-line `next_standard_step` (sweep closer), a
-        # warning at the bottom gets buried — and in fact that's
-        # how the 2026-04-30 revision-pass silent-failure-of-five-
-        # chapters bug went unnoticed: revise didn't fire on 5/11
-        # chapters, verify-writes flagged them as `unchanged`, but
-        # the warning was past the action plan and slid off-screen.
+    if verify is not None and verify.has_any_warning:
+        # Surface verify-writes warnings (unchanged / missing /
+        # unpaired-chapter) at the TOP of the postamble, BEFORE
+        # the Done / Wrote / Next block. A warning at the bottom
+        # gets buried under long sweep closers — that's how the
+        # 2026-04-30 revision-pass silent-failure-of-five-
+        # chapters bug went unnoticed.
         footer = _render_verify_warning(verify) + "\n\n" + footer.lstrip("\n")
     return EndResult(last_action=la, footer=footer, verify_report=verify)
 
@@ -278,6 +285,26 @@ def _render_verify_warning(report: "checkpoints.WriteVerificationReport") -> str
         lines.append("")
         for p, s in other:
             lines.append(f"  - {p}: {s}")
+    if report.unpaired_chapter_writes:
+        lines.append(
+            f"\n⚠️  {len(report.unpaired_chapter_writes)} chapter "
+            f"file(s) were modified WITHOUT regenerating their "
+            f"`.summary.md`. The per-chapter summary is the rolling-"
+            f"context surface every downstream drafter / reviser "
+            f"reads — when chapter prose drifts from the summary, "
+            f"continuity breaks (the next chapter sees the OLD "
+            f"cast / threads / POV state). Regenerate now:"
+        )
+        for p in report.unpaired_chapter_writes:
+            try:
+                ch_num = int(p.rsplit("/ch_", 1)[1].rstrip(".md"))
+                book = p.split("/", 2)[1]
+                lines.append(
+                    f"    /autonovel:summarize-chapter {ch_num} "
+                    f"--book {book} --force"
+                )
+            except (ValueError, IndexError):
+                lines.append(f"    {p}  (unable to parse chapter number)")
     lines.append("")
     lines.append("=" * 60)
     return "\n".join(lines)

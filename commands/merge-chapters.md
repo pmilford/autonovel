@@ -57,6 +57,20 @@ upward from the lowest number to avoid collisions.
 7. Use `file_write` to update `books/{book}/outline.md`: combine the
    two entries into one under `## Chapter N`, and renumber every
    subsequent `## Chapter` heading by -1.
+
+8. **Regenerate every changed chapter's summary.** Whichever
+   chapters were merged / split / renamed, their `.summary.md`
+   files are now stale (the new chapter has a different
+   plot/cast/threads shape). Use `file_write` to overwrite each
+   affected `books/{book}/chapters/ch_NN.summary.md` following
+   the canonical 7-section template (Location, Plot, POV state,
+   Cast on stage, Threads opened, Threads closed, Story time;
+   150–250 words total per chapter). For renumber-only ops the
+   summary content is identical but the file path moved — re-write
+   to ensure mtime matches the chapter so the stale-summary signal
+   doesn't fire spuriously. The lifecycle's verify-writes guard
+   prints a 🔴 banner for any chapter file in --wrote without its
+   paired summary.
 </workflow>
 
 <acceptance>

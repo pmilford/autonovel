@@ -11,6 +11,7 @@ reads:
   - books/{book}/edit_logs/ch{chapter:02d}_cuts.json
 writes:
   - books/{book}/chapters/ch_{chapter}.md
+  - books/{book}/chapters/ch_{chapter}.summary.md
 context_mode: book
 ---
 
@@ -58,6 +59,24 @@ dominate cuts; default to those two types unless the user says otherwise.
    (with reasons), and any cuts that failed to match (these are the
    ones the adversarial-editor's quote was imprecise about — flag them
    so the user can hand-apply or re-run the edit).
+
+6. **The chapter summary is now stale** —
+   `books/{book}/chapters/ch_{chapter}.summary.md` references the
+   pre-cuts prose. apply-cuts is light-tier and doesn't run the
+   LLM, so we don't regenerate the summary inline (that would bump
+   the tier). Print a closing line directing the user to refresh
+   continuity:
+
+   ```
+   ⚠️  ch_NN.summary.md is now older than ch_NN.md. Run
+       /autonovel:summarize-chapter NN --book {book} --force
+   to regenerate (or accept the /autonovel:next nag, which will
+   surface this until you do).
+   ```
+
+   The lifecycle's verify-writes guard will also fire its 🔴 banner
+   in the postamble (chapter modified without paired summary write),
+   so this step is belt-and-suspenders — the user can't miss it.
 </workflow>
 
 <acceptance>

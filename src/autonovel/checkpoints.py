@@ -149,6 +149,11 @@ class WriteVerificationItem:
 @dataclass
 class WriteVerificationReport:
     items: list[WriteVerificationItem]
+    unpaired_chapter_writes: list[str] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.unpaired_chapter_writes is None:
+            self.unpaired_chapter_writes = []
 
     @property
     def warnings(self) -> list[WriteVerificationItem]:
@@ -159,6 +164,14 @@ class WriteVerificationReport:
         return [i for i in self.items
                 if i.status in ("unchanged", "missing")]
 
+    @property
+    def has_any_warning(self) -> bool:
+        """True when any verify-writes signal fired — `unchanged` /
+        `missing` items, OR an unpaired chapter write (chapter
+        modified without regenerating its summary). The postamble
+        renders the top-line banner whenever this is True."""
+        return bool(self.warnings) or bool(self.unpaired_chapter_writes)
+
     def to_dict(self) -> dict:
         return {
             "items": [
@@ -167,7 +180,51 @@ class WriteVerificationReport:
             "warnings": [
                 {"path": i.path, "status": i.status} for i in self.warnings
             ],
+            "unpaired_chapter_writes": list(self.unpaired_chapter_writes),
         }
+
+
+_CHAPTER_FILE_RE = __import__("re").compile(
+    r"books/[^/]+/chapters/ch_(\d+)\.md$"
+)
+
+
+def find_unpaired_chapter_writes(claimed: list[str]) -> list[str]:
+    """Find chapter files claimed for writing whose paired
+    `.summary.md` is NOT in the same claim list.
+
+    The per-chapter `.summary.md` is the load-bearing rolling-
+    context surface every downstream drafter / reviser reads. Any
+    command that mutates a chapter file MUST also regenerate the
+    summary — otherwise continuity drifts (the next chapter sees
+    the OLD cast / threads / POV state).
+
+    This guard catches the structural class of bugs where a
+    command (apply-cuts, lengthen, shorten, deepen-character,
+    revoice, foreshadow, add-subplot, merge-chapters,
+    split-chapter) modifies the chapter without touching the
+    summary. Missing pairs surface in the verify-writes top-line
+    banner so the user sees them before acting on the postamble's
+    suggested next step.
+
+    Returns the list of chapter paths whose summaries are missing
+    from the claim. Empty list means every chapter write has a
+    matching summary write.
+    """
+    norm: list[str] = [c.strip() for c in claimed if c.strip()]
+    summary_set: set[str] = {
+        c for c in norm if c.endswith(".summary.md")
+    }
+    out: list[str] = []
+    for c in norm:
+        m = _CHAPTER_FILE_RE.search(c)
+        if m is None:
+            continue
+        # Same prefix, just .summary.md instead of .md.
+        summary_companion = c[: -len(".md")] + ".summary.md"
+        if summary_companion not in summary_set:
+            out.append(c)
+    return out
 
 
 def verify_writes(cp: Checkpoint, series_root: Path,
@@ -247,7 +304,10 @@ def verify_writes(cp: Checkpoint, series_root: Path,
         else:
             status = "outside-checkpoint"
         items.append(WriteVerificationItem(path=rel, status=status))
-    return WriteVerificationReport(items=items)
+    unpaired = find_unpaired_chapter_writes(claimed)
+    return WriteVerificationReport(
+        items=items, unpaired_chapter_writes=unpaired,
+    )
 
 
 def prune(checkpoints_dir: Path, keep: int = 20) -> int:

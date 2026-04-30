@@ -129,6 +129,8 @@ def _load_state(series: SeriesLayout, book: str) -> dict:
                 "threads_opened": r.threads_opened or "",
                 "threads_closed": r.threads_closed or "",
                 "status": r.status or "",
+                "display_status": r.display_status,
+                "revision_count": r.revision_count,
                 "summary_stale": r.summary_stale,
             })
     except Exception:  # noqa: BLE001
@@ -521,9 +523,14 @@ if _TEXTUAL_AVAILABLE:
             table.clear()
             rows = self._state.get("rows", [])
             for r in rows:
-                status_cell = str(r.get("status", "") or "")[:10]
+                # Use display_status (e.g. "revised ×6") rather than
+                # the raw frontmatter `status:` so the user sees how
+                # many times the chapter has been re-evaluated. The
+                # revision count is derived from eval-log file count,
+                # not the LLM's self-reported status string — honest.
+                status_cell = (r.get("display_status") or r.get("status") or "")[:14]
                 if r.get("summary_stale"):
-                    status_cell = (status_cell + " ⚠")[:12]
+                    status_cell = (status_cell + " ⚠")[:16]
                 table.add_row(
                     str(r.get("chapter", "")),
                     str(r.get("word_count", 0)),
@@ -611,7 +618,10 @@ if _TEXTUAL_AVAILABLE:
                 f"- **Location:** {row.get('location') or '—'}",
                 f"- **Words:** {row.get('word_count', 0)}",
                 f"- **Score:** {score_line}",
-                f"- **Status:** {row.get('status') or '—'}",
+                f"- **Status:** {row.get('display_status') or row.get('status') or '—'}"
+                + (f"  (raw frontmatter: `{row.get('status')}`)"
+                    if row.get('display_status') and row.get('display_status') != row.get('status')
+                    else ""),
                 stale_banner,
                 "### Cast",
                 row.get("cast") or "—",
@@ -795,6 +805,19 @@ if _TEXTUAL_AVAILABLE:
                 "to chapter 14 still highlighted (not chapter 1). Same "
                 "for the chapter detail and research note preview "
                 "panes: scroll position survives the 5 s tick.\n\n"
+                "**Status column** uses a canonical scheme:\n\n"
+                "- `drafted` — initial draft; never re-evaluated.\n"
+                "- `revised ×N` — re-evaluated N times after the "
+                "initial draft. The count is derived from eval-log "
+                "file count (mechanical, can't be hallucinated), "
+                "NOT the LLM's self-reported `status:` string. "
+                "If you see `revised-v6` or similar, that's a legacy "
+                "frontmatter value passed through verbatim — the "
+                "chapter detail pane shows both forms when they "
+                "differ.\n"
+                "- `imported` — externally-imported manuscript "
+                "(via `/autonovel:import-book`); the autonovel "
+                "draft→revise cycle hasn't been applied.\n\n"
                 "**Stale-summary indicator (`⚠` after status):** the "
                 "chapter's `.md` mtime is newer than its `.summary.md` "
                 "— revise didn't regenerate the summary, so the "
