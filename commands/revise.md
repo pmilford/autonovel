@@ -127,6 +127,21 @@ file blocked a full revision-pass.
    `books/{book}/chapters/ch_{chapter}.md` with the full revised
    chapter. Do not truncate. Do not summarize.
 
+8b. **Re-evaluate the chapter title.** Read the chapter's current
+    frontmatter `title:` field. If the rewrite changed the
+    chapter's central beat — step 6 added or removed a major
+    plot moment, the cast shifted significantly, or the chapter
+    now ends on a different decision — regenerate the title using
+    the same 2-6 word evocative-phrase shape as `commands/draft.md`
+    step 11 (Concrete object/phrase from the chapter's central
+    beat; not a plot summary; avoid cliché and generic
+    abstractions). Update the frontmatter `title:` field as part
+    of the chapter rewrite (preserve everything else verbatim).
+    When the rewrite was a polish pass that didn't change the
+    central beat, leave the title alone. typeset surfaces the
+    title in TOC + chapter opening + running header, so a stale
+    title misleads the reader.
+
 9. **Regenerate the chapter summary.** Use `file_write` to overwrite
    `books/{book}/chapters/ch_{chapter}.summary.md` with a fresh
    150–250 word continuity summary. **The shape and section list

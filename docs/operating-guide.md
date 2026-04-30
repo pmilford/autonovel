@@ -180,6 +180,14 @@ the atoms.
 
 ## 1. Where human input matters, and how much
 
+**Lost? Run `/autonovel:help`.** Zero-arg shows a category-
+grouped overview of every command. `/autonovel:help <topic>`
+walks one workflow with the exact command sequence —
+`/autonovel:help art` is the right place to start if the 10
+art-* / cover-* commands feel opaque. Topics: art, foundation,
+drafting, revising, typeset, research, front-matter, sweeps,
+tui, cli, next-steps.
+
 **Quick start: run the onboarding wizard.** Before reading the
 rest of this section:
 

@@ -92,6 +92,7 @@ def _actions_for_book(series: SeriesLayout, cfg: project_mod.ProjectConfig,
     out.extend(_missing_title_author_actions(cfg, book))
     out.extend(_missing_front_matter_actions(book_root, book))
     out.extend(_missing_glossary_actions(cfg, book_root, book))
+    out.extend(_missing_chapter_titles_actions(book_root, book))
     return out
 
 
@@ -439,6 +440,50 @@ def _missing_title_author_actions(cfg: project_mod.ProjectConfig,
     )]
 
 
+def _missing_chapter_titles_actions(book_root: Path, book: str) -> list[NextAction]:
+    """Polish signal — chapters with no `title:` frontmatter and no
+    `# Heading` line. typeset's TOC reads as `Chapter I`,
+    `Chapter II`, … rather than the publishing convention
+    `Chapter VII — The Apothecary's Mortar`. Surfaces the
+    `/autonovel:extract-chapter-titles` recommendation. Silenced
+    when fewer than 3 chapters are drafted (too early to titulate)
+    OR when every chapter has a title (already polished).
+
+    LOW priority — typeset still works; this is reader-experience
+    polish, not data integrity.
+    """
+    chapters_dir = book_root / "chapters"
+    if not chapters_dir.is_dir():
+        return []
+    try:
+        from ..mechanical.chapter_titles import inspect_titles
+    except Exception:  # noqa: BLE001
+        return []
+    report = inspect_titles(book_root)
+    if report.total < 3:
+        return []
+    if not report.missing:
+        return []
+    chapters_str = ",".join(str(c) for c in report.missing)
+    return [NextAction(
+        priority="LOW",
+        title=f"Backfill chapter titles for {len(report.missing)} chapter(s)",
+        command=(f"/autonovel:extract-chapter-titles --book {book} "
+                 f"--chapters {chapters_str}"),
+        rationale=(
+            f"books/{book}/chapters/ has {len(report.missing)} "
+            f"chapter(s) with no `title:` frontmatter (ch "
+            f"{chapters_str}). typeset's TOC reads `Chapter I`, "
+            f"`Chapter II`, … rather than the publishing "
+            f"convention `Chapter VII — The Apothecary's Mortar`. "
+            f"Light-tier LLM call generates a 2-6 word evocative "
+            f"phrase per chapter from the summary + opening "
+            f"prose; ~$0.001 per chapter."
+        ),
+        book=book,
+    )]
+
+
 def _missing_glossary_actions(cfg: project_mod.ProjectConfig,
                                  book_root: Path, book: str) -> list[NextAction]:
     """For period fiction (project.yaml :: period.start set), once
@@ -696,6 +741,9 @@ def _past_end_of_book_replacement(series: SeriesLayout, book: str | None,
 # command name so a user pressing the same command twice doesn't see
 # the same general hint, but a single command run is deterministic.
 _GENERAL_HINTS: tuple[str, ...] = (
+    "`/autonovel:help` lists every command grouped by topic — "
+    "`/autonovel:help art`, `/autonovel:help typeset`, etc. for in-"
+    "depth workflow guides",
     "`/autonovel:summaries --where 'score < 7'` filters chapters by score "
     "without firing evaluate",
     "`/autonovel:dashboard` re-renders the latest evaluate output (sparklines "
@@ -708,6 +756,8 @@ _GENERAL_HINTS: tuple[str, ...] = (
     "about — pending conflicts, regressions, fresh briefs, stale reports",
     "`autonovel cost` rolls up token + USD spend per book / per tier "
     "/ per command from the command log",
+    "`autonovel tui` is a read-only long-running browser for the whole "
+    "series — chapters, scores, research, front+back matter, next actions",
 )
 
 

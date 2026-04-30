@@ -819,6 +819,15 @@ if _TEXTUAL_AVAILABLE:
                 "suggested command will do**, **why it's suggested**, "
                 "and **which artifacts it will read or change** so you "
                 "can decide before invoking.\n"
+                "\n"
+                "**Topic-based reference (in your runtime):** "
+                "`/autonovel:help` lists every category; "
+                "`/autonovel:help art` walks the art workflow with the "
+                "exact command sequence (typographic-only, "
+                "pollinations, wikimedia, fal/replicate/openai). Other "
+                "topics: `foundation`, `drafting`, `revising`, "
+                "`typeset`, `research`, `front-matter`, `sweeps`, "
+                "`tui`, `cli`, `next-steps`.\n"
             )
             # Per-book context summary.
             parts.append("## Where you are")

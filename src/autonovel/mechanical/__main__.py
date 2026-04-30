@@ -45,6 +45,14 @@ from .cliches import cliche_density, cliche_hits
 from .cuts import VALID_TYPES, apply_cuts
 from .epub import build_epub_md
 from .back_matter import build_back_matter_tex
+from .chapter_titles import (
+    inspect_titles,
+    render_markdown as render_chapter_titles_md,
+)
+from .timeline import (
+    extract_in_narrative_dates,
+    render_markdown as render_timeline_md,
+)
 from .front_matter import build_front_matter_tex
 from .latex import build_chapters_tex
 from .dashboard import (
@@ -567,6 +575,42 @@ def _cmd_wikimedia_fetch(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_timeline_extract(args: argparse.Namespace) -> int:
+    """Extract in-narrative dates from chapter summaries +
+    frontmatter for the appendix timeline. Pure mechanical (1) of
+    the three timeline sources; (2) referenced and (3) context
+    rows merge in via the slash-command body's LLM step."""
+    book_root = Path(args.book_root)
+    rows = extract_in_narrative_dates(book_root)
+    if args.format == "json":
+        json.dump(
+            {
+                "rows": [r.to_dict() for r in rows],
+                "count": len(rows),
+            },
+            sys.stdout, indent=2,
+        )
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_timeline_md(rows))
+    return 0
+
+
+def _cmd_chapter_titles(args: argparse.Namespace) -> int:
+    """Inspect every chapter's title status (frontmatter / heading
+    fallback / missing). Used by /autonovel:next as a polish
+    signal and by /autonovel:extract-chapter-titles to identify
+    which chapters need backfill."""
+    book_root = Path(args.book_root)
+    report = inspect_titles(book_root)
+    if args.format == "json":
+        json.dump(report.to_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_chapter_titles_md(report))
+    return 0
+
+
 def _cmd_build_back_matter_tex(args: argparse.Namespace) -> int:
     book_root = Path(args.book_root)
     output = Path(args.output) if args.output else None
@@ -867,6 +911,18 @@ def main(argv: list[str] | None = None) -> int:
     fm.add_argument("book_root", help="Path to the book dir (the parent of preface.md).")
     fm.add_argument("--output", default=None, help="Write to this path; otherwise stdout-JSON only.")
     fm.set_defaults(func=_cmd_build_front_matter_tex)
+
+    tl = sub.add_parser("timeline-extract",
+                        help="Mechanical pass for the appendix timeline — pulls in-narrative dates from chapter summaries + frontmatter.")
+    tl.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    tl.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    tl.set_defaults(func=_cmd_timeline_extract)
+
+    ct = sub.add_parser("chapter-titles",
+                        help="Inspect every chapter's `title:` frontmatter (or `# Heading` fallback) and report which need backfill.")
+    ct.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    ct.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    ct.set_defaults(func=_cmd_chapter_titles)
 
     bm = sub.add_parser("build-back-matter-tex",
                         help="Wrap appendix.md into back_matter.tex (post-`\\backmatter` block).")

@@ -147,12 +147,28 @@ required reads — surface the error and stop, don't retry.
    and `ANTI-SLOP.md`. Do not use any word that appears in
    `shared/period_bans.txt`.
 
-11. Use `file_write` to write `books/{book}/chapters/ch_{chapter}.md`. Start
+11. **Write a 2-6 word evocative chapter title.** Concrete object
+    or phrase from the chapter's central beat — what the chapter is
+    *about*, not a plot summary. Examples: "The Apothecary's
+    Mortar", "What Tommaso Knew", "Carnival Hours", "Salt and
+    Saltpeter". Avoid cliché ("The Beginning", "A New Hope"),
+    avoid POV-character names alone (the running header already
+    shows POV via `\chaptermark`), avoid generic abstractions
+    ("Confrontation", "Decision").
+
+    The title goes into the chapter's YAML frontmatter `title:`
+    field; typeset surfaces it in the TOC, the chapter opening
+    page, and the running header. project.yaml ::
+    typeset.chapter_titles = false (default true) opts out of
+    this and reverts to numbered-only chapters.
+
+12. Use `file_write` to write `books/{book}/chapters/ch_{chapter}.md`. Start
     with a YAML frontmatter block per `docs/chapter-frontmatter.md`:
-    `book`, `chapter`, `pov`, `story_time` (ISO date or range), `events`,
+    `book`, `chapter`, `pov`, `title` (the 2-6 word title from
+    step 11), `story_time` (ISO date or range), `events`,
     `status: drafted`, and `word_count`.
 
-12. **Write the chapter summary.** Use `file_write` to save a
+13. **Write the chapter summary.** Use `file_write` to save a
     150–250 word summary at
     `books/{book}/chapters/ch_{chapter}.summary.md`. Cover seven
     things, each as a one or two sentence section:
@@ -180,7 +196,7 @@ required reads — surface the error and stop, don't retry.
     is NOT a chapter summary for the reader — it is a continuity
     handoff to the next drafter.
 
-13. Use `file_write` to append any new candidate canon facts to
+14. Use `file_write` to append any new candidate canon facts to
     `books/{book}/pending_canon.md`. If none are new, append a single line
     noting that no new facts were discovered in this chapter. Never edit
     `shared/canon.md` directly — that is what `autonovel promote-canon` is for.

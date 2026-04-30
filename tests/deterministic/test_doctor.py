@@ -64,6 +64,39 @@ def test_export_tool_check_can_be_suppressed(series_root: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Missing export tools — used by `autonovel doctor --install-missing`
+# to delegate to install-export-tools for the missing-tools subset.
+
+def test_missing_export_tools_returns_subset_of_known_tools() -> None:
+    """`missing_export_tools` returns names that are NOT on PATH —
+    by definition a subset of `EXPORT_TOOLS` keys."""
+    from autonovel.housekeeping.doctor import (
+        EXPORT_TOOLS,
+        missing_export_tools,
+    )
+    missing = missing_export_tools()
+    for name in missing:
+        assert name in EXPORT_TOOLS
+
+
+def test_missing_export_tools_excludes_present_tools(monkeypatch) -> None:
+    """When a tool IS on PATH (mocked), it must not appear in the
+    missing list."""
+    import autonovel.housekeeping.doctor as doc_mod
+
+    real_which = doc_mod.shutil.which
+
+    def fake_which(name: str):
+        if name == "tectonic":
+            return "/usr/local/bin/tectonic"  # pretend installed
+        return real_which(name)
+
+    monkeypatch.setattr(doc_mod.shutil, "which", fake_which)
+    missing = doc_mod.missing_export_tools()
+    assert "tectonic" not in missing
+
+
+# ---------------------------------------------------------------------------
 # Claude Code settings — [1m] context-mode billing-gate detection.
 
 import json as _json

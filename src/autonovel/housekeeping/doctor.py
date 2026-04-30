@@ -158,6 +158,20 @@ def _scan_for_one_m(value: object, _path: str = "") -> list[str]:
     return out
 
 
+def missing_export_tools() -> list[str]:
+    """Names of export-side tools (tectonic, pandoc, ffmpeg, etc.)
+    that are not on PATH. Used by `autonovel doctor --install-missing`
+    to feed `install_export_tools.apply()` only the tools that
+    actually need work — re-running install for already-present
+    tools is wasted effort.
+
+    Pure: just re-runs the same `shutil.which` walk that
+    `check_export_tools` does, but returns the bare names rather
+    than rendered warning lines.
+    """
+    return [name for name in EXPORT_TOOLS if shutil.which(name) is None]
+
+
 def run(series_root: Path, *, fix: bool = False, export_tools: bool = True) -> DoctorReport:
     report = DoctorReport()
     if not (series_root / SERIES_MARKER).is_file():

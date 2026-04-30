@@ -1,7 +1,7 @@
 ---
 name: autonovel:appendix
 description: Generate or scaffold a back-matter appendix (timeline of real events, real-character bios, sources, maps).
-argument-hint: "--book <short-name> [--sections timeline,bios,sources,notes] [--from auto|user|both] [--force]"
+argument-hint: "--book <short-name> [--sections timeline,bios,sources,notes] [--from auto|user|both] [--story-only|--include-context] [--force]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -85,11 +85,55 @@ Three modes selected by `--from`, paralleling
    regardless of how the user listed them — a stable rendering
    order is more reader-friendly than a custom one):
 
-   **(a) Timeline.** Year-by-year (or month-by-month for tight
-   periods). Each entry: `**<date>** — <event> [shortname-cite].`
-   Mark events the novel depicts with `*(novel: ch N)*` so the
-   reader can locate the corresponding chapter. Cap at ~30 entries
-   for a focused timeline; longer is encyclopedia territory.
+   **(a) Timeline — three-source merge.** Walk three sources of
+   timeline rows and merge them with distinct markers per source:
+
+   - **`📖` In-narrative.** Mechanical pass — pulled from chapter
+     summaries' `## Story time` sections + each chapter's
+     frontmatter `events:` array. The dates the book actually
+     depicts. Run via `bash`:
+
+     ```
+     autonovel mechanical timeline-extract books/{book} --format json
+     ```
+
+     Returns rows with `source: "narrative"` and a `chapter`
+     field pointing at the chapter. The slash-command's job is
+     to enrich each row's `description` field with a one-clause
+     summary from the chapter's `## Plot` section.
+
+   - **`🏛️ referenced` Real, mentioned in the prose.** Walk every
+     chapter's prose for real-world events the book mentions but
+     doesn't depict (e.g. "the sack of Constantinople, forty
+     years before"). Cross-reference each candidate against
+     `shared/research/notes/*.md` and `shared/canon.md` —
+     emit a row only when a research note corroborates the date.
+     Skip if `--story-only` was passed.
+
+   - **`🏛️ context` Real, context-setting.** LLM-curated events
+     the prose doesn't mention but the reader should know to
+     follow the period (the *Wolf Hall* end-paper convention).
+     Walk research notes for period-relevant entries the prose
+     doesn't reference; pick events that thematically connect
+     (the same political crisis, the same trade route, the same
+     intellectual movement). Cap at ~10 such rows so the timeline
+     stays focused. Default OFF; `--include-context` opts in.
+
+   Default mode: `narrative` + `referenced`. `--story-only` cuts
+   to narrative only. `--include-context` adds context rows.
+
+   Render via the mechanical helper after merging:
+
+   ```
+   autonovel mechanical timeline-extract books/{book} --format markdown
+   ```
+
+   then layer the LLM-merged referenced + context rows in the
+   same shape (`**<date>** <marker> — <description> [<cite>]`).
+   The legend block at the top names the three markers so the
+   reader knows what each means. Cap total entries at ~40 for
+   the focused-edition convention; longer is encyclopedia
+   territory.
 
    **(b) Bios.** One paragraph per named historical figure who
    appears as a character. 100-200 words each. Required structure:

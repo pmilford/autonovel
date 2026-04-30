@@ -110,6 +110,17 @@ def _build_parser() -> argparse.ArgumentParser:
     doc = sub.add_parser("doctor", help="Sanity-check a series directory.")
     doc.add_argument("--series", default=None)
     doc.add_argument("--fix", action="store_true", help="Recreate missing directories")
+    doc.add_argument("--install-missing", dest="install_missing",
+                      action="store_true",
+                      help="After the report, install any missing external "
+                            "export tools (tectonic / pandoc / ffmpeg / "
+                            "Pillow / fontconfig / etc.) by handing off to "
+                            "`install-export-tools` for the missing subset. "
+                            "Requires sudo for system packages; prompts "
+                            "before each tool unless `--yes` is also passed.")
+    doc.add_argument("--yes", action="store_true",
+                      help="With `--install-missing`, skip per-tool "
+                            "confirmation prompts.")
     doc.set_defaults(func=_cmd_doctor)
 
     tui_p = sub.add_parser("tui",
@@ -578,6 +589,51 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
         return 2
     report = doctor.run(series.root, fix=args.fix)
     print(doctor.render(report))
+
+    # `--install-missing` hands the missing export-tools subset off
+    # to install_export_tools so the user can fix shell-side gaps
+    # in one command instead of switching between `doctor` (reports)
+    # and `install-export-tools` (acts). Tools already present on
+    # PATH are skipped.
+    if args.install_missing:
+        from . import install_export_tools as iet
+        missing = doctor.missing_export_tools()
+        if not missing:
+            print("\nAll declared export tools are already on PATH; "
+                   "nothing to install.")
+            return 0 if report.ok else 1
+        # Map each missing tool back to the export(s) that need it
+        # so the planner can build a focused plan.
+        wanted_exports: list[str] = []
+        for export, tools in iet.EXPORT_REQUIREMENTS.items():
+            if any(t in missing for t in tools) and export not in wanted_exports:
+                wanted_exports.append(export)
+        print(f"\n--- installing missing tools "
+               f"({', '.join(missing)}) ---\n")
+        try:
+            plan = iet.plan(exports=wanted_exports)
+        except ValueError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+        # Filter the plan to ONLY the tools that are actually
+        # missing. Already-present tools shouldn't trigger another
+        # install pass.
+        plan.selected_tools = [
+            t for t in plan.selected_tools
+            if t.name.lower() in {m.lower() for m in missing}
+            or t.name in missing
+        ]
+        sys.stdout.write(iet.render_plan(plan))
+        result = iet.apply(plan, confirm=not args.yes)
+        if result.failed:
+            print(f"\nFailed: {result.failed}")
+            return 1
+        if result.skipped:
+            print(f"\nSkipped (user declined or no-op): {result.skipped}")
+        if result.succeeded:
+            print(f"\n✅ Installed: {result.succeeded}")
+            print("Re-run `autonovel doctor` to confirm everything is ok.")
+
     return 0 if report.ok else 1
 
 

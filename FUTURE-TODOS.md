@@ -1157,8 +1157,35 @@ prose ≈ 8 / 10, with investigation-heavy plots).
 
 ## Reader interest / reading experience
 
-- **TOC + chapter-page rendering should show chapter names by
-  default; numbers-only as an opt-in.** Surfaced 2026-04-30. The
+- ~~**TOC + chapter-page rendering should show chapter names by
+  default; numbers-only as an opt-in.**~~ **v1 shipped 2026-04-30
+  PM.** Three sub-items all live:
+  1. `commands/draft.md` step 11 generates a 2-6 word evocative
+     title at draft time; written to frontmatter `title:` field.
+     `commands/revise.md` step 8b regenerates the title when the
+     central beat changes.
+  2. `mechanical/chapter_titles.py` inspector + new CLI
+     subcommand `autonovel mechanical chapter-titles` reports
+     which chapters have a title (frontmatter / heading / missing).
+     `/autonovel:extract-chapter-titles --book <name>` LLM-
+     backfills the missing list. /autonovel:next surfaces the
+     missing-titles count as a LOW polish signal.
+  3. `mechanical/latex.py::_extract_chapter_title` already
+     surfaces the title via `\chapter{<title>}`, so TOC + chapter
+     opening + running header all read it for free. The
+     numbers-only opt-out via `project.yaml :: typeset.chapter_titles
+     = false` is documented in draft.md but not yet enforced —
+     follow-up entry below.
+  10 new Tier-1 tests for the inspector + render shapes. Tier
+  1+2: 1409 → 1431.
+
+  Open follow-up: enforce `project.yaml :: typeset.chapter_titles
+  = false` in `_extract_chapter_title` (drop frontmatter title
+  read; emit empty `\chapter*{}` so the running header reverts to
+  numbers only). Currently the field is documented but not read.
+  ~30 min to wire.
+
+- **TOC + chapter-page rendering — original entry follows for context.**
   current typeset emits `\chapter*{}` (empty) when a chapter
   file has no `title:` frontmatter field — relying on
   `\titleformat{\chapter}` to render `chapter <Roman>` alone.
@@ -1200,9 +1227,30 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   exposes the 7-section template's Plot field — that field is
   the primary input for a chapter-title suggestion).
 
-- **Automated mixed-source timeline for the appendix —
-  fictional + real-world dates, distinctly marked.** Surfaced
-  2026-04-30. The current `/autonovel:appendix --sections
+- ~~**Automated mixed-source timeline for the appendix —
+  fictional + real-world dates, distinctly marked.**~~
+  **v1 shipped 2026-04-30 PM.** Mechanical pass shipped
+  (`mechanical/timeline.py::extract_in_narrative_dates`); LLM
+  merge documented in the slash-command body.
+  - Mechanical: walks chapter summaries' `## Story time` +
+    frontmatter `events:` for in-narrative dates (`📖` marker
+    with chapter cite). New CLI subcommand `autonovel mechanical
+    timeline-extract`. 11 new Tier-1 tests covering extraction,
+    summary-overrides-frontmatter precedence, sorting, render
+    shapes. Tier 1+2 contribution: +11.
+  - LLM: `/autonovel:appendix --sections timeline` body extended
+    to invoke the mechanical helper, then layer in `🏛️ referenced`
+    rows (real events the prose mentions, cross-referenced
+    against research notes) and `🏛️ context` rows (events the
+    prose doesn't mention but the reader should know — opt-in
+    via `--include-context`). `--story-only` cuts to narrative
+    only.
+  Pairs with the existing `/autonovel:summaries --where
+  'story_time >= "1492-08"'` query DSL — same data, different
+  surface.
+
+- **Automated mixed-source timeline for the appendix — original
+  entry follows for context.** Surfaced 2026-04-30. The current `/autonovel:appendix --sections
   timeline` (shipped same day) is LLM-only and pulls from
   research notes + canon. Richer shape: walk the manuscript
   itself for in-story dates and merge with researched
@@ -1396,7 +1444,19 @@ prose ≈ 8 / 10, with investigation-heavy plots).
 - **Gemini Tier-3 spot-check on a Gemini-equipped box.** Skipped on
   the PR-8 dev box because `gemini` was not on `$PATH`. Adapter has
   full Tier-1 coverage; just needs an end-to-end run.
-- **`autonovel doctor --fix` for missing external CLI tools.** Today
+- ~~**`autonovel doctor --fix` for missing external CLI tools.**~~
+  **v1 shipped 2026-04-30 PM** as `autonovel doctor
+  --install-missing` (semantically clearer than `--fix-tools`;
+  parallel to `install-export-tools --apply`). Detects missing
+  export tools via `doctor.missing_export_tools()`, builds an
+  install plan via `install_export_tools.plan()` filtered to
+  the missing-tools subset, hands off to `apply()` with per-
+  tool confirmation (or `--yes` to skip prompts). Pairs the two
+  flows: `doctor` reports issues, `doctor --install-missing`
+  fixes the export-tool subset in one command. 2 new Tier-1
+  tests cover the helper + present-tools-excluded path.
+
+- **`autonovel doctor --fix` — original entry follows for context.** Today
   the doctor reports them; could shell out to brew/apt to install on
   approval. **Caveat from author testing 2026-04-25:** naïve `apt
   install` of `tectonic` on Chromebook/Debian frequently fails or
