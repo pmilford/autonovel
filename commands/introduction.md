@@ -70,25 +70,75 @@ command refuses to clobber author content).
    `file_read` on `project.yaml` to pull the book's display title
    for the heading. Write `books/{book}/preface.md` with this
    exact starter shape (the user replaces the bracketed
-   placeholders):
+   placeholders) — note the inline HOW-TO-EDIT comments next to
+   each section:
 
    ```markdown
    # Preface
 
-   <!-- Hand-authored. Speak as the author, in your voice. Typeset
-        renders this as `\chapter*{Preface}` in the PDF and as a
-        front-matter section in the ePub. Delete this comment when
-        you're ready to write. -->
+   <!-- ============================================================
+        HOW TO EDIT THIS FILE
+        ============================================================
+        Hand-authored. Speak as the author, in your voice. Typeset
+        renders this as \chapter*{Preface} in the PDF and as a
+        front-matter section in the ePub.
+
+        - Replace each [bracketed placeholder] with real prose.
+        - Delete sections you don't want; nothing here is required.
+        - Total length: 200-700 words is typical. Two short pages.
+        - DON'T summarise the plot — the cover blurb does that.
+        - DON'T explain themes; let the book do that.
+        - DO write in your natural voice (this is YOU, not the
+          narrator).
+        - The thanks paragraph goes LAST. Keep it generous but
+          tight; long thanks lists exhaust the reader before
+          chapter one.
+
+        Delete this comment block when the prose is ready.
+        ============================================================
+   -->
+
+   <!-- Section 1: Why this book exists.
+        Concrete is better than abstract: a moment that started it,
+        a problem that wouldn't go away, a question that needed
+        twenty thousand words to answer. One paragraph, sometimes
+        two. Personal. Not "this novel explores…" — that reads as
+        marketing copy. Closer to "I started this book on a train
+        from Lyon to Frankfurt in 2024 because…" -->
 
    [Why I wrote this book — one or two paragraphs. Personal. Not
-   plot summary. The acknowledgement of debts comes later.]
+   plot summary.]
+
+   <!-- Section 2: Reader-orientation note (optional).
+        Use IF the book needs framing the cover blurb can't carry.
+        Examples:
+          - "This book contains depictions of [content note].
+            Skip pages 41-44 if you'd rather not."
+          - "The dates use the Julian calendar; February 1492 here
+            is March 1492 in modern reckoning."
+          - "Read the chapters in order; the timeline is not
+            chronological but the revelations depend on sequence."
+        Skip this whole paragraph if you have nothing to add. -->
 
    [What the reader needs to know going in — a content note, a
    period framing, a recommendation about reading order. Optional.
    Skip this paragraph if you have nothing to add.]
 
+   <!-- Section 3: The thanks paragraph.
+        Comes LAST. People, places, sources. Keep it tight — two
+        or three sentences each, not a list. Cite primary sources
+        if research drove the work; name the human friends who read
+        drafts. If Autonovel was substantively involved in
+        drafting, this is the place to acknowledge that openly
+        (e.g. "First drafted with the help of Anthropic's Claude
+        via Autonovel; substantially revised by hand.").
+        A paragraph or two at most. -->
+
    [The thanks paragraph: people, places, the long history of the
    book. Last; a paragraph or two at most.]
+
+   <!-- Sign-off: town + year is conventional. Drop it if you'd
+        rather sign just the name. -->
 
    — [Author], [City], [Year]
    ```
@@ -134,9 +184,51 @@ command refuses to clobber author content).
    words.
 
 5. Print a one-screen summary: which files were written, their
-   word counts, and the next-step hint:
-   `/autonovel:typeset --book {book}` to weave them into the PDF
-   and ePub.
+   word counts, and (when the preface scaffold was created) an
+   explicit edit-guide block so the user knows exactly what to do
+   next without re-reading the file's inline comments:
+
+   ```
+   📄 Wrote books/{book}/preface.md (scaffold; ~150 words of
+        bracketed placeholders + HOW-TO-EDIT block).
+
+   To turn the scaffold into a real preface:
+
+     1. Open books/{book}/preface.md in your editor.
+     2. Read the HOW-TO-EDIT comment block at the top once.
+     3. Replace each [bracketed placeholder] with real prose:
+          - Section 1 (Why this book) — 1-2 paragraphs, personal,
+            concrete. NOT "this novel explores…".
+          - Section 2 (Reader note) — only if you have framing
+            the cover blurb can't carry; otherwise delete the
+            section.
+          - Section 3 (Thanks) — last, tight; if Autonovel
+            substantively drafted, acknowledge it openly.
+          - Sign-off — Author, City, Year.
+     4. Delete the HTML comment blocks once the prose is
+        ready (they don't render in typeset, but cleaner without).
+     5. Save. No further command needed — typeset picks up the
+        file automatically.
+
+   Typical length: 200-700 words (two short pages in print).
+
+   When ready: /autonovel:typeset --book {book}
+   ```
+
+   For `--from auto` and `--from both`, also print the
+   introduction.md word count and a one-line note that
+   introduction.md is AI-drafted and YOU should re-read it before
+   typeset (it's a draft, not a finished essay):
+
+   ```
+   📄 Wrote books/{book}/introduction.md (AI-drafted essay,
+        N words).
+
+   Open it before typeset; AI-drafted introductions tend to
+   over-explain themes or slip into marketing-copy register
+   ("In this book…"). Trim ruthlessly. Re-running with --force
+   regenerates from scratch.
+   ```
 </workflow>
 
 <acceptance>
