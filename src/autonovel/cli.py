@@ -112,6 +112,16 @@ def _build_parser() -> argparse.ArgumentParser:
     doc.add_argument("--fix", action="store_true", help="Recreate missing directories")
     doc.set_defaults(func=_cmd_doctor)
 
+    iet = sub.add_parser("install-export-tools",
+                          help="Interactive installer for the external tools the export commands depend on (tectonic / pandoc / ffmpeg / Pillow / fontconfig / etc.).")
+    iet.add_argument("--exports", default=None,
+                      help="Comma-list of exports to install for: pdf, epub, cover, audiobook, art. Default: all.")
+    iet.add_argument("--apply", action="store_true",
+                      help="Run the install commands instead of printing them. Prompts before each tool unless --yes.")
+    iet.add_argument("--yes", action="store_true",
+                      help="Skip per-tool confirmation prompts under --apply.")
+    iet.set_defaults(func=_cmd_install_export_tools)
+
     rt = sub.add_parser(
         "refresh-templates",
         help="Refresh package-shipped templates (default: typeset/) over the live series.",
@@ -444,6 +454,37 @@ def _cmd_status(args: argparse.Namespace) -> int:
         return 2
     report = status.gather(series)
     print(status.render(report))
+    return 0
+
+
+def _cmd_install_export_tools(args: argparse.Namespace) -> int:
+    """Interactive installer for export-side external tools."""
+    from . import install_export_tools as iet
+    if args.exports:
+        try:
+            exports = [e.strip() for e in args.exports.split(",") if e.strip()]
+        except Exception:  # noqa: BLE001
+            print("error: --exports must be a comma list", file=sys.stderr)
+            return 2
+    else:
+        # Default: every export. The user can narrow with --exports.
+        exports = list(iet.EXPORT_REQUIREMENTS)
+    try:
+        plan = iet.plan(exports=exports)
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    sys.stdout.write(iet.render_plan(plan))
+    if not args.apply:
+        return 0
+    print("\n--- applying ---\n")
+    result = iet.apply(plan, confirm=not args.yes)
+    print(f"\nSucceeded: {result.succeeded}")
+    if result.skipped:
+        print(f"Skipped: {result.skipped}")
+    if result.failed:
+        print(f"Failed: {result.failed}")
+        return 1
     return 0
 
 

@@ -826,6 +826,23 @@ Missing `tectonic` or `pandoc` show as **WARNING** lines with the
 fix command — install whatever you need, re-run `doctor` until the
 warning for your target tool is gone, then run typeset.
 
+Don't want to debug shell? Use the interactive helper:
+
+```bash
+autonovel install-export-tools                          # print all install steps
+autonovel install-export-tools --exports pdf,epub       # narrow to one slice
+autonovel install-export-tools --apply                  # run them, prompt-per-tool
+autonovel install-export-tools --apply --yes            # run them all, no prompts
+```
+
+It detects your OS (Debian/Ubuntu/macOS), notices whether autonovel
+itself was installed via pipx vs pip, and prints the exact commands
+in order — including the known-fragile cases (e.g. apt-tectonic
+often ships too old → fall back to the upstream prebuilt binary)
+and the `pipx inject` vs `pip install` choice for `Pillow` / `pydub`.
+Each tool has a `verify` command run after install so a too-old
+binary on PATH gets caught instead of silently passing.
+
 You can run typeset between revision passes purely as a "what does
 the book look like right now?" check — it doesn't modify the
 chapters, only writes typeset artifacts under
