@@ -1166,8 +1166,14 @@ to refresh on demand. Tabs:
 - **Foundation** — status of `world.md`, `characters.md`,
   `canon.md`, `voice.md`, `outline.md`, `seed.txt`, plus the
   pending-canon state.
-- **Front matter** — title, author, preface, introduction
-  presence.
+- **Front + back matter** — every surface typeset weaves into
+  the PDF: title page (title + author), preface,
+  introduction, glossary (front matter, before chapter 1),
+  and appendix (back matter, after the last chapter). Each
+  row shows ✅/❌ for presence, the word count when present,
+  and the exact slash-command to create it when absent.
+  Render order documented inline (Title → Preface →
+  Introduction → Glossary → chapters → Appendix → colophon).
 - **Reviews** — reader-panel + Opus review presence + last-run
   timestamps.
 - **Commands** — last 15 logged commands + the situational

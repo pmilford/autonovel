@@ -195,12 +195,18 @@ def _load_state(series: SeriesLayout, book: str) -> dict:
         "seed.txt": (book_root / "seed.txt").is_file(),
     }
 
-    # Front matter.
+    # Front + back matter.
     front_matter = {
         "title": book_entry.title if book_entry else "",
         "author": (book_entry.author if book_entry else "") or cfg.author or "",
         "preface": (book_root / "preface.md").is_file(),
         "introduction": (book_root / "introduction.md").is_file(),
+        "glossary": (book_root / "glossary.md").is_file(),
+        "appendix": (book_root / "appendix.md").is_file(),
+        "preface_words": _word_count_if(book_root / "preface.md"),
+        "introduction_words": _word_count_if(book_root / "introduction.md"),
+        "glossary_words": _word_count_if(book_root / "glossary.md"),
+        "appendix_words": _word_count_if(book_root / "appendix.md"),
     }
 
     # Reviews.
@@ -277,6 +283,15 @@ def _mtime_if(p: Path) -> str:
     return datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="minutes")
 
 
+def _word_count_if(p: Path) -> int:
+    if not p.is_file():
+        return 0
+    try:
+        return len(p.read_text(encoding="utf-8").split())
+    except OSError:
+        return 0
+
+
 # --------------------------------------------------------- sparkline
 
 
@@ -342,7 +357,7 @@ if _TEXTUAL_AVAILABLE:
         #status_bar Static { width: 1fr; }
         #chapter_table { height: 1fr; }
         #chapter_detail { width: 40; padding: 0 1; }
-        #spark_box { height: 8; padding: 1; border: round $accent; }
+        #spark_box { height: 12; padding: 1; border: round $accent; }
         DataTable { height: 1fr; }
         """
 
@@ -404,7 +419,7 @@ if _TEXTUAL_AVAILABLE:
                             yield Markdown("", id="research_detail_md")
                 with TabPane("Foundation", id="tab_foundation"):
                     yield Markdown("", id="foundation_md")
-                with TabPane("Front matter", id="tab_front_matter"):
+                with TabPane("Front + back matter", id="tab_front_matter"):
                     yield Markdown("", id="front_matter_md")
                 with TabPane("Reviews", id="tab_reviews"):
                     yield Markdown("", id="reviews_md")
@@ -579,6 +594,18 @@ if _TEXTUAL_AVAILABLE:
                 drops_line = (
                     f"\n  ⚠️  Tension drops (≥3 consecutive declines): {ranges}"
                 )
+            stale_count = sum(1 for r in rows if r.get("summary_stale"))
+            stale_legend = ""
+            if stale_count:
+                stale_legend = (
+                    f"\n  ⚠ next to status (status column): chapter "
+                    f"`.md` is newer than its `.summary.md`. The "
+                    f"rolling-context surface every drafter reads is "
+                    f"out of date. Fix: `/autonovel:summarize-chapter "
+                    f"--stale --book {self.active_book}` (refreshes all "
+                    f"{stale_count} stale chapter(s)). Continuity-"
+                    f"critical."
+                )
             self.query_one("#spark_box", Static).update(
                 f"Score   {score_spark}{score_stats}\n"
                 f"Tension {tension_spark}{tension_stats}\n"
@@ -590,6 +617,7 @@ if _TEXTUAL_AVAILABLE:
                 f"  ({n_eval} of {n_total} chapters evaluated; "
                 f"pending canon: {self._state.get('pending_canon', 'none')})"
                 + drops_line
+                + stale_legend
             )
             # Restore detail view to the previously-cursored chapter.
             if rows:
@@ -712,14 +740,48 @@ if _TEXTUAL_AVAILABLE:
         def _render_front_matter(self) -> None:
             fm = self._state.get("front_matter", {})
             tick = lambda b: "✅" if b else "❌"  # noqa: E731
+
+            def line(present_key: str, words_key: str, file_name: str,
+                      role: str, command_hint: str) -> str:
+                present = fm.get(present_key)
+                marker = tick(present)
+                if present:
+                    words = fm.get(words_key, 0)
+                    return (f"- {marker} `{file_name}` ({role}) — "
+                            f"{words} words")
+                return (f"- {marker} `{file_name}` ({role}) — "
+                        f"run `{command_hint}` to create")
+
             text = (
-                "## Front matter\n\n"
-                f"- **Title:** {fm.get('title') or '— (run /autonovel:title)'}\n"
-                f"- **Author:** {fm.get('author') or '— (set in project.yaml)'}\n"
-                f"- {tick(fm.get('preface'))} `preface.md` "
-                f"(user-authored)\n"
-                f"- {tick(fm.get('introduction'))} `introduction.md` "
-                f"(AI-drafted)\n"
+                "## Title page\n\n"
+                f"- **Title:** {fm.get('title') or '— (run `/autonovel:title --book <name>`)'}\n"
+                f"- **Author:** {fm.get('author') or '— (run `autonovel onboard <name>` or set in project.yaml)'}\n"
+                "\n"
+                "## Front matter (before chapter 1)\n\n"
+                + line("preface", "preface_words", "preface.md",
+                        "user-authored",
+                        "/autonovel:introduction --from user --book <name>")
+                + "\n"
+                + line("introduction", "introduction_words",
+                        "introduction.md", "AI-drafted essay",
+                        "/autonovel:introduction --from auto --book <name>")
+                + "\n"
+                + line("glossary", "glossary_words", "glossary.md",
+                        "period-vocabulary reference",
+                        "/autonovel:glossary --book <name> --from auto")
+                + "\n"
+                "\n"
+                "## Back matter (after the last chapter)\n\n"
+                + line("appendix", "appendix_words", "appendix.md",
+                        "timeline / bios / sources / notes",
+                        "/autonovel:appendix --book <name> --sections timeline,bios")
+                + "\n"
+                "\n"
+                "_Order in the typeset PDF:_ Title page → Preface → "
+                "Introduction → Glossary → chapters → Appendix → "
+                "colophon. Each item is optional; absence is "
+                "respected by the typeset front-/back-matter builder "
+                "via `\\IfFileExists` guards."
             )
             self.query_one("#front_matter_md", Markdown).update(text)
 
@@ -805,6 +867,15 @@ if _TEXTUAL_AVAILABLE:
                 "to chapter 14 still highlighted (not chapter 1). Same "
                 "for the chapter detail and research note preview "
                 "panes: scroll position survives the 5 s tick.\n\n"
+                "**Front + back matter tab** lists every front-/back-"
+                "matter file the typeset PDF assembles, in render "
+                "order (preface → introduction → glossary → chapters "
+                "→ appendix → colophon). Each row shows ✅ or ❌ for "
+                "presence, the word count when present, and the "
+                "exact slash-command to create it when absent. "
+                "/autonovel:typeset auto-skips missing files via "
+                "`\\IfFileExists` guards — no need to scaffold every "
+                "one.\n\n"
                 "**Status column** uses a canonical scheme:\n\n"
                 "- `drafted` — initial draft; never re-evaluated.\n"
                 "- `revised ×N` — re-evaluated N times after the "

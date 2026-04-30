@@ -145,6 +145,50 @@ def test_load_state_lists_book_names_in_project(
     assert book in state["book_names"]
 
 
+def test_front_matter_state_includes_glossary_and_appendix(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """The front_matter dict must carry presence + word-count for
+    every front-/back-matter surface so the Front + back matter tab
+    can show all four."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    (book_root / "preface.md").write_text(
+        "# Preface\n\nWords here.\n", encoding="utf-8"
+    )
+    (book_root / "glossary.md").write_text(
+        "# Glossary\n\n**Doge** — chief magistrate of Venice.\n",
+        encoding="utf-8",
+    )
+    (book_root / "appendix.md").write_text(
+        "# Appendix\n\n## Timeline\n\n**1492-08-03** — event.\n",
+        encoding="utf-8",
+    )
+    state = tui._load_state(_layout(series), book)
+    fm = state["front_matter"]
+    # Presence flags for every surface.
+    assert fm.get("preface") is True
+    assert fm.get("introduction") is False
+    assert fm.get("glossary") is True
+    assert fm.get("appendix") is True
+    # Word counts surfaced for the present files.
+    assert fm.get("preface_words", 0) > 0
+    assert fm.get("introduction_words", 0) == 0
+    assert fm.get("glossary_words", 0) > 0
+    assert fm.get("appendix_words", 0) > 0
+
+
+def test_word_count_if_handles_missing(tmp_path: Path) -> None:
+    p = tmp_path / "absent.md"
+    assert tui._word_count_if(p) == 0
+
+
+def test_word_count_if_counts_present_file(tmp_path: Path) -> None:
+    p = tmp_path / "x.md"
+    p.write_text("one two three four five.\n", encoding="utf-8")
+    assert tui._word_count_if(p) == 5
+
+
 # ----------------------------------------------------- CLI graceful degradation
 
 

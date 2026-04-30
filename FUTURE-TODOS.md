@@ -1157,6 +1157,49 @@ prose ≈ 8 / 10, with investigation-heavy plots).
 
 ## Reader interest / reading experience
 
+- **TOC + chapter-page rendering should show chapter names by
+  default; numbers-only as an opt-in.** Surfaced 2026-04-30. The
+  current typeset emits `\chapter*{}` (empty) when a chapter
+  file has no `title:` frontmatter field — relying on
+  `\titleformat{\chapter}` to render `chapter <Roman>` alone.
+  That makes the table of contents read `Chapter I`, `Chapter
+  II`, `…` with no signal of what each chapter contains. For
+  real-book convention, the TOC should show evocative chapter
+  titles ("The Apothecary's Mortar"), with the numbers either
+  alongside or as a metadata cue.
+
+  Three sub-asks:
+
+  1. **Generate chapter titles by default during draft.**
+     `/autonovel:draft` step N adds a step: write a 2-6 word
+     evocative title for the chapter to the frontmatter `title:`
+     field. The LLM is good at this from prose. Same shape for
+     `revise` (regenerate when the chapter's central beat
+     changed). New `--no-title` flag for users who want
+     numbers-only books explicitly.
+  2. **Mechanical title-extractor for retroactive backfill.**
+     `autonovel mechanical extract-chapter-titles <book>` reads
+     each chapter's prose and proposes a 3-5-word title via
+     LLM (light tier; can run as a sweep). Updates frontmatter
+     in place.
+  3. **Typeset surfaces the title in the TOC, the chapter
+     opening page, and the running header.** Update
+     `mechanical/latex.py::_extract_chapter_title` to use the
+     frontmatter `title:` when present; emit `\chapter[<short>
+     ]{<long>}` so TOC short-form matches the running-header
+     and the chapter opening page reads "Chapter VII — The
+     Apothecary's Mortar". Numbers-only mode (project.yaml ::
+     typeset.chapter_titles = false) preserves the current
+     empty-`\chapter*{}` shape.
+
+  Cost: ~6-8 hr (draft.md + revise.md body changes; mechanical
+  extract-chapter-titles helper + CLI; latex.py title rendering
+  + typeset.tex template; project.yaml schema bump for the
+  numbers-only switch; Tier-1 tests across the chain). Pairs
+  with the existing chapter-summary helper (which already
+  exposes the 7-section template's Plot field — that field is
+  the primary input for a chapter-title suggestion).
+
 - **Automated mixed-source timeline for the appendix —
   fictional + real-world dates, distinctly marked.** Surfaced
   2026-04-30. The current `/autonovel:appendix --sections
