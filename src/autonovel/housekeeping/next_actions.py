@@ -91,6 +91,7 @@ def _actions_for_book(series: SeriesLayout, cfg: project_mod.ProjectConfig,
     out.extend(_typeset_staleness_actions(book_root, book, series.root))
     out.extend(_missing_title_author_actions(cfg, book))
     out.extend(_missing_front_matter_actions(book_root, book))
+    out.extend(_missing_glossary_actions(cfg, book_root, book))
     return out
 
 
@@ -433,6 +434,50 @@ def _missing_title_author_actions(cfg: project_mod.ProjectConfig,
             f"/autonovel:title to propose candidates from the "
             f"outline + seed (or use --set / --author to set "
             f"explicit values)."
+        ),
+        book=book,
+    )]
+
+
+def _missing_glossary_actions(cfg: project_mod.ProjectConfig,
+                                 book_root: Path, book: str) -> list[NextAction]:
+    """For period fiction (project.yaml :: period.start set), once
+    the book has 3+ chapters drafted, suggest generating a
+    glossary. Period vocabulary readers can't decode (a *grosso*,
+    a *podestà*, a Doge) is the most common reason historical
+    fiction loses readers — the published convention is a one-page
+    front-matter glossary.
+
+    LOW priority because it's polish, not data integrity. Silenced
+    when the file already exists (even as a stub, since the user
+    has explicitly opted in)."""
+    period = getattr(cfg, "period", None) or {}
+    period_start = (
+        period.get("start") if isinstance(period, dict)
+        else getattr(period, "start", None)
+    )
+    if not period_start:
+        return []
+    glossary = book_root / "glossary.md"
+    if glossary.is_file():
+        return []
+    chapters = iter_chapter_files(book_root / "chapters")
+    if len(chapters) < 3:
+        return []
+    return [NextAction(
+        priority="LOW",
+        title=f"Add a period glossary for typeset front matter",
+        command=f"/autonovel:glossary --book {book} --from auto",
+        rationale=(
+            f"books/{book} is period fiction "
+            f"(project.yaml :: period.start = {period_start}) and has "
+            f"{len(chapters)} chapter(s) drafted, but no `glossary.md`. "
+            f"Period vocabulary the reader can't decode (a *grosso*, "
+            f"a *podestà*, a Doge) is the most common reason historical "
+            f"fiction loses readers; the published convention is a one-"
+            f"page glossary in the front matter, right before chapter 1. "
+            f"`--from auto` extracts terms from the prose + research "
+            f"notes; you refine before typeset."
         ),
         book=book,
     )]

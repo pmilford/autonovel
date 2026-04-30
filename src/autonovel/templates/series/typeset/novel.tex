@@ -183,6 +183,12 @@
 % === END MATTER ===
 \backmatter
 
+% Optional appendix (real-world events, bios, sources, etc.). Written
+% by `autonovel mechanical build-back-matter-tex` from `appendix.md`
+% if the file exists in the book's root. The `\IfFileExists` guard
+% silently skips inclusion when no appendix has been authored.
+\IfFileExists{back_matter.tex}{\input{back_matter.tex}}{}
+
 \thispagestyle{empty}
 \vspace*{3in}
 \begin{center}

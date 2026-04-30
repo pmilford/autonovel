@@ -441,6 +441,67 @@ def test_front_matter_skipped_below_three_chapters(series_root: Path) -> None:
     assert not any("preface or introduction" in a.title.lower() for a in actions)
 
 
+# --------------------------------------------------------- glossary suggestion
+
+
+def test_glossary_suggested_for_period_fiction_with_chapters(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Period fiction (project.yaml :: period.start set) with 3+
+    chapters but no glossary.md → LOW signal recommending
+    /autonovel:glossary. Late-stage fixture has 5 chapters."""
+    series, book = late_stage_book
+    # Set a period in project.yaml.
+    from autonovel import project as project_mod
+    cfg = project_mod.load(_layout(series).project_file)
+    cfg.period = {"start": "1480", "end": "1550", "region": "Venice"}
+    project_mod.dump(cfg, _layout(series).project_file)
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    glossary = [a for a in actions
+                 if "glossary" in a.title.lower()]
+    assert len(glossary) == 1
+    assert glossary[0].priority == "LOW"
+    assert "/autonovel:glossary" in (glossary[0].command or "")
+
+
+def test_glossary_silent_for_contemporary_fiction(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """No period set → not historical fiction → no glossary nag."""
+    series, book = late_stage_book
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("glossary" in a.title.lower() for a in actions)
+
+
+def test_glossary_silent_when_file_exists(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """Existing glossary.md (even a stub) silences the signal —
+    the user has explicitly opted in."""
+    series, book = late_stage_book
+    from autonovel import project as project_mod
+    cfg = project_mod.load(_layout(series).project_file)
+    cfg.period = {"start": "1480", "end": "1550", "region": "Venice"}
+    project_mod.dump(cfg, _layout(series).project_file)
+    (series / "books" / book / "glossary.md").write_text(
+        "# Glossary\n\nstub\n", encoding="utf-8"
+    )
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("glossary" in a.title.lower() for a in actions)
+
+
+def test_glossary_silent_under_three_chapters(series_root: Path) -> None:
+    """Books with <3 chapters drafted are too early to be worth
+    glossary work — the prose may still be churning."""
+    from autonovel import project as project_mod
+    cfg = project_mod.load(_layout(series_root).project_file)
+    cfg.period = {"start": "1480", "end": "1550", "region": "Venice"}
+    cfg.books.append(project_mod.BookEntry(name="b", status="drafting"))
+    project_mod.dump(cfg, _layout(series_root).project_file)
+    actions = next_actions.enumerate_actions(_layout(series_root), book="b")
+    assert not any("glossary" in a.title.lower() for a in actions)
+
+
 # --------------------------------------------------------- git backup states
 
 

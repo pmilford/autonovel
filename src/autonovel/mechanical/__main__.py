@@ -15,7 +15,8 @@ Subcommands:
   research-index <series>          Per-note metadata table for shared/research/notes/.
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
-  build-front-matter-tex <book>    Build front_matter.tex from preface.md + introduction.md.
+  build-front-matter-tex <book>    Build front_matter.tex from preface + introduction + glossary.
+  build-back-matter-tex <book>     Build back_matter.tex from appendix.md.
   render-novel-tex <template> [-s KEY=V ...]  Substitute @KEY@ placeholders (safer than sed).
   typeset-filename <slug> <kind>   Print canonical timestamped + latest filenames.
 
@@ -41,6 +42,7 @@ from .chapter_summary import render_markdown_table, summarize_chapters
 from .cliches import cliche_density, cliche_hits
 from .cuts import VALID_TYPES, apply_cuts
 from .epub import build_epub_md
+from .back_matter import build_back_matter_tex
 from .front_matter import build_front_matter_tex
 from .latex import build_chapters_tex
 from .dashboard import (
@@ -515,6 +517,23 @@ def _cmd_build_front_matter_tex(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_build_back_matter_tex(args: argparse.Namespace) -> int:
+    book_root = Path(args.book_root)
+    output = Path(args.output) if args.output else None
+    content, titles = build_back_matter_tex(book_root, output=output)
+    json.dump(
+        {
+            "sections": titles,
+            "bytes": len(content),
+            "output": str(output) if output else None,
+            "wrote": output is not None and content != "",
+        },
+        sys.stdout, indent=2,
+    )
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_render_novel_tex(args: argparse.Namespace) -> int:
     template = Path(args.template).read_text(encoding="utf-8")
     subs: dict[str, str] = {}
@@ -794,10 +813,16 @@ def main(argv: list[str] | None = None) -> int:
     cs.set_defaults(func=_cmd_chapter_summary)
 
     fm = sub.add_parser("build-front-matter-tex",
-                        help="Concatenate preface.md + introduction.md into front_matter.tex.")
+                        help="Concatenate preface.md + introduction.md + glossary.md into front_matter.tex.")
     fm.add_argument("book_root", help="Path to the book dir (the parent of preface.md).")
     fm.add_argument("--output", default=None, help="Write to this path; otherwise stdout-JSON only.")
     fm.set_defaults(func=_cmd_build_front_matter_tex)
+
+    bm = sub.add_parser("build-back-matter-tex",
+                        help="Wrap appendix.md into back_matter.tex (post-`\\backmatter` block).")
+    bm.add_argument("book_root", help="Path to the book dir (the parent of appendix.md).")
+    bm.add_argument("--output", default=None, help="Write to this path; otherwise stdout-JSON only.")
+    bm.set_defaults(func=_cmd_build_back_matter_tex)
 
     rt = sub.add_parser("render-novel-tex",
                         help="Substitute @KEY@ placeholders in a novel.tex template (replaces fragile sed).")

@@ -83,16 +83,31 @@ Light tier — mechanical. No LLM call.
 3a. Build `front_matter.tex` via `bash`:
     `autonovel mechanical build-front-matter-tex books/{book}
     --output books/{book}/typeset/front_matter.tex`.
-    The helper checks for `books/{book}/preface.md` (hand-authored)
-    and `books/{book}/introduction.md` (typically written by
-    `/autonovel:introduction --from auto`); when neither exists,
-    it writes nothing and the chapter file `\IfFileExists{}`
-    guard in novel.tex silently skips the include. When either
-    or both exist, each becomes a `\chapter*{...}` block (unnumbered,
-    in the TOC, in the `\frontmatter` zone — i.e. before chapter 1).
-    Parse the JSON output — print the section names that landed
-    (`["Preface"]`, `["Introduction"]`, or both) as part of the
-    summary.
+    The helper checks for `books/{book}/preface.md` (hand-authored),
+    `books/{book}/introduction.md` (typically written by
+    `/autonovel:introduction --from auto`), and
+    `books/{book}/glossary.md` (typically written by
+    `/autonovel:glossary --from auto`); when none exist, it writes
+    nothing and the chapter file `\IfFileExists{}` guard in novel.tex
+    silently skips the include. When any exist, each becomes a
+    `\chapter*{...}` block (unnumbered, in the TOC, in the
+    `\frontmatter` zone — before chapter 1). Render order is fixed:
+    Preface → Introduction → Glossary (so the glossary sits closest
+    to chapter 1 for reader flip-back). Parse the JSON output —
+    print the section names that landed as part of the summary.
+
+3b. Build `back_matter.tex` via `bash`:
+    `autonovel mechanical build-back-matter-tex books/{book}
+    --output books/{book}/typeset/back_matter.tex`. Reads
+    `books/{book}/appendix.md` (typically written by
+    `/autonovel:appendix --from auto`); when absent, writes nothing
+    and the `\IfFileExists{}` guard in novel.tex silently skips the
+    include. The `## Sub-heading` lines inside appendix.md (Timeline,
+    Bios, Sources, Notes) get promoted to `\section*{}` so the
+    back-matter renders with proper section breaks. Sits in the
+    `\backmatter` zone — after the last chapter, before the
+    colophon. Parse the JSON output — print the section names that
+    landed.
    The `--plates-manifest` flag is best-effort — if the file
    doesn't exist (no user-imported plates), the build still
    succeeds. If it does exist, every entry's image gets woven into

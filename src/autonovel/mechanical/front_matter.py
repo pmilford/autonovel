@@ -41,20 +41,28 @@ def build_front_matter_tex(
     *,
     output: Path | None = None,
 ) -> tuple[str, list[str]]:
-    """Concatenate preface + introduction into one front-matter
-    LaTeX block. Returns the generated TeX and a list of section
-    titles included (`["Preface", "Introduction"]` etc.).
+    """Concatenate preface + introduction + glossary into one front-
+    matter LaTeX block. Returns the generated TeX and a list of
+    section titles included (`["Preface", "Introduction",
+    "Glossary"]` etc.).
 
-    Both source files are optional; when neither exists the helper
-    returns ("", []) and writing is skipped.
+    All three source files are optional; when none exists the helper
+    returns ("", []) and writing is skipped. Order is fixed:
+    preface (author voice) first, introduction (essay) second,
+    glossary (period-vocabulary reference) last so it sits right
+    before chapter 1 — readers can flip back to it without paging
+    through the introduction.
     """
     sections: list[tuple[str, Path]] = []
     preface = book_root / "preface.md"
     introduction = book_root / "introduction.md"
+    glossary = book_root / "glossary.md"
     if preface.is_file():
         sections.append(("Preface", preface))
     if introduction.is_file():
         sections.append(("Introduction", introduction))
+    if glossary.is_file():
+        sections.append(("Glossary", glossary))
 
     if not sections:
         return "", []

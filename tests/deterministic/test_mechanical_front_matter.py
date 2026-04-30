@@ -61,6 +61,37 @@ def test_both_files_preface_first(tmp_path: Path) -> None:
     assert content.index("Preface") < content.index("Introduction")
 
 
+def test_glossary_included_after_introduction(tmp_path: Path) -> None:
+    """Glossary sits last in the front-matter sequence so readers
+    can flip back to it without paging through the introduction."""
+    (tmp_path / "preface.md").write_text(
+        "# Preface\n\nAuthor speaking.\n", encoding="utf-8"
+    )
+    (tmp_path / "introduction.md").write_text(
+        "# Introduction\n\nEssay.\n", encoding="utf-8"
+    )
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n**grosso** — small Venetian silver coin.\n",
+        encoding="utf-8",
+    )
+    content, titles = build_front_matter_tex(tmp_path)
+    assert titles == ["Preface", "Introduction", "Glossary"]
+    assert content.index("Preface") < content.index("Introduction")
+    assert content.index("Introduction") < content.index("Glossary")
+
+
+def test_glossary_only_renders(tmp_path: Path) -> None:
+    """Glossary alone — no preface, no introduction — still renders
+    as a chapter*. The most common shape for a quick-publish book."""
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n**Doge** — chief magistrate of Venice.\n",
+        encoding="utf-8",
+    )
+    content, titles = build_front_matter_tex(tmp_path)
+    assert titles == ["Glossary"]
+    assert "\\chapter*{Glossary}" in content
+
+
 def test_addcontentsline_emitted_for_toc(tmp_path: Path) -> None:
     """Front-matter sections must appear in the TOC even though they
     use `\\chapter*` (which is unnumbered and otherwise excluded
