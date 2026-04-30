@@ -95,10 +95,27 @@ each of these and the workaround is in the codebase:
 ## When in doubt
 
 - Run `/autonovel:next` to see the prioritised state-aware action
-  list (pending conflicts, regressions, stale review reports,
-  backup status, plus the canonical pipeline next step).
+  list (pending conflicts, regressions, briefs newer than their
+  chapters — the brief→revise pair, stale review reports, backup
+  status, plus the canonical pipeline next step). Past-end-of-book
+  guard: when the canonical line points to a draft chapter beyond
+  what exists by more than 1, it gets demoted to "book appears
+  complete — try evaluate --full / typeset". You'll also see a
+  one-line "💡 Maybe try:" hint in every command's postamble
+  drawn from the same enumerator, so most of the time you don't
+  need to call `/autonovel:next` separately.
 - Run `/autonovel:resume` if a previous command left an
-  `.autonovel/in-progress.lock` behind.
+  `.autonovel/in-progress.lock` behind. Also detects an
+  interrupted sweep (`draft-pass` or `revision-pass`) via
+  `.autonovel/sweep-progress.json` and prints a precise "continue
+  from chapter N" with the remaining chapter list.
+- Run `/autonovel:impact-of --book <name>` after
+  `/autonovel:promote-canon` if any facts were superseded —
+  parses `## Superseded` blocks in `shared/canon.md`, greps every
+  chapter for tokens unique to the prior value, and emits a
+  per-chapter action checklist of `/autonovel:revise --chapter N`
+  calls with line-snippet evidence. No more `ls` + `grep` to
+  figure out which chapters now disagree with canon.
 - Run `/autonovel:sidequest` for the menu of non-standard operations
   (rename character, split chapter, deepen character, etc.).
 - Run `/autonovel:talk --book <name> "<question>"` to ask the book
@@ -127,12 +144,24 @@ each of these and the workaround is in the codebase:
 - Run `/autonovel:pov-bleed --book <name>` for a heuristic POV-
   bleed scan. Suggestion list, not a gate — false positives are
   common.
-- Run `/autonovel:import-book --book <name> --from <path>` to
-  import an externally-written manuscript. Flips the book to
-  `mode: edit-imported`; the rest of the pipeline (evaluate /
-  revise / panel / review / typeset) is unchanged. After
-  importing, run `/autonovel:summarize-chapter --all --book
-  <name>` so revise/brief have continuity summaries to read.
+- Run `/autonovel:import-book --book <name> --from <path>
+  [--reverse-engineer]` to import an externally-written manuscript.
+  Flips the book to `mode: edit-imported`; the rest of the pipeline
+  (evaluate / revise / panel / review / typeset) is unchanged. With
+  `--reverse-engineer`, the import scans the imported prose for
+  candidate character names and seeds (or appends to)
+  `shared/characters.md` with an auto-detected block. After
+  importing, run `/autonovel:summarize-chapter --all --book <name>`
+  so revise/brief have continuity summaries to read; then
+  `/autonovel:voice-discovery --book <name>` and
+  `/autonovel:gen-outline --book <name>` to fill in the rest of
+  the foundation against the imported prose.
+- Run `/autonovel:research --query "<question>"` to ask
+  cross-source synthesis questions over your existing
+  `shared/research/notes/` — no web search, just LLM synthesis with
+  inline `[shortname]` citations. Distinct from `/autonovel:talk`
+  (queries prose) and `/autonovel:research "<topic>"` (live web
+  research that writes new notes).
 - Run `/autonovel:series-arc` (no `--book`) when the series
   has ≥2 books for the cross-book scoreboard — completion,
   cross-book cast, story-time discipline, unresolved threads,

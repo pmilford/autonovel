@@ -352,14 +352,25 @@ claude            # or `codex`, or `gemini`
 
 #### How to drive the pipeline
 
-The simplest pattern: **run one command, then ask `/autonovel:next`
-what to run next.** Repeat until you reach drafting, then revision,
-then export. `/autonovel:next` inspects what's on disk — pending
-canon conflicts, chapter regressions, stale reader-panel/Opus
-review reports, git backup state, missing title or author, missing
-front matter — and emits a prioritised action list. The canonical
-pipeline next step appears at the bottom; situational actions take
-precedence. You do not have to memorise the order.
+The simplest pattern: **run one command, then read the postamble's
+"💡 Maybe try:" hint** — every successful command now ends with a
+one-line situational suggestion drawn from the same enumerator
+that powers `/autonovel:next`. So most of the time you don't have
+to ask anything; the next step is right there in the response.
+When you want the full picture, `/autonovel:next` inspects what's
+on disk — pending canon conflicts, chapter regressions, briefs
+newer than their chapters (the brief→revise pair is the most
+common signal), stale reader-panel/Opus review reports, git
+backup state, missing title or author, missing front matter — and
+emits a prioritised action list. The canonical pipeline next step
+appears at the bottom; situational actions take precedence. You do
+not have to memorise the order.
+
+After `/autonovel:promote-canon` flips facts, run
+`/autonovel:impact-of --book <name>` to get a per-chapter
+checklist of `/autonovel:revise --chapter N` calls with
+line-snippet evidence — no `ls` + `grep` required to find which
+chapters now disagree with canon.
 
 For a fresh series, `/autonovel:next` will walk you through the
 foundation in this order:
