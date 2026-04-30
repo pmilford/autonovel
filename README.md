@@ -150,6 +150,8 @@ terminal is open with `git` and `pipx` available.
    ```bash
    cd autonovel
    pipx install '.[export]'
+   # or, to also pull in the read-only TUI dep up front:
+   pipx install '.[export,tui]'
    ```
 
    `cd` ("change directory") moves you into the cloned folder.
@@ -158,7 +160,10 @@ terminal is open with `git` and `pipx` available.
    pulls in the Python image + audio libraries (`Pillow`, `pydub`)
    that the export commands (cover art, audiobook) need. Quotes
    around `'.[export]'` matter — your shell will otherwise try to
-   glob the brackets.
+   glob the brackets. The optional `tui` extra pulls in `textual`
+   for `autonovel tui` (long-running terminal browser); skip it if
+   you'll only use the slash-commands and the `autonovel status` /
+   `autonovel cost` one-shots.
 
    If you only ever plan to draft and revise (no PDF / cover /
    audiobook export), `pipx install .` without the extras works

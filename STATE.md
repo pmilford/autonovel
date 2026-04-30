@@ -977,16 +977,29 @@
   harness stays explicitly skipped rather than silently passing.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 (late PM) —
+  **1243 passing** (`pytest tests/deterministic tests/contracts`).
+  Three additional commits on the workflow-guidance + tooling
+  batch: `autonovel install-export-tools` interactive installer
+  (+16); `/autonovel:impact-of` LLM follow-up — `--with-llm`
+  classifier (HIGH/MEDIUM/LOW/FALSE_POSITIVE) and `--source
+  research` mode (+4 regression locks); `autonovel tui`
+  read-only terminal browser via textual `[tui]` extra, with
+  Help / Chapters / Research / Foundation / Front matter /
+  Reviews / Commands tabs and live next-step rationale + reads/
+  writes per suggested command (+16). Doc sync follow-up
+  brought docs/commands.md rows for `/autonovel:next` + `/autonovel:
+  impact-of` up to date and added a CLI subcommands section.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 (PM) —
-  **1207 passing** (`pytest tests/deterministic tests/contracts`).
-  Workflow-guidance batch (six commits): brief-newer-than-chapter
-  signal + past-end guard in `/autonovel:next` (+7); postamble
-  "💡 Maybe try:" hints (+6); `/autonovel:impact-of` (kills the
-  ls/grep workflow after promote-canon, +21+5 contract pickups);
-  research-notes index + `/autonovel:research --query` mode (+13);
-  sweep-progress checkpoint for `/autonovel:resume` continuation
-  (+18); edit-imported Phase 2 foundation reverse-engineering (+14
-  + 1 contract pickup). Single-session delta: 1123 → 1207 (+84).
+  **1207 passing**. Workflow-guidance batch (six commits):
+  brief-newer-than-chapter signal + past-end guard in
+  `/autonovel:next` (+7); postamble "💡 Maybe try:" hints (+6);
+  `/autonovel:impact-of` (kills the ls/grep workflow after
+  promote-canon, +21+5 contract pickups); research-notes index
+  + `/autonovel:research --query` mode (+13); sweep-progress
+  checkpoint for `/autonovel:resume` continuation (+18); edit-
+  imported Phase 2 foundation reverse-engineering (+14 + 1
+  contract pickup). Single-session delta: 1123 → 1207 (+84).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-29 (AM) — **1123
   passing** (`pytest tests/deterministic tests/contracts`).
   FUTURE-TODOS #1 added 22; #2 added 27; #5.1 added 17 (and fixed
