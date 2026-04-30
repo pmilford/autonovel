@@ -1319,9 +1319,38 @@ pandoc --version
 
 ### 5c. Cover and ornament rendering (`/autonovel:cover-*`, `/autonovel:art-vectorize`)
 
-Required: **`fontconfig`** (font lookup), **`potrace`** (PNG → SVG).
-Plus the Python `Pillow` package (in the autonovel `[export]`
-extra).
+**Three paths to a cover, ranked by cost:**
+
+1. **Free, no key, instant — typographic-only** (NYRB Classics
+   shape: title + author on a solid color):
+   ```text
+   /autonovel:cover-print --book <name> --pages <N> --typographic-only [--bg-color "#1a3b5c"]
+   ```
+   No image-API key needed; no Stable Diffusion install; no
+   Pollinations rate-limits. Pillow + system fonts only. The
+   right choice if you don't have or don't want to pay for an
+   image API.
+2. **Free, no key, AI-generated — Pollinations.ai**:
+   ```text
+   /autonovel:art-directions --book <name> --surface cover
+   /autonovel:art-curate --book <name> --surface cover --provider pollinations
+   /autonovel:art-pick --book <name> --surface cover --variant N
+   /autonovel:cover-composite --book <name>
+   /autonovel:cover-print --book <name> --pages <N>
+   ```
+   Pollinations.ai is an open HTTPS endpoint (no signup, no
+   key). Quality is roughly SDXL-level; varies per request.
+   Subject to rate limits (a handful of requests per minute);
+   fine for one cover, slow for 24 chapter ornaments.
+3. **Paid, key required — fal / replicate / openai**: same flow
+   as (2) but `--provider fal` (default) / `replicate` /
+   `openai` and the corresponding `FAL_KEY` /
+   `REPLICATE_API_TOKEN` / `OPENAI_API_KEY` env var. More
+   consistent quality, no rate-limit anxiety, costs money.
+
+Required for any path: **`fontconfig`** (font lookup),
+**`potrace`** (PNG → SVG, only if vectorising ornaments). Plus
+the Python `Pillow` package (in the autonovel `[export]` extra).
 
 ```bash
 # Linux / WSL / Chromebook:

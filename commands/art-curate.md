@@ -1,7 +1,7 @@
 ---
 name: autonovel:art-curate
-description: Generate image variants from saved directions via the configured image provider.
-argument-hint: "--book <short-name> --surface cover|ornament|map|scene-break [--provider fal|replicate|openai]"
+description: Generate image variants from saved directions via the configured image provider. `pollinations` is the free, no-API-key option.
+argument-hint: "--book <short-name> --surface cover|ornament|map|scene-break [--provider pollinations|fal|replicate|openai]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -24,9 +24,20 @@ downloading each result into `books/{book}/art/variants/`. The user
 then picks one with `/autonovel:art-pick`.
 
 Multi-provider hook is intentional — `project.yaml` can set
-`image.provider: fal|replicate|openai` and a per-provider env-var name
-for the API key. The default is `fal` because that is what the
-pre-rewrite pipeline used.
+`image.provider: pollinations|fal|replicate|openai` and a
+per-provider env-var name for the API key.
+
+**Recommended default for new projects: `pollinations`** —
+free, no API key, uses Pollinations.ai's open HTTPS endpoint
+(`image.pollinations.ai/prompt/<encoded-prompt>?width=W&height=H`).
+Quality is roughly SDXL-level; varies. The other providers (fal,
+replicate, openai) cost money and need keys but produce more
+consistent output. Pick what matches your budget.
+
+Free typography-only path (no AI art at all): skip art-curate
+entirely and run `/autonovel:cover-print --typographic-only` —
+covers come out as title + author over a solid color or pattern
+via Pillow, no provider involved.
 </purpose>
 
 <workflow>
@@ -39,19 +50,35 @@ pre-rewrite pipeline used.
    `books/{book}/art/directions/{surface}.json`. If either is missing,
    surface the command to run first and stop.
 
-3. Resolve the provider's API key from the environment — `FAL_KEY` for
-   fal.ai, `REPLICATE_API_TOKEN` for replicate, `OPENAI_API_KEY` for
-   openai. If the key is missing, stop with a single-line message
-   naming the env var and point the user at `.env.example`.
+3. Resolve the provider's API key (or skip for pollinations):
+   - `pollinations` → no key needed; the endpoint is open. Skip
+     this step.
+   - `fal` → `FAL_KEY`.
+   - `replicate` → `REPLICATE_API_TOKEN`.
+   - `openai` → `OPENAI_API_KEY`.
 
-4. For each direction, shell out to the provider via `bash` — a short
-   `curl`/`httpx` call posting the prompt — and save the returned image
-   to `books/{book}/art/variants/{surface}_NN.png` (two-digit index
+   If a paid provider's key is missing, stop with a single-line
+   message naming the env var, suggest switching to
+   `--provider pollinations` for the free path, and point the
+   user at `.env.example`.
+
+4. For each direction, shell out to the provider via `bash` and
+   save the returned image to
+   `books/{book}/art/variants/{surface}_NN.png` (two-digit index
    matching the direction index). Use these defaults per surface:
    - `cover`: 1K resolution, 2:3 aspect.
    - `ornament`: 0.5K resolution, 1:1 aspect.
    - `map`: 1K resolution, 4:3 aspect.
    - `scene-break`: 0.5K resolution, 4:1 aspect.
+
+   Provider-specific shapes:
+   - `pollinations`: GET `https://image.pollinations.ai/prompt/
+     <URL-encoded-prompt>?width=W&height=H&seed=<index>&nologo=true`.
+     Use `curl -L -o <out>` (the endpoint streams a PNG
+     directly). The seed parameter ensures different directions
+     produce different images. No request body.
+   - `fal` / `replicate` / `openai`: short `curl`/`httpx` POST
+     with the prompt — same shape as the pre-rewrite pipeline.
 
 5. Use `file_write` to update `books/{book}/art/picks.json` — the
    registry of what has been generated and what has been picked.

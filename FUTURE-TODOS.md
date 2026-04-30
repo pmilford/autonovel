@@ -1178,6 +1178,45 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   not per-book). 8 Tier-1 regression locks pin the contract
   surface. Tier 1+2: 1115 → 1123.
 
+## Free / no-API-key cover and ornament generation
+
+- **Local Stable Diffusion provider — `--provider local-sd`.** The
+  Pollinations.ai option (shipped 2026-04-30) is free + no key
+  but is rate-limited and quality varies per request. A truly
+  free alternative is local SD via the `diffusers` Python package
+  (or A1111 / ComfyUI HTTP). New optional extra `[local-art]`
+  pulls in `diffusers + transformers + torch`; bigger install
+  (~5 GB model weights) but unlimited use thereafter. Should
+  detect CUDA / MPS / CPU and fall back gracefully; CPU works but
+  is slow. `autonovel install-export-tools --exports cover-local`
+  walks the user through the model download. Cost: ~5-7 hr
+  (provider implementation + install-tool flow + Tier-1 tests
+  with mocked diffusers + doc). Hold for users who hit
+  Pollinations rate limits or want offline-first operation.
+
+- **Wikimedia-Commons public-domain art provider — `--provider
+  wikimedia`.** Truly free and lawful for any use; the catch is
+  that you get a real painting (not an AI-generated original) so
+  the user has to crop / scale to cover dimensions. New helper
+  searches the Commons API for `<period> <region> <theme>`
+  matches, surfaces 5-10 candidates with attribution + license
+  metadata, the user picks one, helper downloads + crops via
+  Pillow. Best for historical fiction where a period-appropriate
+  painting is on-genre. Cost: ~3-4 hr (Commons API client +
+  search-rank heuristics + crop helper + Tier-1 tests). Pairs
+  with `/autonovel:art-import` (already shipped) for the user-
+  supplied image case.
+
+- **Pollinations.ai prompt-tuning loop.** The free
+  Pollinations.ai endpoint lacks the prompt-engineering knobs
+  (negative prompt, guidance scale, sampler) that paid providers
+  expose. Quality depends entirely on the prompt. A future
+  helper could iterate: generate 3 variants per direction, pick
+  the highest CLIP-similarity to the prompt mechanically (or via
+  a second LLM judge call), retry once with a tightened prompt
+  if all 3 are below a threshold. Adds robustness on a free
+  provider where bad rolls are common. Cost: ~4-5 hr.
+
 ## Maintenance
 
 - ~~**Token + cost tracking.**~~ **Shipped 2026-04-28.**

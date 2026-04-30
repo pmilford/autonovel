@@ -1,7 +1,7 @@
 ---
 name: autonovel:cover-print
 description: Compose a print-ready wraparound cover + the thumbnail matrix.
-argument-hint: "--book <short-name> --pages <N> [--paper cream|white] [--trim-w 5.5] [--trim-h 8.5] [--spine-override <inches>] [--preview] [--blurb-file <path>]"
+argument-hint: "--book <short-name> --pages <N> [--paper cream|white] [--trim-w 5.5] [--trim-h 8.5] [--spine-override <inches>] [--preview] [--blurb-file <path>] [--typographic-only [--bg-color #RRGGBB]]"
 model_tier: light
 allowed-tools:
   - file_read
@@ -29,6 +29,16 @@ override (`--spine-override <inches>`) wins when present.
 Light tier — PIL only, no LLM. Improvement over pre-rewrite: one
 invocation yields the full KDP/Lulu wraparound AND all thumbnails;
 previously those were two scripts run separately.
+
+**Typographic-only mode** (`--typographic-only`) skips the
+`books/{book}/art/cover.png` requirement entirely and produces a
+title-and-author-on-solid-color cover. The right path when the
+user has no image-API key, isn't running local Stable Diffusion,
+and doesn't want to use Pollinations — the typographic look is a
+recognised cover convention (NYRB Classics, Penguin Black
+Classics, Faber poetry editions). `--bg-color #RRGGBB` overrides
+the background; default is a paper-stock-matched off-white. Free,
+zero-key, runs in under a second.
 </purpose>
 
 <workflow>
@@ -38,9 +48,18 @@ previously those were two scripts run separately.
    required args → usage error and stop.
 
 2. Use `file_read` on `project.yaml` to resolve title/author/subtitle
-   (same precedence as `/autonovel:cover-composite`). Confirm
-   `books/{book}/art/cover.png` exists; if not, stop with a
-   run-art-pick reminder.
+   (same precedence as `/autonovel:cover-composite`).
+
+   - **Default mode**: confirm `books/{book}/art/cover.png` exists;
+     if not, stop with a run-art-pick reminder (or "switch to
+     `--typographic-only` if you don't have art").
+   - **Typographic-only mode** (`--typographic-only`): skip the
+     cover.png check. The cover layer is a solid color (paper-
+     stock-matched off-white by default; `--bg-color #RRGGBB`
+     overrides). Title + author + optional subtitle are composed
+     onto the wraparound canvas via Pillow's text rendering, with
+     the back-cover blurb (if `--blurb-file` provided) on the
+     opposite panel. No image dependency.
 
 3. Use `bash` to compute the cover spec:
    `autonovel mechanical spine-width --pages <N> --paper <P>`

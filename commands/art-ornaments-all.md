@@ -1,7 +1,7 @@
 ---
 name: autonovel:art-ornaments-all
 description: Generate a per-chapter ornament for every chapter, keyed to chapter content.
-argument-hint: "--book <short-name> [--provider fal] [--chapters <N,M,...>]"
+argument-hint: "--book <short-name> [--provider pollinations|fal|replicate|openai] [--chapters <N,M,...>]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -35,15 +35,25 @@ coherent series. Otherwise plain text-to-image is fine — just noisier.
 <workflow>
 1. Parse `$ARGUMENTS`. `--book <short-name>` is required. Optional:
    `--provider` (defaults to `project.yaml :: image.provider` then
-   `fal`), `--chapters N,M,...` (comma-separated; default all).
+   `pollinations` for new projects / `fal` for legacy), `--chapters
+   N,M,...` (comma-separated; default all).
 
 2. Use `file_read` on `project.yaml`, `books/{book}/art/visual_style.json`,
    and `books/{book}/art/picks.json`. If `visual_style.json` is missing,
    surface "run `/autonovel:art-style --book {book}` first" and stop.
 
-3. Resolve the provider API key. Missing key → stop with a single-line
-   message naming the env var (`FAL_KEY` / `REPLICATE_API_TOKEN` /
-   `OPENAI_API_KEY`). Do not fail silently — the user needs to know.
+3. Resolve provider auth (or skip for pollinations):
+   - `pollinations` → no key needed; the endpoint is open. Skip
+     this step. **The right default for users who don't have or
+     don't want to pay for an image-API key.**
+   - `fal` → `FAL_KEY`.
+   - `replicate` → `REPLICATE_API_TOKEN`.
+   - `openai` → `OPENAI_API_KEY`.
+
+   Missing paid-provider key → stop with a single-line message
+   naming the env var, suggest switching to
+   `--provider pollinations` for the free path. Do not fail
+   silently.
 
 4. Determine the reference image: `books/{book}/art/ornament_reference.png`
    if it exists. If not, print a one-line note that the set will not be
@@ -51,6 +61,18 @@ coherent series. Otherwise plain text-to-image is fine — just noisier.
 
 5. Enumerate chapter files with `bash`: `ls books/{book}/chapters/ch_*.md`.
    Skip any chapter already in the `--chapters` exclusion if provided.
+
+   Provider call shape:
+   - `pollinations` → GET `https://image.pollinations.ai/prompt/
+     <URL-encoded-prompt>?width=512&height=512&seed=<chapter-num>&nologo=true`.
+     `curl -L -o <out>` streams the PNG. The seed is the chapter
+     number so each chapter gets a deterministically-different
+     ornament. No image-to-image (Pollinations doesn't support
+     it); the reference image is a no-op for this provider —
+     style coherence comes from the prompt instead.
+   - `fal` / `replicate` / `openai` → image-to-image with the
+     reference PNG, same shape as the pre-rewrite pipeline.
+
    For each chapter:
    - **Prefer the authored prompt file**:
      `books/{book}/art/prompts/ch{chapter:02d}_ornament.md`. When
