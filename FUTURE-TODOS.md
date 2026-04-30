@@ -745,6 +745,91 @@ These surfaced during a real first-run on a Chromebook + WSL on Claude
 Max $200/month. Full narrative + rationale in
 `docs/lessons-from-author-testing.md`.
 
+- **Onboarding flow — clear "what to write and when" + sensible
+  defaults for working title and author attribution.** Surfaced
+  2026-04-30 by author testing. The current new-series + new-book
+  flow drops the user into a series root with a stub `seed.txt`,
+  empty `voice.md` Part 2, no title, no author, and no concrete
+  guidance on *which file to fill in next or how much to write*.
+  The result is a confused user pasting a half-formed pitch into
+  seed.txt and then asking the runtime "what now?" — exactly the
+  ls/grep failure mode but at the start instead of the middle.
+  Three concrete improvements:
+
+  1. **Onboarding wizard.** New CLI subcommand
+     `autonovel onboard [--book <name>]` that walks through the
+     foundation in order with prompts:
+       - "Paste your one-paragraph pitch (period, protagonist,
+         central conflict, tone). Examples: ..." → writes
+         `seed.txt` with the formatted result.
+       - Period? Region? Genre? → updates `project.yaml`.
+       - Working title (we'll suggest 3 from the seed) → sets
+         `books[<name>].title`.
+       - Human author name → `books[<name>].author` (default-set
+         per below).
+       - "Run `/autonovel:gen-world` next" — the next-step is
+         spelled out, with the tier (heavy) and approximate token
+         cost noted.
+     Each prompt has a `(skip — fill later)` option; the wizard
+     writes a one-line `## Onboarding TODO` block to seed.txt
+     listing what's still empty.
+
+  2. **Suggested working titles from the seed.** When the user
+     provides a seed, generate 3 working-title candidates via a
+     light-tier LLM call and write them as commented options in
+     seed.txt:
+     ```
+     # Working titles (LLM-suggested; pick one or write your own
+     # via `/autonovel:title --book <name> --set "<title>"`):
+     #   1. "<candidate-A>"
+     #   2. "<candidate-B>"
+     #   3. "<candidate-C>"
+     ```
+     Pre-populates `books[<name>].title = "<candidate-A> (working)"`
+     so the title page never falls back to "Untitled" while the
+     book is in flight. The `(working)` suffix flags it as a
+     placeholder; `/autonovel:title --set` strips the suffix.
+
+  3. **Author attribution defaults — credit the human, name the
+     AI honestly.** Currently `books[<name>].author` defaults to
+     empty and the typeset title page falls back to "Anonymous".
+     Better: at onboard / new-book time, default to a structured
+     `author` value:
+     ```yaml
+     author:
+       human: "<name>"          # required; prompted at onboard
+       ai_co_author: "Autonovel"  # optional; truthful credit
+       attribution_style: "seed-by-human"   # default
+     ```
+     Where `attribution_style` controls the typeset rendering:
+       - `seed-by-human` (default): "Seed by **<human>**;
+         drafted with Autonovel."
+       - `human-only`: "<human>" (when the human did substantive
+         editing — they decide).
+       - `ai-only`: "Autonovel" (acknowledging full AI authorship;
+         honest for unedited drafts).
+       - `custom`: free-form string the human supplies.
+     The credit lands on the title page (typeset / cover) and in
+     ePub metadata. Honest by default ("the AI did most of the
+     work"), but the human gets named and acknowledged. Avoids
+     both extremes (uncredited human; deceptively-credited AI).
+
+  4. **Onboarding state reachable from `/autonovel:next`.** Add a
+     HIGH situational signal "Foundation incomplete — run
+     `autonovel onboard`" when seed.txt is empty / only has
+     placeholder content / `books[<name>].title` is unset. So
+     even a user who skipped onboarding finds their way back via
+     the existing next-action flow.
+
+  Cost: ~6-8 hr (CLI subcommand + prompt module + LLM
+  title-suggestion via light tier + project.yaml schema bump for
+  the structured author block + typeset.tex update for the new
+  attribution_style render path + Tier-1 tests + operating-guide
+  §1 onboarding walkthrough rewrite). The structured author
+  block is a one-way schema change so PR sequence matters —
+  ship the schema migration before the CLI to keep already-
+  in-flight series upgradable.
+
 - ~~**Per-command `model:` override on `[1m]` session models —
   recovery path.**~~ **Shipped 2026-04-28.** New CLI flag
   `autonovel install --no-model-pin` re-renders every command

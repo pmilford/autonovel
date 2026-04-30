@@ -161,11 +161,13 @@ project.yaml.
 
 ---
 
-## A `/autonovel:*` command's footer says `⚠️ verify-writes:`
+## A `/autonovel:*` command's postamble shows a `🔴 VERIFY-WRITES` banner
 
 The postamble caught a self-report mismatch. The LLM passed
 `--wrote <path>` to `autonovel _end` for one or more files, but
-the on-disk state doesn't match the claim:
+the on-disk state doesn't match the claim. As of 2026-04-30 the
+warning leads the postamble (rather than trailing it) so it can't
+get buried under a long sweep closer.
 
 - `claimed created but file does not exist` — the LLM said it
   created a file but never invoked the `Write` tool. Re-run the
@@ -173,17 +175,25 @@ the on-disk state doesn't match the claim:
   step that should be writing the file.
 - `claimed modified but bytes match the checkpoint` — the LLM
   said it edited a file but the bytes are identical to the
-  begin-time backup. The command may have decided no edits were
-  needed (legitimate; ignore the warning) or skipped the edit
-  step (re-run).
+  begin-time backup. **For chapter files specifically, this is
+  almost always the silent-revise-failure bug class** — the
+  per-chapter task subagent in a `revision-pass` / `draft-pass`
+  sweep reported success without invoking Write/Edit. The fix is
+  to re-run the sweep targeting just those chapters; the banner
+  now lists them by path. For non-chapter paths, the command may
+  have legitimately decided no edits were needed (e.g.
+  `pending_canon.md` only grows when new facts surface) — review
+  before re-running.
 
-The warning is informational — the command exited `ok` and the
+The banner is informational — the command exited `ok` and the
 lock has been released. Decide whether to re-run based on the
 command's contract: if the command is *required* to produce a
 specific file (e.g. `/autonovel:gen-world` writes
-`shared/world.md`), re-run when it shows up missing. If the
-write was conditional (e.g. `pending_canon.md` only grows when
-new facts are discovered), the warning is fine.
+`shared/world.md`), re-run when it shows up missing. The
+chapter-file specific call-out is the load-bearing case for
+sweep commands — the situational `/autonovel:next` will also
+flag those chapters via the brief→revise signal, since the
+brief is fresh while the chapter file is unchanged.
 
 The same warnings get logged to
 `.autonovel/command-log.jsonl`'s `note` field so an audit trail

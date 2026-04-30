@@ -1159,12 +1159,26 @@ no longer resets you to chapter 1 on the next refresh — the row
 cursor is restored across each 5 s tick (clamped to the new row
 count if rows are added or removed).
 
-**Score sparkline (Chapters tab):** shows each chapter's overall
-score on a 0-10 scale, where 10 is best. Threshold is 7.0 — any
-chapter below that is a `revise` candidate. The footer line under
-the sparkline reports the range / mean / count below threshold so
-you can read the shape at a glance. `·` blocks mark chapters with
-no eval log yet.
+**Scroll preservation:** the chapter-detail and research-note
+preview panes hold their `VerticalScroll` position across refresh.
+Reading line 200 of a long research note no longer snaps you back
+to line 0 every 5 s.
+
+**Sparklines (Chapters tab):** two side-by-side rows show the
+shape of the book at a glance:
+
+- **Score** — overall score from per-chapter `/autonovel:evaluate`
+  on a 0–10 scale (10 best). Threshold is 7.0; any chapter below
+  is a `revise` candidate. Range / mean / below-threshold count
+  shown alongside.
+- **Tension** — `tension` dimension from `/autonovel:evaluate
+  --full` on a 0–10 scale (higher = more pull-through). Reads
+  the latest `<ts>_full.json`; if you haven't run `--full` yet,
+  the line says so explicitly. A `⚠️  Tension drops` line surfaces
+  any range of ≥3 consecutive declining chapters — the same
+  signal the dashboard's tension-drop alarm flags.
+- `·` blocks in either row mark chapters with no eval data for
+  that dimension yet.
 
 **Copy / paste:** textual captures mouse events; bypass with
 `shift+drag` (works in GNOME Terminal, iTerm2, Windows Terminal,
