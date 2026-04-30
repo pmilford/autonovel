@@ -745,8 +745,39 @@ These surfaced during a real first-run on a Chromebook + WSL on Claude
 Max $200/month. Full narrative + rationale in
 `docs/lessons-from-author-testing.md`.
 
-- **Onboarding flow — clear "what to write and when" + sensible
-  defaults for working title and author attribution.** Surfaced
+- ~~**Onboarding flow — clear "what to write and when" + sensible
+  defaults for working title and author attribution.**~~
+  **v1 shipped 2026-04-30** as `autonovel onboard <book>` plus
+  doc updates in operating-guide §1 and README. Wizard walks
+  through pitch / period / genre / working title / human author
+  / attribution style with structured prompts; every prompt has
+  a `(skip)` option that lands in a `## Onboarding TODO` block
+  for `/autonovel:next` to surface. Writes a structured seed.txt
+  + updates project.yaml :: books[<book>].title (with `(working)`
+  suffix) and .author (rendered per attribution_style:
+  seed-by-human / human-only / ai-only / co-author). 13 new
+  Tier-1 tests cover full-run / all-skipped / partial-skip /
+  attribution rendering / project.yaml preservation. New helper
+  `src/autonovel/onboard.py`. Tier 1+2: 1393 → 1406.
+
+  Open follow-ups (deferred from v1):
+   1. Inline LLM working-title proposals during the wizard. v1
+      defers to `/autonovel:title` (which is a runtime command,
+      not a Python helper) for proposals — the wizard's
+      "working title" prompt either takes the user's typed input
+      or skips with guidance to run /autonovel:title once they're
+      in Claude Code. A future v2 could call out to the runtime
+      from the CLI to inline this.
+   2. Structured author dict (`{human, ai_co_author,
+      attribution_style}`) on `project.yaml :: books[].author`
+      instead of the currently-rendered string. v1 stores the
+      rendered string ("Seed by X; drafted with Autonovel") so
+      typeset / cover.py / ePub builder don't need schema
+      migration. v2 would migrate to the dict and add a
+      `display_attribution()` helper that callers use, with
+      legacy-string-author backward compat.
+
+- **Onboarding flow — original entry follows for context.** Surfaced
   2026-04-30 by author testing. The current new-series + new-book
   flow drops the user into a series root with a stub `seed.txt`,
   empty `voice.md` Part 2, no title, no author, and no concrete
@@ -1125,6 +1156,59 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   contract surfaces in `evaluate.md`. Tier 1+2: 1074 → 1081.
 
 ## Reader interest / reading experience
+
+- **Automated mixed-source timeline for the appendix —
+  fictional + real-world dates, distinctly marked.** Surfaced
+  2026-04-30. The current `/autonovel:appendix --sections
+  timeline` (shipped same day) is LLM-only and pulls from
+  research notes + canon. Richer shape: walk the manuscript
+  itself for in-story dates and merge with researched
+  real-world events, marking each row's source so the reader
+  knows what's documented vs invented.
+
+  Three sources of timeline rows:
+
+  1. **Story-time, in-narrative.** Mechanical pass over
+     `books/<book>/chapters/ch_*.summary.md`'s `## Story time`
+     fields plus the `events:` frontmatter array on each
+     chapter. These are the dates the book actually depicts.
+     Render with a marker (e.g. `📖 ch N`) so the reader
+     understands "this happened on the page".
+  2. **Real, referenced in the book.** Real-world events the
+     prose mentions (e.g. "the sack of Constantinople, forty
+     years before") without depicting them. Detected by
+     cross-referencing chapter prose against research-notes'
+     candidate canon entries marked with year tokens. Render
+     with a different marker (e.g. `🏛️ referenced ch N`).
+  3. **Real, context-setting.** Events the reader should know
+     to follow the book but the prose never mentions —
+     researched + LLM-curated for relevance to the period and
+     to the book's thematic concerns. Render with a third marker
+     (e.g. `🏛️ context`). The scholarly-edition convention is
+     to include these so the reader can place the story in its
+     wider history.
+
+  Output: an alphabetically-by-date timeline merging all three,
+  with a legend explaining the markers. Filter switches:
+  `--story-only` for just (1), `--include-context` to add (3)
+  on top of (1)+(2), default (1)+(2). Replaces the current
+  appendix-timeline LLM-only path with a mechanical-then-LLM
+  hybrid: the mechanical pass covers (1) deterministically, the
+  LLM does (2) cross-referencing and (3) curation.
+
+  Implementation seam:
+  - `mechanical/timeline.py` extracts story-time rows from
+    chapter summaries + frontmatter events. Pure-Python; cheap.
+  - `/autonovel:appendix --sections timeline` body extended to
+    invoke the mechanical helper first, then ask the LLM to add
+    rows (2) and (3) on top, marking each row's source.
+  - Format spec in the appendix template (Markdown rows like
+    `**1492-08-03** 📖 — Lucia first appears (ch 5).`).
+
+  Cost: ~5-7 hr (helper + summary parsing for `## Story time` /
+  `events:` extraction; LLM-side body changes; tests; doc sync).
+  Pairs with the existing `/autonovel:summaries --where 'story_time
+  >= "1492-08"'` query DSL — same data, different surface.
 
 - ~~**Pacing curve graph in `/autonovel:evaluate --full`.**~~
   **Shipped 2026-04-25** — `--full` mode emits a markdown table

@@ -120,6 +120,14 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Initial book to display; default: first book in project.yaml.")
     tui_p.set_defaults(func=_cmd_tui)
 
+    onb = sub.add_parser("onboard",
+                          help="Interactive onboarding wizard — captures pitch, period, title, author into seed.txt + project.yaml.")
+    onb.add_argument("book", help="Book name (must already exist in project.yaml; run `autonovel new-book` first).")
+    onb.add_argument("--series", default=None, help="Series name or path; default: walk up from cwd.")
+    onb.add_argument("--non-interactive", action="store_true",
+                      help="Skip the wizard; just print the next-step guidance based on what's already in seed.txt + project.yaml.")
+    onb.set_defaults(func=_cmd_onboard)
+
     iet = sub.add_parser("install-export-tools",
                           help="Interactive installer for the external tools the export commands depend on (tectonic / pandoc / ffmpeg / Pillow / fontconfig / etc.).")
     iet.add_argument("--exports", default=None,
@@ -493,6 +501,42 @@ def _cmd_tui(args: argparse.Namespace) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     return tui.run_tui(series, initial_book=args.book)
+
+
+def _cmd_onboard(args: argparse.Namespace) -> int:
+    """Run the onboarding wizard for one book."""
+    from . import onboard
+    try:
+        series = _resolve_series(args.series)
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    try:
+        if args.non_interactive:
+            # Just print the current state without prompting.
+            book_root = series.books / args.book
+            if not book_root.is_dir():
+                print(f"error: book {args.book!r} not found under "
+                      f"{series.books}. Run `autonovel new-book "
+                      f"{args.book}` first.", file=sys.stderr)
+                return 2
+            print(f"Series: {series.root.name}")
+            print(f"Book:   {args.book}")
+            seed = book_root / "seed.txt"
+            print(f"Seed:   {seed.relative_to(series.root)}"
+                  + (" (exists)" if seed.is_file() else " (missing)"))
+            from . import project as project_mod
+            cfg = project_mod.load(series.project_file)
+            entry = cfg.book_by_name(args.book)
+            if entry:
+                print(f"Title:  {entry.title or '<unset — run /autonovel:title>'}")
+                print(f"Author: {entry.author or '<unset — run autonovel onboard ' + args.book + '>'}")
+            return 0
+        result = onboard.run_wizard(series, args.book)
+        return 0 if result is not None else 2
+    except FileNotFoundError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
 
 
 def _cmd_install_export_tools(args: argparse.Namespace) -> int:

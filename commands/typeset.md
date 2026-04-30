@@ -1,7 +1,7 @@
 ---
 name: autonovel:typeset
 description: Build PDF + ePub from a book's chapters and typeset templates.
-argument-hint: "--book <short-name> [--pdf-only | --epub-only] [--convert-vectors]"
+argument-hint: "--book <short-name> [--pdf-only | --epub-only] [--convert-vectors] [--auto-prepare-art / --no-auto-prepare-art]"
 model_tier: light
 allowed-tools:
   - file_read
@@ -73,6 +73,56 @@ Light tier — mechanical. No LLM call.
    page) and the per-chapter `ornament_ch*.png` files via
    `\IfFileExists` — missing art degrades gracefully, the build still
    completes.
+
+2a. **Auto-prepare art** (default-on; pass `--no-auto-prepare-art`
+    to skip). The art pipeline has three mechanical stages whose
+    output typeset reads — vectorize, composite, cover-print —
+    and it's annoying to forget any of them between
+    `art-pick` and `typeset`. Auto-prepare detects which stages
+    are stale and runs them inline.
+
+    For each stage: compare upstream mtime to downstream mtime;
+    run the prep step when the downstream is missing OR older.
+
+    a. **Vectorize ornaments** (only if any
+       `books/{book}/art/ornament_ch*.png` exists). For each PNG,
+       check whether the matching `.svg` exists and is newer; if
+       not, invoke `bash`:
+       ```
+       autonovel:art-vectorize --book {book}
+       ```
+       Skip when `potrace` isn't on PATH (typeset doesn't require
+       SVGs — it falls back to PNGs — but quality is sharper with
+       SVGs at print resolution). Surface the missing-tool case
+       in the summary, don't fail.
+
+    b. **Compose the titled cover** (only if
+       `books/{book}/art/cover.png` exists). Compare its mtime to
+       `books/{book}/art/cover_titled.png`. If titled is missing
+       OR older, invoke:
+       ```
+       /autonovel:cover-composite --book {book}
+       ```
+       (call inline as a slash-command so the user sees the same
+       step they'd run by hand). Skip when no cover.png is
+       present (the user has chosen the typographic-only path
+       and cover-print handles everything in one shot).
+
+    c. **Build the print-ready wraparound** when `--pages` was
+       passed to typeset (or is set in `project.yaml :: print
+       .pages`). Compare cover_titled mtime to cover_print.png
+       mtime; if print is missing OR older, invoke:
+       ```
+       /autonovel:cover-print --book {book} --pages <N>
+       ```
+       Pass `--typographic-only` automatically when no cover.png
+       was generated. Skip when `--pages` is not resolvable (the
+       user can run cover-print manually after typeset).
+
+    Print a one-line summary per stage: `vectorize: N PNGs → N
+    SVGs (or skipped: potrace missing)`, `composite: regenerated`,
+    `cover-print: regenerated`. The summary at step 6 includes
+    these lines.
 
 3. Build `chapters_content.tex` via `bash`:
    `autonovel mechanical build-tex books/{book}/chapters

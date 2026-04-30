@@ -180,6 +180,28 @@ the atoms.
 
 ## 1. Where human input matters, and how much
 
+**Quick start: run the onboarding wizard.** Before reading the
+rest of this section:
+
+```bash
+autonovel new-series my-novel
+cd my-novel
+autonovel new-book book-one
+autonovel onboard book-one
+```
+
+`autonovel onboard` walks you through the load-bearing inputs in
+prompt-driven order — pitch, period, genre, working title, human
+author, attribution style. Every prompt has a `(skip)` option
+that lands a `## Onboarding TODO` block in `seed.txt` for
+`/autonovel:next` to surface later. Output: a structured
+`seed.txt` and a populated `project.yaml :: books[<book>]` ready
+for foundation. Then open Claude Code in the series root and run
+`/autonovel:next` to walk through the rest. Skip the wizard and
+hand-edit if you prefer; the file shapes are documented below.
+
+---
+
 The pipeline is autonomous in execution but you decide the shape.
 Per stage, the minimum-viable input + the recommended-for-quality
 input + how long each takes:

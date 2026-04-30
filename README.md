@@ -386,6 +386,23 @@ suggested next command, *why* it's suggested, *what it reads*, and
 *what it writes* — so you can decide before invoking it in your
 runtime. Read-only by contract; never acquires the lock.
 
+**Quickest start:** run the onboarding wizard from the shell:
+
+```bash
+autonovel new-series my-novel && cd my-novel
+autonovel new-book book-one
+autonovel onboard book-one          # interactive prompts
+```
+
+`autonovel onboard` captures pitch / period / genre / working
+title / human author / attribution style into a structured
+`seed.txt` + `project.yaml`. Every prompt has a `(skip)` option;
+skipped items land in an `## Onboarding TODO` block that
+`/autonovel:next` surfaces later. After the wizard finishes, open
+Claude Code in the series root and `/autonovel:next` walks you
+through gen-world / gen-characters / voice-discovery / gen-canon
+/ gen-outline / draft 1 in order.
+
 For a fresh series, `/autonovel:next` will walk you through the
 foundation in this order:
 
