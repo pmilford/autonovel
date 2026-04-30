@@ -231,6 +231,98 @@ def test_conversation_md_does_not_trigger_brief_signal(
     assert not any("fresh brief" in a.title.lower() for a in actions)
 
 
+# --------------------------------------------------------- summary stale
+
+
+def test_summary_stale_flagged_high_when_chapter_newer(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """The continuity signal: chapter file is newer than its
+    .summary.md. /autonovel:next must surface it as HIGH —
+    summaries are the rolling-context surface every drafter reads."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    summary = book_root / "chapters" / "ch_03.summary.md"
+    chapter = book_root / "chapters" / "ch_03.md"
+    older = time.time() - 1000
+    newer = time.time()
+    os.utime(summary, (older, older))
+    os.utime(chapter, (newer, newer))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    stale = [a for a in actions if "stale" in a.title.lower()
+             and "summar" in a.title.lower()]
+    assert len(stale) == 1
+    assert stale[0].priority == "HIGH"
+    assert "3" in stale[0].title
+
+
+def test_summary_stale_silent_when_summary_newer(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """No drift → no signal."""
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    # Make every summary newer than its chapter so the signal is silent.
+    newer = time.time()
+    older = time.time() - 1000
+    for n in (1, 2, 3, 4, 5):
+        ch = book_root / "chapters" / f"ch_{n:02d}.md"
+        sm = book_root / "chapters" / f"ch_{n:02d}.summary.md"
+        os.utime(ch, (older, older))
+        os.utime(sm, (newer, newer))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("stale" in a.title.lower() and "summar" in a.title.lower()
+                    for a in actions)
+
+
+def test_summary_stale_recommends_summarize_chapter_for_one(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    # Single stale summary.
+    older = time.time() - 1000
+    newer = time.time()
+    for n in (1, 2, 3, 4, 5):
+        ch = book_root / "chapters" / f"ch_{n:02d}.md"
+        sm = book_root / "chapters" / f"ch_{n:02d}.summary.md"
+        os.utime(ch, (older, older))
+        os.utime(sm, (newer, newer))
+    chapter = book_root / "chapters" / "ch_03.md"
+    os.utime(chapter, (newer + 100, newer + 100))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    stale = next(a for a in actions if "stale" in a.title.lower()
+                  and "summar" in a.title.lower())
+    assert "summarize-chapter 3" in (stale.command or "")
+    assert "--force" in (stale.command or "")
+
+
+def test_summary_stale_multi_chapter_uses_all_sweep(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    series, book = late_stage_book
+    book_root = series / "books" / book
+    older = time.time() - 1000
+    newer = time.time()
+    # Mark ch 2, 3, 4 as stale.
+    for n in (1, 5):
+        ch = book_root / "chapters" / f"ch_{n:02d}.md"
+        sm = book_root / "chapters" / f"ch_{n:02d}.summary.md"
+        os.utime(ch, (older, older))
+        os.utime(sm, (newer, newer))
+    for n in (2, 3, 4):
+        ch = book_root / "chapters" / f"ch_{n:02d}.md"
+        sm = book_root / "chapters" / f"ch_{n:02d}.summary.md"
+        os.utime(sm, (older, older))
+        os.utime(ch, (newer + n, newer + n))
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    stale = next(a for a in actions if "stale" in a.title.lower()
+                  and "summar" in a.title.lower())
+    assert "2,3,4" in stale.title
+    # Multi-chapter case routes to --all sweep, not per-chapter.
+    assert "--all" in (stale.command or "")
+
+
 # --------------------------------------------------------- panel / review staleness
 
 

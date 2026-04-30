@@ -122,9 +122,14 @@ def _load_state(series: SeriesLayout, book: str) -> dict:
                 "word_count": r.word_count or 0,
                 "score": r.score,
                 "tension": tension_by_ch.get(r.chapter),
+                "location": r.location or "",
                 "cast": ", ".join(r.cast) if r.cast else "",
                 "plot": r.plot or "",
+                "pov_state": r.pov_state or "",
+                "threads_opened": r.threads_opened or "",
+                "threads_closed": r.threads_closed or "",
                 "status": r.status or "",
+                "summary_stale": r.summary_stale,
             })
     except Exception:  # noqa: BLE001
         rows = []
@@ -516,13 +521,16 @@ if _TEXTUAL_AVAILABLE:
             table.clear()
             rows = self._state.get("rows", [])
             for r in rows:
+                status_cell = str(r.get("status", "") or "")[:10]
+                if r.get("summary_stale"):
+                    status_cell = (status_cell + " ⚠")[:12]
                 table.add_row(
                     str(r.get("chapter", "")),
                     str(r.get("word_count", 0)),
                     str(r.get("pov", ""))[:12],
                     str(r.get("story_time", ""))[:10],
                     f"{r['score']:.1f}" if r.get("score") is not None else "—",
-                    str(r.get("status", "") or "")[:10],
+                    status_cell,
                 )
             # Restore cursor row (clamped to new row count).
             if rows:
@@ -584,18 +592,43 @@ if _TEXTUAL_AVAILABLE:
         def _render_chapter_detail(self, row: dict) -> None:
             md = self.query_one("#chapter_detail_md", Markdown)
             ch = row.get("chapter", "?")
-            text = (
-                f"## Chapter {ch}\n\n"
-                f"- **POV:** {row.get('pov') or '—'}\n"
-                f"- **Story time:** {row.get('story_time') or '—'}\n"
-                f"- **Words:** {row.get('word_count', 0)}\n"
-                f"- **Score:** "
-                f"{row['score']:.2f}" + ("\n" if row.get('score') is not None else "—\n")
-                + f"- **Status:** {row.get('status') or '—'}\n\n"
-                f"### Cast\n{row.get('cast') or '—'}\n\n"
-                f"### Plot\n{row.get('plot') or '—'}\n"
-            )
-            md.update(text)
+            score = row.get("score")
+            score_line = f"{score:.2f}" if score is not None else "—"
+            stale_banner = ""
+            if row.get("summary_stale"):
+                stale_banner = (
+                    "\n> ⚠️  **Summary is stale** — chapter file is "
+                    "newer than `.summary.md`. The rolling-context "
+                    "surface downstream drafters read is out of date. "
+                    "Re-run `/autonovel:summarize-chapter` or revise "
+                    "again (revise step 9 regenerates the summary).\n"
+                )
+            sections: list[str] = [
+                f"## Chapter {ch}",
+                "",
+                f"- **POV:** {row.get('pov') or '—'}",
+                f"- **Story time:** {row.get('story_time') or '—'}",
+                f"- **Location:** {row.get('location') or '—'}",
+                f"- **Words:** {row.get('word_count', 0)}",
+                f"- **Score:** {score_line}",
+                f"- **Status:** {row.get('status') or '—'}",
+                stale_banner,
+                "### Cast",
+                row.get("cast") or "—",
+                "",
+                "### Plot",
+                row.get("plot") or "—",
+                "",
+                "### POV state at close",
+                row.get("pov_state") or "_(summary doesn't include POV state — older format or partial summary)_",
+                "",
+                "### Threads opened",
+                row.get("threads_opened") or "_(none recorded)_",
+                "",
+                "### Threads closed",
+                row.get("threads_closed") or "_(none recorded)_",
+            ]
+            md.update("\n".join(sections))
 
         def on_data_table_row_highlighted(
             self, message
@@ -762,6 +795,27 @@ if _TEXTUAL_AVAILABLE:
                 "to chapter 14 still highlighted (not chapter 1). Same "
                 "for the chapter detail and research note preview "
                 "panes: scroll position survives the 5 s tick.\n\n"
+                "**Stale-summary indicator (`⚠` after status):** the "
+                "chapter's `.md` mtime is newer than its `.summary.md` "
+                "— revise didn't regenerate the summary, so the "
+                "rolling-context surface every downstream drafter "
+                "reads is out of date. Continuity-critical: the next "
+                "chapter's drafter sees the OLD cast / threads / POV "
+                "state. Fix with `/autonovel:summarize-chapter "
+                "<N> --force` or just `/autonovel:revise --chapter N` "
+                "(revise step 9 regenerates the summary as part of "
+                "the rewrite). The Help tab's suggested-commands list "
+                "surfaces this as HIGH priority via "
+                "`/autonovel:next`'s situational signal.\n\n"
+                "**Reading the chapter detail (right pane):** shows "
+                "every section the per-chapter summary captures — POV / "
+                "Story time / Location / Words / Score / Status / Cast "
+                "on stage / Plot / POV state at close / Threads opened "
+                "/ Threads closed. If a section reads "
+                "_(summary doesn't include POV state — older format or "
+                "partial summary)_, that chapter's summary predates the "
+                "current 7-section template; backfill with "
+                "`/autonovel:summarize-chapter <N> --force` to refresh.\n\n"
                 "## Keyboard\n\n"
                 "- **`r`** — refresh now (don't wait for the 5 s timer)\n"
                 "- **`p`** — pause / resume auto-refresh. Pause when "

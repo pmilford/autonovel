@@ -1092,9 +1092,12 @@ Or in Claude Code:
 `/autonovel:next` inspects the live filesystem — pending canon
 conflicts, chapter regressions, briefs newer than their chapters
 (the brief→revise pair is the most common situational signal),
-stale reader-panel / Opus review reports, missing front matter,
-missing book title, GitHub backup state — and emits a prioritised
-action list. The canonical pipeline next step (from the prior
+**stale per-chapter summaries** (`.summary.md` older than the
+`.md` — the load-bearing continuity surface every drafter reads,
+HIGH priority because next chapter's drafter sees the wrong cast
+/ threads / POV state if the summary lags), stale reader-panel
+/ Opus review reports, missing front matter, missing book title,
+GitHub backup state — and emits a prioritised action list. The canonical pipeline next step (from the prior
 command's footer) appears at the bottom; situational actions take
 precedence over it. Past-end-of-book guard: when the canonical
 line points to a draft chapter beyond what exists by more than 1,

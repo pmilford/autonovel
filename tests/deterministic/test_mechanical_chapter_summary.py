@@ -292,6 +292,68 @@ def test_cli_markdown_default(tmp_path: Path) -> None:
     assert "Tommaso" in proc.stdout
 
 
+def test_plot_starting_with_iso_date_does_not_truncate_to_date(
+    tmp_path: Path,
+) -> None:
+    """2026-04-30 bug: a Plot field beginning with an ISO date
+    (`1492-08-12. The protagonist...`) was truncated by
+    `_first_sentence` to just the date, because the regex
+    treated `12.` followed by space as a sentence end. Fix
+    requires a letter immediately before the punctuation."""
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1)
+    plot = "1492-08-12. Tommaso enters the counting-house and confronts Anselmo about the missing ledger."
+    _make_summary(book, 1, plot=plot,
+                   cast="Tommaso — POV; Anselmo — antagonist")
+    rows = summarize_chapters(book)
+    assert "Tommaso" in (rows[0].plot or ""), (
+        "Plot should not truncate to just the leading date — must "
+        "include the actual sentence."
+    )
+
+
+def test_summary_extracts_threads_and_pov_state(tmp_path: Path) -> None:
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1)
+    _make_summary(book, 1, plot="Things happened.",
+                   cast="Tommaso — POV")
+    row = summarize_chapters(book)[0]
+    assert row.pov_state and "Niccolò" in row.pov_state
+    assert row.threads_opened and "ledger" in row.threads_opened
+    assert row.threads_closed is not None  # may be `—` but field present
+
+
+def test_summary_stale_when_chapter_newer(tmp_path: Path) -> None:
+    """The continuity-critical signal: chapter mtime > summary mtime
+    means revise didn't regenerate the summary. The flag must
+    surface so /autonovel:next can prompt a summarize-chapter
+    re-run."""
+    import os
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1)
+    _make_summary(book, 1, plot="Old plot.",
+                   cast="Tommaso — POV")
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    os.utime(book / "chapters" / "ch_01.summary.md", (older, older))
+    os.utime(book / "chapters" / "ch_01.md", (newer, newer))
+    row = summarize_chapters(book)[0]
+    assert row.summary_stale is True
+
+
+def test_summary_not_stale_when_summary_newer(tmp_path: Path) -> None:
+    import os
+    book = _make_book(tmp_path)
+    _make_chapter(book, 1)
+    _make_summary(book, 1, plot="Plot.", cast="Tommaso — POV")
+    older = 1_000_000.0
+    newer = 2_000_000.0
+    os.utime(book / "chapters" / "ch_01.md", (older, older))
+    os.utime(book / "chapters" / "ch_01.summary.md", (newer, newer))
+    row = summarize_chapters(book)[0]
+    assert row.summary_stale is False
+
+
 def test_cli_json_format(tmp_path: Path) -> None:
     book = _make_book(tmp_path)
     _make_chapter(book, 1)

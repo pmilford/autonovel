@@ -43,6 +43,10 @@ class ChapterRow:
     cast: list[str] = field(default_factory=list)   # names from Cast on stage
     score: float | None = None     # latest overall_score
     status: str | None = None      # frontmatter status (drafted / revised / etc)
+    pov_state: str | None = None       # what POV knows / wants / fears at close
+    threads_opened: str | None = None  # mysteries / promises future chapters owe
+    threads_closed: str | None = None  # earlier setups this chapter resolved
+    summary_stale: bool = False    # True when ch_NN.md mtime > ch_NN.summary.md
 
     def to_dict(self) -> dict:
         return {
@@ -55,6 +59,10 @@ class ChapterRow:
             "cast": list(self.cast),
             "score": self.score,
             "status": self.status,
+            "pov_state": self.pov_state,
+            "threads_opened": self.threads_opened,
+            "threads_closed": self.threads_closed,
+            "summary_stale": self.summary_stale,
         }
 
 
@@ -112,11 +120,23 @@ def summarize_chapters(book_root: Path) -> list[ChapterRow]:
             row.plot = sm.get("plot")
             row.cast = sm.get("cast") or []
             row.location = sm.get("location")
+            row.pov_state = sm.get("pov_state")
+            row.threads_opened = sm.get("threads_opened")
+            row.threads_closed = sm.get("threads_closed")
             # The summary's Story time tends to be more specific than
             # the frontmatter's (which can be a range); prefer it
             # when present.
             if sm.get("story_time"):
                 row.story_time = sm["story_time"]
+            # Continuity check: a chapter modified since its
+            # `.summary.md` was written has drifted from its summary.
+            # The next chapter's drafter reads summaries for prior-
+            # chapter context, so a stale summary breaks continuity.
+            try:
+                if ch_path.stat().st_mtime > summary_path.stat().st_mtime:
+                    row.summary_stale = True
+            except OSError:  # pragma: no cover
+                pass
 
         row.score = eval_index.get(num)
         rows.append(row)
@@ -216,17 +236,38 @@ def _parse_summary(text: str) -> dict:
         # accidentally wrote a longer paragraph, take the first
         # sentence so the table column doesn't blow.
         out["location"] = _first_sentence(sections["location"])
+    if "pov state" in sections:
+        # Multi-sentence allowed (knows / wants / fears) but cap at
+        # a reasonable display length.
+        out["pov_state"] = _trim(sections["pov state"], 280)
+    if "threads opened" in sections:
+        out["threads_opened"] = _trim(sections["threads opened"], 280)
+    if "threads closed" in sections:
+        out["threads_closed"] = _trim(sections["threads closed"], 280)
     return out
+
+
+def _trim(text: str, limit: int) -> str:
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
 
 
 def _first_sentence(text: str) -> str:
     """Return text up through the first sentence-ending punctuation
-    (`.`, `?`, `!`). If none found, return the whole text. Caps at
-    180 chars in either case so a single rambling sentence doesn't
-    blow the column width."""
+    (`.`, `?`, `!`). The terminator must be preceded by a letter so
+    that a Plot field starting with an ISO date (`1492-08-12. The
+    protagonist…`) doesn't truncate to just the date — the `.` after
+    `12` is not a sentence boundary even though it's followed by
+    whitespace. If no boundary found, return the whole text. Caps at
+    180 chars so a rambling sentence doesn't blow the column."""
     if not text:
         return ""
-    m = re.search(r"[.!?](?=\s|$)", text)
+    # `(?<=[A-Za-z])` requires a letter immediately before the
+    # punctuation, ruling out date-internal periods and trailing
+    # numerals.
+    m = re.search(r"(?<=[A-Za-z])[.!?](?=\s|$)", text)
     if m:
         result = text[: m.end()].strip()
     else:
