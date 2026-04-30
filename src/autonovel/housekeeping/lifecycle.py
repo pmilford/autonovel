@@ -84,12 +84,22 @@ class EndResult:
 
 def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
         series: SeriesLayout | None = None,
-        usage: dict | None = None) -> EndResult:
+        usage: dict | None = None,
+        next_standard_step_override: str | None = None,
+        next_rationale_override: str | None = None) -> EndResult:
     """`usage` carries optional telemetry from the runtime session
     (model, tier, input/output/cache tokens, estimated USD cost).
     Each field lands on the command-log entry so `autonovel cost`
     can roll it up. Missing keys land as None — mechanical-only
-    commands typically pass the dict empty."""
+    commands typically pass the dict empty.
+
+    `next_standard_step_override` lets sweep commands
+    (revision-pass, draft-pass) supply a multi-line custom action
+    plan that gets stored in last-action.json and surfaced as the
+    canonical Next: line. Without it, the auto-computed
+    `_next_step_for(series, book)` result wins — which is correct
+    for single-chapter commands but wrong for sweeps where the
+    closer is verify→panel→backup, not "draft N+1"."""
     series = series or load_series()
     cmd = _load_command(command_name)
     ctx = _parse_arguments(cmd, arg_string)
@@ -120,14 +130,31 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
     lock.release(series.lock_file)
 
     ns = _next_step_for(series, book) if book else None
+    if next_standard_step_override is not None:
+        # Sweep commands writing a custom multi-line closer. Use
+        # provided rationale, or fall back to the auto-computed one
+        # (rationale on the override-path is usually `None` because
+        # the multi-line block is self-explanatory).
+        canonical_next = next_standard_step_override
+        canonical_rationale = (
+            next_rationale_override
+            if next_rationale_override is not None
+            else (ns.rationale if ns else None)
+        )
+    elif ns is not None:
+        canonical_next = ns.command
+        canonical_rationale = ns.rationale
+    else:
+        canonical_next = None
+        canonical_rationale = None
     la = last_action.write(
         series.last_action_file,
         command=command_name,
         args=shlex.split(arg_string) if arg_string else [],
         wrote=list(wrote),
         book=book,
-        next_standard_step=ns.command if ns else None,
-        next_rationale=ns.rationale if ns else None,
+        next_standard_step=canonical_next,
+        next_rationale=canonical_rationale,
         sidequests=_default_sidequests(command_name, ctx),
     )
 
@@ -150,7 +177,15 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
     )
     footer = _render_footer(command_name, arg_string, wrote, la, series)
     if verify is not None and verify.warnings:
-        footer = footer.rstrip() + "\n\n" + _render_verify_warning(verify)
+        # Surface the verify-writes warning at the TOP of the
+        # postamble, BEFORE the Done / Wrote / Next block. With a
+        # long multi-line `next_standard_step` (sweep closer), a
+        # warning at the bottom gets buried — and in fact that's
+        # how the 2026-04-30 revision-pass silent-failure-of-five-
+        # chapters bug went unnoticed: revise didn't fire on 5/11
+        # chapters, verify-writes flagged them as `unchanged`, but
+        # the warning was past the action plan and slid off-screen.
+        footer = _render_verify_warning(verify) + "\n\n" + footer.lstrip("\n")
     return EndResult(last_action=la, footer=footer, verify_report=verify)
 
 
@@ -185,21 +220,66 @@ def _verify_writes(series: SeriesLayout, command_name: str,
 
 
 def _render_verify_warning(report: "checkpoints.WriteVerificationReport") -> str:
-    """User-facing block surfaced in the postamble footer when one
-    or more `--wrote` claims couldn't be verified against the
-    checkpoint."""
-    lines = ["⚠️  verify-writes:"]
+    """User-facing block surfaced at the TOP of the postamble when
+    one or more `--wrote` claims couldn't be verified against the
+    checkpoint. Has to lead the footer because long sweep closers
+    (verify→panel→backup multi-line block) would otherwise push it
+    off screen — exactly how the 2026-04-30 revision-pass silent-
+    failure went unnoticed.
+
+    Specifically calls out chapter files (the load-bearing case)
+    so the user immediately sees which chapters look like the
+    revise step no-op'd on them."""
+    chapter_unchanged: list[str] = []
+    other_unchanged: list[str] = []
+    missing: list[str] = []
+    other: list[tuple[str, str]] = []
     for w in report.warnings:
         if w.status == "missing":
-            lines.append(f"  - {w.path}: claimed created but file does not exist")
+            missing.append(w.path)
         elif w.status == "unchanged":
-            lines.append(f"  - {w.path}: claimed modified but bytes match the checkpoint")
+            if "/chapters/ch_" in w.path and w.path.endswith(".md"):
+                chapter_unchanged.append(w.path)
+            else:
+                other_unchanged.append(w.path)
         else:
-            lines.append(f"  - {w.path}: {w.status}")
-    lines.append(
-        "  These are LLM self-reports that don't match the disk. "
-        "If the command's contract required these writes, re-run."
-    )
+            other.append((w.path, w.status))
+
+    lines: list[str] = []
+    lines.append("=" * 60)
+    lines.append("🔴 VERIFY-WRITES: claims do not match disk")
+    lines.append("=" * 60)
+    if chapter_unchanged:
+        lines.append(
+            f"\n⚠️  {len(chapter_unchanged)} chapter file(s) were "
+            f"claimed modified but the bytes match the pre-command "
+            f"checkpoint — the LLM said it revised them but did not. "
+            f"Likely cause: the per-chapter task subagent reported "
+            f"success without invoking Write/Edit for these chapters. "
+            f"Re-run the sweep targeting just these chapters:"
+        )
+        for p in chapter_unchanged:
+            lines.append(f"    {p}")
+    if missing:
+        lines.append(
+            f"\n❌ {len(missing)} claimed-created path(s) do not exist:"
+        )
+        for p in missing:
+            lines.append(f"    {p}")
+    if other_unchanged:
+        lines.append(
+            f"\n⚠️  {len(other_unchanged)} non-chapter path(s) "
+            f"unchanged (likely OK if the command was conditionally "
+            f"writing — review):"
+        )
+        for p in other_unchanged:
+            lines.append(f"    {p}")
+    if other:
+        lines.append("")
+        for p, s in other:
+            lines.append(f"  - {p}: {s}")
+    lines.append("")
+    lines.append("=" * 60)
     return "\n".join(lines)
 
 

@@ -58,6 +58,7 @@ from .adapters.installer import _commands_source_dir
 from .cost import build_report as build_cost_report
 from .housekeeping import next_actions, sweep_progress
 from .mechanical.chapter_summary import summarize_chapters
+from .mechanical.dashboard import build_dashboard
 from .mechanical.research_index import build_index as build_research_index
 from .paths import SeriesLayout, load_series
 
@@ -95,14 +96,32 @@ def _load_state(series: SeriesLayout, book: str) -> dict:
     # Chapter table — pull from the chapter-summary helper which
     # already merges frontmatter + summary + latest eval into one row.
     rows: list[dict] = []
+    tension_drops: list[dict] = []
     try:
-        for r in summarize_chapters(book_root):
+        # Pull score + cast + plot + status from chapter-summary
+        # helper, then layer tension from dashboard's eval-log
+        # reader. dashboard.build_dashboard already reads the
+        # per-chapter latest-eval log and extracts tension; we
+        # piggyback on it instead of re-parsing the JSON ourselves.
+        summary_rows = list(summarize_chapters(book_root))
+        try:
+            dash = build_dashboard(book_root)
+            tension_by_ch = {m.chapter: m.tension for m in dash.metrics}
+            tension_drops = [
+                {"start": td.start, "end": td.end,
+                 "values": td.values}
+                for td in dash.tension_drops
+            ]
+        except Exception:  # noqa: BLE001
+            tension_by_ch = {}
+        for r in summary_rows:
             rows.append({
                 "chapter": r.chapter,
                 "pov": r.pov or "",
                 "story_time": r.story_time or "",
                 "word_count": r.word_count or 0,
                 "score": r.score,
+                "tension": tension_by_ch.get(r.chapter),
                 "cast": ", ".join(r.cast) if r.cast else "",
                 "plot": r.plot or "",
                 "status": r.status or "",
@@ -241,6 +260,7 @@ def _load_state(series: SeriesLayout, book: str) -> dict:
         "pending_canon": pending_status,
         "pending_conflicts": pending_conflicts,
         "research_notes": research_notes,
+        "tension_drops": tension_drops,
     }
 
 
@@ -315,7 +335,7 @@ if _TEXTUAL_AVAILABLE:
         #status_bar Static { width: 1fr; }
         #chapter_table { height: 1fr; }
         #chapter_detail { width: 40; padding: 0 1; }
-        #spark_box { height: 5; padding: 1; border: round $accent; }
+        #spark_box { height: 8; padding: 1; border: round $accent; }
         DataTable { height: 1fr; }
         """
 
@@ -431,6 +451,18 @@ if _TEXTUAL_AVAILABLE:
             except Exception as e:  # noqa: BLE001 — TUI must not crash
                 state = {"_error": str(e)}
             self._state = state
+            # Capture every VerticalScroll's scroll_y BEFORE re-rendering
+            # so we can restore them after. Without this, refreshing a
+            # research note preview at line 200 snaps you back to line
+            # 0 every 5 s — the same UX bug as the cursor-reset, just
+            # in the scrollers instead of the tables.
+            saved_scrolls: dict[str, float] = {}
+            for sid in ("chapter_detail", "research_detail"):
+                try:
+                    w = self.query_one(f"#{sid}", VerticalScroll)
+                    saved_scrolls[sid] = w.scroll_y
+                except Exception:  # noqa: BLE001
+                    pass
             self._render_status_bar()
             self._render_help()
             self._render_chapters()
@@ -439,6 +471,17 @@ if _TEXTUAL_AVAILABLE:
             self._render_front_matter()
             self._render_reviews()
             self._render_commands()
+            # Restore scroll positions. The new content's height may be
+            # smaller than the old; clamp to the new scroll range so we
+            # don't end up scrolled past the bottom.
+            for sid, y in saved_scrolls.items():
+                try:
+                    w = self.query_one(f"#{sid}", VerticalScroll)
+                    self.call_after_refresh(
+                        lambda w=w, y=y: w.scroll_to(y=y, animate=False)
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
 
         def _on_timer_refresh(self) -> None:
             """Timer-driven refresh — skipped while paused so the
@@ -489,25 +532,49 @@ if _TEXTUAL_AVAILABLE:
                 except Exception:  # noqa: BLE001 — cursor restoration is decorative
                     pass
             scores = [r.get("score") for r in rows]
+            tensions = [r.get("tension") for r in rows]
             real_scores = [s for s in scores if s is not None]
-            spark = _sparkline(scores)
+            real_tensions = [t for t in tensions if t is not None]
+            score_spark = _sparkline(scores)
+            tension_spark = _sparkline(tensions)
             n_eval = len(real_scores)
             n_total = len(scores)
             below = sum(1 for s in real_scores if s < 7.0)
-            score_summary = ""
+            score_stats = ""
             if real_scores:
-                score_summary = (
-                    f"   range {min(real_scores):.1f}–{max(real_scores):.1f}, "
-                    f"mean {sum(real_scores)/len(real_scores):.2f}, "
-                    f"{below} below 7.0 threshold"
+                score_stats = (
+                    f" range {min(real_scores):.1f}–{max(real_scores):.1f}"
+                    f" mean {sum(real_scores)/len(real_scores):.2f}"
+                    f" · {below} below 7.0"
+                )
+            tension_stats = ""
+            if real_tensions:
+                tension_stats = (
+                    f" range {min(real_tensions):.1f}–{max(real_tensions):.1f}"
+                    f" mean {sum(real_tensions)/len(real_tensions):.2f}"
+                )
+            else:
+                tension_stats = " (no whole-book eval — run /autonovel:evaluate --full)"
+            drops = self._state.get("tension_drops", []) or []
+            drops_line = ""
+            if drops:
+                ranges = ", ".join(
+                    f"ch{d['start']}→ch{d['end']}" for d in drops
+                )
+                drops_line = (
+                    f"\n  ⚠️  Tension drops (≥3 consecutive declines): {ranges}"
                 )
             self.query_one("#spark_box", Static).update(
-                f"Score per chapter (0=worst, 10=best; ≥7 = above threshold):\n"
-                f"  {spark}\n"
-                f"  {n_eval} of {n_total} chapters evaluated"
-                + (f"; {score_summary}" if score_summary else "")
-                + f"\n  · = no eval log yet for that chapter."
-                f"\n  Pending canon: {self._state.get('pending_canon', 'none')}."
+                f"Score   {score_spark}{score_stats}\n"
+                f"Tension {tension_spark}{tension_stats}\n"
+                f"  Score = overall_score from per-chapter evaluate "
+                f"(0–10, ≥7 = above threshold).\n"
+                f"  Tension = `tension` dimension from /autonovel:evaluate "
+                f"--full (0–10, higher = more pull-through).\n"
+                f"  · = chapter has no eval data yet."
+                f"  ({n_eval} of {n_total} chapters evaluated; "
+                f"pending canon: {self._state.get('pending_canon', 'none')})"
+                + drops_line
             )
             # Restore detail view to the previously-cursored chapter.
             if rows:

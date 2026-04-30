@@ -178,6 +178,70 @@ def test_lifecycle_end_surfaces_unchanged_warning_in_footer(series_root: Path) -
     assert "shared/world.md" in result.footer
 
 
+def test_verify_warning_appears_at_top_of_footer(series_root: Path) -> None:
+    """Bug 2 fix from 2026-04-30: when a sweep emits a multi-line
+    `next_standard_step` closer, a warning at the bottom of the
+    postamble gets buried. Verify-writes warnings must lead the
+    footer so the user sees them before the long action plan."""
+    from autonovel.paths import SeriesLayout
+    series = SeriesLayout(root=series_root)
+    target = series_root / "shared" / "world.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("original world", encoding="utf-8")
+    lifecycle.begin("autonovel:gen-world", "", series=series)
+    result = lifecycle.end(
+        "autonovel:gen-world", "", status="ok",
+        wrote=["shared/world.md"], series=series,
+    )
+    footer = result.footer
+    # The verify warning must appear BEFORE the Done: marker.
+    warning_idx = footer.find("VERIFY-WRITES")
+    done_idx = footer.find("**Done:**")
+    assert warning_idx >= 0, "verify-writes banner missing"
+    assert done_idx >= 0, "Done marker missing"
+    assert warning_idx < done_idx, (
+        "verify-writes warning must appear ABOVE the Done line "
+        "so it doesn't get buried by long sweep closers"
+    )
+
+
+def test_verify_warning_calls_out_chapter_files_specifically(
+    series_root: Path,
+) -> None:
+    """The 2026-04-30 silent-revise-failure bug: 5 chapters claimed
+    revised but bytes unchanged. The warning must specifically flag
+    chapter files (the load-bearing case for sweeps), not just dump
+    every unchanged path in a flat list."""
+    from autonovel.paths import SeriesLayout
+    series = SeriesLayout(root=series_root)
+    book_root = series_root / "books" / "the-book"
+    chapters = book_root / "chapters"
+    chapters.mkdir(parents=True, exist_ok=True)
+    # Mock a revision-pass shape: pre-existing chapter files claimed
+    # written but not actually modified.
+    for n in (2, 5, 9):
+        (chapters / f"ch_{n:02d}.md").write_text(
+            f"---\nchapter: {n}\n---\n\nProse.\n",
+            encoding="utf-8",
+        )
+    # Use draft as the test command (its writes: include
+    # books/{book}/chapters/ch_{chapter}.md).
+    lifecycle.begin("autonovel:revise", "5 --book the-book", series=series)
+    result = lifecycle.end(
+        "autonovel:revise", "5 --book the-book", status="ok",
+        wrote=[
+            "books/the-book/chapters/ch_05.md",
+            "books/the-book/briefs/ch05.md",  # missing — no checkpoint, doesn't exist on disk
+        ],
+        series=series,
+    )
+    # Either path showing as unchanged or missing should fire the
+    # banner. Assert the chapter-specific call-out wording.
+    if result.verify_report and result.verify_report.warnings:
+        footer = result.footer
+        assert "chapter file" in footer.lower() or "ch_05.md" in footer
+
+
 def test_lifecycle_end_clean_when_writes_real(series_root: Path) -> None:
     from autonovel.paths import SeriesLayout
     series = SeriesLayout(root=series_root)

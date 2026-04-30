@@ -74,6 +74,55 @@ def test_end_footer_includes_postamble_hint(demo_series: SeriesLayout) -> None:
     assert "💡" in result.footer
 
 
+def test_end_next_standard_step_override_replaces_auto_computed(
+    demo_series: SeriesLayout,
+) -> None:
+    """Bug 1 fix from 2026-04-30: revision-pass / draft-pass write
+    a multi-line action plan as next_standard_step. Without the
+    override flag, the auto-computed `_next_step_for(series, book)`
+    wins (typically "draft N+1") and the sweep's careful closer is
+    dropped. The override must reach last_action.json verbatim."""
+    custom_plan = (
+        "1. Verify deltas: <details>\n"
+        "2. Re-run reader-panel + review:\n"
+        "     /autonovel:reader-panel --book one\n"
+        "     /autonovel:review --book one\n"
+        "3. Backup: git add . && git commit && git push"
+    )
+    lifecycle.begin("autonovel:revision-pass", "--chapters 1-5 --book one",
+                     series=demo_series)
+    result = lifecycle.end(
+        "autonovel:revision-pass", "--chapters 1-5 --book one",
+        status="ok", wrote=[],
+        series=demo_series,
+        next_standard_step_override=custom_plan,
+    )
+    la = last_action.read(demo_series.last_action_file)
+    assert la is not None
+    assert la.next_standard_step == custom_plan
+    assert "reader-panel" in (la.next_standard_step or "")
+    # Footer surfaces the multi-line block too.
+    assert "reader-panel" in result.footer
+
+
+def test_end_no_override_falls_back_to_auto_computed(
+    demo_series: SeriesLayout,
+) -> None:
+    """Default path unchanged: when override is None,
+    `_next_step_for(series, book)` wins."""
+    lifecycle.begin("autonovel:draft", "5 --book one", series=demo_series)
+    result = lifecycle.end(
+        "autonovel:draft", "5 --book one",
+        status="ok", wrote=["books/one/chapters/ch_05.md"],
+        series=demo_series,
+    )
+    la = last_action.read(demo_series.last_action_file)
+    assert la is not None
+    assert la.next_standard_step is not None
+    # Auto-computed → should be a slash-command, single-line.
+    assert "/autonovel:" in la.next_standard_step
+
+
 def test_end_footer_no_hint_on_error(demo_series: SeriesLayout) -> None:
     """On status=error the postamble must not emit a hint —
     suggesting a follow-up while the command itself failed is

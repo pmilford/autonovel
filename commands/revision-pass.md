@@ -354,10 +354,34 @@ the whole sweep on a single missing input.
    list, count of pending-canon conflicts (read
    `books/{book}/pending_canon.md` after the final promote-canon
    to count `## Conflict N` blocks), the chapter range that was
-   swept. Pass the whole multi-line block as `next_standard_step`
-   to the postamble — `/autonovel:next` will print it verbatim
-   so the user sees exactly what to do without re-deriving from
-   scratch.
+   swept. Pass the whole multi-line block to the postamble via
+   the `--next-standard-step` flag on `autonovel _end`:
+
+   ```
+   autonovel _end --command autonovel:revision-pass \
+       --args "<the original $ARGUMENTS>" \
+       --status ok \
+       --wrote <every-path-actually-modified> \
+       --next-standard-step "$(cat <<'EOF'
+   1. Verify deltas: ...
+   2. Resolve canon conflicts: ...
+   3. Re-run whole-book reviewers: ...
+      /autonovel:reader-panel --book {book}
+      /autonovel:review --book {book}
+   4. Backup: git add . && git commit && git push
+   5. ...
+   EOF
+   )"
+   ```
+
+   The `--next-standard-step` flag stores the multi-line block in
+   `last-action.json :: next_standard_step` so
+   `/autonovel:next` prints it verbatim. **Without this flag**,
+   the postamble falls back to the auto-computed
+   `_next_step_for(series, book)` result — typically "draft N+1"
+   — and the carefully-crafted closer is dropped on the floor.
+   The 2026-04-30 silent-revise-failure session ran into this
+   exact case.
 
    Note: this multi-line shape is the right shape for any
    multi-chapter sweep. Single-chapter atomic commands (draft,

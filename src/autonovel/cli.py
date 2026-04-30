@@ -275,6 +275,25 @@ def _build_parser() -> argparse.ArgumentParser:
                        type=int, default=None)
     _end.add_argument("--cost-usd", dest="cost_usd", type=float, default=None,
                        help="Estimated USD cost (NOT authoritative).")
+    # Sweep commands (revision-pass, draft-pass) and any postamble
+    # that wants to write a custom multi-line action plan instead of
+    # the auto-computed `_next_step_for(series, book)` result. Without
+    # this flag, the sweep's carefully-crafted closer never makes it
+    # into last-action.json — `/autonovel:next` then sees only the
+    # canonical "draft N+1" step. This was the bug behind the
+    # 2026-04-30 revision-pass postamble report. accepts a single
+    # string with embedded newlines (the runtime quotes appropriately).
+    _end.add_argument("--next-standard-step", dest="next_standard_step_override",
+                       default=None,
+                       help="Override the auto-computed canonical next step. "
+                            "Used by sweep commands to write multi-line action "
+                            "plans (verify→panel→backup closer). Pass the full "
+                            "rendered text; newlines preserved.")
+    _end.add_argument("--next-rationale", dest="next_rationale_override",
+                       default=None,
+                       help="Optional rationale shown after the canonical next "
+                            "step. Defaults to the auto-computed one when "
+                            "--next-standard-step is set without --next-rationale.")
     _end.set_defaults(func=_cmd_end)
 
     _na = sub.add_parser("_next-actions", help=argparse.SUPPRESS)
@@ -891,6 +910,8 @@ def _cmd_end(args: argparse.Namespace) -> int:
             "cache_creation_tokens": args.cache_creation_tokens,
             "cost_usd": args.cost_usd,
         },
+        next_standard_step_override=args.next_standard_step_override,
+        next_rationale_override=args.next_rationale_override,
     )
     if args.status == "ok" and result.footer:
         print(result.footer)

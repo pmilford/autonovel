@@ -394,9 +394,29 @@ that stalled long sweeps around chapter 8-10.
    `books/{book}/pending_canon.md` to count `## Conflict N`
    blocks), the chapter range that was swept, the panel+review
    flagged lists when `--deep` ran. Pass the whole multi-line
-   block as `next_standard_step` to the postamble —
-   `/autonovel:next` prints it verbatim so the user sees exactly
-   what to do without re-deriving from scratch.
+   block to the postamble via `autonovel _end
+   --next-standard-step "<rendered text>"`:
+
+   ```
+   autonovel _end --command autonovel:draft-pass \
+       --args "<the original $ARGUMENTS>" \
+       --status ok \
+       --wrote <every-path-actually-modified> \
+       --next-standard-step "$(cat <<'EOF'
+   1. Verify per-chapter scores: ...
+   2. Resolve canon conflicts: ...
+   3. (--deep only) Reader-panel + review flagged: ...
+   4. (no --deep) Run whole-book reviewers: ...
+   5. Backup: git add . && git commit && git push
+   6. After acting on (1)/(3), ...
+   EOF
+   )"
+   ```
+
+   Without `--next-standard-step`, the auto-computed
+   `_next_step_for(series, book)` wins — usually "draft N+1" —
+   and the closer is dropped on the floor. `/autonovel:next` then
+   misroutes the user.
 </workflow>
 
 <files-touched>

@@ -308,3 +308,29 @@ def test_cli_end_accepts_usage_flags(series_root: Path) -> None:
     assert e.tier == "heavy"
     assert e.input_tokens == 1500
     assert e.cost_usd == 0.075
+
+
+def test_cli_end_accepts_next_standard_step_override(series_root: Path) -> None:
+    """Bug 1 fix from 2026-04-30: `autonovel _end --next-standard-step
+    "<multi-line>"` stores the multi-line value in last-action.json
+    so /autonovel:next reads the sweep closer instead of the
+    auto-computed canonical step."""
+    from autonovel import last_action
+    custom_plan = "1. Re-run reader-panel\n2. Backup\n3. Move on"
+    subprocess.run(
+        [sys.executable, "-m", "autonovel.cli", "_begin",
+         "--command", "autonovel:revision-pass",
+         "--args", "--chapters 1-3 --book b"],
+        cwd=series_root, capture_output=True, text=True, check=True,
+    )
+    subprocess.run(
+        [sys.executable, "-m", "autonovel.cli", "_end",
+         "--command", "autonovel:revision-pass",
+         "--args", "--chapters 1-3 --book b",
+         "--status", "ok",
+         "--next-standard-step", custom_plan],
+        cwd=series_root, capture_output=True, text=True, check=True,
+    )
+    la = last_action.read(series_root / ".autonovel" / "last-action.json")
+    assert la is not None
+    assert la.next_standard_step == custom_plan
