@@ -1194,18 +1194,21 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   with mocked diffusers + doc). Hold for users who hit
   Pollinations rate limits or want offline-first operation.
 
-- **Wikimedia-Commons public-domain art provider — `--provider
-  wikimedia`.** Truly free and lawful for any use; the catch is
-  that you get a real painting (not an AI-generated original) so
-  the user has to crop / scale to cover dimensions. New helper
-  searches the Commons API for `<period> <region> <theme>`
-  matches, surfaces 5-10 candidates with attribution + license
-  metadata, the user picks one, helper downloads + crops via
-  Pillow. Best for historical fiction where a period-appropriate
-  painting is on-genre. Cost: ~3-4 hr (Commons API client +
-  search-rank heuristics + crop helper + Tier-1 tests). Pairs
-  with `/autonovel:art-import` (already shipped) for the user-
-  supplied image case.
+- ~~**Wikimedia-Commons public-domain art provider — `--provider
+  wikimedia`.**~~ **Shipped 2026-04-30.** New helper
+  `src/autonovel/export/wikimedia.py` with three-step API:
+  `search_images(query)` → `fetch_image_metadata(file_title)` →
+  `download_and_crop(details, target_size, output)`. Two CLI
+  subcommands `autonovel mechanical wikimedia-search` (returns
+  candidates as JSON; `--detailed` includes full per-candidate
+  metadata with one extra HTTP call each) and `wikimedia-fetch`
+  (downloads + center-crops one image to the target aspect via
+  Pillow LANCZOS resampling). Strict PD/CC0 default; pass
+  `--allow-non-pd` for CC-BY content (caller responsible for
+  attribution). The slash-command `/autonovel:art-curate
+  --provider wikimedia` body documents the search → user-picks →
+  fetch flow. 12 new Tier-1 tests with httpx.Client stubbed
+  for offline runs. Tier 1+2: 1381 → 1393.
 
 - **Pollinations.ai prompt-tuning loop.** The free
   Pollinations.ai endpoint lacks the prompt-engineering knobs

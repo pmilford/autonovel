@@ -1377,6 +1377,129 @@ sudo apt install -y fonts-ebgaramond fonts-bebas-neue
 # Double-click each .ttf to install.
 ```
 
+#### 5c.1. The 10 art commands, explained
+
+There are 10 `/autonovel:art-*` and `/autonovel:cover-*` commands.
+The names obscure what they do; here's the map.
+
+**Surfaces** — every art command takes a `--surface` flag picking
+which artwork it works on:
+
+- `cover` — the front cover image
+- `ornament` — small decorative images (chapter-opening flourishes,
+  scene-break dividers)
+- `map` — book's geography (one image per book)
+- `scene-break` — the dingbat / divider between scenes within a chapter
+
+**The full pipeline (cover example):**
+
+```text
+                                                            ┌────────────────┐
+                                                            │ visual_style   │
+                                                            │   .json        │
+                                                            └───────┬────────┘
+                                                                    │
+                                ┌───────────────────────────────────┘
+                                │
+1.  /autonovel:art-style ───────┘  derive visual style from world + voice
+                                   (one-time per book; sets palette / register)
+
+2.  /autonovel:art-directions    generate N (default 5) radically different
+        --surface cover          prompt directions for the surface
+                                   (writes books/<book>/art/directions/cover.json)
+
+3.  /autonovel:art-curate        run each direction through the image provider
+        --surface cover           (pollinations | fal | replicate | openai)
+        --provider pollinations  → books/<book>/art/variants/cover_01.png … _05.png
+
+4.  /autonovel:art-pick          you pick one as the final
+        --surface cover
+        --variant 3              → books/<book>/art/cover.png (canonical)
+
+5.  /autonovel:cover-composite   overlay title + author + subtitle text on
+                                   the picked image
+                                  → books/<book>/art/cover_titled.png
+
+6.  /autonovel:cover-print       compose the print-ready wraparound (front +
+        --pages 320               spine + back) + KDP/Lulu/Kindle thumbnails
+                                  → books/<book>/art/cover_print.png +
+                                    books/<book>/art/thumbnails/*.png
+```
+
+**Per-chapter ornaments** — same flow, two added steps:
+
+```text
+1-2. art-style + art-directions  (or skip 2 and use art-prompts instead)
+
+2'. /autonovel:art-prompts       one prompt .md per chapter, derived from
+        --surface ornament        the chapter's outline + summary so each
+                                   ornament references chapter content
+                                   (a bell for a bell-chapter, a key for a
+                                   lock-chapter)
+
+3'. /autonovel:art-ornaments-all run every chapter's prompt through the
+        --provider pollinations   provider
+                                  → books/<book>/art/ornament_ch{NN}.png
+
+4'. /autonovel:art-vectorize     convert ornament PNGs → SVGs (potrace)
+                                   for sharper print rendering — optional
+                                   but typeset-quality.
+```
+
+**User-supplied art bypass** — when you have an existing image
+(historical painting, photo, map you drew):
+
+```text
+/autonovel:art-import --file ~/Downloads/painting.jpg \
+    --surface plate --slug fugger-portrait \
+    --caption "..." --attribution "..."
+```
+
+Skips the direction → curate → pick flow entirely. typeset weaves
+imported plates into the manuscript at the placement the user
+configures (`before-chapter N`, `chapter-start N`, `after-chapter N`).
+
+**Three free paths to a cover (no API key needed):**
+
+1. **Typographic-only** — no AI art at all:
+   ```text
+   /autonovel:cover-print --book <name> --pages <N> --typographic-only --bg-color "#1a3b5c"
+   ```
+   Title + author over solid color via Pillow. NYRB Classics shape.
+   Skips steps 1-5 entirely.
+2. **Pollinations** — free AI art (rate-limited):
+   ```text
+   /autonovel:art-style --book <name>
+   /autonovel:art-directions --book <name> --surface cover
+   /autonovel:art-curate --book <name> --surface cover --provider pollinations
+   /autonovel:art-pick --book <name> --surface cover --variant 2
+   /autonovel:cover-composite --book <name>
+   /autonovel:cover-print --book <name> --pages <N>
+   ```
+3. **Wikimedia Commons (public-domain art)** — perfect for
+   historical fiction (FUTURE-TODOS — local SD and Wikimedia
+   provider are queued).
+
+**Paid paths (more consistent quality, costs money):** swap
+`--provider pollinations` for `--provider fal` (default; needs
+`FAL_KEY`) or `replicate` (needs `REPLICATE_API_TOKEN`) or `openai`
+(needs `OPENAI_API_KEY`).
+
+**The 10-command summary** (one line each):
+
+| Command | What it does |
+|---|---|
+| `/autonovel:art-style` | Derive visual style from world + voice (run once per book) |
+| `/autonovel:art-directions` | Generate N radically different prompt directions for one surface |
+| `/autonovel:art-curate` | Run the directions through the image provider, save PNG variants |
+| `/autonovel:art-pick` | Select one variant as the final art for a surface |
+| `/autonovel:art-prompts` | Per-chapter authored prompts (richer than --directions for ornaments) |
+| `/autonovel:art-ornaments-all` | Generate every chapter's ornament from its prompt |
+| `/autonovel:art-import` | Import a user-supplied image (painting, map, photo) — skips the AI flow |
+| `/autonovel:art-vectorize` | Convert ornament PNGs → SVGs for sharper print rendering |
+| `/autonovel:cover-composite` | Overlay title + author text on the picked cover art |
+| `/autonovel:cover-print` | Compose the wraparound (front + spine + back) + thumbnails |
+
 ### 5d. Audiobook generation (`/autonovel:audiobook-*`)
 
 Required: **`ffmpeg`** (audio assembly + m4b output). Plus the

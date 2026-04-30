@@ -17,6 +17,8 @@ Subcommands:
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
   build-front-matter-tex <book>    Build front_matter.tex from preface + introduction + glossary.
   build-back-matter-tex <book>     Build back_matter.tex from appendix.md.
+  wikimedia-search <query>         Search Commons for public-domain images (free, no key).
+  wikimedia-fetch <File:title>     Download + center-crop one Commons image.
   render-novel-tex <template> [-s KEY=V ...]  Substitute @KEY@ placeholders (safer than sed).
   typeset-filename <slug> <kind>   Print canonical timestamped + latest filenames.
 
@@ -95,6 +97,7 @@ from .scenes import split_scenes
 from .sensory import channel_balance
 from .slop import period_ban_hits, slop_score
 from .spine import cover_spec
+from ..export import wikimedia as wikimedia_mod
 from .typeset import latest_filename, output_filename, render_novel_tex
 
 
@@ -517,6 +520,53 @@ def _cmd_build_front_matter_tex(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_wikimedia_search(args: argparse.Namespace) -> int:
+    """Search Wikimedia Commons for public-domain images. Free
+    no-API-key alternative to fal/replicate/openai for cover art —
+    especially useful for historical fiction where a period-
+    appropriate painting is on-genre."""
+    candidates = wikimedia_mod.search_images(args.query, limit=args.limit)
+    detailed = []
+    if args.detailed:
+        for c in candidates:
+            details = wikimedia_mod.fetch_image_metadata(c.title)
+            entry = {**c.to_dict()}
+            if details is not None:
+                entry["details"] = details.to_dict()
+            detailed.append(entry)
+    payload = {
+        "query": args.query,
+        "results": detailed if args.detailed else [c.to_dict() for c in candidates],
+    }
+    json.dump(payload, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_wikimedia_fetch(args: argparse.Namespace) -> int:
+    """Download one Commons image and center-crop to target size.
+    The slash-command body invokes this after the user picks one
+    candidate from `wikimedia-search`."""
+    details = wikimedia_mod.fetch_image_metadata(args.title)
+    if details is None:
+        print(f"error: no metadata for {args.title!r}", file=sys.stderr)
+        return 2
+    target_size = (args.width, args.height)
+    try:
+        result = wikimedia_mod.download_and_crop(
+            details,
+            target_size=target_size,
+            output_path=Path(args.output),
+            allow_non_pd=args.allow_non_pd,
+        )
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    json.dump(result.to_dict(), sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_build_back_matter_tex(args: argparse.Namespace) -> int:
     book_root = Path(args.book_root)
     output = Path(args.output) if args.output else None
@@ -823,6 +873,28 @@ def main(argv: list[str] | None = None) -> int:
     bm.add_argument("book_root", help="Path to the book dir (the parent of appendix.md).")
     bm.add_argument("--output", default=None, help="Write to this path; otherwise stdout-JSON only.")
     bm.set_defaults(func=_cmd_build_back_matter_tex)
+
+    ws = sub.add_parser("wikimedia-search",
+                        help="Free public-domain art via Wikimedia Commons. Search by query; print candidates as JSON.")
+    ws.add_argument("query", help="Search query, e.g. 'Venice 1500 painting' or 'Jakob Fugger portrait'.")
+    ws.add_argument("--limit", type=int, default=10,
+                     help="Max candidates to return (default 10).")
+    ws.add_argument("--detailed", action="store_true",
+                     help="Also fetch full metadata for each candidate (license, dimensions, artist). Slower (one extra HTTP call per candidate) but lets the LLM judge which to download without a second round-trip.")
+    ws.set_defaults(func=_cmd_wikimedia_search)
+
+    wf = sub.add_parser("wikimedia-fetch",
+                        help="Download one Wikimedia Commons image and center-crop to target size. Refuses non-PD/CC0 images by default.")
+    wf.add_argument("title", help="Commons file title, e.g. `File:Jakob_Fugger_(Albrecht_Dürer).jpg`.")
+    wf.add_argument("--width", type=int, required=True,
+                     help="Target width in pixels.")
+    wf.add_argument("--height", type=int, required=True,
+                     help="Target height in pixels.")
+    wf.add_argument("--output", required=True,
+                     help="Output path for the cropped PNG.")
+    wf.add_argument("--allow-non-pd", action="store_true",
+                     help="Permit fetching non-public-domain images (CC-BY etc.). You're responsible for attribution.")
+    wf.set_defaults(func=_cmd_wikimedia_fetch)
 
     rt = sub.add_parser("render-novel-tex",
                         help="Substitute @KEY@ placeholders in a novel.tex template (replaces fragile sed).")

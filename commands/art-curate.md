@@ -1,7 +1,7 @@
 ---
 name: autonovel:art-curate
 description: Generate image variants from saved directions via the configured image provider. `pollinations` is the free, no-API-key option.
-argument-hint: "--book <short-name> --surface cover|ornament|map|scene-break [--provider pollinations|fal|replicate|openai]"
+argument-hint: "--book <short-name> --surface cover|ornament|map|scene-break [--provider pollinations|wikimedia|fal|replicate|openai] [--allow-non-pd]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -30,9 +30,19 @@ per-provider env-var name for the API key.
 **Recommended default for new projects: `pollinations`** —
 free, no API key, uses Pollinations.ai's open HTTPS endpoint
 (`image.pollinations.ai/prompt/<encoded-prompt>?width=W&height=H`).
-Quality is roughly SDXL-level; varies. The other providers (fal,
-replicate, openai) cost money and need keys but produce more
-consistent output. Pick what matches your budget.
+Quality is roughly SDXL-level; varies. The other AI providers
+(fal, replicate, openai) cost money and need keys but produce
+more consistent output. Pick what matches your budget.
+
+**Best fit for historical fiction: `wikimedia`** — searches
+Wikimedia Commons for public-domain paintings, photographs, maps,
+and engravings, lets the user pick one, downloads + center-crops
+to the target aspect via Pillow. No AI generation; you get a real
+period painting (Bellini, Dürer, de Barbari, etc.). Free, no key,
+fully lawful. Filters to public-domain / CC0 by default; pass
+`--allow-non-pd` for CC-BY content (you're then responsible for
+attribution per license terms; the helper records the attribution
+line either way).
 
 Free typography-only path (no AI art at all): skip art-curate
 entirely and run `/autonovel:cover-print --typographic-only` —
@@ -50,16 +60,16 @@ via Pillow, no provider involved.
    `books/{book}/art/directions/{surface}.json`. If either is missing,
    surface the command to run first and stop.
 
-3. Resolve the provider's API key (or skip for pollinations):
-   - `pollinations` → no key needed; the endpoint is open. Skip
-     this step.
+3. Resolve the provider's API key (or skip for free providers):
+   - `pollinations` → no key needed; open HTTPS endpoint.
+   - `wikimedia` → no key needed; Commons API is open.
    - `fal` → `FAL_KEY`.
    - `replicate` → `REPLICATE_API_TOKEN`.
    - `openai` → `OPENAI_API_KEY`.
 
    If a paid provider's key is missing, stop with a single-line
-   message naming the env var, suggest switching to
-   `--provider pollinations` for the free path, and point the
+   message naming the env var, suggest `--provider pollinations`
+   or `--provider wikimedia` for the free paths, and point the
    user at `.env.example`.
 
 4. For each direction, shell out to the provider via `bash` and
@@ -77,6 +87,25 @@ via Pillow, no provider involved.
      Use `curl -L -o <out>` (the endpoint streams a PNG
      directly). The seed parameter ensures different directions
      produce different images. No request body.
+   - `wikimedia`: rather than running each direction through
+     image-generation, transform the direction into a search
+     query and walk Commons:
+     ```
+     autonovel mechanical wikimedia-search "<period> <region> <theme>" --detailed
+     ```
+     The helper returns up to 10 candidates with full metadata
+     (license, dimensions, artist, description). Surface the
+     top 5 candidates to the user with their thumbnails (open
+     `descriptionurl`s) and ask which to download. Then:
+     ```
+     autonovel mechanical wikimedia-fetch "<File:title>" \
+       --width <W> --height <H> \
+       --output books/{book}/art/variants/{surface}_NN.png
+     ```
+     The helper refuses non-PD/CC0 images by default; pass
+     `--allow-non-pd` to override. Multiple variants (one per
+     direction) come from running the search with each
+     direction's themes as the query.
    - `fal` / `replicate` / `openai`: short `curl`/`httpx` POST
      with the prompt — same shape as the pre-rewrite pipeline.
 
