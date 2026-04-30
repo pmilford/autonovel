@@ -161,6 +161,49 @@ These run from a terminal in your series root, not as slash-commands.
 | `autonovel onboard <book> [--non-interactive]` | Interactive onboarding wizard — prompts for pitch / period / genre / working title / human author / attribution style, writes a structured `seed.txt`, and updates `project.yaml :: books[<book>]`. Every prompt has a (skip) option which lands an `## Onboarding TODO` block in seed.txt for `/autonovel:next` to surface. `--non-interactive` skips prompts and prints current state. |
 | `autonovel test-fixture {new,list,run,trim-flakiness} ...` | Manage genre fixture smoke tests. |
 
+## Mechanical helpers (invoked from slash-command bodies via `bash`)
+
+`autonovel mechanical <subcommand>` — pure-Python helpers that
+slash-command bodies invoke to do deterministic work without an
+LLM call. Most users never type these directly; they're listed
+here so you know what each slash-command is doing under the hood
+and can run them by hand for inspection / debugging.
+
+| Subcommand | What it does |
+|---|---|
+| `slop <path>` | JSON slop-score of a prose file. |
+| `period-bans <path> <bans>` | Hits of bans list against a prose file. |
+| `apply-cuts <chapter> <cuts>` | Apply a cuts.json file to a chapter in place. |
+| `scenes <path>` | Split a chapter into scenes by `***` / `---` / `* * *` breaks. |
+| `motifs <book>` | Per-chapter motif density from `motifs.md`. |
+| `chapter-summary <book>` | One-line-per-chapter overview (date / POV / score / cast / plot). |
+| `chapter-titles <book>` | Inspect every chapter's `title:` frontmatter; reports which need backfill. Pairs with `/autonovel:extract-chapter-titles`. |
+| `timeline-extract <book>` | Pull in-narrative dates from chapter summaries + frontmatter for the appendix timeline. The mechanical pre-pass before LLM-side merging of real-world events. |
+| `summary-query <book> --where '<expr>'` | Filter chapter-summary by a small DSL (pov / score / story_time / cast / location / plot). |
+| `dashboard <book>` | Re-render latest `<ts>_full.json` eval log + mechanical augmentations + sparklines. |
+| `syntax-drift <book>` | Per-chapter Flesch-Kincaid grade vs voice/seed baseline. |
+| `pov-bleed <book>` | Heuristic POV-bleed scan. |
+| `dialogue <book>` | Dialogue-mechanics linter. |
+| `period-register <book>` | Roll period-bans hits across every chapter. |
+| `series-arc <series>` | Cross-book completion + cast + thread continuity. |
+| `show-dont-tell <book>` | Pre-flight tell-candidate scanner. |
+| `entity-track <book>` | Per-chapter named-entity tracker. |
+| `cliches <path>` | Curated bigram/trigram cliché scan. |
+| `sensory <path>` | Per-channel sensory-balance fractions. |
+| `summary-query <book> --where ...` | Filter the chapter-summary table. |
+| `impact-of <book> --source ...` | Token-grep chapters for changed canon facts (post promote-canon). |
+| `research-index <series>` | Per-note metadata table for `shared/research/notes/`. |
+| `wikimedia-search "<query>"` | Free public-domain art via Commons API. |
+| `wikimedia-fetch "File:<title>"` | Download + center-crop one Commons image. |
+| `build-front-matter-tex <book>` | Concatenate preface + introduction + glossary into front_matter.tex. |
+| `build-back-matter-tex <book>` | Wrap appendix.md into back_matter.tex. |
+| `build-tex <chapters_dir>` | Build chapters_content.tex from .md files. |
+| `build-epub-md <chapters_dir>` | Concatenate ch_NN.md → one ePub-ready markdown. |
+| `spine-width --pages N` | Cover canvas spec (spine + canvas + px). |
+
+`autonovel mechanical <subcmd> --help` shows full flags for any
+of them. Many emit JSON via `--format json` for piping.
+
 ## Frontmatter contract
 
 Every command file under `commands/*.md` carries YAML frontmatter the

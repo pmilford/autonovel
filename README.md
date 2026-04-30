@@ -386,6 +386,14 @@ suggested next command, *why* it's suggested, *what it reads*, and
 *what it writes* — so you can decide before invoking it in your
 runtime. Read-only by contract; never acquires the lock.
 
+**Lost? Run `/autonovel:help`.** Zero-arg gives a category-grouped
+overview of every command. `/autonovel:help <topic>` walks one
+workflow with the exact command sequence — useful topics include
+`art` (the 10 art-* / cover-* commands; four cover paths from
+free-typographic to paid AI), `foundation`, `drafting`,
+`revising`, `typeset`, `research`, `front-matter`, `sweeps`,
+`tui`, `cli`, `next-steps`.
+
 **Quickest start:** run the onboarding wizard from the shell:
 
 ```bash

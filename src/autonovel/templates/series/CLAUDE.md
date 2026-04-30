@@ -94,6 +94,16 @@ each of these and the workaround is in the codebase:
 
 ## When in doubt
 
+- Run `/autonovel:help` for the discoverability overview.
+  `/autonovel:help <topic>` walks one workflow with the exact
+  command sequence — `/autonovel:help art`, `/autonovel:help
+  typeset`, `/autonovel:help foundation`, `/autonovel:help
+  drafting`, `/autonovel:help revising`, `/autonovel:help
+  research`, `/autonovel:help front-matter`, `/autonovel:help
+  sweeps`, `/autonovel:help tui`, `/autonovel:help cli`,
+  `/autonovel:help next-steps`. The right place to start when a
+  set of commands feels opaque (the 10 art-* / cover-* commands
+  in particular).
 - Run `/autonovel:next` to see the prioritised state-aware action
   list (pending conflicts, regressions, briefs newer than their
   chapters — the brief→revise pair, stale review reports, backup
@@ -144,6 +154,22 @@ each of these and the workaround is in the codebase:
 - Run `/autonovel:pov-bleed --book <name>` for a heuristic POV-
   bleed scan. Suggestion list, not a gate — false positives are
   common.
+- Run `/autonovel:extract-chapter-titles --book <name>` to backfill
+  evocative chapter titles into frontmatter for chapters drafted
+  before titles became standard. typeset's TOC reads the
+  frontmatter `title:` field; without backfill the TOC reads
+  `Chapter I, II, …` instead of `Chapter VII — The Apothecary's
+  Mortar`. `/autonovel:next` surfaces missing titles as a LOW
+  polish signal; light-tier (~$0.001/chapter).
+- Run `/autonovel:glossary --book <name> --from auto` for a
+  period-vocabulary reference in the front matter (right before
+  chapter 1). Critical for historical fiction. Run
+  `/autonovel:appendix --book <name> --sections timeline,bios
+  --from auto` for the back-matter timeline + real-character
+  bios; the timeline merges in-narrative dates (📖) with real
+  events the prose mentions (🏛️ referenced) and optionally
+  context-setting events (🏛️ context, opt-in via
+  `--include-context`).
 - Run `/autonovel:import-book --book <name> --from <path>
   [--reverse-engineer]` to import an externally-written manuscript.
   Flips the book to `mode: edit-imported`; the rest of the pipeline
