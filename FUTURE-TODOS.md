@@ -33,6 +33,27 @@ to start.
   1+2: 974 → 1005. Phase 2 (reverse-engineered foundation) is
   still queued: see follow-up entry below.
 
+- ~~**Edit-and-revise mode — Phase 2 (foundation reverse-engineering).**~~
+  **Shipped 2026-04-29 PM** as commit `a636c70` (mechanical v1).
+  `autonovel import-book ... --reverse-engineer` extracts
+  candidate character names from imported prose (capitalised
+  single-word tokens above a frequency threshold; structural-
+  English reject list of ~70 sentence-starters / month / weekday
+  / honorific tokens) and writes a stub `shared/characters.md`
+  when missing OR appends a "Candidate cast (auto-detected)"
+  block when present (idempotent — re-runs detect the sentinel
+  heading). Numbered next-steps printed: voice-discovery,
+  summarize-chapter, gen-outline, evaluate. New helper
+  `src/autonovel/import_foundation.py`. 14 new Tier-1 tests.
+  Tier 1+2: 1193 → 1207. Doc sync: commands/import-book.md,
+  docs/commands.md, series-template CLAUDE.md.
+  Open follow-ups (deliberately deferred per
+  feedback_avoid_brittle_python.md): voice.md Part 2 derivation
+  from prose register (mechanical heuristics drift; voice-discovery
+  is the right LLM-side tool), outline.md derivation from
+  per-chapter summaries (needs LLM via summarize-chapter first).
+  Original entry follows for context:
+
 - **Edit-and-revise mode — Phase 2 (foundation reverse-engineering).** The
   pipeline today assumes autonovel drafted the book itself. New use
   case 2026-04-28: a user has a finished or partial manuscript
@@ -88,6 +109,20 @@ to start.
   walkthrough). Opens up a meaningful adjacent use case without
   changing the rest of the pipeline.
 
+- ~~**`/autonovel:next` — brief-newer-than-chapter signal + full
+  audit of situational gaps.**~~ **Shipped 2026-04-29 PM** as
+  commit `b7abadd`. Brief→revise HIGH situational signal in
+  `housekeeping/next_actions.py::_brief_newer_than_chapter_actions`;
+  past-end-of-book guard in `canonical_pipeline_action` that
+  demotes draft commands targeting chapter N where N >
+  existing_chapters + 1 to a "book appears complete" INFO
+  pointing at evaluate --full / typeset. 7 new Tier-1 tests
+  (single + multiple briefs, conversation.md non-trigger,
+  past-end and next-sequential cases). Tier 1+2: 1123 → 1130.
+  Doc sync: commands/next.md, docs/operating-guide.md, series-
+  template CLAUDE.md.
+  Original entry follows for context:
+
 - **`/autonovel:next` — brief-newer-than-chapter signal + full
   audit of situational gaps.** Surfaced 2026-04-29 by author
   testing: ran `/autonovel:brief` for chapters 1, 2, 3, 5, 10 of
@@ -122,6 +157,19 @@ to start.
   `tests/deterministic/test_next_actions_situational.py`. Cost:
   ~3-4 hr (signal + audit + guard + tests).
 
+- ~~**Situational-aware help hints in command output.**~~
+  **Shipped 2026-04-29 PM** as commit `f1d12d7`. Every
+  successful postamble now ends with a one-line `💡 Maybe try:`
+  hint pulled from `next_actions.top_hint(series, just_ran=...)`
+  — picks the highest-priority situational action with a runnable
+  command that doesn't point back at the just-ran command, falls
+  back to a 6-entry rotating "Did you know?" pool indexed by
+  hash(just_ran) for deterministic-yet-varied general hints.
+  Wrapped in try/except so a hint-path crash never fails the
+  command. Suppressed on status=error. 6 new Tier-1 tests. Tier
+  1+2: 1130 → 1136. Doc sync: docs/operating-guide.md.
+  Original entry follows for context:
+
 - **Situational-aware help hints in command output.** Surfaced
   2026-04-29 by author testing: "I'm generally lost on next
   steps, especially when the software is giving incorrect
@@ -148,6 +196,32 @@ to start.
   prints the line. Suppress when `--quiet` or when the command
   itself errored. Cost: ~3 hr (API + postamble wiring + Tier-1
   tests + the small general-hints pool).
+
+- ~~**`/autonovel:impact-of <command>` — answer "what should I
+  revise now?" without ls/grep.**~~ **Shipped 2026-04-29 PM** in
+  two commits. Mechanical first pass (`347ed61`):
+  `src/autonovel/mechanical/impact.py` parses `## Superseded`
+  blocks in `shared/canon.md`, computes tokens unique to each
+  prior_value, greps every chapter (frontmatter-stripped) for
+  them, emits a per-chapter checklist of `/autonovel:revise
+  --chapter N` calls with line-snippet evidence. CLI subcommand
+  `autonovel mechanical impact-of` and slash-command
+  `/autonovel:impact-of`. 21 new Tier-1 tests + 5 contract
+  pickups. Tier 1+2: 1136 → 1162.
+  LLM follow-up (`54ac17c`): slash-command extended with
+  `--with-llm` (Haiku-tier classifier labels each match
+  HIGH/MEDIUM/LOW/FALSE_POSITIVE so the action checklist only
+  includes HIGH+MEDIUM) and `--source research` mode (LLM by
+  default; reads notes newer than the last canon timestamp,
+  scans each chapter against the notes' Candidate Canon
+  Entries). 4 new Tier-1 regression locks. Tier 1+2: 1223 →
+  1227.
+  Open follow-up: extending `--source` to `voice-discovery`,
+  `gen-canon`, `add-character`, `rename-character`,
+  `merge-chapters`, `reorder`, `remove-chapter`, `add-source`
+  remains future work; today only `promote-canon` and `research`
+  are supported.
+  Original entry follows for context:
 
 - **`/autonovel:impact-of <command>` — answer "what should I
   revise now?" without ls/grep.** Surfaced 2026-04-29: after
@@ -194,6 +268,20 @@ to start.
   into shell commands (`ls`, `grep`, `cat`) to figure out
   which of N chapters to act on, that's a missing autonovel
   surface — file an issue.
+
+- ~~**Query/grep helper for `shared/research/notes/`.**~~
+  **Shipped 2026-04-29 PM** as commit `54a0bd2`. Two
+  complementary surfaces: `autonovel mechanical research-index
+  <series>` emits a per-note metadata table (slug / title /
+  updated / words / sources / body citations / candidate canon
+  entries / uncertainties), with `--grep <pattern>` (full-body)
+  and `--cites <URL-or-DOI>` (Sources block only) filters; and
+  `/autonovel:research --query "<question>"` reads every note
+  and answers with inline `[shortname]` citations — no web
+  search, pure synthesis. 13 new Tier-1 tests. Tier 1+2: 1162 →
+  1175. Doc sync: docs/commands.md research row, series-template
+  CLAUDE.md.
+  Original entry follows for context:
 
 - **Query/grep helper for `shared/research/notes/`.** Surfaced
   2026-04-29: author has research notes for Jakob Fugger,
@@ -520,6 +608,31 @@ to start.
 
   10 properties × 25 examples each = ~250 random layouts per
   CI run. Tier 1+2: 897 → 907.
+
+- ~~**Read-only TUI for series state — terminal only, NOT a web
+  server.**~~ **Shipped 2026-04-29 PM** as commit `597d308`. New
+  CLI subcommand `autonovel tui [--book <name>]` launches a
+  textual-based read-only browser with seven tabs: Help (live —
+  for each suggested next command, shows rationale + reads/
+  writes from frontmatter), Chapters (DataTable + side detail
+  + score sparkline), Research (notes list + preview), Foundation
+  (status of each shared/ + per-book file), Front matter
+  (title/author/preface/introduction), Reviews (reader-panel +
+  Opus review presence + mtimes), Commands (last 15 + situational
+  next-actions + canonical step). Header bar: series name · book
+  selector · lock state · sweep progress live · cost today +
+  total. Polls FS every 5 s; press `r` to refresh; `b` to switch
+  books; `0-6` to jump to tabs; `q` to quit. Read-only by
+  contract — never acquires the lock; safe to run alongside an
+  active sweep. New optional extra `[tui]` (`textual>=0.70`); the
+  CLI prints a clear pip / pipx install hint when textual isn't
+  importable. New helper `src/autonovel/tui.py`. 16 new Tier-1
+  tests covering sparkline edge cases, slash-command extraction,
+  command-index cache, state-load shape on minimal + late-stage
+  fixtures, graceful CLI degradation. Tier 1+2: 1227 → 1243. Doc
+  sync: docs/operating-guide.md, README.md, docs/commands.md
+  (new CLI subcommands section).
+  Original entry follows for context:
 
 - **Read-only TUI for series state — terminal only, NOT a web
   server.** Author noted 2026-04-25 that NousResearch's earlier
@@ -1041,6 +1154,24 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   checking `which`. Probably better as a separate `autonovel
   install-export-tools` subcommand than a `doctor` flag, since the
   scope is "set up an environment" not "diagnose a series".
+
+- ~~**`autonovel install-export-tools` interactive helper.**~~
+  **Shipped 2026-04-29 PM** as commit `1baae2c`. New CLI
+  subcommand `autonovel install-export-tools [--exports
+  pdf,epub,cover,audiobook,art] [--apply] [--yes]`. Detects OS
+  (macos/debian/fedora/arch/other from /etc/os-release) and
+  install method (pipx/pip/editable). Maps user-facing exports
+  to per-tool install plans, deduping shared tools. Each tool
+  has a per-OS install command list, optional notes (e.g.
+  apt-tectonic too old → upstream prebuilt), and a `verify`
+  command run after install to catch too-old binaries that
+  `which` would falsely report as OK. Python pkg installs
+  (Pillow / pydub) emit `pipx inject autonovel <pkg>` when
+  pipx-installed, else `pip install <pkg>`. Default mode prints
+  the plan; `--apply` runs with per-tool confirmation. New
+  helper `src/autonovel/install_export_tools.py`. 16 new Tier-1
+  tests. Tier 1+2: 1207 → 1223. Doc sync in operating-guide §3b.
+  Original entry follows for context:
 
 - **`autonovel install-export-tools` interactive helper.** Surfaced
   by 2026-04-25 author testing: writers hit real pain getting
