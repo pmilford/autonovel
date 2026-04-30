@@ -1,7 +1,7 @@
 ---
 name: autonovel:summarize-chapter
 description: Backfill a 150-250 word continuity summary for a chapter that was drafted before summaries were standard.
-argument-hint: "<chapter-number> [--book <short-name>] [--force]"
+argument-hint: "<chapter-number> | --all | --stale [--book <short-name>] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -34,10 +34,33 @@ stage, what threads opened, what threads closed, where in story time.
 </purpose>
 
 <workflow>
-1. Parse `$ARGUMENTS`. Expect a positional chapter number; `--book`
-   defaults via `_begin`. `--force` overwrites an existing summary
-   (default: refuse if a non-trivial summary already exists). Missing
-   chapter number → stop with usage hint.
+1. Parse `$ARGUMENTS`. Three modes:
+
+   - **`<chapter-number>`** — backfill or refresh the summary for
+     one chapter (the original mode).
+   - **`--all`** — sweep every chapter under
+     `books/{book}/chapters/ch_*.md` that lacks a summary OR whose
+     summary is older than the chapter file. Implies `--force` for
+     stale ones; preserves up-to-date ones unless explicit
+     `--force` is also passed.
+   - **`--stale`** — same as `--all` but only refreshes summaries
+     that are mtime-stale (chapter newer than summary), skipping
+     chapters whose summary is current. The right shape after a
+     long revise sweep that may have silently no-op'd revise step
+     9 on some chapters.
+
+   `--book` defaults via `_begin`. `--force` (in single-chapter
+   mode) overwrites an existing summary (default: refuse if a
+   non-trivial summary already exists). Missing chapter number AND
+   no `--all`/`--stale` → stop with usage hint.
+
+   For `--all` / `--stale`, run steps 2-7 once per target chapter,
+   in ascending chapter order. Print a one-line per-chapter
+   progress marker so the user can see the sweep advancing. Skip
+   chapters whose summary is up-to-date (in `--stale` mode) or
+   whose summary is non-trivial without `--force` (in `--all`
+   mode). At the end, emit a single summary line: `Refreshed N of
+   M chapter(s); skipped <list>` so the user can confirm coverage.
 
 2. Use `file_read` on `project.yaml` to resolve the book entry,
    `pov`, and `defaults.chapter_target_words`.
