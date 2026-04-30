@@ -48,6 +48,16 @@ export = [
     "Pillow>=10.0",
     "pydub>=0.25",
 ]
+# `autonovel tui` — read-only terminal UI for browsing series state
+# (chapters / scores / research / reviews / next actions / lock /
+# sweep-progress / cost). Strict opt-in: textual is a heavy dep with
+# its own renderer and rich-text engine. Users who never run the TUI
+# don't need it; the CLI surfaces (`autonovel status`, `autonovel
+# cost`, `/autonovel:dashboard`, `/autonovel:next`) cover the same
+# data without textual.
+tui = [
+    "textual>=0.70",
+]
 
 [project.scripts]
 autonovel = "autonovel.cli:main"

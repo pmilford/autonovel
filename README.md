@@ -372,6 +372,15 @@ checklist of `/autonovel:revise --chapter N` calls with
 line-snippet evidence — no `ls` + `grep` required to find which
 chapters now disagree with canon.
 
+Want a long-running window on the series state instead of one-shot
+commands? `autonovel tui` (in a separate terminal from the series
+root, with `pip install 'autonovel[tui]'` or `pipx inject autonovel
+textual`) is a read-only browser for chapters / scores / research /
+front matter / reviews / next actions. The Help tab shows, for each
+suggested next command, *why* it's suggested, *what it reads*, and
+*what it writes* — so you can decide before invoking it in your
+runtime. Read-only by contract; never acquires the lock.
+
 For a fresh series, `/autonovel:next` will walk you through the
 foundation in this order:
 

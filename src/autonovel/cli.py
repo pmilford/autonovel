@@ -112,6 +112,14 @@ def _build_parser() -> argparse.ArgumentParser:
     doc.add_argument("--fix", action="store_true", help="Recreate missing directories")
     doc.set_defaults(func=_cmd_doctor)
 
+    tui_p = sub.add_parser("tui",
+                            help="Long-running terminal UI for browsing series state. Read-only; never acquires the lock. Run in a separate terminal window from the series root.")
+    tui_p.add_argument("--series", default=None,
+                        help="Series root path; default: walk up from cwd.")
+    tui_p.add_argument("--book", default=None,
+                        help="Initial book to display; default: first book in project.yaml.")
+    tui_p.set_defaults(func=_cmd_tui)
+
     iet = sub.add_parser("install-export-tools",
                           help="Interactive installer for the external tools the export commands depend on (tectonic / pandoc / ffmpeg / Pillow / fontconfig / etc.).")
     iet.add_argument("--exports", default=None,
@@ -455,6 +463,17 @@ def _cmd_status(args: argparse.Namespace) -> int:
     report = status.gather(series)
     print(status.render(report))
     return 0
+
+
+def _cmd_tui(args: argparse.Namespace) -> int:
+    """Launch the read-only TUI."""
+    from . import tui
+    try:
+        series = _resolve_series(args.series)
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    return tui.run_tui(series, initial_book=args.book)
 
 
 def _cmd_install_export_tools(args: argparse.Namespace) -> int:

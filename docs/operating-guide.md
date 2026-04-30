@@ -1112,6 +1112,49 @@ applies, it falls back to a rotating "Did you know?" hint from
 a small pool of less-known commands. Decorative, never blocking
 — a crash in the hint path doesn't fail the command.
 
+For a long-running view that updates as your book grows, run
+`autonovel tui` in a *separate* terminal window from the series
+root:
+
+```bash
+autonovel tui                  # default: first book in project.yaml
+autonovel tui --book <name>    # start on a specific book
+```
+
+The TUI is read-only by contract — it never acquires the lock and
+never writes any file. Polls the filesystem every 5 s; press `r`
+to refresh on demand. Tabs:
+
+- **Help (live)** — for each currently-suggested next command,
+  shows *why* it's suggested (rationale from the situational
+  enumerator), *what it does* (description from the command
+  frontmatter), *what it reads* (every input artifact), and
+  *what it writes* (every output artifact, or "read-only" when
+  the command writes nothing). The right pane to consult before
+  invoking a heavy-tier command in your runtime.
+- **Chapters** — DataTable of every chapter (ch / words / pov /
+  story_time / score / status) with a side-pane chapter detail
+  view. Score sparkline at the bottom. Cursor a row to see its
+  detail.
+- **Research** — list of `shared/research/notes/*.md` with a
+  preview pane.
+- **Foundation** — status of `world.md`, `characters.md`,
+  `canon.md`, `voice.md`, `outline.md`, `seed.txt`, plus the
+  pending-canon state.
+- **Front matter** — title, author, preface, introduction
+  presence.
+- **Reviews** — reader-panel + Opus review presence + last-run
+  timestamps.
+- **Commands** — last 15 logged commands + the situational
+  next-actions list + canonical pipeline step.
+
+Header bar: series name · book selector · lock state · sweep
+progress (live) · cost today + total. Switch books with `b`.
+Quit with `q`.
+
+Optional dep: requires `textual>=0.70`. Install via `pip install
+'autonovel[tui]'` or `pipx inject autonovel textual`.
+
 Or, for the cost-and-token side of "where am I":
 
 ```bash
