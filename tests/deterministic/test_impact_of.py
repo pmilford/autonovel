@@ -2,8 +2,10 @@
 `autonovel mechanical impact-of` CLI subcommand.
 
 Covers Superseded-block parsing, token extraction, chapter grep,
-report assembly, render shapes (markdown + JSON), and the CLI
-round-trip.
+report assembly, render shapes (markdown + JSON), the CLI
+round-trip, and (at the bottom) regression locks for the
+`/autonovel:impact-of` slash-command body shape — the
+`--with-llm` and `--source research` modes added 2026-04-29 PM.
 """
 
 from __future__ import annotations
@@ -324,3 +326,41 @@ def test_cli_impact_of_json_format(tmp_path: Path) -> None:
     assert data["source_command"] == "promote-canon"
     assert data["chapters_with_matches"] == [2]
     assert len(data["supersedures"]) == 1
+
+
+# ----------------------------------- /autonovel:impact-of body locks
+
+
+@pytest.fixture
+def impact_of_cmd():
+    from autonovel.adapters.base import discover_commands
+    here = Path(__file__).resolve().parent.parent.parent / "commands"
+    return next(c for c in discover_commands(here) if c.name == "autonovel:impact-of")
+
+
+def test_argument_hint_lists_with_llm_and_source_research(impact_of_cmd) -> None:
+    hint = impact_of_cmd.argument_hint or ""
+    assert "--with-llm" in hint
+    assert "research" in hint
+
+
+def test_body_documents_classification_buckets(impact_of_cmd) -> None:
+    """The four classification labels must be named verbatim — they
+    shape the action checklist filtering."""
+    body = impact_of_cmd.body
+    for label in ("HIGH", "MEDIUM", "LOW", "FALSE_POSITIVE"):
+        assert label in body, f"impact-of body missing label {label}"
+
+
+def test_body_documents_research_mode(impact_of_cmd) -> None:
+    body = impact_of_cmd.body
+    assert "--source research" in body
+    assert "research-index" in body  # mechanical helper invoked
+    assert "Candidate Canon Entries" in body  # what the LLM extracts
+
+
+def test_body_documents_no_llm_fallback(impact_of_cmd) -> None:
+    """Research mode is LLM by default; --no-llm reverts to literal
+    grep over the citations."""
+    body = impact_of_cmd.body
+    assert "--no-llm" in body
