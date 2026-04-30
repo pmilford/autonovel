@@ -51,9 +51,14 @@ from pathlib import Path
 # packages it needs. The same tool can appear in multiple exports;
 # the planner deduplicates.
 EXPORT_REQUIREMENTS: dict[str, list[str]] = {
-    "pdf": ["tectonic", "rsvg-convert"],   # /autonovel:typeset
+    # /autonovel:typeset reads `\setmainfont{EB Garamond}` in the
+    # series's novel.tex; the package name is `fonts-ebgaramond` on
+    # Debian/Ubuntu and a Homebrew cask on macOS. fontconfig is the
+    # font-lookup glue tectonic uses — required even when the font
+    # itself is installed.
+    "pdf": ["tectonic", "rsvg-convert", "fontconfig", "eb-garamond"],
     "epub": ["pandoc"],                     # /autonovel:typeset --epub
-    "cover": ["pillow", "fontconfig"],      # /autonovel:cover-print, cover-composite
+    "cover": ["pillow", "fontconfig", "eb-garamond"],  # cover-print, cover-composite
     "audiobook": ["ffmpeg", "pydub"],       # /autonovel:audiobook-assemble
     "art": ["potrace", "rsvg-convert"],     # /autonovel:art-vectorize, art-ornaments-all
 }
@@ -108,17 +113,31 @@ _DEBIAN: dict[str, ToolPlan] = {
         verify="rsvg-convert --version",
     ),
     "fontconfig": ToolPlan(
-        name="fontconfig", purpose="Font lookup for cover rendering (/autonovel:cover-composite, cover-print)",
+        name="fontconfig", purpose="Font lookup glue (`fc-match`) — needed for `/autonovel:typeset` AND cover rendering",
         commands=[
             "sudo apt-get install -y fontconfig",
-            "sudo apt-get install -y fonts-eb-garamond",
+        ],
+        verify="fc-match --version",
+    ),
+    "eb-garamond": ToolPlan(
+        name="EB Garamond",
+        purpose="primary serif for chapter prose AND cover typography",
+        commands=[
+            "sudo apt-get install -y fonts-ebgaramond",
+            "fc-cache -fv",
         ],
         notes=[
+            "If `fc-match \"EB Garamond\"` still resolves to a fallback "
+            "after install, the package may have shipped the font under a "
+            "different family name. Confirm with `fc-list | grep -i "
+            "garamond` and update novel.tex's `\\setmainfont{...}` to the "
+            "exact name fc-list reports.",
             "Bebas Neue (display font for some cover styles) is not in "
             "the default Debian font repos; if `/autonovel:cover-print` "
-            "complains, drop the .ttf into ~/.fonts/ and run `fc-cache -f`.",
+            "complains, drop the .ttf into ~/.fonts/ and run "
+            "`fc-cache -fv`.",
         ],
-        verify="fc-match --help",
+        verify="fc-match \"EB Garamond\" | grep -qi garamond",
     ),
     "pillow": ToolPlan(
         name="Pillow",
@@ -164,9 +183,24 @@ _MACOS: dict[str, ToolPlan] = {
         verify="rsvg-convert --version",
     ),
     "fontconfig": ToolPlan(
-        name="fontconfig", purpose="Font lookup for cover rendering",
+        name="fontconfig", purpose="Font lookup glue (`fc-match`) — needed for typeset AND cover rendering",
         commands=["brew install fontconfig"],
-        verify="fc-match --help",
+        verify="fc-match --version",
+    ),
+    "eb-garamond": ToolPlan(
+        name="EB Garamond",
+        purpose="primary serif for chapter prose AND cover typography",
+        commands=[
+            "brew install --cask font-eb-garamond",
+        ],
+        notes=[
+            "If `font-eb-garamond` cask isn't recognised, tap the fonts "
+            "repo first: `brew tap homebrew/cask-fonts`. Or download "
+            "manually from https://fonts.google.com/specimen/EB+Garamond "
+            "and double-click each .ttf to install.",
+            "After install, run `fc-cache -fv` if you have fontconfig.",
+        ],
+        verify="fc-match \"EB Garamond\" 2>/dev/null | grep -qi garamond || ls ~/Library/Fonts/EBGaramond*.ttf",
     ),
     "pillow": ToolPlan(
         name="Pillow", purpose="Cover composition", commands=[],

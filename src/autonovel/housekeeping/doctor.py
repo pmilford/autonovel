@@ -101,6 +101,62 @@ def check_export_tools() -> list[str]:
     return out
 
 
+# Fonts the typeset template references via `\setmainfont` /
+# `\setsansfont`. When fontconfig can't find these, fontspec walks
+# its name-fallback chain and produces noisy "stepping through fonts
+# by name" build output before failing — author hit this 2026-04-30.
+# We pre-flight check so the user sees a clean "install <font>"
+# warning before typeset rather than diagnosing tectonic output.
+TYPESET_FONTS: dict[str, tuple[str, str]] = {
+    "EB Garamond": (
+        "primary serif for chapter prose (`/autonovel:typeset`)",
+        "Linux/WSL: sudo apt-get install -y fonts-ebgaramond && fc-cache -fv  "
+        "OR macOS: brew install --cask font-eb-garamond  "
+        "OR: autonovel install-export-tools --apply",
+    ),
+}
+
+
+def check_typeset_fonts() -> list[str]:
+    """Use `fc-match` to confirm each TYPESET_FONTS entry resolves
+    to an installed font. fc-match always returns *something* (a
+    fallback) when the requested name is missing, so we compare
+    the requested name against the resolved family name to detect
+    fallbacks. When fc-match itself isn't on PATH (no fontconfig
+    installed) we emit a single warning rather than per-font noise.
+    """
+    if shutil.which("fc-match") is None:
+        return [
+            "fontconfig not installed (no `fc-match` on PATH); typeset font "
+            "lookup may fail. Install: see `fc-match` entry above."
+        ]
+    out: list[str] = []
+    import subprocess
+    for font_name, (purpose, install_hint) in TYPESET_FONTS.items():
+        try:
+            r = subprocess.run(
+                ["fc-match", "-f", "%{family[0]}", font_name],
+                capture_output=True, text=True, timeout=5,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+        resolved = (r.stdout or "").strip()
+        # When the requested font isn't installed, fc-match returns
+        # the system default (usually "DejaVu Serif" or "Liberation
+        # Serif" on Linux, "Times New Roman" on macOS). The
+        # fallback's family name doesn't include any token from the
+        # requested name → flag.
+        requested_tokens = {t.lower() for t in font_name.split() if len(t) >= 3}
+        resolved_tokens = {t.lower() for t in resolved.split() if len(t) >= 3}
+        if not (requested_tokens & resolved_tokens):
+            out.append(
+                f"font {font_name!r}: missing — needed for {purpose}; "
+                f"fc-match resolves to {resolved!r} (fallback). "
+                f"Install: {install_hint}"
+            )
+    return out
+
+
 _ONE_M_RE = re.compile(r"\[1[mM]\]")
 
 
@@ -226,6 +282,8 @@ def run(series_root: Path, *, fix: bool = False, export_tools: bool = True) -> D
     if export_tools:
         for line in check_export_tools():
             report.warnings.append(f"export tool {line}")
+        for line in check_typeset_fonts():
+            report.warnings.append(f"typeset {line}")
 
     for line in check_claude_settings(project_root=series_root):
         report.warnings.append(f"claude settings: {line}")

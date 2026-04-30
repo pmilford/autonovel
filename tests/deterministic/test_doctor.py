@@ -79,6 +79,56 @@ def test_missing_export_tools_returns_subset_of_known_tools() -> None:
         assert name in EXPORT_TOOLS
 
 
+def test_check_typeset_fonts_warns_when_fc_match_resolves_to_fallback(
+    monkeypatch,
+) -> None:
+    """When fc-match returns a family name that doesn't share any
+    significant token with the requested name, that's a fallback —
+    the requested font isn't installed."""
+    import autonovel.housekeeping.doctor as doc_mod
+    import subprocess
+
+    monkeypatch.setattr(doc_mod.shutil, "which",
+                         lambda name: "/usr/bin/fc-match" if name == "fc-match" else None)
+
+    def fake_run(args, **kwargs):
+        # fc-match returned "DejaVu Serif" — no garamond token → fallback.
+        return subprocess.CompletedProcess(args, 0, stdout="DejaVu Serif", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    warnings = doc_mod.check_typeset_fonts()
+    assert any("EB Garamond" in w for w in warnings)
+    assert any("DejaVu" in w for w in warnings)
+
+
+def test_check_typeset_fonts_silent_when_resolved(monkeypatch) -> None:
+    """fc-match returns the actual EB Garamond family (token
+    overlap with requested) → silent."""
+    import autonovel.housekeeping.doctor as doc_mod
+    import subprocess
+
+    monkeypatch.setattr(doc_mod.shutil, "which",
+                         lambda name: "/usr/bin/fc-match" if name == "fc-match" else None)
+
+    def fake_run(args, **kwargs):
+        return subprocess.CompletedProcess(args, 0, stdout="EB Garamond", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    assert doc_mod.check_typeset_fonts() == []
+
+
+def test_check_typeset_fonts_emits_one_warning_when_fc_match_missing(
+    monkeypatch,
+) -> None:
+    """When fontconfig itself is absent, emit one consolidated
+    warning rather than per-font noise."""
+    import autonovel.housekeeping.doctor as doc_mod
+    monkeypatch.setattr(doc_mod.shutil, "which", lambda name: None)
+    warnings = doc_mod.check_typeset_fonts()
+    assert len(warnings) == 1
+    assert "fontconfig not installed" in warnings[0]
+
+
 def test_missing_export_tools_excludes_present_tools(monkeypatch) -> None:
     """When a tool IS on PATH (mocked), it must not appear in the
     missing list."""

@@ -285,6 +285,69 @@ revision don't.
 
 ---
 
+## tectonic typeset spits out long font-lookup output and fails / produces wrong-looking PDF
+
+Symptom: tectonic prints many lines like `(Font: searching for ...)` /
+`Cannot find OpenType font ...` / `*** stepping through fonts by
+name` and either fails or produces a PDF with the wrong typeface.
+
+Root cause: the typeset template's `\setmainfont{EB Garamond}` is
+asking fontconfig for EB Garamond; it isn't installed (or
+fontconfig itself isn't), so fontspec walks its name-fallback
+chain trying related variants, prints the noisy lookup, and either
+gives up or substitutes a generic serif. As of 2026-04-30 the
+template has a graceful fallback chain — `EB Garamond` → system
+`Garamond` → `TeX Gyre Pagella` (always present in tectonic's
+bundled set) — so a missing font no longer breaks typeset, but
+the PDF is rendered in the wrong typeface.
+
+**Diagnose:**
+
+```bash
+fc-match "EB Garamond"          # should report an EBGaramond*.otf
+                                 # path. If it reports something
+                                 # else (DejaVu, Liberation, Times
+                                 # New Roman) → font is missing.
+fc-list | grep -i garamond      # what fontconfig actually has
+```
+
+**Fix:**
+
+```bash
+# Linux / WSL / Chromebook:
+sudo apt-get install -y fonts-ebgaramond fontconfig
+fc-cache -fv
+
+# macOS:
+brew install --cask font-eb-garamond
+# OR manual: download from https://fonts.google.com/specimen/EB+Garamond
+# and double-click each .ttf to install.
+
+# Either way — easiest:
+autonovel install-export-tools --exports pdf --apply
+```
+
+`autonovel doctor` (as of 2026-04-30) checks this proactively: it
+runs `fc-match "EB Garamond"` and warns when the result is a
+fallback rather than the requested font. Run `autonovel doctor`
+before typeset and you'll see the warning *before* the noisy
+build output.
+
+**For existing series scaffolded before 2026-04-30:** the
+`novel.tex` template has been updated with a graceful font
+fallback chain (`EB Garamond` → system `Garamond` → `TeX Gyre
+Pagella`), so a missing font no longer breaks typeset. To pick
+up the new template:
+
+```bash
+autonovel refresh-templates --only typeset
+```
+
+Re-runs the package-shipped templates over your live series's
+`typeset/` directory. Preserves any local edits to other files.
+
+---
+
 ## Fal.ai / ElevenLabs API errors during export
 
 These are paid third-party services. autonovel doesn't ship API keys

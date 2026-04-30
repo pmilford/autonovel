@@ -18,10 +18,42 @@
 
 % === FONTS ===
 \usepackage{fontspec}
-\setmainfont{EB Garamond}[
-  Ligatures=TeX,
-  Numbers=OldStyle
-]
+% Primary font: EB Garamond. If fontconfig can't find it (common on
+% Chromebook / WSL / fresh macOS), fontspec walks its fallback chain
+% trying many similar names — the user sees a "stepping through many
+% fonts by name" failure with no clear root cause. We catch the
+% missing-font case explicitly via \IfFontExistsTF and fall back to a
+% widely-available serif so typeset still produces a readable PDF.
+% Tier of preference:
+%   1. EB Garamond     (the design choice; Google Fonts free)
+%   2. Garamond        (system Garamond if present — macOS ships one)
+%   3. TeX Gyre Pagella (always present in tectonic's bundled set;
+%                        Palatino-shaped, similar feel to EB Garamond)
+%
+% To install EB Garamond:
+%   Linux/WSL: sudo apt-get install -y fonts-ebgaramond && fc-cache -fv
+%   macOS:     brew install --cask font-eb-garamond
+%   Or:        autonovel install-export-tools --apply  (handles both)
+\IfFontExistsTF{EB Garamond}{
+  \setmainfont{EB Garamond}[
+    Ligatures=TeX,
+    Numbers=OldStyle
+  ]
+}{%
+  \IfFontExistsTF{Garamond}{
+    \setmainfont{Garamond}[Ligatures=TeX]
+  }{%
+    % TeX Gyre Pagella is bundled with tectonic and always available.
+    % Slightly different metrics than EB Garamond (wider em; less
+    % calligraphic italic) but type-page-perfect and free.
+    \setmainfont{TeX Gyre Pagella}[Ligatures=TeX]
+    \typeout{*** WARNING: EB Garamond not installed; using TeX Gyre Pagella fallback.}
+    \typeout{*** Install EB Garamond for the design-intended look:}
+    \typeout{***   sudo apt-get install -y fonts-ebgaramond  (Linux/WSL)}
+    \typeout{***   brew install --cask font-eb-garamond       (macOS)}
+    \typeout{***   autonovel install-export-tools --apply}
+  }
+}
 
 % === TYPOGRAPHY ===
 \usepackage{microtype}
