@@ -215,18 +215,36 @@ Light tier — mechanical. No LLM call.
       (they should only point at successful builds).
 
 5. ePub path (unless `--pdf-only`):
-   a. **Build the combined markdown.** Use `bash` to run
-      `autonovel mechanical build-epub-md books/{book}/chapters
-      --output books/{book}/typeset/chapters_combined.md`. This
-      enumerates only `ch_NN.md` files (NOT `ch_NN.summary.md`,
+   a. **Build the combined markdown.** Use `bash` to run:
+
+      ```
+      autonovel mechanical build-epub-md books/{book}/chapters \
+        --output books/{book}/typeset/chapters_combined.md \
+        --plates-manifest books/{book}/typeset/plates.yaml
+      ```
+
+      Enumerates only `ch_NN.md` files (NOT `ch_NN.summary.md`,
       which would otherwise leak the per-chapter continuity
       handoff — POV, threads_opened, threads_closed — into the
       reader's ePub), strips YAML frontmatter from each chapter
       (so `book: …`, `word_count: …` don't render as visible
       prose), and emits a canonical `# Chapter N: <title>` heading
       per chapter so pandoc reliably sees one top-level division
-      per chapter (which makes ePub chapter navigation actually
-      work). Bug both fixed 2026-04-25.
+      per chapter.
+
+      The `--plates-manifest` flag wires user-imported plates
+      (the same `plates.yaml` the PDF path reads) into the ePub
+      with placement-aware positioning: `before-chapter` plates
+      render BEFORE the chapter heading, `chapter-start`
+      between heading and prose, `after-chapter` after prose.
+      Each plate emits a centered HTML `<img>` with caption +
+      attribution, parallel to the LaTeX `\includegraphics` in
+      build_chapters_tex. Per-chapter ornaments at
+      `art/ornament_chNN.png` are also emitted as image refs at
+      the chapter opening — pandoc embeds the PNGs into the
+      ePub bundle automatically. User 2026-04-30 reported
+      images missing from the ePub; root cause was that
+      build_epub_md never read the manifest.
 
    b. **Resolve the timestamped output names** for the ePub build:
       ```

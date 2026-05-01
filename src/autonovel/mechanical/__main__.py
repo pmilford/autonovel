@@ -662,7 +662,12 @@ def _cmd_typeset_filename(args: argparse.Namespace) -> int:
 def _cmd_build_epub_md(args: argparse.Namespace) -> int:
     chapters_dir = Path(args.chapters_dir)
     output = Path(args.output) if args.output else None
-    content, reports = build_epub_md(chapters_dir, output=output)
+    plates_manifest = (
+        Path(args.plates_manifest) if args.plates_manifest else None
+    )
+    content, reports = build_epub_md(
+        chapters_dir, output=output, plates_manifest=plates_manifest,
+    )
     json.dump(
         {
             "chapters": len(reports),
@@ -893,10 +898,13 @@ def main(argv: list[str] | None = None) -> int:
     et.set_defaults(func=_cmd_entity_track)
 
     em = sub.add_parser("build-epub-md",
-                        help="Concatenate ch_NN.md files into one pandoc-ready markdown.")
+                        help="Concatenate ch_NN.md files into one pandoc-ready markdown; weaves in user-imported plates from plates.yaml.")
     em.add_argument("chapters_dir")
     em.add_argument("--output", default=None,
                     help="Write the combined markdown to this path; otherwise stdout-JSON only.")
+    em.add_argument("--plates-manifest", dest="plates_manifest", default=None,
+                    help="Path to plates.yaml — typically books/<name>/typeset/plates.yaml. "
+                         "Defaults to <chapters_dir>/../typeset/plates.yaml when present.")
     em.set_defaults(func=_cmd_build_epub_md)
 
     cs = sub.add_parser("chapter-summary",

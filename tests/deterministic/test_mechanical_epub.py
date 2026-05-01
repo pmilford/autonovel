@@ -153,6 +153,134 @@ def test_chapter_ornament_referenced_when_png_exists(tmp_path: Path) -> None:
     )
 
 
+def test_plate_before_chapter_appears_before_heading(tmp_path: Path) -> None:
+    """User-imported plate with placement=before-chapter must
+    render BEFORE the chapter heading in the ePub markdown so
+    pandoc places it on its own page in the spine. User
+    2026-04-30 had 3 plates that worked in the PDF but were
+    missing from the ePub — root cause was that build_epub_md
+    never read plates.yaml."""
+    book_root = tmp_path / "book"
+    chapters = book_root / "chapters"
+    chapters.mkdir(parents=True)
+    typeset = book_root / "typeset"
+    plates_dir = typeset / "plates"
+    plates_dir.mkdir(parents=True)
+    # Tiny placeholder image file. The schema in plates.yaml is what
+    # the ePub builder reads — the file's bytes don't matter for
+    # this test (pandoc would fail on a real bundle, but build_epub_md
+    # only emits the markdown reference).
+    (plates_dir / "venice.png").write_bytes(b"\x89PNG")
+    (typeset / "plates.yaml").write_text(
+        "plates:\n"
+        "  - chapter: 1\n"
+        "    placement: before-chapter\n"
+        "    file: plates/venice.png\n"
+        "    caption: Map of Venice, c. 1500.\n"
+        "    attribution: Public domain.\n",
+        encoding="utf-8",
+    )
+    (chapters / "ch_01.md").write_text(
+        "# A Chapter\n\nProse.\n", encoding="utf-8"
+    )
+    content, _ = build_epub_md(chapters)
+    plate_idx = content.find("venice.png")
+    heading_idx = content.find("# Chapter 1")
+    assert plate_idx >= 0, "plate image markup must appear in epub markdown"
+    assert plate_idx < heading_idx, (
+        "before-chapter plate must precede the chapter heading"
+    )
+    assert "Map of Venice, c. 1500." in content
+    assert "Public domain." in content
+
+
+def test_plate_chapter_start_appears_between_heading_and_prose(
+    tmp_path: Path,
+) -> None:
+    """chapter-start placement renders between the chapter heading
+    and the prose body."""
+    book_root = tmp_path / "book"
+    chapters = book_root / "chapters"
+    chapters.mkdir(parents=True)
+    typeset = book_root / "typeset"
+    plates_dir = typeset / "plates"
+    plates_dir.mkdir(parents=True)
+    (plates_dir / "opening.png").write_bytes(b"\x89PNG")
+    (typeset / "plates.yaml").write_text(
+        "plates:\n"
+        "  - chapter: 2\n"
+        "    placement: chapter-start\n"
+        "    file: plates/opening.png\n"
+        "    caption: Chapter opening.\n",
+        encoding="utf-8",
+    )
+    (chapters / "ch_02.md").write_text(
+        "# Two\n\nProse here.\n", encoding="utf-8"
+    )
+    content, _ = build_epub_md(chapters)
+    plate_idx = content.find("opening.png")
+    heading_idx = content.find("# Chapter 2")
+    prose_idx = content.find("Prose here.")
+    assert heading_idx < plate_idx < prose_idx
+
+
+def test_plate_after_chapter_appears_after_prose(
+    tmp_path: Path,
+) -> None:
+    """after-chapter placement renders AFTER the prose body."""
+    book_root = tmp_path / "book"
+    chapters = book_root / "chapters"
+    chapters.mkdir(parents=True)
+    typeset = book_root / "typeset"
+    plates_dir = typeset / "plates"
+    plates_dir.mkdir(parents=True)
+    (plates_dir / "epilogue.png").write_bytes(b"\x89PNG")
+    (typeset / "plates.yaml").write_text(
+        "plates:\n"
+        "  - chapter: 3\n"
+        "    placement: after-chapter\n"
+        "    file: plates/epilogue.png\n",
+        encoding="utf-8",
+    )
+    (chapters / "ch_03.md").write_text(
+        "# Three\n\nThe last paragraph.\n", encoding="utf-8"
+    )
+    content, _ = build_epub_md(chapters)
+    plate_idx = content.find("epilogue.png")
+    prose_idx = content.find("The last paragraph.")
+    assert prose_idx < plate_idx
+
+
+def test_plate_html_escapes_special_chars_in_caption(
+    tmp_path: Path,
+) -> None:
+    """Caption with `<` / `>` / `&` chars must be escaped to keep
+    the inline HTML valid."""
+    book_root = tmp_path / "book"
+    chapters = book_root / "chapters"
+    chapters.mkdir(parents=True)
+    typeset = book_root / "typeset"
+    plates_dir = typeset / "plates"
+    plates_dir.mkdir(parents=True)
+    (plates_dir / "x.png").write_bytes(b"\x89PNG")
+    (typeset / "plates.yaml").write_text(
+        "plates:\n"
+        "  - chapter: 1\n"
+        "    placement: chapter-start\n"
+        "    file: plates/x.png\n"
+        '    caption: "Bell & Whistle <Venice>"\n',
+        encoding="utf-8",
+    )
+    (chapters / "ch_01.md").write_text(
+        "# A\n\nProse.\n", encoding="utf-8"
+    )
+    content, _ = build_epub_md(chapters)
+    assert "&amp;" in content
+    assert "&lt;Venice&gt;" in content
+    # Raw `<Venice>` must not appear (would break XHTML parsing).
+    assert "<Venice>" not in content
+
+
 def test_chapter_without_ornament_renders_cleanly(tmp_path: Path) -> None:
     """No ornament_chNN.png → no image markup; chapter still parses."""
     chapters = tmp_path / "book" / "chapters"
