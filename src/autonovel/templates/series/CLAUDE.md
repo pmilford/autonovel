@@ -119,13 +119,16 @@ each of these and the workaround is in the codebase:
   interrupted sweep (`draft-pass` or `revision-pass`) via
   `.autonovel/sweep-progress.json` and prints a precise "continue
   from chapter N" with the remaining chapter list.
-- Run `/autonovel:impact-of --book <name>` after
-  `/autonovel:promote-canon` if any facts were superseded —
-  parses `## Superseded` blocks in `shared/canon.md`, greps every
-  chapter for tokens unique to the prior value, and emits a
-  per-chapter action checklist of `/autonovel:revise --chapter N`
-  calls with line-snippet evidence. No more `ls` + `grep` to
-  figure out which chapters now disagree with canon.
+- Run `/autonovel:impact-of --book <name>` after any foundation
+  mutation to get a per-chapter action checklist of revises.
+  `--source promote-canon` (default) parses `## Superseded`
+  blocks; `--source rename-character` greps stragglers of the
+  OLD name from the most recent rename in `command-log.jsonl`;
+  `--source merge-chapters|reorder|remove-chapter` greps prose
+  for now-stale chapter-number cross-references; mtime sources
+  (`voice-discovery / add-character / gen-characters / gen-world
+  / add-source`) flag chapters older than the foundation file.
+  No more `ls` + `grep` to figure out what to revise next.
 - Run `/autonovel:sidequest` for the menu of non-standard operations
   (rename character, split chapter, deepen character, etc.).
 - Run `/autonovel:talk --book <name> "<question>"` to ask the book

@@ -205,6 +205,7 @@ def build_chapters_tex(
     output: Path | None = None,
     plates_manifest: Path | None = None,
     plates_root: Path | None = None,
+    chapter_titles: bool = True,
 ) -> tuple[str, list[ChapterBuildReport]]:
     """Build `chapters_content.tex` from every `ch_*.md` in `chapters_dir`.
 
@@ -215,6 +216,13 @@ def build_chapters_tex(
     woven in when `plates_manifest` points at a `plates.yaml`. Plate
     paths inside the manifest are interpreted relative to
     `plates_root` (defaults to the manifest's parent directory).
+
+    `chapter_titles=False` (driven by `project.yaml :: typeset.
+    chapter_titles = false`) disables the per-chapter title extraction,
+    so each chapter renders as `\\chapter{}` — the
+    `\\titleformat{\\chapter}` rule prints "chapter <Roman>" alone and
+    the TOC reads "Chapter I, Chapter II, …" with no evocative titles.
+    Useful for series-style books that prefer numbered chapters.
     """
     from ..paths import iter_chapter_files
     chapter_files = iter_chapter_files(chapters_dir)
@@ -237,7 +245,7 @@ def build_chapters_tex(
         # into the chapter prose at typeset time. Bug observed
         # 2026-04-25 against the live novel.
         raw = ch_path.read_text(encoding="utf-8")
-        title = _extract_chapter_title(raw)
+        title = _extract_chapter_title(raw) if chapter_titles else ""
         text = strip_yaml_frontmatter(raw)
         lines = text.strip().split("\n")
         # If the first content line was a `# Heading`, drop it from

@@ -186,6 +186,11 @@ def _build_parser() -> argparse.ArgumentParser:
                              "users on `[1m]` whose per-command pin silently "
                              "downshifts to the non-`[1m]` variant. See "
                              "docs/troubleshooting.md."))
+    inst.add_argument("--dry-run", dest="dry_run", action="store_true",
+                      help=("Print the list of files that WOULD be written into "
+                             "each detected runtime's commands directory; touch "
+                             "no disk. Useful for `npx autonovel install --dry-run` "
+                             "before letting the install mutate `~/.claude/`."))
     inst.set_defaults(func=_cmd_install)
 
     uninst = sub.add_parser("uninstall", help="Uninstall /autonovel:* commands.")
@@ -729,15 +734,22 @@ def _cmd_install(args: argparse.Namespace) -> int:
         return 2
     path = Path(args.path).resolve() if args.path else None
     pin_model = not getattr(args, "no_model_pin", False)
+    dry_run = getattr(args, "dry_run", False)
     for adapter in adapters:
         result = installer_mod.install(
             adapter, install_root=path, pin_model=pin_model,
+            dry_run=dry_run,
         )
-        print(f"installed [{result.adapter_name}] → {result.install_root}")
+        verb = "would install" if dry_run else "installed"
+        print(f"{verb} [{result.adapter_name}] → {result.install_root}")
         if not pin_model:
             print("  (model: frontmatter omitted — session model wins)")
         for w in result.written:
-            print(f"  + {w.relative_to(result.install_root)}")
+            sigil = "~" if dry_run else "+"
+            print(f"  {sigil} {w.relative_to(result.install_root)}")
+    if dry_run:
+        print("")
+        print("(dry-run: no files written. Re-run without --dry-run to apply.)")
     return 0
 
 

@@ -557,3 +557,304 @@ def test_body_documents_no_llm_fallback(impact_of_cmd) -> None:
     grep over the citations."""
     body = impact_of_cmd.body
     assert "--no-llm" in body
+
+
+# ----------------------------------------- rename-verify (rename-character)
+
+
+def _write_command_log(series: Path, entries: list[dict]) -> None:
+    log = series / ".autonovel" / "command-log.jsonl"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text("\n".join(json.dumps(e) for e in entries) + "\n",
+                    encoding="utf-8")
+
+
+def test_rename_verify_no_log_returns_empty(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    assert report.rename is None
+    assert report.matches == []
+
+
+def test_rename_verify_finds_straggler_old_name(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [{
+        "timestamp": "2026-05-01T12:00:00+00:00",
+        "command": "autonovel:rename-character",
+        "args": ["--old", "Niccolò", "--new", "Marco", "--book", "test-book"],
+        "status": "ok",
+    }])
+    (book_root / "chapters" / "ch_01.md").write_text(
+        "---\nchapter: 1\n---\n\n"
+        "Niccolò opened the door.\n"
+        "Marco followed.\n",
+        encoding="utf-8",
+    )
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    assert report.rename is not None
+    assert report.rename.old == "Niccolò"
+    assert report.rename.new == "Marco"
+    assert report.chapters_with_matches == [1]
+    assert any("Niccolò" in m.line_text for m in report.matches)
+
+
+def test_rename_verify_picks_most_recent_entry(tmp_path: Path) -> None:
+    """Older renames must not shadow the most recent one."""
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [
+        {
+            "timestamp": "2026-04-30T10:00:00+00:00",
+            "command": "autonovel:rename-character",
+            "args": ["--old", "Alice", "--new", "Beth"],
+            "status": "ok",
+        },
+        {
+            "timestamp": "2026-05-01T10:00:00+00:00",
+            "command": "autonovel:rename-character",
+            "args": ["--old", "Charles", "--new", "David"],
+            "status": "ok",
+        },
+    ])
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    assert report.rename is not None
+    assert report.rename.old == "Charles"
+
+
+def test_rename_verify_skips_failed_entries(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [
+        {
+            "timestamp": "2026-04-30T10:00:00+00:00",
+            "command": "autonovel:rename-character",
+            "args": ["--old", "Alice", "--new", "Beth"],
+            "status": "ok",
+        },
+        {
+            "timestamp": "2026-05-01T10:00:00+00:00",
+            "command": "autonovel:rename-character",
+            "args": ["--old", "Charles", "--new", "David"],
+            "status": "error",
+        },
+    ])
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    assert report.rename is not None
+    assert report.rename.old == "Alice"
+
+
+def test_rename_verify_word_boundary(tmp_path: Path) -> None:
+    """The old name must match on word boundaries — `Anna` should not
+    match inside `Annapurna`."""
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [{
+        "timestamp": "2026-05-01T12:00:00+00:00",
+        "command": "autonovel:rename-character",
+        "args": ["--old", "Anna", "--new", "Bea"],
+        "status": "ok",
+    }])
+    (book_root / "chapters" / "ch_01.md").write_text(
+        "---\nchapter: 1\n---\n\n"
+        "She climbed Annapurna in winter.\n",
+        encoding="utf-8",
+    )
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    assert report.matches == []
+
+
+def test_render_rename_verify_clean_says_so(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [{
+        "timestamp": "2026-05-01T12:00:00+00:00",
+        "command": "autonovel:rename-character",
+        "args": ["--old", "Niccolò", "--new", "Marco"],
+        "status": "ok",
+    }])
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    md = impact_mod.render_rename_verify_markdown(report)
+    assert "rename took cleanly" in md
+    assert "Niccolò" in md and "Marco" in md
+
+
+def test_render_rename_verify_no_log(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    md = impact_mod.render_rename_verify_markdown(report)
+    assert "No `/autonovel:rename-character` invocation" in md
+
+
+def test_render_rename_verify_action_plan(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [{
+        "timestamp": "2026-05-01T12:00:00+00:00",
+        "command": "autonovel:rename-character",
+        "args": ["--old", "Old", "--new", "New"],
+        "status": "ok",
+    }])
+    for n in (2, 4):
+        (book_root / "chapters" / f"ch_{n:02d}.md").write_text(
+            f"---\nchapter: {n}\n---\n\nOld walked away.\n",
+            encoding="utf-8",
+        )
+    report = impact_mod.build_rename_verify_report(
+        book_root, series_root=series,
+    )
+    md = impact_mod.render_rename_verify_markdown(report, book="test-book")
+    assert "/autonovel:revise --chapter 2 --book test-book" in md
+    assert "/autonovel:revise --chapter 4 --book test-book" in md
+
+
+def test_cli_impact_of_rename_character_json(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [{
+        "timestamp": "2026-05-01T12:00:00+00:00",
+        "command": "autonovel:rename-character",
+        "args": ["--old", "Old", "--new", "New"],
+        "status": "ok",
+    }])
+    (book_root / "chapters" / "ch_01.md").write_text(
+        "---\nchapter: 1\n---\n\nOld stood up.\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical", "impact-of",
+         str(book_root), "--series-root", str(series),
+         "--source", "rename-character", "--format", "json"],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data["report_kind"] == "rename-verify"
+    assert data["rename"]["old"] == "Old"
+    assert data["chapters_with_matches"] == [1]
+
+
+# ----------------------------------- renumber-refs (merge / reorder / remove)
+
+
+def test_chapter_ref_pattern_finds_arabic_and_roman(tmp_path: Path) -> None:
+    ch = tmp_path / "ch_03.md"
+    ch.write_text(
+        "---\nchapter: 3\n---\n\n"
+        "As we saw in chapter 7, the door was locked.\n"
+        "Chapter VII gave us the key.\n"
+        "By ch. 12 the case was closed.\n"
+        "Just a thematic mention of CHAPTERS without numbers.\n",
+        encoding="utf-8",
+    )
+    matches = impact_mod.find_chapter_number_references(ch)
+    refs = sorted(m.referenced for m in matches)
+    assert refs == ["12", "7", "VII"]
+
+
+def test_renumber_refs_no_log_still_scans(tmp_path: Path) -> None:
+    """Helpful default: even without a logged renumber, list every
+    cross-reference so the user can audit after a manual reorder."""
+    series, book_root = _build_series(tmp_path)
+    (book_root / "chapters" / "ch_02.md").write_text(
+        "---\nchapter: 2\n---\n\n"
+        "As in chapter 5, things shifted.\n",
+        encoding="utf-8",
+    )
+    report = impact_mod.build_renumber_refs_report(
+        book_root, series_root=series, source_command="reorder",
+    )
+    assert report.most_recent_timestamp is None
+    assert report.chapters_with_matches == [2]
+
+
+def test_renumber_refs_picks_up_logged_invocation(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    _write_command_log(series, [{
+        "timestamp": "2026-05-01T09:00:00+00:00",
+        "command": "autonovel:reorder",
+        "args": ["--from", "5", "--to", "2"],
+        "status": "ok",
+    }])
+    (book_root / "chapters" / "ch_03.md").write_text(
+        "---\nchapter: 3\n---\n\nAs in chapter 5, things shifted.\n",
+        encoding="utf-8",
+    )
+    report = impact_mod.build_renumber_refs_report(
+        book_root, series_root=series, source_command="reorder",
+    )
+    assert report.most_recent_timestamp == "2026-05-01T09:00:00+00:00"
+    assert report.most_recent_args == ["--from", "5", "--to", "2"]
+
+
+def test_renumber_refs_unknown_source_returns_empty(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    report = impact_mod.build_renumber_refs_report(
+        book_root, series_root=series,
+        source_command="not-a-renumber",
+    )
+    assert report.matches == []
+    assert report.chapters_with_matches == []
+
+
+def test_render_renumber_refs_clean_says_so(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    (book_root / "chapters" / "ch_01.md").write_text(
+        "---\nchapter: 1\n---\n\nNothing about other chapters.\n",
+        encoding="utf-8",
+    )
+    report = impact_mod.build_renumber_refs_report(
+        book_root, series_root=series, source_command="merge-chapters",
+    )
+    md = impact_mod.render_renumber_refs_markdown(report)
+    assert "Nothing to reconcile" in md
+
+
+def test_render_renumber_refs_action_plan(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    for n, ref in ((2, "chapter 5"), (4, "Chapter VII")):
+        (book_root / "chapters" / f"ch_{n:02d}.md").write_text(
+            f"---\nchapter: {n}\n---\n\nAs in {ref}, the day broke.\n",
+            encoding="utf-8",
+        )
+    report = impact_mod.build_renumber_refs_report(
+        book_root, series_root=series, source_command="merge-chapters",
+    )
+    md = impact_mod.render_renumber_refs_markdown(report, book="test-book")
+    assert "/autonovel:revise --chapter 2 --book test-book" in md
+    assert "/autonovel:revise --chapter 4 --book test-book" in md
+    assert "ch 02" in md
+    assert "ch 04" in md
+
+
+def test_cli_impact_of_remove_chapter_json(tmp_path: Path) -> None:
+    series, book_root = _build_series(tmp_path)
+    (book_root / "chapters" / "ch_03.md").write_text(
+        "---\nchapter: 3\n---\n\nSee ch. 12 for context.\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical", "impact-of",
+         str(book_root), "--series-root", str(series),
+         "--source", "remove-chapter", "--format", "json"],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data["report_kind"] == "renumber-refs"
+    assert data["source_command"] == "remove-chapter"
+    assert data["chapters_with_matches"] == [3]
+
+
+# ------------------------------------ regression locks for argument-hint
+
+
+def test_argument_hint_lists_rename_and_renumber_sources(impact_of_cmd) -> None:
+    hint = impact_of_cmd.argument_hint or ""
+    for src in ("rename-character", "merge-chapters", "reorder", "remove-chapter"):
+        assert src in hint, f"missing source {src!r} in argument-hint"

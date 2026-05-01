@@ -212,11 +212,16 @@ terminal is open with `git` and `pipx` available.
 
    ```bash
    autonovel install
+   # Want to see what would land first?
+   autonovel install --dry-run
    ```
 
    This auto-detects which runtimes you installed in step 4 and
    drops the `/autonovel:*` command files into each one. You can pin
    a single runtime with `--only claude` (or `codex` / `gemini`).
+   `--dry-run` prints the would-be paths without touching disk —
+   useful before letting `npx autonovel install` mutate
+   `~/.claude/commands/`.
 
 6. **(Claude Code only — heads up) The 1M-context billing gate.**
    autonovel benefits from 1M context — `/autonovel:reader-panel` and

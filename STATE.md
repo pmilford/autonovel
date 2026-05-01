@@ -975,8 +975,165 @@
   LLM-judged `overall_score` drift check tolerant to ±0.5 per §12.4.
   The LLM half carries an inline TODO (Bells → series bridge) so the
   harness stays explicitly skipped rather than silently passing.
+- 2026-04-30 (519f3d7): `autonovel tui` Front matter tab renamed
+  to "Front + back matter" and restructured to surface every
+  front- and back-matter file the typeset pipeline weaves in
+  (preface / introduction / glossary / appendix) with present-or-
+  absent indicators and word counts. Stale-summary `⚠` legend
+  added to the Chapters tab footer (chapter `.md` newer than its
+  `.summary.md` — continuity-critical because downstream drafters
+  read the summary, not the chapter, for rolling context). TOC-
+  shows-chapter-names follow-up filed in FUTURE-TODOS (later
+  shipped 7940cd0 + 67bd55a).
+- 2026-04-30 (67bd55a): four user-facing landings in one commit —
+  (1) `/autonovel:help` light-tier slash-command with topic mode
+  (`art / foundation / drafting / revising / typeset / research /
+  front-matter / sweeps / tui / cli / next-steps`); (2) chapter-
+  name TOC support — `/autonovel:draft` step 11 generates a 2-6
+  word evocative title at draft time written to YAML
+  `title:`, new `/autonovel:extract-chapter-titles` LLM-backfill
+  for legacy chapters, new mechanical `chapter-titles` inspector;
+  (3) mixed-source appendix timeline (`📖`/`🏛️ referenced`/`🏛️
+  context` rows from chapter summaries + research notes); (4)
+  `autonovel doctor --install-missing` flag for one-command
+  setup via the install-export-tools handoff. Doc-sync gaps in
+  this commit caught by fbfe283 one commit later.
+- 2026-04-30 (fbfe283): doc-sync catch-up for 67bd55a — README,
+  series-template CLAUDE.md, and `docs/commands.md` mechanical
+  section all gained the `/autonovel:help` and chapter-name TOC
+  entries that should have shipped with the feature commit.
+  Reinforced `feedback_keep_docs_in_sync.md` with the explicit
+  five-surface checklist (operating-guide / commands.md / help.md
+  / tui / series CLAUDE.md) so the same gap doesn't recur.
+- 2026-04-30 (d1d1b8d): typeset font robustness — three layers of
+  defence against the missing-font failure mode (tectonic
+  walking fontspec's noisy "stepping through fonts by name"
+  fallback chain mid-build). Layer 1: `templates/series/typeset/
+  novel.tex` wraps `\setmainfont{EB Garamond}` in
+  `\IfFontExistsTF` with a three-tier fallback (EB Garamond →
+  system Garamond → TeX Gyre Pagella always present) that emits
+  a clean `*** WARNING:` line naming the install command. Layer
+  2: `housekeeping/doctor.py::check_typeset_fonts` runs
+  `fc-match` against every name `novel.tex` references and warns
+  before typeset rather than after. Layer 3: `install_export_
+  tools.py` learned to install fonts with the `verify` step
+  using `fc-match`.
+- 2026-04-30 (b73eeb7): typeset cluster-fix from one real session
+  — (1) PDF cover prefers `cover_titled.png` over bare
+  `cover.png` (so the title overlay actually appears); (2)
+  full-page plate pages get `\thispagestyle{plain}` (footer page
+  number visible) instead of `{empty}`; (3) chapter-start plate
+  default width bumped 0.6× → 0.8× textwidth to match
+  published-book conventions; (4) `commands/typeset.md` ePub
+  pandoc invocation now wires in glossary + appendix. Plus the
+  start of the `docs/troubleshooting.md` typeset-symptom table
+  that subsequent fix-batches kept extending (this commit set
+  the "describe each fix as a row with symptom + fix landed"
+  pattern).
+- 2026-04-30 (f8acafb): typeset round 2 — five more bugs from a
+  follow-up real-session run. (1) Cover proportions retuned
+  (title 9% → 6% of cover width; top translucent band 4-38% →
+  6-20% of cover height) so the painting isn't visually
+  swallowed. (2) Appendix running header reads "Appendix"
+  instead of inheriting the last `\chaptermark` (explicit
+  `\markboth` after each `\chapter*` in front_matter.py /
+  back_matter.py; novel.tex header reads `\rightmark`). (3)
+  Timeline markers switched from emoji (📖/🏛️) to italic
+  parentheticals because EB Garamond and TeX Gyre Pagella don't
+  ship emoji glyphs (later superseded by 3d36d92). (4) ePub
+  ornament wiring — `art/ornament_chNN.png` now appears at
+  chapter opening in the ePub.
+- 2026-04-30 (a7af370): ePub plate support — `mechanical/epub.
+  py::build_epub_md` now reads `plates.yaml` (the same manifest
+  the PDF path uses) and embeds user-imported plates at the
+  declared `placement` (before-chapter / chapter-start / after-
+  chapter) with caption + attribution. Bug story: a user with 3
+  imported plates (via `/autonovel:art-import`) saw them in the
+  PDF but not the ePub because the previous fix only covered
+  auto-generated `ornament_chNN.png`, not the plates manifest.
+- 2026-04-30 (5877563): typeset round 3 — eight quality fixes.
+  Highlights: `md_to_latex` now handles `**bold**` (was leaving
+  literal `**` in the output); `### sub-sub-headings` in the
+  appendix promote to `\subsection*` (was rendering as literal
+  `###`); plate verso/recto via custom `\cleartoverso` macro so
+  before-chapter plates land on verso with the chapter on the
+  facing recto (no blank verso); widow / orphan / broken-
+  hyphenation penalties set to 10000 in novel.tex; ePub
+  `@TITLE@` / `@AUTHOR@` placeholders now substituted via
+  `mechanical render-novel-tex` per ePub template before pandoc
+  sees them; back-cover image surface added — drop a PNG at
+  `books/<book>/art/back_cover.png` and `novel.tex` renders it
+  full-bleed after the colophon (parallel to the front-cover
+  block).
+- 2026-04-30 (3d36d92): timeline markers retuned again — the
+  italic parentheticals from f8acafb made the three categories
+  visually identical on a quick page-flip. Final fix: typeset-
+  safe Unicode geometric shapes (U+25xx, present in every
+  standard serif font) PAIRED with distinct font weights —
+  `**◆ in story**` (filled diamond, bold), `*◇ referenced*`
+  (open diamond, italic), `○ context` (open circle, plain).
+  Three different shapes plus three different weights makes the
+  category unmistakable.
+- 2026-04-30 (7940cd0): TOC chapter names — REAL root cause.
+  Two distinct bugs both fixed: (1) `templates/series/typeset/
+  novel.tex` had no `\tableofcontents` directive at all — so
+  the PDF had no TOC, just chapter-running-headers (added
+  `\tableofcontents` to the frontmatter zone; pick up via
+  `autonovel refresh-templates --only typeset`); (2)
+  `mechanical/epub.py::_extract_chapter_title` only read prose
+  `# Heading` lines, never YAML frontmatter `title:` —
+  chapters drafted with title-in-frontmatter (the canonical
+  shape after `/autonovel:extract-chapter-titles`) had no
+  prose heading, so pandoc's ePub TOC defaulted to
+  "Chapter N" instead of the title. Lock-in: extractor now
+  reads frontmatter first, falls back to heading. The
+  preceding 67bd55a / 519f3d7 fixed peripheral chapter-title
+  rendering bugs but never the actual TOC; this commit hit
+  the right place after the user explicitly asked to find the
+  real root cause.
+- 2026-05-01 (this batch): four follow-ups landed in one
+  session — see "Tests last known green" entry below for the
+  per-item summary. Plus: doc-sync remediation across the
+  preceding 10 commits (3 commits' worth of gaps closed:
+  519f3d7 TUI rename mention in `commands/help.md` /
+  `docs/commands.md`; 5877563 `back_cover.png` surface in
+  TUI Front+back tab + `docs/operating-guide.md`; d1d1b8d
+  doctor font check in `docs/commands.md` / `commands/help.md`
+  / `docs/operating-guide.md`). `feedback_keep_docs_in_sync.md`
+  bumped to MEMORY.md position #1 with explicit "PRECONDITION
+  FOR GREEN" framing — reinforced 4× by user.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-05-01 — **1503
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  Four shipped follow-ups in one batch:
+  1. `/autonovel:impact-of` source extension — `rename-character`
+     reads command-log for the most recent `--old`/`--new`, word-
+     boundary-greps every chapter for stragglers (catches what the
+     slash-command's sed missed in possessives / unicode look-alikes
+     / HTML entities); `merge-chapters / reorder / remove-chapter`
+     grep prose for chapter-number cross-references (`Chapter VII`,
+     `chapter 7`, `ch. 12`) so a renumber doesn't leave silently-
+     wrong navigational pointers (+15).
+  2. `project.yaml :: typeset.chapter_titles = false` enforcement —
+     `build_chapters_tex` and `build_epub_md` accept a
+     `chapter_titles: bool` kwarg; CLI gains `--no-chapter-titles`
+     (explicit override) and `--project-yaml <path>` (read the
+     toggle from `typeset.chapter_titles`); `commands/typeset.md`
+     passes `--project-yaml project.yaml` on both build paths so
+     numbers-only mode now actually flows through to TOC + chapter
+     pages (was documented in draft.md but not enforced) (+11).
+  3. `autonovel install --dry-run` — preview the per-runtime install
+     plan without touching disk; sigil flips from `+` to `~` and
+     trailer line names "no files written" (+4).
+  4. `project.yaml :: image.provider` wired as default —
+     `ProjectConfig` gains `typeset` and `image` dicts (round-trip
+     in YAML, omitted when empty); new `autonovel mechanical
+     resolve-image-provider [--project-yaml ...] [--cli-provider
+     ...]` helper applies the precedence rule (CLI override →
+     project.yaml → `pollinations` default) in one place;
+     `commands/art-curate.md` and `commands/art-ornaments-all.md`
+     now invoke it instead of re-implementing precedence (+8).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-04-30 — **1334
   passing, 1 skipped** (pydub absent locally;
   `pytest tests/deterministic tests/contracts`). TUI fixes (cursor

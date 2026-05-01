@@ -216,11 +216,27 @@ to start.
   scans each chapter against the notes' Candidate Canon
   Entries). 4 new Tier-1 regression locks. Tier 1+2: 1223 →
   1227.
-  Open follow-up: extending `--source` to `voice-discovery`,
+  ~~Open follow-up: extending `--source` to `voice-discovery`,
   `gen-canon`, `add-character`, `rename-character`,
-  `merge-chapters`, `reorder`, `remove-chapter`, `add-source`
-  remains future work; today only `promote-canon` and `research`
-  are supported.
+  `merge-chapters`, `reorder`, `remove-chapter`, `add-source`.~~
+  **Shipped across two waves (most landed earlier; rename + renumber
+  on 2026-05-01).** `voice-discovery / gen-canon / add-character /
+  gen-characters / gen-world / add-source` shipped 2026-04-30 as
+  canon-driven (gen-canon) + mtime-driven (the rest).
+  `rename-character` shipped 2026-05-01 as a new "rename-verify"
+  report kind: reads the most recent `autonovel:rename-character`
+  entry from `.autonovel/command-log.jsonl`, parses `--old`/`--new`
+  from its args, and word-boundary-greps every chapter for the OLD
+  name (catches stragglers the slash-command's sed missed —
+  possessives, hyphens, unicode look-alikes, HTML entities).
+  `merge-chapters / reorder / remove-chapter` shipped 2026-05-01 as
+  "renumber-refs": greps every chapter for prose chapter-number
+  cross-references (`Chapter VII`, `chapter 7`, `ch. 12`) and emits
+  a candidate review list — false positives expected (thematic
+  mentions, references that were always to the right chapter).
+  Both new report kinds use the command-log timestamp as context
+  but degrade cleanly when no logged invocation exists. 15 new
+  Tier-1 tests. Tier 1+2 contribution from this batch: +15.
   Original entry follows for context:
 
 - **`/autonovel:impact-of <command>` — answer "what should I
@@ -932,8 +948,18 @@ Max $200/month. Full narrative + rationale in
   When canon says X arrived in 1473 and the outline says 1471, the
   user shouldn't have to spot the contradiction manually. evaluate
   --phase foundation could date-compare references.
-- **`autonovel install --dry-run`** so users can preview what would
-  be written into `~/.claude/commands/` before mutating it.
+- ~~**`autonovel install --dry-run`** so users can preview what would
+  be written into `~/.claude/commands/` before mutating it.~~
+  **Shipped 2026-05-01.** `installer.install()` accepts a
+  `dry_run: bool = False` kwarg; when true it renders every
+  command (so render errors still surface) but creates no
+  directories and writes no files. CLI exposes `--dry-run`; the
+  per-runtime banner switches from "installed" to "would install"
+  and per-file sigils from `+` to `~`. Trailer line names "no
+  files written. Re-run without --dry-run to apply." 4 new Tier-1
+  tests cover: nothing-on-disk after a fresh dry-run, plan ↔ real
+  install file-list match, dry-run idempotent over an existing
+  install dir.
 - ~~**`autonovel _begin` should echo a "running from `<dir>`" banner.**~~
   **Shipped 2026-04-28.** `_cmd_begin` prints a one-line
   banner `_begin: running from series root \`<name>\`` (or
@@ -1179,11 +1205,18 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   10 new Tier-1 tests for the inspector + render shapes. Tier
   1+2: 1409 → 1431.
 
-  Open follow-up: enforce `project.yaml :: typeset.chapter_titles
-  = false` in `_extract_chapter_title` (drop frontmatter title
-  read; emit empty `\chapter*{}` so the running header reverts to
-  numbers only). Currently the field is documented but not read.
-  ~30 min to wire.
+  ~~Open follow-up: enforce `project.yaml :: typeset.chapter_titles
+  = false` in `_extract_chapter_title`.~~ **Shipped 2026-05-01.**
+  `ProjectConfig` gains a `typeset` dict (round-trips in YAML, omitted
+  when empty); `build_chapters_tex` and `build_epub_md` accept a
+  `chapter_titles: bool = True` kwarg; `autonovel mechanical build-tex`
+  and `build-epub-md` gain `--no-chapter-titles` (explicit override)
+  and `--project-yaml <path>` (read `typeset.chapter_titles` from
+  `project.yaml`); `commands/typeset.md` passes `--project-yaml
+  project.yaml` on both build paths. When false, chapters render as
+  `\chapter{}` (PDF — `\titleformat` prints "chapter <Roman>" alone)
+  and `# Chapter N` (ePub — pandoc TOC reads "Chapter 1, Chapter 2,
+  …"). 11 new Tier-1 tests. Tier 1+2: 1492 → 1503.
 
 - **TOC + chapter-page rendering — original entry follows for context.**
   current typeset emits `\chapter*{}` (empty) when a chapter
@@ -1511,9 +1544,8 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   `npm install -g autonovel` and `npx autonovel install` actually
   work on a clean box. Probably needs `prepublishOnly` to bundle the
   Python source via a build step, or a postinstall pipx hook.
-- **`autonovel install --dry-run`.** Print what *would* be written
-  without touching the runtime's directory. Useful for CI and for
-  reviewing before letting npx mutate `~/.claude/`.
+- ~~**`autonovel install --dry-run`.**~~ **Shipped 2026-05-01.**
+  See the Maintenance section above for full notes.
 - **Per-runtime tool-name regression test.** Tier-1 already
   golden-files each adapter; add a fuzzer that random-generates
   command bodies and asserts no double-translation happens.
@@ -1521,9 +1553,18 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   destinations (`~/.claude/commands/...`) and the bash preamble assume
   POSIX semantics. Smoke once on a Windows runner before claiming
   cross-platform support.
-- **`project.yaml :: image.provider`** is referenced in
-  `commands/art-curate.md` but not yet read by any code. Either wire
-  it through the adapter context or remove the documentation.
+- ~~**`project.yaml :: image.provider`** is referenced in
+  `commands/art-curate.md` but not yet read by any code.~~
+  **Shipped 2026-05-01.** `ProjectConfig` gains an `image` dict
+  (round-trips in YAML, omitted when empty). New mechanical helper
+  `autonovel mechanical resolve-image-provider [--project-yaml ...]
+  [--cli-provider ...]` applies the precedence rule (CLI override
+  → `project.yaml :: image.provider` → `pollinations` default) in
+  one place; both `commands/art-curate.md` step 1 and
+  `commands/art-ornaments-all.md` step 1 invoke it instead of
+  re-implementing precedence. Helper degrades cleanly on missing /
+  malformed project.yaml. 8 new Tier-1 tests covering YAML round-
+  trip + each precedence path + missing-file fallback.
 - **uv vs pip.** Repo currently has `uv.lock`; CLAUDE.md says
   `pip install -e .[test,export]`. Pick one canonical path or
   document both.

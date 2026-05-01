@@ -132,7 +132,15 @@ Light tier — mechanical. No LLM call.
    `autonovel mechanical build-tex books/{book}/chapters
    --art-dir books/{book}/art --output
    books/{book}/typeset/chapters_content.tex
-   --plates-manifest books/{book}/typeset/plates.yaml`.
+   --plates-manifest books/{book}/typeset/plates.yaml
+   --project-yaml project.yaml`.
+
+   The `--project-yaml` flag is what enforces the
+   `typeset.chapter_titles` toggle from `project.yaml`. When set
+   to `false` (numbers-only mode), per-chapter `title:` extraction
+   is skipped — the TOC and chapter pages render "Chapter I,
+   Chapter II, …" with no evocative titles. Default is `true`
+   (matches what `/autonovel:draft` step 11 generates).
 
 3a. Build `front_matter.tex` via `bash`:
     `autonovel mechanical build-front-matter-tex books/{book}
@@ -251,8 +259,15 @@ Light tier — mechanical. No LLM call.
       ```
       autonovel mechanical build-epub-md books/{book}/chapters \
         --output books/{book}/typeset/chapters_combined.md \
-        --plates-manifest books/{book}/typeset/plates.yaml
+        --plates-manifest books/{book}/typeset/plates.yaml \
+        --project-yaml project.yaml
       ```
+
+      `--project-yaml` honours `typeset.chapter_titles` from
+      `project.yaml` — same toggle as the LaTeX path in step 3.
+      When `false`, every chapter renders as `# Chapter N` with
+      no per-chapter title (ePub TOC reads "Chapter 1, Chapter 2,
+      …").
 
       Enumerates only `ch_NN.md` files (NOT `ch_NN.summary.md`,
       which would otherwise leak the per-chapter continuity

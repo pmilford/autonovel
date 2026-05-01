@@ -53,6 +53,7 @@ def build_epub_md(
     output: Path | None = None,
     art_dir: Path | None = None,
     plates_manifest: Path | None = None,
+    chapter_titles: bool = True,
 ) -> tuple[str, list[CombinedChapter]]:
     """Concatenate `ch_NN.md` files into one ePub-ready markdown blob.
 
@@ -117,10 +118,16 @@ def build_epub_md(
         # extractor can read the YAML — bug 2026-04-30 was that
         # only the body was passed, so frontmatter titles were
         # invisible and the ePub TOC defaulted to "Chapter N".
-        title = _extract_chapter_title(
-            body, default=f"Chapter {num}",
-            text_with_frontmatter=raw_text,
-        )
+        if chapter_titles:
+            title = _extract_chapter_title(
+                body, default=f"Chapter {num}",
+                text_with_frontmatter=raw_text,
+            )
+        else:
+            # Numbers-only mode (project.yaml :: typeset.chapter_titles
+            # = false). Drop the per-chapter title; render every
+            # chapter as `# Chapter N` so pandoc's TOC reads cleanly.
+            title = f"Chapter {num}"
         # If body opens with a `# Title` line, drop it — we're going to
         # emit our own canonical header in front of the prose.
         body_without_title = _strip_leading_heading(body)

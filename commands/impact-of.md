@@ -1,7 +1,7 @@
 ---
 name: autonovel:impact-of
 description: After a foundation mutation, list the chapters that reference the old fact and need revising — kills the ls / grep / cat workflow. Mechanical first pass; opt-in LLM classification of false positives.
-argument-hint: "[--book <short-name>] [--source promote-canon|gen-canon|voice-discovery|add-character|gen-characters|gen-world|add-source|research] [--with-llm] [--format markdown|json]"
+argument-hint: "[--book <short-name>] [--source promote-canon|gen-canon|voice-discovery|add-character|gen-characters|gen-world|add-source|rename-character|merge-chapters|reorder|remove-chapter|research] [--with-llm] [--format markdown|json]"
 model_tier: light
 allowed-tools:
   - bash
@@ -22,7 +22,7 @@ require manual `ls` + `grep` across `shared/canon.md` Superseded
 blocks and `books/<book>/chapters/`. autonovel exists to collapse
 that investigation into one command.
 
-Three mechanical detection shapes, plus an LLM augmentation:
+Five mechanical detection shapes, plus an LLM augmentation:
 
   - **Canon-driven** (`--source promote-canon`, `--source gen-canon`).
     Parses `## Superseded` blocks in `shared/canon.md`, computes
@@ -39,6 +39,22 @@ Three mechanical detection shapes, plus an LLM augmentation:
     foundation surfaces that change in ways grep can't see (a
     new voice fingerprint, a new character entry, a fact in the
     world bible).
+  - **Rename-verify** (`--source rename-character`). Reads the
+    most recent `autonovel:rename-character` entry from
+    `.autonovel/command-log.jsonl`, extracts `--old`/`--new` from
+    its args, and word-boundary-greps every chapter for the OLD
+    name. The slash-command's sed should have caught everything;
+    this catches what slipped through (possessives, hyphens,
+    unicode look-alikes, HTML entities). Empty result = clean
+    rename.
+  - **Renumber-refs** (`--source merge-chapters`, `reorder`,
+    `remove-chapter`). After a renumber, prose mentions of
+    `Chapter VII`, `chapter 7`, `ch. 12`, etc. may now point at
+    the wrong chapter. Greps every chapter for chapter-number
+    cross-references and emits a candidate review list; reads
+    the most recent invocation from the command-log for context.
+    Review-list shape: false positives are common (thematic
+    mentions, references that were always to the right chapter).
   - **LLM-augmented** (`--with-llm`, applies to canon-driven
     sources). After the mechanical pass, a Haiku-tier classifier
     reads each candidate chapter line in context and labels it
@@ -102,6 +118,18 @@ are read-only by contract.
      `report_kind: mtime-driven`. Action plan: each stale chapter
      gets a `/autonovel:revise --chapter N` checklist entry to
      reconcile against the updated foundation.
+   - **Rename-verify** (`rename-character`): reads the most
+     recent `autonovel:rename-character` entry from
+     `.autonovel/command-log.jsonl`, word-boundary-greps every
+     chapter for the OLD name, and reports stragglers with line
+     snippets. JSON has `report_kind: rename-verify`. Empty
+     matches list means the rename took cleanly.
+   - **Renumber-refs** (`merge-chapters`, `reorder`,
+     `remove-chapter`): greps every chapter for prose
+     chapter-number cross-references (`Chapter VII`, `chapter 7`,
+     `ch. 12`). JSON has `report_kind: renumber-refs`. Each
+     chapter with at least one match gets a checklist entry to
+     verify the references against the current chapter ordering.
 
    When `--source research` is set instead, skip step 2 and go
    to step 3 (research mode is LLM-only by default).

@@ -304,3 +304,130 @@ class TestCli:
         assert payload["chapters"] == 1
         assert out.exists()
         assert "\\chapter{Title}" in out.read_text(encoding="utf-8")
+
+
+class TestChapterTitlesToggle:
+    """`project.yaml :: typeset.chapter_titles = false` opt-out for the
+    PDF path. When false, per-chapter `title:` extraction is skipped
+    and every chapter renders as `\\chapter{}` so `\\titleformat`
+    prints "chapter <Roman>" alone (numbers-only TOC + chapter pages).
+    """
+
+    def _seed_titled(self, root: Path) -> Path:
+        ch_dir = root / "chapters"
+        ch_dir.mkdir()
+        (ch_dir / "ch_01.md").write_text(
+            "---\n"
+            "chapter: 1\n"
+            "title: The Apothecary's Mortar\n"
+            "---\n\n"
+            "First sentence of prose.\n",
+            encoding="utf-8",
+        )
+        return ch_dir
+
+    def test_default_keeps_titles(self, tmp_path: Path) -> None:
+        ch_dir = self._seed_titled(tmp_path)
+        content, reports = build_chapters_tex(ch_dir)
+        assert "\\chapter{The Apothecary's Mortar}" in content
+        assert reports[0].title == "The Apothecary's Mortar"
+
+    def test_chapter_titles_false_drops_title(self, tmp_path: Path) -> None:
+        ch_dir = self._seed_titled(tmp_path)
+        content, reports = build_chapters_tex(ch_dir, chapter_titles=False)
+        assert "\\chapter{}" in content
+        assert "The Apothecary's Mortar" not in content
+        assert reports[0].title == ""
+
+    def test_cli_no_chapter_titles_flag(self, tmp_path: Path) -> None:
+        ch_dir = self._seed_titled(tmp_path)
+        out = tmp_path / "out.tex"
+        subprocess.run(
+            [sys.executable, "-m", "autonovel.mechanical", "build-tex",
+             str(ch_dir), "--output", str(out), "--no-chapter-titles"],
+            capture_output=True, text=True, check=True,
+        )
+        text = out.read_text(encoding="utf-8")
+        assert "\\chapter{}" in text
+        assert "The Apothecary's Mortar" not in text
+
+    def test_cli_project_yaml_false(self, tmp_path: Path) -> None:
+        ch_dir = self._seed_titled(tmp_path)
+        project_yaml = tmp_path / "project.yaml"
+        project_yaml.write_text(
+            "series_name: tiny\n"
+            "typeset:\n"
+            "  chapter_titles: false\n",
+            encoding="utf-8",
+        )
+        out = tmp_path / "out.tex"
+        subprocess.run(
+            [sys.executable, "-m", "autonovel.mechanical", "build-tex",
+             str(ch_dir), "--output", str(out),
+             "--project-yaml", str(project_yaml)],
+            capture_output=True, text=True, check=True,
+        )
+        text = out.read_text(encoding="utf-8")
+        assert "\\chapter{}" in text
+        assert "The Apothecary's Mortar" not in text
+
+    def test_cli_project_yaml_true_keeps_titles(self, tmp_path: Path) -> None:
+        ch_dir = self._seed_titled(tmp_path)
+        project_yaml = tmp_path / "project.yaml"
+        project_yaml.write_text(
+            "series_name: tiny\n"
+            "typeset:\n"
+            "  chapter_titles: true\n",
+            encoding="utf-8",
+        )
+        out = tmp_path / "out.tex"
+        subprocess.run(
+            [sys.executable, "-m", "autonovel.mechanical", "build-tex",
+             str(ch_dir), "--output", str(out),
+             "--project-yaml", str(project_yaml)],
+            capture_output=True, text=True, check=True,
+        )
+        text = out.read_text(encoding="utf-8")
+        assert "\\chapter{The Apothecary's Mortar}" in text
+
+    def test_cli_project_yaml_missing_typeset_keeps_titles(
+        self, tmp_path: Path,
+    ) -> None:
+        """Backwards compat: project.yaml with no `typeset:` block
+        must not change behaviour."""
+        ch_dir = self._seed_titled(tmp_path)
+        project_yaml = tmp_path / "project.yaml"
+        project_yaml.write_text("series_name: tiny\n", encoding="utf-8")
+        out = tmp_path / "out.tex"
+        subprocess.run(
+            [sys.executable, "-m", "autonovel.mechanical", "build-tex",
+             str(ch_dir), "--output", str(out),
+             "--project-yaml", str(project_yaml)],
+            capture_output=True, text=True, check=True,
+        )
+        text = out.read_text(encoding="utf-8")
+        assert "\\chapter{The Apothecary's Mortar}" in text
+
+    def test_no_chapter_titles_overrides_project_yaml_true(
+        self, tmp_path: Path,
+    ) -> None:
+        """Explicit `--no-chapter-titles` flag wins over
+        project.yaml's `typeset.chapter_titles: true`."""
+        ch_dir = self._seed_titled(tmp_path)
+        project_yaml = tmp_path / "project.yaml"
+        project_yaml.write_text(
+            "series_name: tiny\n"
+            "typeset:\n"
+            "  chapter_titles: true\n",
+            encoding="utf-8",
+        )
+        out = tmp_path / "out.tex"
+        subprocess.run(
+            [sys.executable, "-m", "autonovel.mechanical", "build-tex",
+             str(ch_dir), "--output", str(out),
+             "--project-yaml", str(project_yaml),
+             "--no-chapter-titles"],
+            capture_output=True, text=True, check=True,
+        )
+        text = out.read_text(encoding="utf-8")
+        assert "\\chapter{}" in text

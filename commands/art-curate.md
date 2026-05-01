@@ -52,9 +52,19 @@ via Pillow, no provider involved.
 
 <workflow>
 1. Parse `$ARGUMENTS`. `--book <short-name>` and `--surface` are
-   required (same four surfaces as `art-directions`). `--provider`
-   defaults to `fal` (or the `image.provider` key in `project.yaml` if
-   set). Anything else is a usage error.
+   required (same four surfaces as `art-directions`). Resolve
+   `--provider` via:
+   ```
+   autonovel mechanical resolve-image-provider \
+     --project-yaml project.yaml \
+     [--cli-provider <X>]    # only if user passed --provider
+   ```
+   The helper applies the precedence rule (CLI override →
+   `project.yaml :: image.provider` → `pollinations` default) and
+   prints `{"provider": "...", "source": "cli|project.yaml|default"}`.
+   Use the `provider` field as the active provider for the rest of
+   this run; surface the `source` to the user so they know where it
+   came from. Anything else is a usage error.
 
 2. Use `file_read` on `books/{book}/art/visual_style.json` and
    `books/{book}/art/directions/{surface}.json`. If either is missing,

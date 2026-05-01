@@ -474,3 +474,74 @@ def test_cli_round_trip(tmp_path: Path) -> None:
     assert "# Chapter 2: Coin" in body
     assert "POV state" not in body
     assert "word_count" not in body
+
+
+# ---------------------- chapter_titles toggle (project.yaml) -----
+
+
+def test_chapter_titles_false_drops_per_chapter_titles(
+    tmp_path: Path,
+) -> None:
+    chapters = tmp_path / "chapters"
+    chapters.mkdir()
+    _make_chapter(chapters, 1, title="Bell", body="Body.")
+    _make_chapter(chapters, 2, title="Coin", body="Body.")
+    body, reports = build_epub_md(chapters, chapter_titles=False)
+    assert "# Chapter 1" in body
+    assert "# Chapter 2" in body
+    assert "Bell" not in body  # title dropped
+    assert "Coin" not in body
+    assert reports[0].title == "Chapter 1"
+
+
+def test_cli_no_chapter_titles_flag(tmp_path: Path) -> None:
+    chapters = tmp_path / "chapters"
+    chapters.mkdir()
+    _make_chapter(chapters, 1, title="Bell", body="Body.")
+    output = tmp_path / "combined.md"
+    subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical", "build-epub-md",
+         str(chapters), "--output", str(output), "--no-chapter-titles"],
+        check=True, capture_output=True, text=True,
+    )
+    body = output.read_text(encoding="utf-8")
+    assert "# Chapter 1" in body
+    assert "Bell" not in body
+
+
+def test_cli_project_yaml_chapter_titles_false(tmp_path: Path) -> None:
+    chapters = tmp_path / "chapters"
+    chapters.mkdir()
+    _make_chapter(chapters, 1, title="Bell", body="Body.")
+    project_yaml = tmp_path / "project.yaml"
+    project_yaml.write_text(
+        "series_name: tiny\ntypeset:\n  chapter_titles: false\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "combined.md"
+    subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical", "build-epub-md",
+         str(chapters), "--output", str(output),
+         "--project-yaml", str(project_yaml)],
+        check=True, capture_output=True, text=True,
+    )
+    body = output.read_text(encoding="utf-8")
+    assert "# Chapter 1" in body
+    assert "Bell" not in body
+
+
+def test_cli_project_yaml_default_keeps_titles(tmp_path: Path) -> None:
+    chapters = tmp_path / "chapters"
+    chapters.mkdir()
+    _make_chapter(chapters, 1, title="Bell", body="Body.")
+    project_yaml = tmp_path / "project.yaml"
+    project_yaml.write_text("series_name: tiny\n", encoding="utf-8")
+    output = tmp_path / "combined.md"
+    subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical", "build-epub-md",
+         str(chapters), "--output", str(output),
+         "--project-yaml", str(project_yaml)],
+        check=True, capture_output=True, text=True,
+    )
+    body = output.read_text(encoding="utf-8")
+    assert "# Chapter 1: Bell" in body

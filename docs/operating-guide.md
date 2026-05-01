@@ -778,6 +778,18 @@ features (e.g. the per-book Custom rubric, per-character voice
 fingerprints, irreversible-change scorer, scene-beat coverage that
 shipped 2026-04-25); your novel never gets clobbered.
 
+**Preview before installing.** If you want to see what the install
+would write before letting it touch `~/.claude/commands/`:
+
+```bash
+autonovel install --dry-run    # prints would-be paths; touches no disk
+```
+
+Each runtime banner switches from "installed" to "would install" and
+the per-file sigil flips from `+` to `~`. Useful for `npx autonovel
+install --dry-run` on a fresh box, or just to confirm what changed
+between two `pipx reinstall` runs.
+
 **Typeset templates need a separate refresh.** `autonovel install`
 does not touch `<series-root>/typeset/novel.tex` (or other typeset
 template files), because those were copied into your series at
@@ -877,6 +889,34 @@ You can run typeset between revision passes purely as a "what does
 the book look like right now?" check — it doesn't modify the
 chapters, only writes typeset artifacts under
 `books/<book>/typeset/`. Safe to interrupt and re-run.
+
+**Numbers-only chapter pages.** By default typeset renders
+"Chapter VII — The Apothecary's Mortar" in the TOC and chapter
+opening pages, reading the per-chapter `title:` frontmatter that
+`/autonovel:draft` step 11 generates. To switch to the older
+"Chapter I, Chapter II, …" convention (numbers only), set:
+
+```yaml
+# project.yaml
+typeset:
+  chapter_titles: false
+```
+
+Both the PDF and ePub paths honour the toggle (the flag flows
+through `autonovel mechanical build-tex --project-yaml project.yaml`
+and `build-epub-md --project-yaml project.yaml`, which `/autonovel:
+typeset` invokes for you). One-off override at the CLI:
+`autonovel mechanical build-tex <chapters_dir> --no-chapter-titles`.
+
+**Adding a back-cover image to the PDF.** Drop a PNG at
+`books/<book>/art/back_cover.png` and re-run `/autonovel:typeset`.
+The template renders it as a full-bleed page after the colophon
+(parallel to the front-cover block). Its presence is also surfaced
+in the `autonovel tui` Front + back matter tab so you can see at
+a glance whether the file is in place. (For the printed wraparound
+— front + spine + back on one canvas — `/autonovel:cover-print
+--pages <N>` is the right tool; the back-cover PNG drop-in is
+specifically for the standalone PDF.)
 
 For cover art (`/autonovel:cover-print`), audiobook
 (`/autonovel:audiobook-*`), and chapter ornaments
@@ -1379,10 +1419,20 @@ pandoc --version
    Subject to rate limits (a handful of requests per minute);
    fine for one cover, slow for 24 chapter ornaments.
 3. **Paid, key required — fal / replicate / openai**: same flow
-   as (2) but `--provider fal` (default) / `replicate` /
-   `openai` and the corresponding `FAL_KEY` /
-   `REPLICATE_API_TOKEN` / `OPENAI_API_KEY` env var. More
-   consistent quality, no rate-limit anxiety, costs money.
+   as (2) but `--provider fal` / `replicate` / `openai` and the
+   corresponding `FAL_KEY` / `REPLICATE_API_TOKEN` /
+   `OPENAI_API_KEY` env var. More consistent quality, no
+   rate-limit anxiety, costs money.
+
+**Provider precedence:** `--provider <X>` flag (per-call) wins
+over `project.yaml :: image.provider` (per-series default), which
+wins over the repo-wide default `pollinations`. Set
+`image.provider: fal` (or whatever) in `project.yaml` to make
+that provider the default for every art-* command without typing
+`--provider` each time. The `autonovel mechanical
+resolve-image-provider` helper applies this rule and is what the
+slash-commands invoke; you can run it yourself to see what
+provider any given series resolves to.
 
 Required for any path: **`fontconfig`** (font lookup),
 **`potrace`** (PNG → SVG, only if vectorising ornaments). Plus
@@ -1412,6 +1462,21 @@ sudo apt install -y fonts-ebgaramond fonts-bebas-neue
 # Open https://fonts.google.com/specimen/Bebas+Neue → Download
 # Double-click each .ttf to install.
 ```
+
+**Pre-flight font check.** `autonovel doctor` runs `fc-match`
+against every font the typeset template references (currently
+just `EB Garamond` for chapter prose) and warns when one isn't
+installed. The warning includes the exact install command for
+your OS. This catches the case where `tectonic` would otherwise
+walk fontspec's noisy "stepping through fonts by name" fallback
+chain before failing mid-build — you see "install
+`fonts-ebgaramond`" up front instead of debugging tectonic's
+output. The typeset template ALSO has a runtime fallback
+(EB Garamond → system Garamond → TeX Gyre Pagella) so a missing
+font produces a still-readable PDF with a `*** WARNING:` line
+naming the install command rather than a build failure. Either
+way: run `autonovel doctor` after installing fonts to confirm
+fontconfig sees them.
 
 #### 5c.1. The 10 art commands, explained
 
@@ -1517,9 +1582,12 @@ configures (`before-chapter N`, `chapter-start N`, `after-chapter N`).
    provider are queued).
 
 **Paid paths (more consistent quality, costs money):** swap
-`--provider pollinations` for `--provider fal` (default; needs
-`FAL_KEY`) or `replicate` (needs `REPLICATE_API_TOKEN`) or `openai`
-(needs `OPENAI_API_KEY`).
+`--provider pollinations` for `--provider fal` (needs `FAL_KEY`)
+or `replicate` (needs `REPLICATE_API_TOKEN`) or `openai` (needs
+`OPENAI_API_KEY`). Alternatively set `image.provider: <X>` in
+`project.yaml` to make a paid provider the default for the whole
+series — `--provider` then only needs to appear when you want a
+one-off override.
 
 **The 10-command summary** (one line each):
 

@@ -314,7 +314,6 @@ _FOUNDATION_FILE_FOR: dict[str, tuple[str | None, str | None]] = {
     "gen-characters": ("shared/characters.md", None),
     "gen-world": ("shared/world.md", None),
     "add-source": ("shared/sources.bib", None),
-    "rename-character": (None, None),  # special-cased below
 }
 
 
@@ -559,5 +558,349 @@ def render_impact_markdown(report: ImpactReport, *, book: str = "",
             )
     else:
         parts.append("- _No chapters reference the flipped facts. Nothing to revise._")
+    parts.append("")
+    return "\n".join(parts).rstrip() + "\n"
+
+
+# ----------------------- log-driven sources (rename / renumber)
+
+
+_RENAME_SOURCES: frozenset[str] = frozenset({"rename-character"})
+_RENUMBER_SOURCES: frozenset[str] = frozenset({
+    "merge-chapters", "reorder", "remove-chapter",
+})
+
+
+def _read_command_log(series_root: Path):
+    """Lazy import to avoid pulling command_log into mechanical's hot
+    path. Returns [] when the log file is absent."""
+    from ..command_log import read_all
+    log = series_root / ".autonovel" / "command-log.jsonl"
+    return read_all(log) if log.is_file() else []
+
+
+def _most_recent(entries, slash_command: str):
+    """Most recent successful entry for `autonovel:<slash_command>`,
+    or None. Entries are timestamp-sorted by append order; we walk
+    from the end."""
+    target = f"autonovel:{slash_command}"
+    for e in reversed(entries):
+        if e.command == target and e.status == "ok":
+            return e
+    return None
+
+
+def _flag_value(args: list[str], *flags: str) -> str | None:
+    """Pull the value following any of `flags` in an argparse-style
+    args list. Supports both `--flag value` and `--flag=value`."""
+    for i, tok in enumerate(args):
+        for f in flags:
+            if tok == f and i + 1 < len(args):
+                return args[i + 1]
+            if tok.startswith(f + "="):
+                return tok.split("=", 1)[1]
+    return None
+
+
+# ---------------------------------------- rename-character verify
+
+
+@dataclass
+class RenamePair:
+    old: str
+    new: str
+    timestamp: str
+
+
+@dataclass
+class RenameVerifyReport:
+    """After `/autonovel:rename-character`, scan chapters for the OLD
+    name. The slash-command's word-boundary sed is supposed to catch
+    every occurrence, but unicode names, hyphens, possessives, and
+    HTML entities can slip through. This is the verify pass.
+    """
+    source_command: str = "rename-character"
+    rename: RenamePair | None = None
+    matches: list[ChapterMatch] = field(default_factory=list)
+    chapters_with_matches: list[int] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "source_command": self.source_command,
+            "rename": (
+                {"old": self.rename.old, "new": self.rename.new,
+                 "timestamp": self.rename.timestamp}
+                if self.rename else None
+            ),
+            "matches": [
+                {"chapter": m.chapter, "line_no": m.line_no,
+                 "line_text": m.line_text,
+                 "matched_tokens": m.matched_tokens}
+                for m in self.matches
+            ],
+            "chapters_with_matches": self.chapters_with_matches,
+        }
+
+
+def build_rename_verify_report(book_root: Path, *,
+                                series_root: Path | None = None,
+                                ) -> RenameVerifyReport:
+    series_root = series_root or book_root.parent.parent
+    entries = _read_command_log(series_root)
+    entry = _most_recent(entries, "rename-character")
+    if entry is None:
+        return RenameVerifyReport()
+    old = _flag_value(entry.args, "--old")
+    new = _flag_value(entry.args, "--new")
+    if not old or not new:
+        return RenameVerifyReport()
+    rename = RenamePair(old=old, new=new, timestamp=entry.timestamp)
+    # Build a synthetic Supersedure so we can reuse ChapterMatch shape.
+    sup = Supersedure(
+        shortname=f"{old} → {new}",
+        prior_value=old,
+        new_value=new,
+        rationale=f"rename logged at {entry.timestamp}",
+        timestamp=entry.timestamp,
+    )
+    pattern = re.compile(rf"\b{re.escape(old)}\b")
+    matches: list[ChapterMatch] = []
+    for ch_path in iter_chapter_files(book_root / "chapters"):
+        text = strip_yaml_frontmatter(ch_path.read_text(encoding="utf-8"))
+        try:
+            ch_num = int(ch_path.stem.split("_")[-1])
+        except ValueError:
+            continue
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            if pattern.search(line):
+                matches.append(ChapterMatch(
+                    chapter=ch_num, line_no=line_no,
+                    line_text=line.strip(),
+                    matched_tokens=[old], supersedure=sup,
+                ))
+    chapters_with_matches = sorted({m.chapter for m in matches})
+    return RenameVerifyReport(
+        rename=rename, matches=matches,
+        chapters_with_matches=chapters_with_matches,
+    )
+
+
+def render_rename_verify_markdown(report: RenameVerifyReport, *,
+                                    book: str = "",
+                                    limit_per_chapter: int = 5) -> str:
+    if report.rename is None:
+        return (
+            "_No `/autonovel:rename-character` invocation found in "
+            "`.autonovel/command-log.jsonl`. Run a rename first, "
+            "then re-run impact-of to verify it took._\n"
+        )
+    parts: list[str] = []
+    parts.append(f"# Impact of `/autonovel:{report.source_command}`")
+    parts.append("")
+    parts.append(
+        f"_Most recent rename:_ `{report.rename.old}` → "
+        f"`{report.rename.new}` (logged {report.rename.timestamp})."
+    )
+    parts.append("")
+    if not report.matches:
+        parts.append(
+            "✅ No straggler occurrences of the old name found. The "
+            "rename took cleanly across every chapter."
+        )
+        parts.append("")
+        return "\n".join(parts).rstrip() + "\n"
+    parts.append(
+        f"⚠️  **{len(report.chapters_with_matches)} chapter(s)** still "
+        f"contain the old name `{report.rename.old}`. The "
+        f"`/autonovel:rename-character` word-boundary sed missed these "
+        f"— possessives, hyphens, HTML entities, and unicode look-alikes "
+        f"are common causes."
+    )
+    parts.append("")
+    by_ch: dict[int, list[ChapterMatch]] = {}
+    for m in report.matches:
+        by_ch.setdefault(m.chapter, []).append(m)
+    for ch in sorted(by_ch):
+        parts.append(f"## ch {ch:02d}")
+        parts.append("")
+        for m in by_ch[ch][:limit_per_chapter]:
+            snippet = (m.line_text[:140] + "…") if len(m.line_text) > 140 else m.line_text
+            parts.append(f"- line {m.line_no}: `{snippet}`")
+        extra = len(by_ch[ch]) - limit_per_chapter
+        if extra > 0:
+            parts.append(f"- _… and {extra} more line(s)._")
+        parts.append("")
+    parts.append("## Action plan")
+    parts.append("")
+    book_arg = f" --book {book}" if book else ""
+    for ch in report.chapters_with_matches:
+        parts.append(
+            f"- [ ] `/autonovel:revise --chapter {ch}{book_arg}` — "
+            f"replace remaining `{report.rename.old}` references with "
+            f"`{report.rename.new}` (or re-run "
+            f"`/autonovel:rename-character --old {report.rename.old} "
+            f"--new {report.rename.new}{book_arg}`)."
+        )
+    parts.append("")
+    return "\n".join(parts).rstrip() + "\n"
+
+
+# --------------------------- merge / reorder / remove cross-references
+
+
+# Inline chapter-number references in prose: "chapter 7", "Chapter VII",
+# "ch. 12", "chapters 5 and 6". Word-boundary on both sides; case-
+# insensitive. Roman numerals capped at the common range; deliberately
+# NOT a full grammar — review-list shape per
+# `feedback_avoid_brittle_python.md`.
+_CHAPTER_REF_RE = re.compile(
+    r"\b[Cc]h(?:apter|\.)\s+(\d+|[IVXLCDM]+)\b",
+)
+
+
+@dataclass
+class ChapterRefMatch:
+    chapter: int           # the chapter the reference appears in
+    line_no: int
+    line_text: str
+    referenced: str        # the cited token, e.g. "7" or "VII"
+
+    def to_dict(self) -> dict:
+        return {
+            "chapter": self.chapter,
+            "line_no": self.line_no,
+            "line_text": self.line_text,
+            "referenced": self.referenced,
+        }
+
+
+@dataclass
+class RenumberRefsReport:
+    """After a renumber-the-book operation (`merge-chapters`,
+    `reorder`, `remove-chapter`), prose references to chapter numbers
+    elsewhere may now point at the wrong chapter. This is a candidate
+    review list — the user judges each match against the new numbering.
+    """
+    source_command: str
+    most_recent_args: list[str] = field(default_factory=list)
+    most_recent_timestamp: str | None = None
+    matches: list[ChapterRefMatch] = field(default_factory=list)
+    chapters_with_matches: list[int] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "source_command": self.source_command,
+            "most_recent_args": list(self.most_recent_args),
+            "most_recent_timestamp": self.most_recent_timestamp,
+            "matches": [m.to_dict() for m in self.matches],
+            "chapters_with_matches": self.chapters_with_matches,
+        }
+
+
+def find_chapter_number_references(chapter_path: Path) -> list[ChapterRefMatch]:
+    if not chapter_path.is_file():
+        return []
+    try:
+        ch_num = int(chapter_path.stem.split("_")[-1])
+    except ValueError:
+        return []
+    text = strip_yaml_frontmatter(chapter_path.read_text(encoding="utf-8"))
+    out: list[ChapterRefMatch] = []
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        for m in _CHAPTER_REF_RE.finditer(line):
+            out.append(ChapterRefMatch(
+                chapter=ch_num, line_no=line_no,
+                line_text=line.strip(),
+                referenced=m.group(1),
+            ))
+    return out
+
+
+def build_renumber_refs_report(book_root: Path, *,
+                                 series_root: Path | None = None,
+                                 source_command: str
+                                 ) -> RenumberRefsReport:
+    series_root = series_root or book_root.parent.parent
+    if source_command not in _RENUMBER_SOURCES:
+        return RenumberRefsReport(source_command=source_command)
+    entries = _read_command_log(series_root)
+    entry = _most_recent(entries, source_command)
+    matches: list[ChapterRefMatch] = []
+    for ch_path in iter_chapter_files(book_root / "chapters"):
+        matches.extend(find_chapter_number_references(ch_path))
+    chapters_with_matches = sorted({m.chapter for m in matches})
+    return RenumberRefsReport(
+        source_command=source_command,
+        most_recent_args=list(entry.args) if entry else [],
+        most_recent_timestamp=entry.timestamp if entry else None,
+        matches=matches,
+        chapters_with_matches=chapters_with_matches,
+    )
+
+
+def render_renumber_refs_markdown(report: RenumberRefsReport, *,
+                                    book: str = "",
+                                    limit_per_chapter: int = 5) -> str:
+    parts: list[str] = []
+    parts.append(f"# Impact of `/autonovel:{report.source_command}`")
+    parts.append("")
+    if report.most_recent_timestamp:
+        args_str = " ".join(report.most_recent_args)
+        parts.append(
+            f"_Most recent invocation:_ `{report.source_command} "
+            f"{args_str}` (logged {report.most_recent_timestamp})."
+        )
+    else:
+        parts.append(
+            f"_No `/autonovel:{report.source_command}` entry found in "
+            f"`.autonovel/command-log.jsonl`._ Showing all chapter-number "
+            f"cross-references regardless — review against the current "
+            f"chapter ordering."
+        )
+    parts.append("")
+    if not report.matches:
+        parts.append(
+            "✅ No prose chapter-number cross-references found. Nothing "
+            "to reconcile after the renumber."
+        )
+        parts.append("")
+        return "\n".join(parts).rstrip() + "\n"
+    parts.append(
+        f"⚠️  **{len(report.chapters_with_matches)} chapter(s)** contain "
+        f"prose references to chapter numbers (`Chapter VII`, `chapter 7`, "
+        f"`ch. 12`, …). After a renumber, these may now point at the "
+        f"wrong chapter."
+    )
+    parts.append("")
+    parts.append(
+        "> Mechanical scan — every chapter-number mention in prose. "
+        "False positives are common (a chapter that meant the right "
+        "chapter all along, or a thematic mention rather than a "
+        "navigational one); skim each before revising."
+    )
+    parts.append("")
+    by_ch: dict[int, list[ChapterRefMatch]] = {}
+    for m in report.matches:
+        by_ch.setdefault(m.chapter, []).append(m)
+    for ch in sorted(by_ch):
+        parts.append(f"## ch {ch:02d}")
+        parts.append("")
+        for m in by_ch[ch][:limit_per_chapter]:
+            snippet = (m.line_text[:140] + "…") if len(m.line_text) > 140 else m.line_text
+            parts.append(
+                f"- line {m.line_no} (refs `{m.referenced}`): `{snippet}`"
+            )
+        extra = len(by_ch[ch]) - limit_per_chapter
+        if extra > 0:
+            parts.append(f"- _… and {extra} more line(s)._")
+        parts.append("")
+    parts.append("## Action plan")
+    parts.append("")
+    book_arg = f" --book {book}" if book else ""
+    for ch in report.chapters_with_matches:
+        parts.append(
+            f"- [ ] `/autonovel:revise --chapter {ch}{book_arg}` — "
+            f"verify chapter-number references against current ordering."
+        )
     parts.append("")
     return "\n".join(parts).rstrip() + "\n"

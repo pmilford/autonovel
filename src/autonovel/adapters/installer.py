@@ -53,6 +53,7 @@ def install(
     commands_dir: Path | None = None,
     model_map: dict[str, str] | None = None,
     pin_model: bool = True,
+    dry_run: bool = False,
 ) -> InstallResult:
     """Render every command into the runtime's install dir.
 
@@ -62,12 +63,19 @@ def install(
     Codex / Gemini adapters accept the kwarg for symmetry but may
     not honour it (their model resolution rules differ); see each
     adapter's `render()` for behaviour.
+
+    `dry_run=True` collects the list of paths that *would* be
+    written (and renders each command to surface render errors) but
+    touches no disk: no `mkdir`, no file writes. The returned
+    `InstallResult.written` then names the would-be paths so the
+    caller can preview the install plan.
     """
     root = install_root or adapter.default_install_root()
     src = commands_dir or _commands_source_dir()
     cmds = discover_commands(src)
 
-    root.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        root.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     render_kwargs: dict = {"model_map": model_map}
     # Pass pin_model only to adapters that accept it. Inspecting via
@@ -79,8 +87,10 @@ def install(
         render_kwargs["pin_model"] = pin_model
     for cmd in cmds:
         target = adapter.target_path(root, cmd)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(adapter.render(cmd, **render_kwargs), encoding="utf-8")
+        rendered = adapter.render(cmd, **render_kwargs)
+        if not dry_run:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(rendered, encoding="utf-8")
         written.append(target)
 
     return InstallResult(adapter_name=adapter.name, install_root=root, written=written)

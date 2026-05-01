@@ -34,9 +34,18 @@ coherent series. Otherwise plain text-to-image is fine — just noisier.
 
 <workflow>
 1. Parse `$ARGUMENTS`. `--book <short-name>` is required. Optional:
-   `--provider` (defaults to `project.yaml :: image.provider` then
-   `pollinations` for new projects / `fal` for legacy), `--chapters
-   N,M,...` (comma-separated; default all).
+   `--provider` (resolved against `project.yaml :: image.provider`,
+   defaulting to `pollinations`), `--chapters N,M,...`
+   (comma-separated; default all). Resolve the active provider
+   via:
+   ```
+   autonovel mechanical resolve-image-provider \
+     --project-yaml project.yaml \
+     [--cli-provider <X>]    # only if user passed --provider
+   ```
+   The helper prints `{"provider": "...", "source": "cli|project.yaml|default"}`;
+   use the `provider` value as the active provider for the rest
+   of this run.
 
 2. Use `file_read` on `project.yaml`, `books/{book}/art/visual_style.json`,
    and `books/{book}/art/picks.json`. If `visual_style.json` is missing,

@@ -81,6 +81,20 @@ class ProjectConfig:
     llm: dict[str, Any] = field(default_factory=dict)
     books: list[BookEntry] = field(default_factory=list)
     defaults: dict[str, Any] = field(default_factory=dict)
+    # Per-series typeset overrides (PDF + ePub). Currently honoured:
+    #   chapter_titles: bool = True — when False, the typeset path
+    #     drops the per-chapter `title:` extraction so the TOC and
+    #     chapter pages render numbers-only ("Chapter VII") instead
+    #     of the evocative title ("Chapter VII — The Apothecary's
+    #     Mortar"). Pairs with the `commands/draft.md` step that
+    #     generates the title in the first place.
+    # Other keys are reserved for future typeset toggles; unknown
+    # keys are tolerated (no validation enforcement).
+    typeset: dict[str, Any] = field(default_factory=dict)
+    # Default image provider for art-curate / cover commands when no
+    # `--provider` flag is passed. Common values: "pollinations",
+    # "openai", "wikimedia". CLI flag overrides this.
+    image: dict[str, Any] = field(default_factory=dict)
     # Series-level author — inherited by any BookEntry whose own
     # `author` field is unset. Optional; "Anonymous" if neither is set.
     author: str | None = None
@@ -94,6 +108,10 @@ class ProjectConfig:
             "books": [b.to_dict() for b in self.books],
             "defaults": dict(self.defaults),
         }
+        if self.typeset:
+            d["typeset"] = dict(self.typeset)
+        if self.image:
+            d["image"] = dict(self.image)
         if self.author is not None:
             d["author"] = self.author
         return d
@@ -185,6 +203,8 @@ def _from_dict(raw: dict[str, Any]) -> ProjectConfig:
         llm=llm,
         books=books,
         defaults=raw.get("defaults") or {},
+        typeset=raw.get("typeset") or {},
+        image=raw.get("image") or {},
         author=raw.get("author"),
     )
 

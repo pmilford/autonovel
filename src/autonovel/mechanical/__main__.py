@@ -13,6 +13,7 @@ Subcommands:
   chapter-summary <book> [--format] One-line-per-chapter overview (date/POV/score/cast/plot).
   impact-of <book> [--source N]    Grep chapters for tokens unique to superseded canon facts.
   research-index <series>          Per-note metadata table for shared/research/notes/.
+  resolve-image-provider [...]     Resolve image provider from CLI flag + project.yaml + default.
   build-epub-md <chapters_dir>     Concatenate ch_NN.md → one ePub-ready markdown.
   build-tex <chapters_dir> [--art] Build chapters_content.tex from md.
   build-front-matter-tex <book>    Build front_matter.tex from preface + introduction + glossary.
@@ -69,8 +70,12 @@ from .entity_track import (
 )
 from .impact import (
     build_impact_report,
+    build_rename_verify_report,
+    build_renumber_refs_report,
     build_stale_chapters_report,
     render_impact_markdown,
+    render_rename_verify_markdown,
+    render_renumber_refs_markdown,
     render_stale_chapters_markdown,
 )
 from .research_index import (
@@ -380,6 +385,8 @@ _MTIME_DRIVEN_SOURCES = (
     "voice-discovery", "add-character", "gen-characters", "gen-world",
     "add-source",
 )
+_RENAME_VERIFY_SOURCES = ("rename-character",)
+_RENUMBER_REFS_SOURCES = ("merge-chapters", "reorder", "remove-chapter")
 
 
 def _cmd_impact_of(args: argparse.Namespace) -> int:
@@ -426,6 +433,45 @@ def _cmd_impact_of(args: argparse.Namespace) -> int:
         else:
             sys.stdout.write(
                 render_stale_chapters_markdown(stale, book=book_root.name)
+            )
+    elif args.source in _RENAME_VERIFY_SOURCES:
+        rv = build_rename_verify_report(
+            book_root, series_root=series_root,
+        )
+        if args.format == "json":
+            json.dump(
+                {
+                    "book_root": str(book_root),
+                    "series_root": str(series_root) if series_root else None,
+                    "report_kind": "rename-verify",
+                    **rv.to_dict(),
+                },
+                sys.stdout, indent=2,
+            )
+            sys.stdout.write("\n")
+        else:
+            sys.stdout.write(
+                render_rename_verify_markdown(rv, book=book_root.name)
+            )
+    elif args.source in _RENUMBER_REFS_SOURCES:
+        rr = build_renumber_refs_report(
+            book_root, series_root=series_root,
+            source_command=args.source,
+        )
+        if args.format == "json":
+            json.dump(
+                {
+                    "book_root": str(book_root),
+                    "series_root": str(series_root) if series_root else None,
+                    "report_kind": "renumber-refs",
+                    **rr.to_dict(),
+                },
+                sys.stdout, indent=2,
+            )
+            sys.stdout.write("\n")
+        else:
+            sys.stdout.write(
+                render_renumber_refs_markdown(rr, book=book_root.name)
             )
     else:
         # Should not happen given the argparse choices=, but defend
@@ -659,14 +705,42 @@ def _cmd_typeset_filename(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_chapter_titles(args: argparse.Namespace) -> bool:
+    """Resolve the chapter_titles flag from CLI args + project.yaml.
+
+    Precedence (highest to lowest):
+      1. `--no-chapter-titles` flag — explicit opt-out, wins.
+      2. `--project-yaml <path>` — read `typeset.chapter_titles`
+         (default True when missing).
+      3. Default: True.
+    """
+    if getattr(args, "no_chapter_titles", False):
+        return False
+    project_yaml = getattr(args, "project_yaml", None)
+    if project_yaml:
+        try:
+            from ..project import load as load_project
+            cfg = load_project(Path(project_yaml))
+            value = cfg.typeset.get("chapter_titles", True)
+            return bool(value)
+        except Exception:  # noqa: BLE001
+            # Missing / malformed project.yaml falls back to default.
+            # The typeset path will fail elsewhere if the file is
+            # actually broken; here we want to be tolerant.
+            return True
+    return True
+
+
 def _cmd_build_epub_md(args: argparse.Namespace) -> int:
     chapters_dir = Path(args.chapters_dir)
     output = Path(args.output) if args.output else None
     plates_manifest = (
         Path(args.plates_manifest) if args.plates_manifest else None
     )
+    chapter_titles = _resolve_chapter_titles(args)
     content, reports = build_epub_md(
         chapters_dir, output=output, plates_manifest=plates_manifest,
+        chapter_titles=chapter_titles,
     )
     json.dump(
         {
@@ -695,12 +769,14 @@ def _cmd_build_tex(args: argparse.Namespace) -> int:
     output = Path(args.output) if args.output else None
     plates_manifest = Path(args.plates_manifest) if args.plates_manifest else None
     plates_root = Path(args.plates_root) if args.plates_root else None
+    chapter_titles = _resolve_chapter_titles(args)
     content, reports = build_chapters_tex(
         chapters_dir,
         art_dir=art_dir,
         output=output,
         plates_manifest=plates_manifest,
         plates_root=plates_root,
+        chapter_titles=chapter_titles,
     )
     json.dump(
         {
@@ -718,6 +794,56 @@ def _cmd_build_tex(args: argparse.Namespace) -> int:
         },
         sys.stdout,
         indent=2,
+    )
+    sys.stdout.write("\n")
+    return 0
+
+
+_DEFAULT_IMAGE_PROVIDER = "pollinations"
+
+
+def _cmd_resolve_image_provider(args: argparse.Namespace) -> int:
+    """Resolve the active image provider from CLI args + project.yaml.
+
+    Precedence (highest to lowest):
+      1. `--cli-provider <X>` — explicit per-call override (the
+         slash-command's `--provider` flag passed through).
+      2. `project.yaml :: image.provider` — the per-series default.
+      3. `pollinations` — repo-wide free-tier default.
+
+    The slash-command body invokes:
+        autonovel mechanical resolve-image-provider --project-yaml project.yaml \
+            [--cli-provider <X>]
+    and reads the JSON `{"provider": "<name>", "source": "cli|project.yaml|default"}`
+    so the precedence rule lives in one place instead of being
+    re-implemented in every art-* command body.
+    """
+    cli_provider = getattr(args, "cli_provider", None)
+    if cli_provider:
+        json.dump(
+            {"provider": cli_provider, "source": "cli"},
+            sys.stdout, indent=2,
+        )
+        sys.stdout.write("\n")
+        return 0
+    project_yaml = getattr(args, "project_yaml", None)
+    if project_yaml:
+        try:
+            from ..project import load as load_project
+            cfg = load_project(Path(project_yaml))
+            value = cfg.image.get("provider")
+            if value:
+                json.dump(
+                    {"provider": str(value), "source": "project.yaml"},
+                    sys.stdout, indent=2,
+                )
+                sys.stdout.write("\n")
+                return 0
+        except Exception:  # noqa: BLE001
+            pass
+    json.dump(
+        {"provider": _DEFAULT_IMAGE_PROVIDER, "source": "default"},
+        sys.stdout, indent=2,
     )
     sys.stdout.write("\n")
     return 0
@@ -872,9 +998,10 @@ def main(argv: list[str] | None = None) -> int:
     io.add_argument("--series-root", default=None,
                      help="Series root for shared/canon.md (default: book_root.parent.parent).")
     io.add_argument("--source",
-                     choices=_CANON_DRIVEN_SOURCES + _MTIME_DRIVEN_SOURCES,
+                     choices=(_CANON_DRIVEN_SOURCES + _MTIME_DRIVEN_SOURCES
+                              + _RENAME_VERIFY_SOURCES + _RENUMBER_REFS_SOURCES),
                      default="promote-canon",
-                     help="Which command's impact to analyse. Canon-driven: promote-canon, gen-canon (parse Superseded blocks). Mtime-driven: voice-discovery, add-character, gen-characters, gen-world, add-source (find chapters drafted before the foundation file's last update).")
+                     help="Which command's impact to analyse. Canon-driven: promote-canon, gen-canon (parse Superseded blocks). Mtime-driven: voice-discovery, add-character, gen-characters, gen-world, add-source (find chapters drafted before the foundation file's last update). Rename-verify: rename-character (grep for stragglers of the OLD name from command-log). Renumber-refs: merge-chapters, reorder, remove-chapter (grep prose for chapter-number cross-references that may now point at the wrong chapter).")
     io.add_argument("--format", choices=("markdown", "json"), default="markdown",
                      help="Output format (default: markdown).")
     io.set_defaults(func=_cmd_impact_of)
@@ -905,6 +1032,11 @@ def main(argv: list[str] | None = None) -> int:
     em.add_argument("--plates-manifest", dest="plates_manifest", default=None,
                     help="Path to plates.yaml — typically books/<name>/typeset/plates.yaml. "
                          "Defaults to <chapters_dir>/../typeset/plates.yaml when present.")
+    em.add_argument("--project-yaml", dest="project_yaml", default=None,
+                    help="Path to project.yaml. When given, `typeset.chapter_titles` "
+                         "controls whether per-chapter `title:` extraction runs (default true).")
+    em.add_argument("--no-chapter-titles", dest="no_chapter_titles", action="store_true",
+                    help="Force numbers-only chapter rendering (overrides project.yaml).")
     em.set_defaults(func=_cmd_build_epub_md)
 
     cs = sub.add_parser("chapter-summary",
@@ -983,7 +1115,21 @@ def main(argv: list[str] | None = None) -> int:
     bt.add_argument("--plates-root", dest="plates_root", default=None,
                     help="Base directory plate `file:` paths are resolved against "
                          "(default: parent of --plates-manifest).")
+    bt.add_argument("--project-yaml", dest="project_yaml", default=None,
+                    help="Path to project.yaml. When given, `typeset.chapter_titles` "
+                         "controls whether per-chapter `title:` extraction runs (default true).")
+    bt.add_argument("--no-chapter-titles", dest="no_chapter_titles", action="store_true",
+                    help="Force numbers-only chapter rendering (overrides project.yaml).")
     bt.set_defaults(func=_cmd_build_tex)
+
+    rip = sub.add_parser("resolve-image-provider",
+                          help="Resolve the active image provider from CLI override + project.yaml + default.")
+    rip.add_argument("--project-yaml", dest="project_yaml", default=None,
+                     help="Path to project.yaml (typically `project.yaml`). "
+                          "When set, `image.provider` is the per-series default.")
+    rip.add_argument("--cli-provider", dest="cli_provider", default=None,
+                     help="Explicit per-call provider (the slash-command's --provider). Wins over project.yaml.")
+    rip.set_defaults(func=_cmd_resolve_image_provider)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

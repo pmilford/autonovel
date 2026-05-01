@@ -125,3 +125,143 @@ def test_yaml_with_no_metadata_loads_cleanly(tmp_path: Path) -> None:
     # Falls back through the chain cleanly.
     assert book.display_title(fallback=cfg.series_name) == "house-of-bells"
     assert book.display_author(fallback=cfg.author) == "Anonymous"
+
+
+# ---------------------- typeset + image dicts (loader / dump) ---
+
+
+def test_typeset_dict_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "project.yaml"
+    path.write_text(
+        "series_name: tiny\n"
+        "typeset:\n"
+        "  chapter_titles: false\n",
+        encoding="utf-8",
+    )
+    cfg = project_mod.load(path)
+    assert cfg.typeset == {"chapter_titles": False}
+    # Dump round-trips the typeset block.
+    out = tmp_path / "out.yaml"
+    project_mod.dump(cfg, out)
+    cfg2 = project_mod.load(out)
+    assert cfg2.typeset == {"chapter_titles": False}
+
+
+def test_typeset_omitted_when_empty(tmp_path: Path) -> None:
+    """Backward-compat: a config with no `typeset:` block must dump
+    without one, so existing project.yaml files don't gain noise."""
+    cfg = ProjectConfig(series_name="tiny")
+    out = tmp_path / "out.yaml"
+    project_mod.dump(cfg, out)
+    text = out.read_text(encoding="utf-8")
+    assert "typeset" not in text
+    assert "image" not in text
+
+
+def test_image_provider_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "project.yaml"
+    path.write_text(
+        "series_name: tiny\n"
+        "image:\n"
+        "  provider: wikimedia\n",
+        encoding="utf-8",
+    )
+    cfg = project_mod.load(path)
+    assert cfg.image.get("provider") == "wikimedia"
+
+
+# --------------------- resolve-image-provider CLI helper -------
+
+
+def test_resolve_image_provider_default(tmp_path: Path) -> None:
+    """No project.yaml + no override → repo default `pollinations`."""
+    import json
+    import subprocess
+    import sys
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical",
+         "resolve-image-provider"],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data == {"provider": "pollinations", "source": "default"}
+
+
+def test_resolve_image_provider_from_project_yaml(tmp_path: Path) -> None:
+    import json
+    import subprocess
+    import sys
+    project_yaml = tmp_path / "project.yaml"
+    project_yaml.write_text(
+        "series_name: tiny\n"
+        "image:\n"
+        "  provider: wikimedia\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical",
+         "resolve-image-provider", "--project-yaml", str(project_yaml)],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data == {"provider": "wikimedia", "source": "project.yaml"}
+
+
+def test_resolve_image_provider_cli_wins_over_project_yaml(
+    tmp_path: Path,
+) -> None:
+    """CLI override beats the per-series default."""
+    import json
+    import subprocess
+    import sys
+    project_yaml = tmp_path / "project.yaml"
+    project_yaml.write_text(
+        "series_name: tiny\n"
+        "image:\n"
+        "  provider: wikimedia\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical",
+         "resolve-image-provider", "--project-yaml", str(project_yaml),
+         "--cli-provider", "openai"],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data == {"provider": "openai", "source": "cli"}
+
+
+def test_resolve_image_provider_project_yaml_no_image_block(
+    tmp_path: Path,
+) -> None:
+    """project.yaml without an `image:` block falls through to default."""
+    import json
+    import subprocess
+    import sys
+    project_yaml = tmp_path / "project.yaml"
+    project_yaml.write_text("series_name: tiny\n", encoding="utf-8")
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical",
+         "resolve-image-provider", "--project-yaml", str(project_yaml)],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data == {"provider": "pollinations", "source": "default"}
+
+
+def test_resolve_image_provider_missing_project_yaml_falls_back(
+    tmp_path: Path,
+) -> None:
+    """A path that doesn't exist falls back to default rather than
+    crashing — defensive against typos in the slash-command body."""
+    import json
+    import subprocess
+    import sys
+    out = subprocess.run(
+        [sys.executable, "-m", "autonovel.mechanical",
+         "resolve-image-provider",
+         "--project-yaml", str(tmp_path / "missing.yaml")],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.stdout)
+    assert data == {"provider": "pollinations", "source": "default"}

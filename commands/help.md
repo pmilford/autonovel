@@ -99,10 +99,16 @@ Three FREE paths (no API key) + paid AI providers:
     the Commons API, returns candidates with license + attribution
     metadata, downloads + center-crops to target aspect.
 
-(4) PAID providers — fal (default) / replicate / openai. Same
-    flow as (2) but `--provider fal` / `replicate` / `openai`
-    and the corresponding env-var key. Costs money; more
-    consistent quality; no rate limits.
+(4) PAID providers — fal / replicate / openai. Same flow as
+    (2) but `--provider fal` / `replicate` / `openai` and the
+    corresponding env-var key. Costs money; more consistent
+    quality; no rate limits.
+
+Provider precedence: `--provider` (per-call) wins over
+`project.yaml :: image.provider` (per-series default), which
+wins over the repo default `pollinations`. Set `image.provider`
+once in project.yaml and you can drop the flag from every
+art-* call.
 
 Per-chapter ornaments (a small image at each chapter opening):
 
@@ -257,10 +263,21 @@ added new notes): which chapters reference the now-wrong fact?
                        --source promote-canon|gen-canon|
                                 voice-discovery|add-character|
                                 gen-characters|gen-world|add-source|
-                                research
+                                rename-character|merge-chapters|
+                                reorder|remove-chapter|research
 
-Mechanical token-grep first; --with-llm classifier for canon-
-driven sources cuts the false-positive review burden.
+Five report shapes:
+  • canon-driven (promote-canon, gen-canon) — Superseded-block grep.
+  • mtime-driven (voice-discovery, add-character, gen-characters,
+    gen-world, add-source) — chapters older than the foundation file.
+  • rename-verify (rename-character) — straggler grep for the OLD
+    name from the most recent rename in command-log.
+  • renumber-refs (merge-chapters, reorder, remove-chapter) — prose
+    grep for chapter-number cross-references after a renumber.
+  • research — LLM scan of new notes vs every chapter.
+
+Mechanical first; --with-llm classifier for canon-driven sources
+cuts the false-positive review burden.
 ```
 
 ============================== TOPIC: typeset =====================
@@ -522,14 +539,25 @@ Daily workflow:
 
   autonovel status                     phase, scores, last command
   autonovel cost                       token + USD spend rollup
-  autonovel doctor                     sanity-check the series
+  autonovel doctor                     sanity-check the series —
+                                       required dirs, project.yaml
+                                       shape, missing CLI tools
+                                       (tectonic / pandoc / ffmpeg /
+                                       Pillow / fontconfig), AND
+                                       typeset fonts (fc-match
+                                       lookup; catches missing
+                                       EB Garamond before tectonic
+                                       walks fontspec's fallback
+                                       chain mid-build).
+                                       --install-missing hands off
+                                       to install-export-tools.
   autonovel tui                        long-running terminal UI
 
 Environment setup:
 
   autonovel install-export-tools       install tectonic / pandoc /
-                                       ffmpeg / Pillow / etc. with
-                                       per-tool verification
+                                       ffmpeg / Pillow / fonts /
+                                       etc. with per-tool verification
 
 Maintenance:
 

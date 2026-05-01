@@ -16,7 +16,7 @@ Read-only by contract:
 
 Layout (textual TabbedContent):
   Header:   series name · book selector · lock · sweep · cost
-  Tabs:     Chapters · Research · Foundation · Front matter · Reviews · Commands
+  Tabs:     Chapters · Research · Foundation · Front + back matter · Reviews · Commands
   Footer:   q quit · r refresh · 1-6 jump to tab · b switch book
 
 Refresh: 5-second timer + manual `r`. State load is cheap (mtime
@@ -203,6 +203,7 @@ def _load_state(series: SeriesLayout, book: str) -> dict:
         "introduction": (book_root / "introduction.md").is_file(),
         "glossary": (book_root / "glossary.md").is_file(),
         "appendix": (book_root / "appendix.md").is_file(),
+        "back_cover_image": (book_root / "art" / "back_cover.png").is_file(),
         "preface_words": _word_count_if(book_root / "preface.md"),
         "introduction_words": _word_count_if(book_root / "introduction.md"),
         "glossary_words": _word_count_if(book_root / "glossary.md"),
@@ -370,7 +371,7 @@ if _TEXTUAL_AVAILABLE:
             Binding("1", "tab(1)", "Chapters"),
             Binding("2", "tab(2)", "Research"),
             Binding("3", "tab(3)", "Foundation"),
-            Binding("4", "tab(4)", "Front matter"),
+            Binding("4", "tab(4)", "Front + back matter"),
             Binding("5", "tab(5)", "Reviews"),
             Binding("6", "tab(6)", "Commands"),
         ]
@@ -776,12 +777,16 @@ if _TEXTUAL_AVAILABLE:
                         "timeline / bios / sources / notes",
                         "/autonovel:appendix --book <name> --sections timeline,bios")
                 + "\n"
+                f"- {tick(fm.get('back_cover_image'))} "
+                f"`art/back_cover.png` (full-bleed back-cover image) — "
+                f"{'present; renders as a full-page image after the colophon' if fm.get('back_cover_image') else 'drop a PNG at this path to add a back-cover image to the PDF (printed wraparound is a separate flow via `/autonovel:cover-print`)'}"
+                "\n"
                 "\n"
                 "_Order in the typeset PDF:_ Title page → Preface → "
                 "Introduction → Glossary → chapters → Appendix → "
-                "colophon. Each item is optional; absence is "
-                "respected by the typeset front-/back-matter builder "
-                "via `\\IfFileExists` guards."
+                "colophon → back-cover image. Each item is optional; "
+                "absence is respected by the typeset front-/back-matter "
+                "builder via `\\IfFileExists` guards."
             )
             self.query_one("#front_matter_md", Markdown).update(text)
 
@@ -927,7 +932,7 @@ if _TEXTUAL_AVAILABLE:
                 "header.\n"
                 "- **`b`** — switch to the next book in the series\n"
                 "- **`0`–`6`** — jump to a tab (Help, Chapters, "
-                "Research, Foundation, Front matter, Reviews, Commands)\n"
+                "Research, Foundation, Front + back matter, Reviews, Commands)\n"
                 "- **`q`** — quit\n\n"
                 "## Copy / paste from the TUI\n\n"
                 "Textual captures mouse events by default, which "

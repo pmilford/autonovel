@@ -152,3 +152,43 @@ def test_load_adapter_rejects_unknown() -> None:
     import pytest
     with pytest.raises(KeyError):
         installer.load_adapter("emacs-org-mode")
+
+
+def test_install_dry_run_writes_nothing(tmp_path: Path) -> None:
+    """`--dry-run` returns the would-be paths but touches no disk."""
+    adapter = ClaudeCodeAdapter()
+    install_root = tmp_path / "fresh"
+    result = installer.install(adapter, install_root=install_root, dry_run=True)
+    assert len(result.written) >= 3
+    # No directory was created.
+    assert not install_root.exists()
+    # No would-be file was written.
+    for w in result.written:
+        assert not w.exists()
+
+
+def test_install_dry_run_then_real_install_matches(tmp_path: Path) -> None:
+    """Dry-run plan must match what a real install actually writes."""
+    adapter = ClaudeCodeAdapter()
+    plan = installer.install(adapter, install_root=tmp_path, dry_run=True)
+    actual = installer.install(adapter, install_root=tmp_path)
+    assert sorted(p.name for p in plan.written) == sorted(
+        p.name for p in actual.written
+    )
+    for w in actual.written:
+        assert w.is_file()
+
+
+def test_install_dry_run_idempotent_over_existing_dir(tmp_path: Path) -> None:
+    """Dry-run must not mutate an existing install dir either."""
+    adapter = ClaudeCodeAdapter()
+    installer.install(adapter, install_root=tmp_path)
+    autonovel_dir = tmp_path / "autonovel"
+    one_file = next(autonovel_dir.iterdir())
+    before = one_file.read_text(encoding="utf-8")
+    # Now overwrite that file with garbage and run dry-run.
+    one_file.write_text("DRY_RUN_SHOULD_NOT_RESTORE", encoding="utf-8")
+    installer.install(adapter, install_root=tmp_path, dry_run=True)
+    # The clobbered content survives — dry-run did not write.
+    assert one_file.read_text(encoding="utf-8") == "DRY_RUN_SHOULD_NOT_RESTORE"
+    assert one_file.read_text(encoding="utf-8") != before
