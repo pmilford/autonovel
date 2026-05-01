@@ -124,6 +124,47 @@ def test_canonical_chapter_heading_emitted(tmp_path: Path) -> None:
     assert "\n# The Bell\n" not in content
 
 
+def test_chapter_ornament_referenced_when_png_exists(tmp_path: Path) -> None:
+    """User 2026-04-30 reported "the ePub doesn't show the images".
+    Root cause: build_epub_md only emitted prose; pandoc never saw
+    any image refs. Fix: when `art/ornament_chNN.png` exists, emit
+    a markdown image tag at the top of each chapter so pandoc
+    embeds the PNG into the ePub bundle."""
+    chapters = tmp_path / "book" / "chapters"
+    chapters.mkdir(parents=True)
+    art = tmp_path / "book" / "art"
+    art.mkdir(parents=True)
+    # Create a tiny placeholder ornament file (content doesn't
+    # matter for the markdown emission test).
+    (art / "ornament_ch01.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (chapters / "ch_01.md").write_text(
+        "# A Chapter\n\nProse.\n", encoding="utf-8"
+    )
+    content, _ = build_epub_md(chapters)
+    # Ornament image reference appears between the chapter heading
+    # and the chapter prose.
+    heading_idx = content.find("# Chapter 1")
+    img_idx = content.find("ornament_ch01.png")
+    prose_idx = content.find("Prose.")
+    assert heading_idx >= 0 and img_idx > heading_idx
+    assert img_idx < prose_idx, (
+        "ornament image must precede prose so the ePub renders it "
+        "at the chapter opening"
+    )
+
+
+def test_chapter_without_ornament_renders_cleanly(tmp_path: Path) -> None:
+    """No ornament_chNN.png → no image markup; chapter still parses."""
+    chapters = tmp_path / "book" / "chapters"
+    chapters.mkdir(parents=True)
+    (chapters / "ch_01.md").write_text(
+        "# A Chapter\n\nProse.\n", encoding="utf-8"
+    )
+    content, _ = build_epub_md(chapters)
+    assert "ornament_ch01.png" not in content
+    assert "Prose." in content
+
+
 def test_chapter_with_no_heading_gets_synthesised_title(tmp_path: Path) -> None:
     """A chapter file that lacks a `# …` heading still gets a
     canonical `# Chapter N` heading (so pandoc still sees a

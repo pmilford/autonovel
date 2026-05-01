@@ -51,6 +51,7 @@ def build_epub_md(
     chapters_dir: Path,
     *,
     output: Path | None = None,
+    art_dir: Path | None = None,
 ) -> tuple[str, list[CombinedChapter]]:
     """Concatenate `ch_NN.md` files into one ePub-ready markdown blob.
 
@@ -59,11 +60,21 @@ def build_epub_md(
 
     Excludes `ch_NN.summary.md` and any adjunct files via the shared
     `iter_chapter_files()` filter.
+
+    `art_dir` (defaults to `chapters_dir.parent / "art"`) is searched
+    for per-chapter ornament PNGs (`ornament_chNN.png`); when found,
+    a markdown image reference is emitted at the top of each chapter
+    so pandoc embeds the PNG into the ePub. User 2026-04-30 reported
+    "the ePub doesn't show the images" — root cause was that
+    build_epub_md only emitted prose; pandoc never saw any image
+    references.
     """
     from ..paths import iter_chapter_files
     chapter_files = iter_chapter_files(chapters_dir)
     if not chapter_files:
         raise FileNotFoundError(f"no ch_*.md under {chapters_dir}")
+    if art_dir is None:
+        art_dir = chapters_dir.parent / "art"
 
     pieces: list[str] = []
     reports: list[CombinedChapter] = []
@@ -86,7 +97,30 @@ def build_epub_md(
         body_without_title = _strip_leading_heading(body)
 
         canonical_heading = f"# Chapter {num}: {title}" if title and not title.lower().startswith("chapter ") else f"# {title}"
-        pieces.append(f"{canonical_heading}\n\n{body_without_title}".rstrip() + "\n")
+        # Per-chapter ornament — a small image at the chapter
+        # opening, parallel to the LaTeX `\includegraphics` step in
+        # build_chapters_tex. Pandoc embeds the referenced PNG into
+        # the ePub bundle automatically when it sees a `![](path)`
+        # markdown image. Use a relative path from the chapters_dir
+        # since pandoc resolves image paths relative to the input
+        # markdown file.
+        ornament_md = ""
+        ornament_png = art_dir / f"ornament_ch{num:02d}.png"
+        if ornament_png.is_file():
+            try:
+                rel = ornament_png.relative_to(chapters_dir.parent)
+            except ValueError:
+                rel = ornament_png
+            # Centered image. Pandoc's gfm extension respects an
+            # explicit width attribute; 60% works on most readers.
+            ornament_md = (
+                f'\n<p style="text-align: center;">'
+                f'<img src="{rel}" alt="" style="width: 60%; max-width: 400px;" />'
+                f'</p>\n\n'
+            )
+        pieces.append(
+            f"{canonical_heading}\n{ornament_md}\n{body_without_title}".rstrip() + "\n"
+        )
         reports.append(CombinedChapter(
             chapter=num,
             title=title,

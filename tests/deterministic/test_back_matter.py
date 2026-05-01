@@ -27,6 +27,28 @@ def test_no_appendix_returns_empty(tmp_path: Path) -> None:
     assert titles == []
 
 
+def test_appendix_emits_markboth_for_running_header(tmp_path: Path) -> None:
+    """User 2026-04-30 reported "PDF appendix has chapter titles of
+    chapter 24, not the appendix" — root cause: \\chapter*{} doesn't
+    update the running-header mark, so \\rightmark inherited the
+    last \\chaptermark value. Fix: emit \\markboth{}{Appendix} after
+    the \\chapter*{Appendix} line so the recto running header
+    reads "Appendix"."""
+    book = tmp_path / "book"
+    book.mkdir()
+    (book / "appendix.md").write_text(
+        "# Appendix\n\nProse.\n", encoding="utf-8"
+    )
+    content, _ = build_back_matter_tex(book)
+    assert "\\chapter*{Appendix}" in content
+    assert "\\markboth{}{Appendix}" in content
+    # markboth must follow chapter*; if it precedes, the previous
+    # chaptermark value still leaks through to \rightmark.
+    chap_idx = content.index("\\chapter*{Appendix}")
+    mark_idx = content.index("\\markboth{}{Appendix}")
+    assert chap_idx < mark_idx
+
+
 def test_appendix_renders_as_chapter_star(tmp_path: Path) -> None:
     book = tmp_path / "book"
     book.mkdir()

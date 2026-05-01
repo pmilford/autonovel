@@ -92,9 +92,16 @@ def build_back_matter_tex(
         )
 
         latex_body = md_to_latex(body)
+        # `\markboth{}{<title>}` resets the running header on the
+        # recto to "Appendix" — without it, the header inherits the
+        # last numbered \chaptermark value ("Chapter 24") and the
+        # appendix pages still read as the last chapter. User
+        # 2026-04-30 hit this exact bug.
+        escaped_title = latex_escape(title)
         chapter_block = (
-            f"\\chapter*{{{latex_escape(title)}}}\n"
-            f"\\addcontentsline{{toc}}{{chapter}}{{{latex_escape(title)}}}\n\n"
+            f"\\chapter*{{{escaped_title}}}\n"
+            f"\\addcontentsline{{toc}}{{chapter}}{{{escaped_title}}}\n"
+            f"\\markboth{{}}{{{escaped_title}}}\n\n"
             f"{latex_body}\n"
         )
         pieces.append(chapter_block)

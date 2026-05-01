@@ -82,9 +82,19 @@ def build_front_matter_tex(
         body = "\n".join(body_lines)
 
         latex_body = md_to_latex(body)
+        # `\markboth{}{<title>}` resets the running header on the
+        # recto to the section's name (Preface / Introduction /
+        # Glossary). Without this, the running header inherits the
+        # last \chaptermark value, which for an early `\frontmatter`
+        # section would inherit nothing useful, or for back-matter
+        # would inherit the last numbered chapter ("Chapter 24") —
+        # the user 2026-04-30 reported this exact bug for the
+        # appendix.
+        escaped_title = latex_escape(title)
         chapter_block = (
-            f"\\chapter*{{{latex_escape(title)}}}\n"
-            f"\\addcontentsline{{toc}}{{chapter}}{{{latex_escape(title)}}}\n\n"
+            f"\\chapter*{{{escaped_title}}}\n"
+            f"\\addcontentsline{{toc}}{{chapter}}{{{escaped_title}}}\n"
+            f"\\markboth{{}}{{{escaped_title}}}\n\n"
             f"{latex_body}\n"
         )
         pieces.append(chapter_block)

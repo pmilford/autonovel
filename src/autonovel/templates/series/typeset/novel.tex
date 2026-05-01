@@ -82,8 +82,16 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
+% Running header: book title on verso, chapter mark on recto. The
+% recto reads `\rightmark` (set by `\chaptermark` for numbered
+% chapters and by manual `\markboth` for unnumbered chapters like
+% Preface / Introduction / Glossary / Appendix). Without the
+% `\rightmark` indirection, the appendix's running header would
+% show "Chapter 24" — the last \thechapter value — because
+% `\chapter*` doesn't auto-update the header. User 2026-04-30 hit
+% exactly that bug.
 \fancyhead[LE]{\small\textsc{@TITLE@}}
-\fancyhead[RO]{\small\textsc{Chapter \thechapter}}
+\fancyhead[RO]{\small\textsc{\rightmark}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0pt}
 
@@ -122,7 +130,12 @@
 \titlespacing*{\chapter}{0pt}{0pt}{0pt}
 
 % Lowercase chapter name in header
-\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+% \chaptermark fires for numbered \chapter; we set the right mark
+% to "Chapter <Roman>" so the recto running header reads
+% "Chapter VII" via \rightmark in the fancyhead config above.
+% Unnumbered chapter*'s manually call \markboth with their name
+% (see back_matter.py / front_matter.py).
+\renewcommand{\chaptermark}[1]{\markboth{}{Chapter \thechapter}}
 
 % === TITLE PAGE DESIGN ===
 \newcommand{\makenoveltitle}{%

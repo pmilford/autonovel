@@ -149,10 +149,18 @@ def _extract_frontmatter_field(text: str, field_name: str) -> str:
 # ----------------------------------------------------- render
 
 
+# Typeset-safe markers — emojis (`📖` / `🏛️`) don't render in
+# EB Garamond / TeX Gyre Pagella (the typeset fonts), so they
+# appeared as missing-glyph boxes or were silently dropped per
+# user report 2026-04-30. Italic parenthetical markers render
+# correctly in any text font, are fully ePub-compatible, and read
+# as scholarly-edition convention. The markdown is then converted
+# to `\textit{...}` in PDF via md_to_latex; in ePub pandoc emits
+# `<em>...</em>`.
 _SOURCE_MARKER = {
-    "narrative": "📖",
-    "referenced": "🏛️ referenced",
-    "context": "🏛️ context",
+    "narrative": "*(in story)*",
+    "referenced": "*(real, mentioned)*",
+    "context": "*(real, context)*",
 }
 
 
@@ -178,11 +186,11 @@ def render_markdown(rows: list[TimelineRow], *,
     parts: list[str] = []
     if include_legend:
         parts.append(
-            "_Timeline legend: 📖 = depicted in-narrative; "
-            "🏛️ referenced = real event the prose mentions but "
-            "doesn't depict; 🏛️ context = real event the reader "
-            "should know to follow the period (not mentioned in "
-            "the prose)._\n"
+            "_Timeline legend: *(in story)* = depicted in-narrative; "
+            "*(real, mentioned)* = real event the prose mentions but "
+            "doesn't depict; *(real, context)* = real event the "
+            "reader should know to follow the period (not mentioned "
+            "in the prose)._\n"
         )
     for row in rows:
         marker = _SOURCE_MARKER.get(row.source, "·")

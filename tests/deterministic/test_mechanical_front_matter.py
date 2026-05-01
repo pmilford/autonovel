@@ -92,6 +92,26 @@ def test_glossary_only_renders(tmp_path: Path) -> None:
     assert "\\chapter*{Glossary}" in content
 
 
+def test_each_section_emits_markboth_for_running_header(tmp_path: Path) -> None:
+    """Each front-matter section emits \\markboth{}{<title>} so the
+    running header reads its own name rather than inheriting the
+    previous \\chaptermark value. Same fix as back_matter; same root
+    cause."""
+    (tmp_path / "preface.md").write_text(
+        "# Preface\n\nProse.\n", encoding="utf-8",
+    )
+    (tmp_path / "introduction.md").write_text(
+        "# Introduction\n\nProse.\n", encoding="utf-8",
+    )
+    (tmp_path / "glossary.md").write_text(
+        "# Glossary\n\n**term** — def.\n", encoding="utf-8",
+    )
+    content, _ = build_front_matter_tex(tmp_path)
+    assert "\\markboth{}{Preface}" in content
+    assert "\\markboth{}{Introduction}" in content
+    assert "\\markboth{}{Glossary}" in content
+
+
 def test_addcontentsline_emitted_for_toc(tmp_path: Path) -> None:
     """Front-matter sections must appear in the TOC even though they
     use `\\chapter*` (which is unnumbered and otherwise excluded

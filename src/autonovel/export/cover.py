@@ -90,9 +90,15 @@ def composite_cover(
     shadow_color = (0, 0, 0, 200)
     band_color = (0, 0, 0, 140)
 
-    title_size = max(int(w * 0.09), 36)
-    author_size = max(int(w * 0.045), 20)
-    subtitle_size = max(int(w * 0.03), 14)
+    # Cover-art typography sizing — user 2026-04-30 reported the
+    # title was too large and the translucent band overwhelmed the
+    # underlying image. Target proportions match published-book
+    # cover convention (Penguin Black Classics, NYRB) where the
+    # title is ~6% of cover width and the band sits in the top
+    # ~14% so the cover art remains the dominant visual element.
+    title_size = max(int(w * 0.06), 28)
+    author_size = max(int(w * 0.034), 16)
+    subtitle_size = max(int(w * 0.026), 12)
 
     title_font = _load_font(_resolve_font("title", bold=True), title_size)
     author_font = _load_font(_resolve_font("author"), author_size)
@@ -100,13 +106,18 @@ def composite_cover(
 
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
-    draw.rectangle([(0, int(h * 0.04)), (w, int(h * 0.38))], fill=band_color)
-    draw.rectangle([(0, int(h * 0.78)), (w, int(h * 0.96))], fill=band_color)
+    # Top band: 6%–20% (was 4%–38%; the 34%-tall band swallowed the
+    # cover image's top third). Bottom band: 84%–96% (was 78%–96%;
+    # tightened to leave more art visible).
+    draw.rectangle([(0, int(h * 0.06)), (w, int(h * 0.20))], fill=band_color)
+    draw.rectangle([(0, int(h * 0.84)), (w, int(h * 0.96))], fill=band_color)
 
     center_x = w // 2
-    _drop_text(draw, (center_x, int(h * 0.15)), title.upper(), title_font, text_color, shadow_color)
-    _drop_text(draw, (center_x, int(h * 0.84)), subtitle, subtitle_font, text_color, shadow_color)
-    _drop_text(draw, (center_x, int(h * 0.90)), author.upper(), author_font, text_color, shadow_color)
+    # Title centered in the top band (was at 15%, off-center for a
+    # 4-38% band; now centered for the 6-20% band).
+    _drop_text(draw, (center_x, int(h * 0.13)), title.upper(), title_font, text_color, shadow_color)
+    _drop_text(draw, (center_x, int(h * 0.87)), subtitle, subtitle_font, text_color, shadow_color)
+    _drop_text(draw, (center_x, int(h * 0.92)), author.upper(), author_font, text_color, shadow_color)
 
     result = Image.alpha_composite(img, overlay).convert("RGB")
     out_path.parent.mkdir(parents=True, exist_ok=True)
