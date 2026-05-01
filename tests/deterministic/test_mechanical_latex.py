@@ -69,6 +69,25 @@ class TestMdToLatex:
     def test_ampersand_escaped(self) -> None:
         assert r"\&" in md_to_latex("Smith & Co.")
 
+    def test_bold(self) -> None:
+        """User 2026-04-30 reported `**` markers showing literally
+        in the appendix Sources + timeline date. Root cause: the
+        regex only handled `*italic*`, not `**bold**`."""
+        assert "\\textbf{1492-08-03}" in md_to_latex("**1492-08-03** event")
+
+    def test_bold_does_not_consume_italic(self) -> None:
+        """Bold and italic on the same line must coexist."""
+        out = md_to_latex("**Plot:** *italics inside*")
+        assert "\\textbf{Plot:}" in out
+        assert "\\textit{italics inside}" in out
+
+    def test_bold_with_special_char_inside(self) -> None:
+        """Bold containing an ampersand still works — the bold
+        regex runs BEFORE latex_escape, so the `&` inside the
+        bold gets escaped to `\\&` correctly."""
+        out = md_to_latex("**Smith & Co.** publisher")
+        assert "\\textbf{Smith \\& Co.}" in out
+
 
 class TestDropCap:
     def test_simple_paragraph(self) -> None:

@@ -215,6 +215,37 @@ Light tier — mechanical. No LLM call.
       (they should only point at successful builds).
 
 5. ePub path (unless `--pdf-only`):
+   0. **Render ePub front-matter and back-cover templates with
+      per-book values.** The shipped templates contain literal
+      `@TITLE@` / `@AUTHOR@` placeholders that pandoc passes
+      through verbatim — the user 2026-04-30 reported "the ePub
+      shows placeholder title and author on about page 3" because
+      this step was missing. Run `autonovel mechanical
+      render-novel-tex` against each ePub template, writing the
+      substituted file into `books/{book}/typeset/`:
+
+      ```
+      autonovel mechanical render-novel-tex \
+          typeset/epub_front_matter.md \
+          --output books/{book}/typeset/epub_front_matter.md \
+          -s TITLE='<title>' -s AUTHOR='<author>' -s SERIES_NAME='<series>'
+      autonovel mechanical render-novel-tex \
+          typeset/epub_back_cover.md \
+          --output books/{book}/typeset/epub_back_cover.md \
+          -s TITLE='<title>' -s AUTHOR='<author>' -s SERIES_NAME='<series>'
+      autonovel mechanical render-novel-tex \
+          typeset/epub_colophon.md \
+          --output books/{book}/typeset/epub_colophon.md \
+          -s TITLE='<title>' -s AUTHOR='<author>' -s SERIES_NAME='<series>'
+      ```
+
+      Substitute `<title>` / `<author>` from `project.yaml` per
+      the same fallback chain as step 2 (book.title → series_name;
+      book.author → series.author → "Anonymous"). The pandoc
+      invocation in step 5c reads from
+      `books/{book}/typeset/<rendered>.md` rather than the bare
+      template.
+
    a. **Build the combined markdown.** Use `bash` to run:
 
       ```
@@ -264,14 +295,14 @@ Light tier — mechanical. No LLM call.
         --epub-cover-image=books/{book}/art/cover_titled.png \
         --top-level-division=chapter \
         --toc \
-        typeset/epub_front_matter.md \
+        books/{book}/typeset/epub_front_matter.md \
         <preface-arg> \
         <introduction-arg> \
         <glossary-arg> \
         books/{book}/typeset/chapters_combined.md \
         <appendix-arg> \
-        typeset/epub_back_cover.md \
-        typeset/epub_colophon.md
+        books/{book}/typeset/epub_back_cover.md \
+        books/{book}/typeset/epub_colophon.md
       cp books/{book}/typeset/<timestamped> \
          books/{book}/typeset/<latest>
       ```

@@ -50,6 +50,11 @@ from .latex import latex_escape, md_to_latex
 
 
 _SUBHEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+# `### Sub-sub-heading` — the appendix Sources section commonly has
+# `## Sources` then `### Primary` / `### Secondary` underneath.
+# Without this rule those `###` lines render literally in the PDF
+# / ePub (user 2026-04-30 reported markdown remnants in Sources).
+_SUBSUBHEADING_RE = re.compile(r"^###\s+(.+?)\s*$", re.MULTILINE)
 
 
 def build_back_matter_tex(
@@ -84,8 +89,13 @@ def build_back_matter_tex(
                 body_lines.pop(0)
         body = "\n".join(body_lines)
 
-        # Promote `## Sub-heading` to `\section*{Sub-heading}` BEFORE
-        # md_to_latex runs (md_to_latex doesn't know about headings).
+        # Promote `### Sub-sub-heading` BEFORE `## Sub-heading`
+        # (otherwise the `##` rule would partial-match the leading
+        # two hashes of a `###` line and leave `# Title` behind).
+        body = _SUBSUBHEADING_RE.sub(
+            lambda m: f"\\subsection*{{{latex_escape(m.group(1))}}}",
+            body,
+        )
         body = _SUBHEADING_RE.sub(
             lambda m: f"\\section*{{{latex_escape(m.group(1))}}}",
             body,

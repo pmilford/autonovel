@@ -63,8 +63,53 @@
 \setlength{\parindent}{1.5em}
 \setlength{\parskip}{0pt}
 
+% === WIDOW / ORPHAN / HYPHEN PENALTIES ===
+% User 2026-04-30 reported "words get split across pages, perhaps
+% headings on the last lines of a page". LaTeX's defaults are
+% permissive about widows (a single line of a paragraph at the top
+% of a page) and orphans (last line of a paragraph alone at the
+% bottom). Cranking the penalties forces TeX to push widow/orphan
+% lines to the next page — costs a few half-empty pages but
+% drastically improves the perceived quality. 10000 is "infinitely
+% bad" in TeX's penalty units; the convention for novel typesetting
+% is to use 10000 for both.
+\widowpenalty=10000
+\clubpenalty=10000
+% Don't break a hyphenated word across pages (very ugly).
+\brokenpenalty=10000
+% Discourage starting a page with a hyphenation continuation.
+\interlinepenalty=100
+% Allow a slight bottom-rag (lines NOT forced to flush against the
+% bottom of every page) so widow/orphan adjustments don't produce
+% large rubber-spaced text. \raggedbottom is the convention for
+% novel pages where consistent leading is more important than
+% aligned bottom margins.
+\raggedbottom
+
+% === HEADING-ON-LAST-LINE PROTECTION ===
+% titlesec's \chapter / \section etc. don't always respect needspace
+% — a section heading can land at the bottom of a page with its
+% first prose paragraph on the next page. \needspace below each
+% heading forces a minimum of 4 lines of room; if not available,
+% TeX advances to the next page first.
+\usepackage{needspace}
+
 % === GRAPHICS ===
 \usepackage{graphicx}
+
+% \cleartoverso advances to the next even (verso) page, adding a
+% blank page if needed. Used by mechanical/latex.py's plate
+% renderer to put before-chapter plates on the verso so the
+% chapter heading lands on the facing recto — the published-book
+% convention for full-page chapter-opening images.
+\newcommand{\cleartoverso}{%
+  \clearpage%
+  \ifodd\value{page}%
+    \hbox{}%
+    \thispagestyle{empty}%
+    \clearpage%
+  \fi%
+}
 
 % === DROP CAPS ===
 \usepackage{lettrine}
@@ -257,5 +302,21 @@
 \begin{center}
 {\small------\quad$\diamond$\quad------}
 \end{center}
+
+% === BACK COVER IMAGE (optional) ===
+% Full-bleed back-cover image, parallel to the front-cover block in
+% \frontmatter. User 2026-04-30: "there is a place for a back page
+% image that we are not generating, need a way to do that." Drop a
+% PNG at books/<book>/art/back_cover.png (compose via
+% /autonovel:cover-back when shipped, or hand-author) and it
+% renders here.
+\IfFileExists{../art/back_cover.png}{%
+  \clearpage
+  \thispagestyle{empty}
+  \newgeometry{margin=0pt}
+  \noindent\includegraphics[width=\paperwidth, height=\paperheight, keepaspectratio]{../art/back_cover.png}
+  \restoregeometry
+  \clearpage
+}{}
 
 \end{document}

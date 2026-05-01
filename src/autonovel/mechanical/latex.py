@@ -40,9 +40,15 @@ def latex_escape(text: str) -> str:
 def md_to_latex(body: str) -> str:
     """Convert chapter Markdown to inline LaTeX.
 
-    Handles: `---` scene breaks; `*italic*`; smart quotes / em+en
-    dashes / ellipses; straight ASCII quotes folded to ``…''.
-    Paragraphs are preserved as blank-line separated text.
+    Handles: `---` scene breaks; `**bold**`; `*italic*`; smart
+    quotes / em+en dashes / ellipses; straight ASCII quotes folded
+    to ``…''. Paragraphs are preserved as blank-line separated
+    text.
+
+    Bold support added 2026-04-30 — without it, `**1492-08-03**`
+    rendered as literal `**1492-08-03**` in the PDF / ePub
+    (user reported markdown remnants in the appendix Sources
+    section + the timeline date markers).
     """
     out: list[str] = []
     for line in body.split("\n"):
@@ -52,9 +58,13 @@ def md_to_latex(body: str) -> str:
         elif s == "":
             out.append("")
         else:
-            # italic before escape: leave the `\textit{}` alone, escape the
-            # content separately.
-            # Do *italic* → \textit{italic}
+            # Bold first (greedier; needs to fire BEFORE italic so
+            # the italic regex doesn't eat half a `**X**` pair).
+            # `**X**` → \textbf{X}
+            s = re.sub(r"\*\*([^*]+)\*\*", r"\\textbf{\1}", s)
+            # Italic: single asterisks. Negative lookbehind/lookahead
+            # for `*` keeps `\textbf{X}` content untouched (since the
+            # bold regex already consumed paired double-stars).
             s = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"\\textit{\1}", s)
             s = latex_escape(s)
             s = s.replace("—", "---")
@@ -345,12 +355,39 @@ def _render_plate_block(file_abs: str, caption: str, attribution: str, placement
             f"\\\\\n\\vspace{{0.3em}}\n"
             f"{{\\footnotesize {latex_escape(attribution)}}}"
         )
-    if placement in ("before-chapter", "after-chapter"):
-        # Use `plain` not `empty` so the footer's page number stays
-        # visible on plate pages — the user 2026-04-30 reported the
-        # page numbers vanished on image pages, which made
-        # navigation harder. `plain` keeps the footer page number,
-        # drops the running header (cleaner for full-page plates).
+    if placement == "before-chapter":
+        # Two-page-spread convention: plate on the verso (left,
+        # even page), chapter opening on the recto (right, odd
+        # page). User 2026-04-30 reported "blank pages after each
+        # of the chapter images. I'd expect the images to be on
+        # the left of an open book and the chapter to start on
+        # the right page."
+        #
+        # `\cleartoverso` (defined in novel.tex's macro section)
+        # advances to the next even page (adding a blank if
+        # needed) so the plate lands on the verso. The next
+        # `\chapter{}` then naturally starts on the recto. The
+        # trailing `\clearpage` (NOT `\cleardoublepage`) advances
+        # exactly one page, leaving the recto for the chapter
+        # heading. Avoids the double-blank that
+        # `\cleardoublepage` on both sides used to produce.
+        return (
+            "\\cleartoverso\n"
+            "\\thispagestyle{plain}\n"
+            "\\vspace*{\\fill}\n"
+            "\\begin{center}\n"
+            f"\\includegraphics[width=0.85\\textwidth,height=0.7\\textheight,keepaspectratio]{{{file_abs}}}"
+            f"{caption_tex}{attribution_tex}\n"
+            "\\end{center}\n"
+            "\\vspace*{\\fill}\n"
+            "\\clearpage\n"
+        )
+    if placement == "after-chapter":
+        # `after-chapter` plates can sit on either verso or recto;
+        # the convention is less rigid since they're a closing
+        # element rather than a chapter-opening framing. Keep the
+        # original `\cleardoublepage` symmetry but with `plain` so
+        # the page number is still visible.
         return (
             "\\cleardoublepage\n"
             "\\thispagestyle{plain}\n"

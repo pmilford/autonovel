@@ -125,8 +125,11 @@ def test_build_chapters_tex_weaves_plates(tmp_path: Path, book_root: Path) -> No
     assert "Map of Venice, c. 1500." in content
     assert "Public domain." in content
     # `before-chapter` produces a dedicated full-page block with
-    # \cleardoublepage on each side.
-    assert "\\cleardoublepage" in content
+    # `\cleartoverso` (force to even/verso page so chapter heading
+    # falls on facing recto) and a single `\clearpage` after.
+    # 2026-04-30 fix: previously used `\cleardoublepage` on both
+    # sides, which produced extra blank pages.
+    assert "\\cleartoverso" in content
     # The plate appears BEFORE the \chapter heading for chapter 1.
     plate_idx = content.find("venice.png")
     chapter_idx = content.find("\\chapter{")

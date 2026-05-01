@@ -68,6 +68,25 @@ def test_appendix_renders_as_chapter_star(tmp_path: Path) -> None:
     assert "\\addcontentsline{toc}{chapter}{Appendix}" in content
 
 
+def test_subsubheadings_promoted_to_subsection_star(tmp_path: Path) -> None:
+    """`### Primary` / `### Secondary` inside `## Sources` must
+    render as `\\subsection*{...}`. Without this rule those `###`
+    lines render literally in the PDF — user 2026-04-30 reported
+    `##` markdown remnants in the Sources section."""
+    book = tmp_path / "book"
+    book.mkdir()
+    (book / "appendix.md").write_text(
+        "# Appendix\n\n## Sources\n\n### Primary\n\n"
+        "Some primary source.\n\n### Secondary\n\nA secondary one.\n",
+        encoding="utf-8",
+    )
+    content, _ = build_back_matter_tex(book)
+    assert "\\subsection*{Primary}" in content
+    assert "\\subsection*{Secondary}" in content
+    # Raw `###` must be gone.
+    assert "###" not in content
+
+
 def test_subheadings_promoted_to_section_star(tmp_path: Path) -> None:
     """## headings inside the appendix become \\section*{...} so
     Timeline / Bios / Sources / Notes render with proper breaks."""
