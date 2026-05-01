@@ -119,17 +119,25 @@ def test_render_markdown_sorts_by_date(tmp_path: Path) -> None:
 
 
 def test_render_markdown_legend_block(tmp_path: Path) -> None:
-    """Markers must be typeset-safe (no emoji); EB Garamond / TeX
-    Gyre Pagella don't include emoji glyphs and the user 2026-04-30
-    reported the marker formatting "didn't work" in the PDF —
-    emojis fell out of the font and were silently dropped."""
+    """Markers must be (1) typeset-safe — Unicode Geometric Shapes
+    block, in every serif font; (2) visually distinct — three
+    different shapes plus three different font weights so the
+    category is visible at a glance even if a reader-eye sweep
+    skips the label. User 2026-04-30 round 1 reported emoji
+    didn't render in EB Garamond; round 3 reported the all-italic
+    parenthetical replacements all looked the same."""
     book = tmp_path / "book"
     _make_chapter(book, 1)
     md = render_markdown(extract_in_narrative_dates(book))
-    assert "(in story)" in md
-    assert "(real, mentioned)" in md
-    assert "(real, context)" in md
-    # Specifically NO emoji.
+    # Three distinct dingbat shapes.
+    assert "◆" in md  # narrative (filled)
+    assert "◇" in md  # referenced (open)
+    assert "○" in md  # context (dot)
+    # Three distinct font weights.
+    assert "**◆ in story**" in md  # bold
+    assert "*◇ referenced*" in md  # italic
+    assert "○ context" in md       # plain
+    # No emoji, no fallbacks-only-italic.
     assert "📖" not in md
     assert "🏛" not in md
 
@@ -161,7 +169,7 @@ def test_cli_timeline_extract_markdown(tmp_path: Path) -> None:
     )
     assert "1492-12-25" in out.stdout
     assert "Christmas" in out.stdout
-    assert "(in story)" in out.stdout
+    assert "◆ in story" in out.stdout
 
 
 def test_cli_timeline_extract_json(tmp_path: Path) -> None:

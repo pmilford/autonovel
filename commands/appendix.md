@@ -88,7 +88,17 @@ Three modes selected by `--from`, paralleling
    **(a) Timeline — three-source merge.** Walk three sources of
    timeline rows and merge them with distinct markers per source:
 
-   - **`📖` In-narrative.** Mechanical pass — pulled from chapter
+   Three visually distinct markers — typeset-safe Unicode
+   geometric shapes paired with distinct font weights so the
+   category is unmistakable at a glance:
+
+     **◆ in story** (filled diamond, bold) — depicted in the novel.
+     *◇ referenced* (open diamond, italic) — real event prose mentions.
+     ○ context (open circle, plain) — real, period-only context.
+
+   The three rendering categories:
+
+   - **`◆ in story`** — Mechanical pass; pulled from chapter
      summaries' `## Story time` sections + each chapter's
      frontmatter `events:` array. The dates the book actually
      depicts. Run via `bash`:
@@ -102,7 +112,7 @@ Three modes selected by `--from`, paralleling
      to enrich each row's `description` field with a one-clause
      summary from the chapter's `## Plot` section.
 
-   - **`🏛️ referenced` Real, mentioned in the prose.** Walk every
+   - **`◇ referenced` Real, mentioned in the prose.** Walk every
      chapter's prose for real-world events the book mentions but
      doesn't depict (e.g. "the sack of Constantinople, forty
      years before"). Cross-reference each candidate against
@@ -110,7 +120,7 @@ Three modes selected by `--from`, paralleling
      emit a row only when a research note corroborates the date.
      Skip if `--story-only` was passed.
 
-   - **`🏛️ context` Real, context-setting.** LLM-curated events
+   - **`○ context` Real, context-setting.** LLM-curated events
      the prose doesn't mention but the reader should know to
      follow the period (the *Wolf Hall* end-paper convention).
      Walk research notes for period-relevant entries the prose
@@ -129,11 +139,17 @@ Three modes selected by `--from`, paralleling
    ```
 
    then layer the LLM-merged referenced + context rows in the
-   same shape (`**<date>** <marker> — <description> [<cite>]`).
-   The legend block at the top names the three markers so the
-   reader knows what each means. Cap total entries at ~40 for
-   the focused-edition convention; longer is encyclopedia
-   territory.
+   same shape:
+
+     - In-story (mechanical):  `**1492-08-03** **◆ in story** — <plot> *(ch 5)*`
+     - Referenced:             `**1492-04-12** *◇ referenced* — <event> [shortname]`
+     - Context:                `**1453-05-29** ○ context — <event> [shortname]`
+
+   The leading **bold date** stays consistent across all three
+   categories (so date-sorting reads cleanly). The marker shape
+   AND font weight together identify the category. Cap total
+   entries at ~40 for the focused-edition convention; longer is
+   encyclopedia territory.
 
    **(b) Bios.** One paragraph per named historical figure who
    appears as a character. 100-200 words each. Required structure:
