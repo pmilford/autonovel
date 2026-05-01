@@ -293,6 +293,67 @@ def test_chapter_without_ornament_renders_cleanly(tmp_path: Path) -> None:
     assert "Prose." in content
 
 
+def test_yaml_frontmatter_title_used_for_canonical_heading(
+    tmp_path: Path,
+) -> None:
+    """Real root cause fix 2026-04-30 round 4. The user reported the
+    ePub TOC showed `Chapter 1, Chapter 2, …` instead of chapter
+    titles, even after extract-chapter-titles wrote titles into
+    the YAML frontmatter. epub.py's `_extract_chapter_title` only
+    looked at `# Heading` lines after the frontmatter — it never
+    read the `title:` field. Chapters drafted with the new title-
+    in-frontmatter shape have no prose `# Heading`, so the title
+    fell back to "Chapter N" and pandoc's ePub TOC was numbers-
+    only. Fix: read frontmatter `title:` first, fall back to
+    `# Heading`, then "Chapter N"."""
+    chapters = tmp_path / "chapters"
+    chapters.mkdir()
+    (chapters / "ch_05.md").write_text(
+        "---\n"
+        "book: tiny\n"
+        "chapter: 5\n"
+        'title: "The Apothecary\'s Mortar"\n'
+        "pov: Tommaso\n"
+        "status: drafted\n"
+        "---\n"
+        "Just prose; no `# Heading` line in the body.\n",
+        encoding="utf-8",
+    )
+    content, reports = build_epub_md(chapters)
+    # Canonical heading uses the frontmatter title.
+    assert "# Chapter 5: The Apothecary's Mortar" in content
+    assert reports[0].title == "The Apothecary's Mortar"
+    # NOT the fallback default.
+    assert "# Chapter 5\n" not in content
+
+
+def test_yaml_frontmatter_title_with_quoted_value(tmp_path: Path) -> None:
+    """Frontmatter values can be wrapped in single or double
+    quotes; both must work."""
+    chapters = tmp_path / "chapters"
+    chapters.mkdir()
+    (chapters / "ch_01.md").write_text(
+        "---\nchapter: 1\ntitle: 'Salt and Saltpeter'\n---\n\nProse.\n",
+        encoding="utf-8",
+    )
+    content, _ = build_epub_md(chapters)
+    assert "Salt and Saltpeter" in content
+
+
+def test_yaml_frontmatter_falls_back_to_heading(tmp_path: Path) -> None:
+    """Legacy chapter (no frontmatter `title:` field, but a
+    `# Heading` line) → heading wins. Both shapes work."""
+    chapters = tmp_path / "chapters"
+    chapters.mkdir()
+    (chapters / "ch_03.md").write_text(
+        "---\nchapter: 3\nstatus: drafted\n---\n\n"
+        "# The Old Convention\n\nProse.\n",
+        encoding="utf-8",
+    )
+    content, _ = build_epub_md(chapters)
+    assert "The Old Convention" in content
+
+
 def test_chapter_with_no_heading_gets_synthesised_title(tmp_path: Path) -> None:
     """A chapter file that lacks a `# …` heading still gets a
     canonical `# Chapter N` heading (so pandoc still sees a

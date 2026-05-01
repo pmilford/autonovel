@@ -108,13 +108,19 @@ def build_epub_md(
         except ValueError as exc:
             raise ValueError(f"cannot parse chapter number from {ch_path.name!r}") from exc
 
-        body = strip_yaml_frontmatter(ch_path.read_text(encoding="utf-8")).strip()
+        raw_text = ch_path.read_text(encoding="utf-8")
+        body = strip_yaml_frontmatter(raw_text).strip()
 
-        # Find the chapter's own `# …` heading if it has one; otherwise
-        # synthesise `Chapter N`. Either way we emit a canonical
-        # `# Chapter N: <title>` header so pandoc sees one top-level
-        # division per chapter.
-        title = _extract_chapter_title(body, default=f"Chapter {num}")
+        # Find the chapter's title in priority order: frontmatter
+        # `title:` field, then `# Heading` line, then "Chapter N".
+        # Pass the raw text (with frontmatter intact) so the
+        # extractor can read the YAML — bug 2026-04-30 was that
+        # only the body was passed, so frontmatter titles were
+        # invisible and the ePub TOC defaulted to "Chapter N".
+        title = _extract_chapter_title(
+            body, default=f"Chapter {num}",
+            text_with_frontmatter=raw_text,
+        )
         # If body opens with a `# Title` line, drop it — we're going to
         # emit our own canonical header in front of the prose.
         body_without_title = _strip_leading_heading(body)
@@ -176,12 +182,43 @@ def build_epub_md(
     return content, reports
 
 
-def _extract_chapter_title(body: str, *, default: str) -> str:
-    """Return the chapter's title from the first non-empty line if
-    that line is a markdown heading (`# …`); otherwise *default*.
-    Treats `# Chapter N: Title` and `# Title` and `# N. Title` the
-    same way — strip the leading marker and return the right-hand side.
+def _extract_chapter_title(body: str, *, default: str,
+                            text_with_frontmatter: str | None = None
+                            ) -> str:
+    """Return the chapter's title in priority order:
+
+      1. YAML frontmatter `title:` field (the explicit slot —
+         what `/autonovel:draft` step 11 and
+         `/autonovel:extract-chapter-titles` write).
+      2. The first non-empty line if it's a markdown `# Heading`
+         (legacy convention from before the `title:` field
+         existed).
+      3. *default* (typically "Chapter N").
+
+    Bug 2026-04-30: the prior implementation skipped step 1
+    entirely — only read the markdown heading. Chapters with
+    titles in YAML but no prose-level `# Heading` (the new
+    canonical shape) defaulted to "Chapter N" → pandoc's ePub
+    TOC showed `Chapter 1, Chapter 2, …` instead of the titles.
+    Mirrors `mechanical/latex._extract_chapter_title`'s priority
+    so PDF and ePub render the same titles.
+
+    `text_with_frontmatter` is the raw chapter file pre-strip
+    (build_epub_md passes it explicitly); when None, fall through
+    to step 2 immediately.
     """
+    # Step 1: YAML frontmatter `title:` field.
+    if text_with_frontmatter and text_with_frontmatter.startswith("---"):
+        for raw_line in text_with_frontmatter.splitlines()[1:]:
+            if raw_line.strip() == "---":
+                break
+            if raw_line.startswith("title:"):
+                value = raw_line.split(":", 1)[1].strip()
+                if value.startswith(('"', "'")) and value.endswith(('"', "'")):
+                    value = value[1:-1]
+                if value:
+                    return value
+    # Step 2: first non-empty line if `# Heading`.
     for line in body.splitlines():
         stripped = line.strip()
         if not stripped:

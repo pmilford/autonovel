@@ -283,6 +283,16 @@
 % kept out of the chapter sequence, but added to the TOC.
 \IfFileExists{front_matter.tex}{\input{front_matter.tex}}{}
 
+% === TABLE OF CONTENTS ===
+% User 2026-04-30 reported "the chapter names still don't show in
+% toc". Real root cause: there was no \tableofcontents call AT ALL
+% in the template — the document had no TOC. \chapter{<title>}
+% auto-emits an \addcontentsline entry, but without
+% \tableofcontents nothing renders it. Sits in \frontmatter zone
+% so it's unnumbered and uses Roman page numbering.
+\tableofcontents
+\clearpage
+
 \mainmatter
 
 % === CHAPTERS ===
