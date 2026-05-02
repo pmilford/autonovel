@@ -1482,6 +1482,137 @@ prose ≈ 8 / 10, with investigation-heavy plots).
     vs PDF-only — likely all three; `.fdx` for pros, `.fountain` for
     git-friendly source-control, PDF for portability.
 
+- **🚀 ULTRA-LONG-TERM: Script → full video pipeline.** Surfaced
+  2026-05-01. The natural endpoint of the screenplay output above:
+  drive a full video-generation pipeline from a parsed Fountain /
+  `.fdx` script. The script becomes the spec — every scene, every
+  beat, every cut, every duration.
+
+  Pipeline shape (each stage produces a versioned artefact under
+  `books/<name>/video/`):
+
+  1. **Script → shot list.** Parse the screenplay's scene headings
+     (`INT. APOTHECARY'S SHOP — DAY`), action lines, and dialogue
+     into a structured `shots.json`: per-shot framing (wide /
+     medium / close), camera move (static / pan / dolly / handheld),
+     duration estimate (rough proxy: 2-3s per action beat, 3-5s
+     per spoken line), and the in-shot subjects (characters from
+     `shared/characters.md`, props from canon, setting from world).
+     New `/autonovel:shot-list --book <name>` light-tier command
+     emits the JSON; reads voice.md Part 4 for character beat
+     density. Hand-edit-friendly — the LLM gets the rough cut
+     right ~80% of the time and the user fixes the rest.
+
+  2. **Shot list → storyboard frames.** Each shot becomes 1-3
+     storyboard frames (key + transition frames). Reuse the existing
+     `/autonovel:art-curate` pipeline with a shot-specific prompt
+     ("medium shot of Tommaso turning toward the door, apothecary
+     shop interior, late afternoon light, period-correct 1521") and
+     the cross-book illustration coherence reference library
+     (shared/art_references/) to keep characters consistent across
+     shots. Output: `books/<name>/video/storyboard/<scene>_<shot>_
+     <frame>.png`. New `/autonovel:storyboard --book <name>
+     [--scene <range>]` heavy-tier command (one LLM prompt per
+     frame).
+
+  3. **Storyboard → animated shots.** Each frame-pair becomes a
+     short video clip via image-to-video / video-generation provider
+     (Runway Gen-3, Sora, Kling, or local equivalents — same
+     `[--provider runway|sora|kling|local-svd]` precedence shape as
+     `image.provider`). Camera moves from the shot list become
+     provider-specific motion prompts. Output: `books/<name>/video/
+     clips/<scene>_<shot>.mp4`. New `[video]` extras pulling in
+     whatever provider SDKs land. Real-money expensive at first;
+     local SVD-style models will likely catch up within a few years.
+
+  4. **Audio: narration + dialogue + score + SFX.** Reuses the
+     existing audiobook pipeline for dialogue (per-character
+     ElevenLabs voices already in `voices.yaml`); adds an `[ambient]`
+     track per scene from a public-domain music library (drone /
+     period / silent options) and an SFX track from the `shared/sfx/`
+     library (entry above). New `/autonovel:video-audio --book
+     <name> [--scene <range>]` orchestrates per-shot audio mixing
+     against the shot list timing.
+
+  5. **Edit list → final cut.** A `cut_list.json` (LLM-generated
+     from the script's pacing — tight cuts in action sequences,
+     long takes in dialogue scenes; tunable per shot) drives ffmpeg
+     concatenation with cross-fades, hard cuts, dissolves per the
+     specified style. Output: `books/<name>/video/<book>_v<N>.mp4`.
+     Reuse the existing `mechanical/audio.py::format_chapter_marks_
+     mp4chaps` shape for chapter-level navigation.
+
+  6. **Style coherence at every layer.** This is the load-bearing
+     constraint. Same problem as cross-book illustration coherence
+     (entry above) but harder — characters must look the same not
+     just across books but across thousands of shots within one
+     scene, with motion. Likely needs a per-character LoRA-style
+     fine-tune (or whatever the provider's character-locking
+     primitive is by then), trained from the storyboard frame set
+     once it's been picked. Foundation file: `shared/character_
+     models/<name>.safetensors` (or the provider's equivalent
+     handle) referenced by every video-generation call.
+
+  Cross-cutting:
+    - **Director's-mode evaluator rubric** — distinct from the
+      screenplay rubric; scores shot variety, pacing variation,
+      coverage (does every important moment get its own frame?),
+      continuity (does the prop in shot 4 match shot 7?). Visual-
+      LLM judge over the storyboard frames + shot list.
+    - **Iteration loop is the real cost.** Re-rendering one shot
+      after a script edit must NOT re-render the whole movie. State
+      tracking via `.autonovel/video-state.json`: which scenes →
+      which shots → which clips are current vs stale, mtime against
+      the source script. Same shape as the existing chapter ↔
+      summary stale-detection.
+    - **Real-time preview.** A `autonovel video-preview` TUI /
+      web mode plays back the current rough cut (storyboard +
+      audio, no rendered video yet) so the director iterates on
+      pacing before paying for the expensive video generation.
+    - **Print-vs-screen typeset divergence.** The book's PDF
+      typeset, screenplay typeset, and video-final cut are three
+      different leaf outputs from the same foundation; the
+      typeset-templates story we already have generalises cleanly.
+    - **Industry-standard exchange.** EDL / XML / OTIO export so
+      the rough cut can be opened in DaVinci Resolve / Premiere /
+      Final Cut for human polish. We're not trying to replace the
+      editor — we're making the rough cut so cheap the editor
+      starts at version 4 instead of version 1.
+    - **Audio ducking, music sync, lip sync** — the boring
+      production-finish work that nobody does well right now. Real
+      time to get there: years, not months. ML-driven lip sync
+      (Wav2Lip-style; later real-time generative) is the closest-
+      to-shippable piece.
+
+  Cost: enormous — easily 200-300 hr for a v1 that produces a
+  watchable rough cut from a script (shot-list extraction is
+  ~25 hr; storyboard reuse of art-curate is ~15 hr; video-clip
+  provider integration is ~30-40 hr per provider; audio mixing
+  is ~25 hr; cut list + ffmpeg edit is ~30 hr; state tracking is
+  ~20 hr; preview UI is ~30 hr; character coherence at video
+  scale is the hard research problem and could swallow another
+  100+ hr alone). The video-generation models themselves will
+  determine whether v1 is "watchable" or "uncanny-valley
+  unwatchable" — likely 2-3 years of provider quality improvement
+  before the rough-cut output is usable for anything beyond a
+  storyboard reel. Best treated as the long-horizon endpoint of
+  the whole adjacent-formats arc, not a near-term plan.
+
+  Open questions:
+    - Should the "video" extras pull in heavy ML deps (diffusers,
+      torch, ffmpeg-python, OpenTimelineIO, …) by default or
+      stay strictly cloud-API for v1? Probably cloud-only initially;
+      add `[video-local]` once local generative video catches up.
+    - Where does live-action footage fit? An `--actors human` mode
+      where the storyboard becomes a *shot-list document for a
+      human director* (no video generation; the pipeline stops at
+      stage 1) is a useful intermediate product — gets indie
+      filmmakers a free pre-production package from their script.
+    - Same script, multiple cuts (theatrical / streaming / TV
+      pilot) — the cut_list.json is per-version; the underlying
+      storyboard + clip library is shared. Director's-cut shape
+      from the start.
+
 - **Children's books with cross-book illustration coherence.** Surfaced
   2026-05-01. Children's books are an entirely different shape than the
   current adult-novel target — short prose (under 1000 words for picture
