@@ -1386,6 +1386,102 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   not per-book). 8 Tier-1 regression locks pin the contract
   surface. Tier 1+2: 1115 → 1123.
 
+## Adjacent output formats
+
+- **Movie script + theater play output formats — both from a finished
+  manuscript and from-scratch.** Surfaced 2026-05-01. autonovel today
+  produces novels (PDF + ePub + audiobook). A natural adjacent direction
+  is screenplay / stage-play output — same foundation (world / cast /
+  outline / canon / voice fingerprints) drives a different leaf-shape.
+  Two modes:
+
+  1. **Adapt a finished autonovel book** — `/autonovel:adapt --book
+     <name> --to screenplay|stage-play [--length feature|short|tv-pilot|
+     one-act|three-act]`. Reads `books/<name>/chapters/`, the outline,
+     and the per-character voice fingerprints (Part 4 of voice.md is
+     load-bearing here — dialogue must already sound like the character),
+     and emits a script under `books/<name>/scripts/<format>/`. Most of
+     the heavy lifting is already done: the prose has scenes, beats,
+     dialogue, POV. Adaptation is a structural rewrite (collapse
+     interiority into action; promote subtext to externalised choices;
+     enforce the format's act/scene structure) rather than fresh
+     drafting. Reads `pacing` and `irreversible_change` dimensions
+     from `eval_logs/` to identify the load-bearing scenes that must
+     survive the cut.
+
+  2. **Author from scratch in script mode** — `/autonovel:new-book <name>
+     --mode screenplay|stage-play` flips the book's `mode` field
+     analogously to `edit-imported` (already shipped). The drafter writes
+     in script format from the start, the evaluator scores against
+     screenplay/stage-play rubrics rather than novel rubrics
+     (visual-storytelling, dialogue-as-action, scene-as-unit-of-change),
+     and typeset emits standard industry format (Final Draft / Fountain
+     for screenplays; Samuel French style for stage plays).
+
+  Cross-cutting concerns:
+
+  - **Script-format typesetting** is non-trivial and bigger than the
+    novel typeset path. Industry shapes are strict:
+      - **Screenplay**: 12-pt Courier, 1-inch margins, scene headings
+        in CAPS, character names centered above dialogue, action lines
+        flush left, parentheticals in parens. Page count maps roughly
+        1 page = 1 minute of screen time. Standard exporter is the
+        Fountain markup language → PDF via `screenplain` or similar
+        Python lib; `.fdx` (Final Draft XML) is the format pros expect.
+      - **Stage play**: similar but distinct conventions (character
+        names in caps inline at dialogue start; stage directions in
+        italics; act/scene breaks more pronounced). Fountain-derived
+        formats exist; pandoc has experimental support.
+    Suggests a new `[scripts]` extras with `screenplain` + `fountain-
+    parser` + maybe `prosemark`; `autonovel doctor` learns to pre-flight
+    these like it does tectonic / pandoc / fonts.
+
+  - **Evaluator rubric per medium.** A novel's "interiority" dimension
+    is a script's bug. New per-medium evaluator rubrics under
+    `evaluate.md` — picked by the book's `mode` field. Scene-level
+    beat coverage (already shipped via `scenes.py`) carries over
+    cleanly; show-don't-tell is a non-negotiable in script form
+    (everything is shown — there's no narrator).
+
+  - **Voice fingerprints become casting briefs.** voice.md Part 4
+    (per-character) is exactly what an actor / director reads to
+    understand their character — the fingerprint shape is already
+    right. Add a `--for-casting` flag to `/autonovel:voice-discovery`
+    that reformats Part 4 into a casting-brief-shaped document.
+
+  - **Audiobook → table read pipeline.** The audiobook script parser
+    (`commands/audiobook-script.md`) already extracts speaker-attributed
+    dialogue and emotion tags from prose. That's 70% of what a
+    table-read script needs. Worth wiring `--for-table-read` as an
+    alternative output mode to `audiobook-script`.
+
+  - **Front-matter shapes differ.** Screenplays open with a title page,
+    no preface. Stage plays open with a cast list, setting note, and
+    sometimes a director's note. The existing front_matter.tex /
+    back_matter.tex builders are PDF-novel-shaped and would need
+    parallel script-mode templates.
+
+  Cost: substantial. Plausibly a multi-PR effort spanning a new typeset
+  path (~12 hr), new evaluator rubrics (~6 hr), the adapter command
+  (~8 hr), the new-mode drafter changes (~10 hr), and the script-format
+  exporters with format-conformance tests (~10 hr). Total: ~46 hr of
+  focused work, plus review iterations against real screenwriting /
+  playwriting conventions. Worth scoping as its own milestone rather
+  than a near-term item.
+
+  Open questions:
+
+  - Should "from-scratch script mode" reuse the novel pipeline's
+    foundation (world / characters / outline / canon) or fork into a
+    script-specific scaffold? Probably reuse — the foundation is
+    medium-agnostic, only the leaf prose form changes.
+  - Does the audiobook flow get a "radio play" subset (script mode +
+    audiobook synthesis = an actual radio drama with multi-voice
+    casting)? Cheap addition once script mode exists.
+  - Industry-standard `.fdx` (Final Draft XML) vs Fountain (.fountain)
+    vs PDF-only — likely all three; `.fdx` for pros, `.fountain` for
+    git-friendly source-control, PDF for portability.
+
 ## Free / no-API-key cover and ornament generation
 
 - **Local Stable Diffusion provider — `--provider local-sd`.** The
