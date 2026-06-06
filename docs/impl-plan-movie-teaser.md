@@ -8,6 +8,49 @@
 
 ---
 
+## Status & resume pointer (updated 2026-06-05)
+
+**Shipped** (all additive, regression-gated; existing pipeline intact):
+- **Phase 0** — `src/autonovel/teaser/` package; additive `teaser`/`video`
+  dicts on `ProjectConfig`; `[video]`/`[scripts]` extras stubs; docs split
+  (`docs/teaser-craft.md`); install-immutability guard tests.
+- **`/autonovel:treatment`** — film treatment + 2-page brief (X-Prize).
+  Validated end-to-end on the Fugger book (`~/books/medieval-king-maker`,
+  repo `pmilford/medieval-king-maker`, tag `first-movie-brief`).
+- **Phase 1 (atomic commands)** — `src/autonovel/teaser/{shots,beats,
+  render_prompt,providers,critique}.py`; mechanical CLI `teaser-plan` /
+  `teaser-validate` / `teaser-critique` / `teaser-render-prompt`;
+  commands `/autonovel:teaser-beats` + `/autonovel:shot-prompts` (free,
+  with built-in pre-generation critique).
+
+**Baseline now:** Tier 1+2 = **1546 passed, 1 skipped, 0 failed**
+(`pytest tests/deterministic tests/contracts`). HEAD `16eb224`. Rollback
+tag `pre-movies`. `autonovel` is editable-installed from this repo;
+re-run `autonovel install` after adding commands.
+
+**NEXT (in order):**
+1. **Phase 1 final** — `/autonovel:teaser` orchestrator (chains
+   teaser-beats → shot-prompts, via `task` subagents) + a standalone
+   `/autonovel:teaser-critique` command wrapping the mechanical critique
+   + the LLM critic pass.
+2. **Phase 2** — per-provider render *dialects* in `render_prompt.py`
+   (Veo prose / Sora +Dialogue block / Runway terse / Luma enum) keyed
+   off `providers.py`; reference-image **consistency anchors** per shot +
+   a `teaser/refs/` plan; integrate `shared/art_references/`.
+3. **Phase 3.5** — thin **Pollinations** render adapter
+   (`teaser/render.py` + `resolve-video-provider` twin of the image
+   resolver + `/autonovel:teaser-render`): stateless submit→poll→download
+   per shot, `--dry-run`, free default backend; **clip critique**
+   (vision-LLM, KEEP/REGENERATE/UPGRADE-TO-PAID). Bright lines: clips on
+   disk only, no state file, no auto-assembly (PRD §23.2).
+4. **Phase 3** — ffmpeg `cut_list.json` assembly + viewer-panel cut
+   critique.
+
+Every step: hold the ≥1546 gate, additive-only, full doc-sync, append a
+STATE.md decision entry + bump the green count.
+
+---
+
 ## 0. The safety contract (read first — it governs every phase)
 
 The user's hard constraint: *"be careful that we do not break the
