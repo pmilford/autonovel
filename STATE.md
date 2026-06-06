@@ -1413,7 +1413,21 @@
   cut; build_cut_list defaults only touch open/close/title). Regression
   gate: **Tier 1+2 1676 → 1687 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (Veo durationSeconds bugfix): `backends._veo` sent
+  `parameters.durationSeconds` as a **string**, which Veo's API rejects
+  with HTTP 400 (confirmed live: the same key + prompt succeeds when it's
+  a number). Changed to an `int`. Regression guard added
+  (`test_teaser_phase53.py::test_veo_duration_is_a_number_not_string`).
+  (Field note from live testing: grok's video API returned 403 on the
+  user's XAI key — that tier likely needs a separate Grok-Imagine
+  subscription; environment/billing, not a code bug.) Tier 1+2 1687 →
+  1688.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1688
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +1 since the 1687 mark: Veo durationSeconds-as-int regression guard.
+  Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1687
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +11 since the 1676 mark: movie-teaser Phase 5.7 (scene transitions:

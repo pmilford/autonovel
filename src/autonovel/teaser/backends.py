@@ -485,7 +485,9 @@ def _veo(req: Any, *, key: str, net: Net) -> bytes:
         "instances": [instance],
         "parameters": {
             "aspectRatio": _aspect(req),
-            "durationSeconds": str(_clip_seconds(req, cap=8, default=8)),
+            # Veo's API requires a NUMBER here — a string yields HTTP 400
+            # (verified live 2026-06-06). Keep it an int.
+            "durationSeconds": _clip_seconds(req, cap=8, default=8),
         },
     }
     created = net.post_json(f"{base}/models/{model}:predictLongRunning",

@@ -171,6 +171,22 @@ def test_video_without_init_is_pure_t2v(tmp_path) -> None:
     assert "image" not in body  # no init frame → text-to-video, unchanged
 
 
+def test_veo_duration_is_a_number_not_string() -> None:
+    """Veo's API rejects a string durationSeconds with HTTP 400 — it must
+    be a number (regression guard for the live-confirmed bug)."""
+    client = CaptureClient(
+        post={"predictLongRunning": Resp(json={"name": "operations/op1"})},
+        get={"operations/op1": Resp(json={"done": True, "response": {"generateVideoResponse": {
+            "generatedSamples": [{"video": {"uri": "https://g/v.mp4"}}]}}}),
+             "g/v.mp4": Resp(content=b"VEO")},
+    )
+    backends.render_one(_req(provider="veo", duration_s=8.0),
+                        provider="veo", key="k", net=_net(client))
+    _url, body = client.posts[0]
+    dur = body["parameters"]["durationSeconds"]
+    assert isinstance(dur, int) and dur == 8, f"durationSeconds must be int, got {dur!r}"
+
+
 def test_build_request_records_init_note(tmp_path) -> None:
     req = render.build_request(_shot("01"), provider="grok", kind="video",
                                out_dir=tmp_path, init_image="/k/shot_01.png")
