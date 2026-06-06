@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-assemble
 description: Stitch the rendered teaser clips into one video via ffmpeg, then run a viewer-panel cut critique (does the hook land, does it accelerate, does the button withhold?). Builds an editable cut_list.json first.
-argument-hint: "--book <short-name> [--kind image|video] [--audio <path>] [--fps <n>] [--take <n>] [--force]"
+argument-hint: "--book <short-name> [--kind image|video] [--audio <path>] [--audio-mode auto|duck|mix|clip-only|bed-only|none] [--no-clip-audio] [--fps <n>] [--take <n>] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -35,6 +35,16 @@ and an optional audio bed. **No burned-in text**
 `docs/teaser-craft.md` §4); the cut-list records each `text_card` as a
 note for you. Crossfades/transitions are a future pass.
 
+**Audio (Phase 5.4).** Video clips from grok/veo/kie carry **native
+dialogue + music**, so assembly **keeps the clip audio** — it is no
+longer dropped. With `--audio <bed>` the music bed **ducks under the
+dialogue** by default (sidechain compression) instead of replacing it.
+`--audio-mode` overrides: `duck` (default when clips have audio + a bed),
+`mix` (equal levels), `clip-only` (native audio, no bed), `bed-only`
+(ignore clip audio), `none` (silent), `auto`. Image slideshows have no
+clip audio, so a bed is simply the track. If your video clips are silent
+(e.g. magichour), pass `--no-clip-audio` so a bed becomes the track.
+
 Like `/autonovel:audiobook-assemble`, the heavy lifting (ffmpeg) runs in
 this command via `bash`; the Python helper only *plans* the command.
 ffmpeg is required — if it is missing, the command stops with an install
@@ -51,9 +61,11 @@ is reused when present (so your hand-edits survive); regenerate with
 
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
    `--kind image|video` (default `image` — matches the teaser-render
-   default), `--audio <path>` (an audio-bed file to mix in), `--fps <n>`
-   (default 30), `--take <n>` (which take per shot, default 1), `--force`.
-   Confirm the book exists in `project.yaml`.
+   default), `--audio <path>` (a music-bed file), `--audio-mode
+   auto|duck|mix|clip-only|bed-only|none` (default `auto` — duck the bed
+   under native dialogue), `--no-clip-audio` (the video clips are silent,
+   e.g. magichour), `--fps <n>` (default 30), `--take <n>` (which take per
+   shot, default 1), `--force`. Confirm the book exists in `project.yaml`.
 
 2. **ffmpeg check.** `bash`: `ffmpeg -version` (or `command -v ffmpeg`).
    If absent, stop with: "ffmpeg is required for assembly — `apt install
@@ -61,11 +73,14 @@ is reused when present (so your hand-edits survive); regenerate with
 
 3. **Build / reuse the cut-list.** If `books/{book}/teaser/cut_list.json`
    exists and `--force` was not passed, reuse it. Otherwise `bash`:
-   `autonovel mechanical teaser-cut-list books/{book}/teaser/teaser.json --kind <kind> [--audio <path>] --fps <n> --take <n> --format json`
+   `autonovel mechanical teaser-cut-list books/{book}/teaser/teaser.json --kind <kind> [--audio <path>] [--audio-mode <mode>] [--no-clip-audio] --fps <n> --take <n> --format json`
    — this writes `books/{book}/teaser/cut_list.json` (ordered clips +
-   per-shot `duration_s` + any `text_card` notes) and reports any shots
-   with no clip on disk. If clips are missing, tell the user to render
-   them (`/autonovel:teaser-render`) and proceed with what exists.
+   per-shot `duration_s` + any `text_card` notes + the audio policy) and
+   reports any shots with no clip on disk. For `--kind video` from
+   grok/veo/kie the clips carry native audio, so the bed ducks under it by
+   default; pass `--no-clip-audio` only if the video backend was silent
+   (magichour). If clips are missing, tell the user to render them
+   (`/autonovel:teaser-render`) and proceed with what exists.
 
 4. **Plan the ffmpeg command.** `bash`:
    `autonovel mechanical teaser-ffmpeg-cmd books/{book}/teaser/cut_list.json --format json`

@@ -1351,7 +1351,31 @@
   (rows), STATE, impl-plan. No existing-module behaviour changed.
   Regression gate: **Tier 1+2 1647 → 1655 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 5.4: audio-bed mixing in assembly):
+  additive. Fixed two assembly audio bugs: clip audio was always dropped
+  (`concat a=0`) and a bed *replaced* rather than ducked. `CutList` gained
+  `audio_mode` (auto|none|bed-only|clip-only|mix|duck) + `clip_audio`
+  (bool|None → infer from kind) + `has_clip_audio()`/`resolve_audio_mode()`.
+  `ffmpeg_command` now: keeps native clip dialogue/music (`concat a=1` →
+  `[aclip]` for video w/ audio); **duck** mode ducks the bed under the
+  dialogue via `sidechaincompress` (asplit the dialogue → key the
+  compressor → amix); mix/clip-only/bed-only/none as named. `auto`:
+  image→bed-only/none, video+bed→duck, video no-bed→clip-only, silent
+  video→bed-only/none. Bed mapped as a raw input stream (`2:a`, no
+  brackets — caught by the Phase-3 test). `build_cut_list` +
+  `teaser-cut-list` gained `--audio-mode`/`--clip-audio`/`--no-clip-audio`;
+  teaser-assemble command body documents duck-by-default. New tests:
+  `test_teaser_phase54.py` (10). Doc-sync: teaser-assemble.md,
+  commands.md (2 rows), STATE, impl-plan. Also: user's `GEMINI_API_KEY`
+  added to gitignored `.env` (resolves for gemini/veo). No existing-module
+  behaviour changed (image slideshow + bed path preserved). Regression
+  gate: **Tier 1+2 1655 → 1665 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1665
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +10 since the 1655 mark: movie-teaser Phase 5.4 (audio-bed ducking +
+  native-clip-audio preservation → 10 phase-5.4 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1655
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +8 since the 1647 mark: movie-teaser Phase 5.3 (image-to-video start

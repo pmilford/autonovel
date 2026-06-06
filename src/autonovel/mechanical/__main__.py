@@ -1281,6 +1281,8 @@ def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
         teaser, clips_dir, kind=args.kind,
         width=args.width, height=args.height, fps=args.fps,
         audio_bed=getattr(args, "audio", None), take=args.take,
+        audio_mode=getattr(args, "audio_mode", "auto"),
+        clip_audio=getattr(args, "clip_audio", None),
     )
     out = Path(args.out) if getattr(args, "out", None) else base / "cut_list.json"
     if not cut.entries:
@@ -1326,6 +1328,11 @@ def _cmd_teaser_ffmpeg_cmd(args: argparse.Namespace) -> int:
     else:
         print(cmd)
     return 0
+
+
+def _teaser_audio_modes() -> tuple[str, ...]:
+    from ..teaser.assemble import AUDIO_MODES
+    return AUDIO_MODES
 
 
 def _slugify_title(title: str) -> str:
@@ -1753,6 +1760,16 @@ def main(argv: list[str] | None = None) -> int:
     tcl.add_argument("--kind", choices=["image", "video"], default="image",
                      help="image = still-image slideshow (default); video = clips.")
     tcl.add_argument("--audio", default=None, help="Optional audio-bed file to mix in.")
+    tcl.add_argument("--audio-mode", dest="audio_mode",
+                     choices=list(_teaser_audio_modes()), default="auto",
+                     help="How clip audio + the bed combine (default auto): "
+                          "duck = music ducks under dialogue; mix = equal; "
+                          "clip-only = keep native dialogue, no bed; bed-only; none.")
+    tcl.add_argument("--clip-audio", dest="clip_audio", action="store_true",
+                     default=None, help="Declare the video clips DO carry native "
+                          "audio (grok/veo/kie). Default: inferred from --kind.")
+    tcl.add_argument("--no-clip-audio", dest="clip_audio", action="store_false",
+                     help="Declare the clips are SILENT (e.g. magichour/stub).")
     tcl.add_argument("--fps", type=int, default=30)
     tcl.add_argument("--width", type=int, default=854)
     tcl.add_argument("--height", type=int, default=480)

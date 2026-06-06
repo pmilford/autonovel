@@ -79,8 +79,14 @@
   backends `grok`/`veo`/`kie` attach it (data-URI / bytesBase64Encoded);
   `teaser-render --from-keyframes`. Two-stage path: `--kind image --refs`
   (locked keyframes) → `--kind video --from-keyframes` (motion). 8 tests.
+- **Phase 5.4** — **audio-bed mixing in assembly**: `CutList.audio_mode`
+  (auto|none|bed-only|clip-only|mix|duck) + `clip_audio`;
+  `ffmpeg_command` keeps native clip dialogue/music (`concat a=1`) and a
+  `--audio` music bed **ducks under the dialogue** (sidechaincompress) by
+  default instead of replacing it. `teaser-cut-list`/`teaser-assemble`
+  gained `--audio-mode`/`--clip-audio`/`--no-clip-audio`. 10 tests.
 
-**Baseline now:** Tier 1+2 = **1655 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1665 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

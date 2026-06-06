@@ -56,6 +56,10 @@ class CutEntry:
         )
 
 
+# How clip audio (native dialogue/music) and an optional music bed combine.
+AUDIO_MODES = ("auto", "none", "bed-only", "clip-only", "mix", "duck")
+
+
 @dataclass
 class CutList:
     title: str
@@ -65,6 +69,17 @@ class CutList:
     fps: int = 30
     audio_bed: str | None = None
     entries: list[CutEntry] = field(default_factory=list)
+    # Phase 5.4 — how clip audio + the bed combine:
+    #   auto      image→bed-only; video w/ clip audio + bed→duck; video w/
+    #             clip audio, no bed→clip-only; video no audio→bed-only/none.
+    #   none      drop all audio.   bed-only  ignore clip audio, use the bed.
+    #   clip-only keep native clip dialogue/music, no bed.
+    #   mix       clip audio + bed at equal level.
+    #   duck      bed ducks UNDER the clip dialogue (sidechain compress).
+    audio_mode: str = "auto"
+    # Whether the video clips carry a native audio track (grok/veo/kie do;
+    # magichour/stub/image stills do not). None ⇒ infer from kind.
+    clip_audio: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -74,10 +89,18 @@ class CutList:
         }
         if self.audio_bed:
             d["audio_bed"] = self.audio_bed
+        if self.audio_mode and self.audio_mode != "auto":
+            d["audio_mode"] = self.audio_mode
+        if self.clip_audio is not None:
+            d["clip_audio"] = self.clip_audio
         return d
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "CutList":
+        mode = str(d.get("audio_mode", "auto"))
+        if mode not in AUDIO_MODES:
+            mode = "auto"
+        clip_audio = d.get("clip_audio")
         return cls(
             title=str(d.get("title", "")),
             kind=d.get("kind", "image"),
@@ -85,11 +108,30 @@ class CutList:
             height=int(d.get("height", 480)),
             fps=int(d.get("fps", 30)),
             audio_bed=d.get("audio_bed"),
+            audio_mode=mode,
+            clip_audio=(bool(clip_audio) if clip_audio is not None else None),
             entries=[CutEntry.from_dict(e) for e in (d.get("entries") or [])],
         )
 
     def total_duration_s(self) -> float:
         return sum(e.duration_s for e in self.entries)
+
+    def has_clip_audio(self) -> bool:
+        """Whether the clips carry native audio (explicit, else inferred
+        from kind: video clips do, image stills don't)."""
+        if self.clip_audio is not None:
+            return self.clip_audio
+        return self.kind == "video"
+
+    def resolve_audio_mode(self) -> str:
+        """Resolve ``auto`` to a concrete mode from kind / clip-audio / bed."""
+        mode = (self.audio_mode or "auto").lower()
+        if mode != "auto":
+            return mode
+        has_bed = bool(self.audio_bed)
+        if not self.has_clip_audio():
+            return "bed-only" if has_bed else "none"
+        return "duck" if has_bed else "clip-only"
 
 
 def load(path: Path) -> CutList:
@@ -116,6 +158,8 @@ def build_cut_list(
     fps: int = 30,
     audio_bed: str | None = None,
     take: int = 1,
+    audio_mode: str = "auto",
+    clip_audio: bool | None = None,
 ) -> tuple[CutList, list[str]]:
     """Build a default cut-list from the teaser + the clips on disk.
 
@@ -140,6 +184,7 @@ def build_cut_list(
     cut = CutList(
         title=teaser.title, kind=kind, width=width, height=height, fps=fps,
         audio_bed=audio_bed, entries=entries,
+        audio_mode=audio_mode, clip_audio=clip_audio,
     )
     return cut, missing
 
@@ -156,32 +201,86 @@ def ffmpeg_command(cut_list: CutList, out_path: Path | str) -> list[str]:
 
     Pure function (no execution) so it is unit-testable. Image kind →
     a slideshow (`-loop 1 -t <dur>` per still); video kind → trim each
-    clip to its `duration_s` then concat. Optional audio bed is mixed and
-    the output is trimmed to the shorter of video/audio (`-shortest`).
+    clip to its `duration_s` then concat.
+
+    Audio (Phase 5.4) follows ``cut_list.resolve_audio_mode()``:
+      - **none** — silent output.
+      - **bed-only** — the music bed is the only track (clip audio dropped).
+      - **clip-only** — keep the clips' native dialogue/music, no bed.
+      - **mix** — clip audio + bed at equal level.
+      - **duck** — the bed **ducks under the clip dialogue** (sidechain
+        compress keyed on the concatenated clip audio), then is mixed in —
+        so a music bed never buries the spoken lines.
+    Clip audio is only available for ``kind == video`` with clip-bearing
+    clips; the concat takes ``a=1`` only then.
     """
     if not cut_list.entries:
         raise ValueError("cut_list has no entries — nothing to assemble")
     w, h, fps = cut_list.width, cut_list.height, cut_list.fps
+    n = len(cut_list.entries)
+    has_bed = bool(cut_list.audio_bed)
+    mode = cut_list.resolve_audio_mode()
+    # Clip audio is only real for concatenated video clips that carry it.
+    use_clip_audio = (cut_list.kind == "video"
+                      and cut_list.has_clip_audio()
+                      and mode in ("clip-only", "mix", "duck"))
+
     argv: list[str] = ["ffmpeg", "-y"]
-    # Inputs.
     for e in cut_list.entries:
         if cut_list.kind == "image":
             argv += ["-loop", "1", "-t", f"{e.duration_s:g}", "-i", e.clip]
         else:
             argv += ["-i", e.clip]
-    if cut_list.audio_bed:
+    if has_bed:
         argv += ["-i", cut_list.audio_bed]
-    # Filtergraph: normalise each input, then concat.
-    n = len(cut_list.entries)
+    bed_idx = n if has_bed else None
+
+    # Video chains + concat (carrying clip audio when we need it).
     chains: list[str] = []
     for i, e in enumerate(cut_list.entries):
         pre = "" if cut_list.kind == "image" else f"trim=0:{e.duration_s:g},setpts=PTS-STARTPTS,"
         chains.append(f"[{i}:v]{pre}{_scale_pad(w, h)},fps={fps}[v{i}]")
-    concat_inputs = "".join(f"[v{i}]" for i in range(n))
-    chains.append(f"{concat_inputs}concat=n={n}:v=1:a=0[v]")
+    if use_clip_audio:
+        concat_inputs = "".join(f"[v{i}][{i}:a]" for i in range(n))
+        chains.append(f"{concat_inputs}concat=n={n}:v=1:a=1[v][aclip]")
+    else:
+        concat_inputs = "".join(f"[v{i}]" for i in range(n))
+        chains.append(f"{concat_inputs}concat=n={n}:v=1:a=0[v]")
+
+    # Audio graph → an output label (or None for silent).
+    # In `-map`, a filtergraph output is referenced with brackets ([a]);
+    # a raw input stream is referenced WITHOUT them (2:a). The bed, mapped
+    # straight through, is the latter; filtergraph results are the former.
+    audio_label: str | None = None
+    if mode == "clip-only" and use_clip_audio:
+        audio_label = "[aclip]"
+    elif mode == "bed-only" and has_bed:
+        audio_label = f"{bed_idx}:a"
+    elif mode == "mix" and use_clip_audio and has_bed:
+        chains.append(f"[aclip][{bed_idx}:a]amix=inputs=2:duration=first:"
+                      f"dropout_transition=0[a]")
+        audio_label = "[a]"
+    elif mode == "duck" and use_clip_audio and has_bed:
+        # Split the dialogue: one copy keys the compressor, one is mixed.
+        chains.append("[aclip]asplit=2[ak][am]")
+        chains.append(f"[{bed_idx}:a][ak]sidechaincompress="
+                      f"threshold=0.03:ratio=8:attack=20:release=300[bedduck]")
+        chains.append("[am][bedduck]amix=inputs=2:duration=first:"
+                      "dropout_transition=0[a]")
+        audio_label = "[a]"
+    elif has_bed:
+        # Fallback (e.g. mode wanted clip audio but none available): bed only.
+        audio_label = f"{bed_idx}:a"
+    elif use_clip_audio:
+        audio_label = "[aclip]"
+
     argv += ["-filter_complex", ";".join(chains), "-map", "[v]"]
-    if cut_list.audio_bed:
-        argv += ["-map", f"{n}:a", "-c:a", "aac", "-shortest"]
+    if audio_label is not None:
+        argv += ["-map", audio_label, "-c:a", "aac"]
+        # Trim to the video when a bed (which may run long) is the sole or
+        # mixed source; -shortest is safe since [v] is finite.
+        if has_bed and mode in ("bed-only",) :
+            argv += ["-shortest"]
     argv += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", str(fps), str(out_path)]
     return argv
 
