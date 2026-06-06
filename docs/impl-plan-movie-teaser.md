@@ -55,8 +55,18 @@
   early-402. `resolve-video-provider` default pollinations→grok.
   Model-pin default flipped to OFF (`--pin-model` opt-in). New
   `docs/teaser-render-providers.md`. See STATE 2026-06-06.
+- **Phase 5.1** — **character-reference manifest + approval gate**
+  (`teaser/refmanifest.py`): per-subject declared source (wikimedia PD
+  art / local / generate), locked appearance+constraints, status
+  pending→approved→locked, and a `build_status` planner with one
+  `next_action` each + an approval gate (`unapproved_subjects`). CLI
+  `teaser-refs` (`--init` scaffolds `refs.yaml`) + command
+  `/autonovel:teaser-refs` (declare via wikimedia-*/art-import/generate
+  → approve/lock); advisory gate wired into `teaser-render`. Reuses
+  `refs.py`/`wikimedia-*`/`art-import`. **NEXT (5.2):** feed locked refs
+  into the backends as image-to-video input (grok/veo/kie); morph step.
 
-**Baseline now:** Tier 1+2 = **1621 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1635 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.
@@ -76,7 +86,7 @@ native-audio vs `--audio` bed mixing in assemble; `--kind video`
 validated on more providers; a smoke (Tier-3) test that renders one real
 `stub`/`grok` clip.
 
-Every step: hold the ≥1621 gate, additive-only, full doc-sync, append a
+Every step: hold the ≥1635 gate, additive-only, full doc-sync, append a
 STATE.md decision entry + bump the green count.
 
 ---
