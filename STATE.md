@@ -1393,7 +1393,32 @@
   behaviour changed (audio only appended for video shots that declare it).
   Regression gate: **Tier 1+2 1665 → 1676 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 5.7: scene transitions): additive.
+  `CutEntry` gained `transition` (cut|fade|dissolve) + `fade_out` +
+  `transition_dur`; `ffmpeg_command` emits **concat-compatible** per-clip
+  fades (`fade=t=in/out`, clamped to half the clip) — `dissolve` degrades
+  to a fade-in for now (true cross-dissolve = xfade overlap, noted 5.7b).
+  `build_cut_list(transitions=True)` auto-defaults: open→fade-in,
+  close→fade-out, title-role→fade; everything else a hard cut. New
+  `suggest_transitions(teaser)` + `teaser-transitions` CLI flag candidate
+  points from **structured signals only** (|Δstory_year|≥gap, setting/
+  location change, fast→slow duration shift, beat→title/button, open/close)
+  — advisory candidate generator; the artistic placement is the LLM's call
+  in the teaser-assemble command body (feedback_avoid_brittle_python).
+  `teaser-cut-list`/`teaser-assemble` gained `--no-transitions`. New tests:
+  `test_teaser_phase57.py` (11). Doc-sync: teaser-assemble.md (transitions
+  step + defaults), commands.md (3 rows incl. new teaser-transitions),
+  FUTURE-TODOS (TODO closed, 5.7b cross-dissolve noted), STATE, impl-plan.
+  No existing-module behaviour changed (a default CutEntry is still a hard
+  cut; build_cut_list defaults only touch open/close/title). Regression
+  gate: **Tier 1+2 1676 → 1687 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1687
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +11 since the 1676 mark: movie-teaser Phase 5.7 (scene transitions:
+  fade emission + auto-defaults + suggester → 11 phase-5.7 tests).
+  Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1676
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +11 since the 1665 mark: movie-teaser Phase 5.5+5.6 (audio-to-prompt

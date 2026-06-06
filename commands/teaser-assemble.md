@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-assemble
 description: Stitch the rendered teaser clips into one video via ffmpeg, then run a viewer-panel cut critique (does the hook land, does it accelerate, does the button withhold?). Builds an editable cut_list.json first.
-argument-hint: "--book <short-name> [--kind image|video] [--audio <path>] [--audio-mode auto|duck|mix|clip-only|bed-only|none] [--no-clip-audio] [--fps <n>] [--take <n>] [--force]"
+argument-hint: "--book <short-name> [--kind image|video] [--audio <path>] [--audio-mode auto|duck|mix|clip-only|bed-only|none] [--no-clip-audio] [--no-transitions] [--fps <n>] [--take <n>] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -27,13 +27,24 @@ the first few seconds, does the escalation actually accelerate, does the
 title land ~⅔ in, does the button withhold the ending, does the whole cut
 hold together?
 
-v1 is deliberately thin: **hard cuts** (concat), a still-image slideshow
-(e.g. the free offline `stub` keyframes or Pollinations `flux` images —
-each shot held for its `duration_s`) or real video clips (grok/veo/…),
-and an optional audio bed. **No burned-in text**
-— title/subtitle cards belong in an editor (models garble text;
-`docs/teaser-craft.md` §4); the cut-list records each `text_card` as a
-note for you. Crossfades/transitions are a future pass.
+v1 is deliberately thin: mostly **hard cuts** (concat) with **fades**
+where they earn it, a still-image slideshow (e.g. the free offline `stub`
+keyframes or Pollinations `flux` images — each shot held for its
+`duration_s`) or real video clips (grok/veo/…), and an optional audio bed.
+**No burned-in text** — title/subtitle cards belong in an editor (models
+garble text; `docs/teaser-craft.md` §4); the cut-list records each
+`text_card` as a note for you.
+
+**Transitions (Phase 5.7).** The build applies safe defaults: the teaser
+**fades in** from black on the first shot, **fades out** on the last, and
+**fades** title cards; everything else is a hard cut (`--no-transitions`
+disables this). For *where else* a transition earns its place, run
+`teaser-transitions` — it flags candidates from structured signals (big
+`story_year` jumps, `setting`/location changes, fast→slow `duration_s`
+shifts, beat changes) — then **you** (the LLM) make the artistic call and
+set `transition: fade|dissolve` / `fade_out: true` on the relevant
+`cut_list.json` entries. (`dissolve` renders as a fade for now; true
+cross-dissolve needs the xfade overlap pass — FUTURE-TODOS.)
 
 **Audio (Phase 5.4).** Video clips from grok/veo/kie carry **native
 dialogue + music**, so assembly **keeps the clip audio** — it is no
@@ -64,8 +75,10 @@ is reused when present (so your hand-edits survive); regenerate with
    default), `--audio <path>` (a music-bed file), `--audio-mode
    auto|duck|mix|clip-only|bed-only|none` (default `auto` — duck the bed
    under native dialogue), `--no-clip-audio` (the video clips are silent,
-   e.g. magichour), `--fps <n>` (default 30), `--take <n>` (which take per
-   shot, default 1), `--force`. Confirm the book exists in `project.yaml`.
+   e.g. magichour), `--no-transitions` (keep every cut hard — disables the
+   open/close/title fade defaults), `--fps <n>` (default 30), `--take <n>`
+   (which take per shot, default 1), `--force`. Confirm the book exists in
+   `project.yaml`.
 
 2. **ffmpeg check.** `bash`: `ffmpeg -version` (or `command -v ffmpeg`).
    If absent, stop with: "ffmpeg is required for assembly — `apt install
@@ -80,7 +93,18 @@ is reused when present (so your hand-edits survive); regenerate with
    grok/veo/kie the clips carry native audio, so the bed ducks under it by
    default; pass `--no-clip-audio` only if the video backend was silent
    (magichour). If clips are missing, tell the user to render them
-   (`/autonovel:teaser-render`) and proceed with what exists.
+   (`/autonovel:teaser-render`) and proceed with what exists. The build
+   applies the safe transition defaults (open fade-in / close fade-out /
+   title fade); `--no-transitions` keeps everything a hard cut.
+
+3b. **Consider scene transitions.** `bash`:
+   `autonovel mechanical teaser-transitions books/{book}/teaser/teaser.json --format json`
+   Read the advisory `suggestions` (time jumps, location changes, pace
+   shifts, open/close). Decide — as the editor — which earn a transition,
+   then `file_write` the chosen `transition: fade|dissolve` / `fade_out:
+   true` onto the matching `cut_list.json` entries (hand-edits survive
+   reuse). Keep it sparing: a trailer is mostly hard cuts; fades mark real
+   shifts. Skip silently if there are no meaningful candidates.
 
 4. **Plan the ffmpeg command.** `bash`:
    `autonovel mechanical teaser-ffmpeg-cmd books/{book}/teaser/cut_list.json --format json`

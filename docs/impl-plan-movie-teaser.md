@@ -93,8 +93,15 @@
   gained `story_year`; `teaser-render --voices` injects each approved
   speaker's age-resolved descriptor (`_load_teaser_voices_map`,
   approval-gated). Voices live in refs.yaml. 11 tests.
+- **Phase 5.7** — **scene transitions**: `CutEntry` transition/fade_out/
+  transition_dur; `ffmpeg_command` emits concat-compatible fades;
+  `build_cut_list` auto open-fade-in/close-fade-out/title-fade;
+  `suggest_transitions` + `teaser-transitions` flag candidates from
+  structured signals (date jumps, location changes, pace shifts) — the LLM
+  places them. `--no-transitions` opts out. `dissolve`→fade-in for now
+  (true cross-dissolve = xfade, 5.7b). 11 tests.
 
-**Baseline now:** Tier 1+2 = **1676 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1687 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

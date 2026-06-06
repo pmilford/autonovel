@@ -11,17 +11,16 @@ to start.
 
 ## Near-term — pull into the next PR
 
-- **Scene transitions between teaser scenes.** Requested 2026-06-06.
-  `teaser-assemble` v1 is **hard cuts only** (`transition: "cut"` on every
-  `CutEntry` — the field exists but is ignored by `ffmpeg_command`). Some
-  transitions should differ — at minimum the **first** scene (fade-in from
-  black) and the **last** scene / **title** cards (fade-out, or a longer
-  dissolve into the button). **Action:** design a transition vocabulary
-  (cut / fade / dissolve / dip-to-black) on `CutEntry.transition` +
-  per-position defaults (first→fade-in, title/last→fade), and emit the
-  matching ffmpeg `xfade`/`fade` filters from `ffmpeg_command` (replacing
-  the bare concat). Keep additive; default stays all-cuts so existing
-  cut-lists render unchanged. Likely Phase 5.7.
+- ~~**Scene transitions between teaser scenes.**~~ **Shipped 2026-06-06
+  (Phase 5.7).** `CutEntry` gained `transition` (cut|fade|dissolve) +
+  `fade_out` + `transition_dur`; `ffmpeg_command` emits concat-compatible
+  fade-in/out; `build_cut_list` auto-defaults open→fade-in, close→fade-out,
+  title→fade; `suggest_transitions` (+ `teaser-transitions` CLI) flags
+  candidates from structured signals (story_year jumps, location changes,
+  pace shifts) — advisory, the LLM places them. **Remaining (5.7b):** a
+  true **cross-dissolve** needs the `xfade` overlap rework (overlapping
+  clips with cumulative offsets + audio acrossfade); `dissolve` currently
+  degrades to a fade-in.
 
 - **Music GENERATION (not just a bed).** Today music is a user-supplied
   `--audio` file, ducked under dialogue (5.4). There's no music-*generator*
@@ -138,6 +137,20 @@ to start.
   See project memory `teaser-reference-image-design` +
   `gemini-image-key-location`. Likely folds into the "Phase 5: character
   references" plan above.
+
+- **Non-destructive render — keep previous takes, never overwrite.**
+  Requested 2026-06-06 (Fugger book). Today `teaser-render` writes
+  `clips/shot_<id>.png` and a re-run **overwrites** it; a curated/QA'd frame
+  is lost the moment you re-render (the user had to hand-copy the clips dir
+  to a `takes/` backup before re-rendering). `--takes <n>` already suffixes
+  `_take2`/`_take3`, but same-take re-runs clobber. **Action:** make renders
+  versioned by default — each render lands a new take (timestamp or
+  incrementing index) and a per-shot **selected/current** pointer chooses
+  which take the cut-list/assemble uses (mirror the `art-directions →
+  art-pick` shape: `teaser-render` accumulates takes, a `teaser-pick`
+  selects). Never destroy a prior take; `teaser-assemble` reads the
+  selected take. Bonus: a vision-critique auto-pick of the best take.
+  Pairs with the reference-conditioned-render generalization entry above.
 
 - **Veo on the $300 GCP credit via Vertex (ADC).** The shipped `veo`
   backend drives the Gemini **API-key** path. The $300 new-account

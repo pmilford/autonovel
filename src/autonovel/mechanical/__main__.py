@@ -31,6 +31,7 @@ Subcommands:
   resolve-video-provider [...]     Resolve video provider from CLI + project.yaml + default.
   teaser-render <teaser.json>      Render clips via the free no-key adapter (Pollinations).
   teaser-cut-list <teaser.json>    Build an editable cut_list.json from teaser + clips on disk.
+  teaser-transitions <teaser.json> Suggest scene-transition points (advisory; structured signals).
   teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
 
 All subcommands print a single JSON object to stdout. Commands invoke
@@ -1313,6 +1314,35 @@ def _cmd_teaser_refs(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_transitions(args: argparse.Namespace) -> int:
+    """Suggest where non-cut scene transitions are worth considering
+    (Phase 5.7) — from structured signals (time jumps, location changes,
+    pace shifts, open/close). Advisory: the artistic choice is the LLM's in
+    /autonovel:teaser-assemble; this just surfaces candidates."""
+    from ..teaser import shots as _shots, assemble as _asm
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-transitions: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    sugg = _asm.suggest_transitions(
+        teaser, year_gap=getattr(args, "year_gap", 2.0),
+        slow_ratio=getattr(args, "slow_ratio", 1.5))
+    if getattr(args, "format", "human") == "json":
+        json.dump({"suggestions": [s.to_dict() for s in sugg]}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    if not sugg:
+        print("no shots — nothing to suggest.")
+        return 0
+    print(f"Transition suggestions — {len(sugg)} candidate point(s) "
+          f"(advisory; default elsewhere is a hard cut):")
+    for s in sugg:
+        where = f"{s.after_shot} → {s.into_shot}" if s.after_shot else f"open @ {s.into_shot}"
+        print(f"  [{where}] {s.suggested}: {'; '.join(s.reasons)}")
+    return 0
+
+
 def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
     """Build an editable cut_list.json from teaser.json + the clips on
     disk (Phase 3). Plan-only — never runs ffmpeg."""
@@ -1330,6 +1360,7 @@ def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
         audio_bed=getattr(args, "audio", None), take=args.take,
         audio_mode=getattr(args, "audio_mode", "auto"),
         clip_audio=getattr(args, "clip_audio", None),
+        transitions=not getattr(args, "no_transitions", False),
     )
     out = Path(args.out) if getattr(args, "out", None) else base / "cut_list.json"
     if not cut.entries:
@@ -1826,9 +1857,24 @@ def main(argv: list[str] | None = None) -> int:
     tcl.add_argument("--width", type=int, default=854)
     tcl.add_argument("--height", type=int, default=480)
     tcl.add_argument("--take", type=int, default=1, help="Which take to use per shot.")
+    tcl.add_argument("--no-transitions", dest="no_transitions", action="store_true",
+                     help="Disable the safe transition defaults (first→fade-in, "
+                          "last→fade-out, title→fade); everything stays a hard cut.")
     tcl.add_argument("--out", default=None, help="Output path (default: <dir>/cut_list.json).")
     tcl.add_argument("--format", choices=["json", "human"], default="human")
     tcl.set_defaults(func=_cmd_teaser_cut_list)
+
+    ttr = sub.add_parser("teaser-transitions",
+                         help="Suggest where non-cut scene transitions are worth "
+                              "considering (time jumps, location changes, pace shifts, "
+                              "open/close). Advisory; structured signals only.")
+    ttr.add_argument("path", help="Path to teaser.json.")
+    ttr.add_argument("--year-gap", dest="year_gap", type=float, default=2.0,
+                     help="Min |Δstory_year| between shots to flag a time jump (default 2).")
+    ttr.add_argument("--slow-ratio", dest="slow_ratio", type=float, default=1.5,
+                     help="duration_s increase ratio that flags a fast→slow pace shift.")
+    ttr.add_argument("--format", choices=["json", "human"], default="human")
+    ttr.set_defaults(func=_cmd_teaser_transitions)
 
     tfc = sub.add_parser("teaser-ffmpeg-cmd",
                          help="Print the ffmpeg command that stitches a cut_list.json into "

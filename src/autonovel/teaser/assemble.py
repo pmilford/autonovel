@@ -28,31 +28,48 @@ from .shots import Teaser
 _EXT = {"image": "png", "video": "mp4"}
 
 
+# Transition INTO a clip. v1 emits fades (concat-compatible): `dissolve`
+# renders as a fade-in for now — a true cross-dissolve needs the overlap
+# (xfade) rework noted in FUTURE-TODOS.
+TRANSITIONS = ("cut", "fade", "dissolve")
+
+
 @dataclass
 class CutEntry:
     shot_id: str
     clip: str                # path to the chosen clip file
     duration_s: float = 4.0
     text_card: str | None = None   # noted for the editor; NOT burned in
-    transition: str = "cut"        # v1: hard cut only
+    transition: str = "cut"        # how this clip ENTERS: cut | fade | dissolve
+    fade_out: bool = False         # fade this clip OUT to black at its end
+    transition_dur: float = 0.5    # fade length (seconds)
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "shot_id": self.shot_id, "clip": self.clip,
             "duration_s": self.duration_s, "transition": self.transition,
         }
+        if self.fade_out:
+            d["fade_out"] = True
+        if self.transition_dur != 0.5:
+            d["transition_dur"] = self.transition_dur
         if self.text_card:
             d["text_card"] = self.text_card
         return d
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "CutEntry":
+        trans = d.get("transition", "cut")
+        if trans not in TRANSITIONS:
+            trans = "cut"
         return cls(
             shot_id=str(d.get("shot_id", "")),
             clip=str(d.get("clip", "")),
             duration_s=float(d.get("duration_s", 4.0)),
             text_card=d.get("text_card"),
-            transition=d.get("transition", "cut"),
+            transition=trans,
+            fade_out=bool(d.get("fade_out", False)),
+            transition_dur=float(d.get("transition_dur", 0.5)),
         )
 
 
@@ -160,6 +177,7 @@ def build_cut_list(
     take: int = 1,
     audio_mode: str = "auto",
     clip_audio: bool | None = None,
+    transitions: bool = True,
 ) -> tuple[CutList, list[str]]:
     """Build a default cut-list from the teaser + the clips on disk.
 
@@ -181,12 +199,107 @@ def build_cut_list(
             shot_id=s.id, clip=str(clip), duration_s=s.duration_s,
             text_card=s.text_card,
         ))
+    # Safe transition defaults (Phase 5.7): ease in/out of black and fade
+    # title cards. Everything else stays a hard cut — the artistic
+    # placement of *other* transitions is the LLM's call in the command
+    # body (see suggest_transitions). Disable with transitions=False.
+    if transitions and entries:
+        role_by_id = {s.id: s.role for s in teaser.shots}
+        entries[0].transition = "fade"           # fade in from black
+        entries[-1].fade_out = True              # fade out to black
+        for e in entries:
+            if role_by_id.get(e.shot_id) == "title":
+                e.transition = "fade"
     cut = CutList(
         title=teaser.title, kind=kind, width=width, height=height, fps=fps,
         audio_bed=audio_bed, entries=entries,
         audio_mode=audio_mode, clip_audio=clip_audio,
     )
     return cut, missing
+
+
+def _fade_chain(e: "CutEntry") -> str:
+    """Per-clip fade filters (Phase 5.7), concat-compatible: a fade-IN from
+    black when the clip's `transition` is fade/dissolve, and a fade-OUT to
+    black when `fade_out`. Fade length is clamped to half the clip so the
+    in/out don't overlap. Returns "" for a hard cut. (A true cross-dissolve
+    between clips needs the xfade overlap rework — see FUTURE-TODOS; for now
+    `dissolve` degrades to a fade-in.)"""
+    dur = max(0.1, float(e.duration_s))
+    td = max(0.0, min(float(e.transition_dur), dur / 2.0))
+    parts: list[str] = []
+    if e.transition in ("fade", "dissolve") and td > 0:
+        parts.append(f"fade=t=in:st=0:d={td:g}")
+    if e.fade_out and td > 0:
+        parts.append(f"fade=t=out:st={dur - td:g}:d={td:g}")
+    return ("," + ",".join(parts)) if parts else ""
+
+
+@dataclass
+class TransitionSuggestion:
+    into_shot: str               # the shot this transition leads INTO
+    after_shot: str | None       # the preceding shot (None at the open)
+    suggested: str               # cut | fade | dissolve | fade-out
+    reasons: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "into_shot": self.into_shot, "after_shot": self.after_shot,
+            "suggested": self.suggested, "reasons": list(self.reasons),
+        }
+
+
+def suggest_transitions(
+    teaser: Teaser,
+    *,
+    year_gap: float = 2.0,
+    slow_ratio: float = 1.5,
+) -> list[TransitionSuggestion]:
+    """Flag where a non-cut transition is *worth considering*, from
+    STRUCTURED signals only (no prose judgement — that's the LLM's job in
+    the command body, which may accept/override these):
+
+      - **time jump** — `|Δstory_year|` ≥ ``year_gap`` between consecutive
+        shots → a fade reads the ellipsis.
+      - **location change** — the `setting` changes → a dissolve bridges it.
+      - **pace shift (fast→slow)** — the shot's `duration_s` jumps by
+        ≥ ``slow_ratio``× the previous, or the role moves into `title`/
+        `button` → ease in with a fade.
+      - **open / close** — fade in on the first shot, fade out on the last.
+
+    Advisory: returns one suggestion per flagged boundary (plus open/close).
+    A hard cut everywhere else is the default; the caller applies what it
+    likes onto the cut-list entries.
+    """
+    shots = teaser.shots
+    out: list[TransitionSuggestion] = []
+    if not shots:
+        return out
+    out.append(TransitionSuggestion(shots[0].id, None, "fade", ["open (fade in from black)"]))
+    for prev, cur in zip(shots, shots[1:]):
+        reasons: list[str] = []
+        suggested = "cut"
+        py, cy = getattr(prev, "story_year", None), getattr(cur, "story_year", None)
+        if py is not None and cy is not None and abs(cy - py) >= year_gap:
+            reasons.append(f"time jump (Δ{abs(cy - py):g}y)")
+            suggested = "fade"
+        if _norm(prev.setting) and _norm(cur.setting) and _norm(prev.setting) != _norm(cur.setting):
+            reasons.append(f"location change ({prev.setting} → {cur.setting})")
+            suggested = "dissolve" if suggested == "cut" else suggested
+        if prev.duration_s > 0 and cur.duration_s >= slow_ratio * prev.duration_s:
+            reasons.append(f"pace slows ({prev.duration_s:g}s → {cur.duration_s:g}s)")
+            suggested = suggested if suggested != "cut" else "fade"
+        if cur.role in ("title", "button") and prev.role not in ("title", "button"):
+            reasons.append(f"beat shift (→ {cur.role})")
+            suggested = suggested if suggested != "cut" else "fade"
+        if reasons:
+            out.append(TransitionSuggestion(cur.id, prev.id, suggested, reasons))
+    out.append(TransitionSuggestion(shots[-1].id, None, "fade-out", ["close (fade out to black)"]))
+    return out
+
+
+def _norm(s: str) -> str:
+    return " ".join((s or "").lower().split())
 
 
 def _scale_pad(width: int, height: int) -> str:
@@ -239,7 +352,7 @@ def ffmpeg_command(cut_list: CutList, out_path: Path | str) -> list[str]:
     chains: list[str] = []
     for i, e in enumerate(cut_list.entries):
         pre = "" if cut_list.kind == "image" else f"trim=0:{e.duration_s:g},setpts=PTS-STARTPTS,"
-        chains.append(f"[{i}:v]{pre}{_scale_pad(w, h)},fps={fps}[v{i}]")
+        chains.append(f"[{i}:v]{pre}{_scale_pad(w, h)},fps={fps}{_fade_chain(e)}[v{i}]")
     if use_clip_audio:
         concat_inputs = "".join(f"[v{i}][{i}:a]" for i in range(n))
         chains.append(f"{concat_inputs}concat=n={n}:v=1:a=1[v][aclip]")
