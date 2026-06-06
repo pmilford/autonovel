@@ -11,6 +11,22 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Version every render/mp4 as a distinct take (never overwrite).**
+  Requested 2026-06-06. Today re-running `teaser-render` overwrites a
+  shot's clip in place (`shot_<id>.png` / `_take<t>` only when `--takes>1`
+  within one call), and `teaser-assemble` overwrites `<title>_teaser.mp4`
+  — so a re-render destroys a version the user may have preferred. **We
+  want every render kept** so an earlier take can be chosen. **Action:**
+  (a) per-shot clips — auto-increment the take (`shot_<id>_take<N>.<ext>`,
+  N = next free) on each render instead of clobbering, and add a "latest"
+  pointer / `--take` selection so cut-list can pick which take per shot
+  (the cut-list already has `--take`); (b) assembled video — timestamp the
+  output (reuse the `typeset-filename` timestamped + `latest` pattern:
+  `<title>_teaser_<UTC>.mp4` + a `<title>_teaser_latest.mp4` symlink/copy)
+  so prior cuts survive; (c) a tiny "takes" lister so the user can see +
+  pick. Keep additive; default behaviour can stay "latest wins" for the
+  pointer while the timestamped originals accumulate. Likely Phase 5.8.
+
 - ~~**Scene transitions between teaser scenes.**~~ **Shipped 2026-06-06
   (Phase 5.7).** `CutEntry` gained `transition` (cut|fade|dissolve) +
   `fade_out` + `transition_dur`; `ffmpeg_command` emits concat-compatible
