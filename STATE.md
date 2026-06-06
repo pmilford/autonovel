@@ -1102,6 +1102,26 @@
   / `docs/operating-guide.md`). `feedback_keep_docs_in_sync.md`
   bumped to MEMORY.md position #1 with explicit "PRECONDITION
   FOR GREEN" framing — reinforced 4× by user.
+- 2026-06-05 (movie-teaser planning, pre-implementation): new
+  adjacent feature scoped — movie-script mode + AI-video teaser
+  generator (script → beat-sheet → descriptive shot prompts →
+  consistency anchors → optional assembly), targeting the Future
+  Vision X-Prize (3-min trailer + ≤12pp treatment + 2pp brief;
+  deadline 2026-08-15; AI explicitly allowed). Artifacts:
+  `docs/prd-movie-teaser-mode.md` (v0.3, research-grounded:
+  provider landscape, prompt schema, cinematography vocab,
+  cross-shot consistency, free agent-driven tier (Pollinations-
+  first), three-layer self-critique testing) and
+  `docs/impl-plan-movie-teaser.md` (additive-only, regression-
+  gated phasing). **Safety baseline: tag `pre-movies` @ `e252f71`
+  pushed; Tier 1+2 = 1503 passed / 1 skipped verified.** Prime
+  directive from user: do NOT break the existing book-writing
+  pipeline — all teaser code lands in a new `src/autonovel/teaser/`
+  package, the only existing-file edit is purely-additive optional
+  `teaser`/`video` dicts on `ProjectConfig` (mirrors `typeset`/
+  `image`), every commit holds the ≥1503 regression gate, and
+  `git reset --hard pre-movies` is the rollback. No implementation
+  started yet — planning only.
 
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-05-01 — **1503
