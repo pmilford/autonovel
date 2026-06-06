@@ -555,6 +555,14 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 `remove-chapter`, `deepen-character`, `add-subplot`, `foreshadow`,
 `rename-character`).
 
+- **Movie / teaser (in progress):** `treatment` turns a book's
+  foundation into a film **treatment + 2-page brief** (the prose
+  deliverables a screen story — and the Future Vision X-Prize — needs
+  alongside a trailer). The trailer-generation commands (`teaser`,
+  `shot-prompts`) are next. See
+  [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md) and
+  the creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md).
+
 > **Confused which one to run when?** The drafting/revision commands
 > have a layered relationship — `draft-pass` and `revision-pass`
 > are *sweeps* that automatically call the atomic `draft` /

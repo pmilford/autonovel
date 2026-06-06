@@ -1122,8 +1122,34 @@
   `image`), every commit holds the ≥1503 regression gate, and
   `git reset --hard pre-movies` is the rollback. No implementation
   started yet — planning only.
+- 2026-06-05 (movie-teaser Phase 0 + treatment command): first
+  implementation increment, additive-only. New `src/autonovel/teaser/`
+  package (marker only this phase). Additive optional `teaser`/`video`
+  dicts on `ProjectConfig` (mirror `typeset`/`image`: omitted-when-
+  empty, round-trip + pre-movie back-compat tests). `[video]`/
+  `[scripts]` extras stubs (empty — Phase 0 + treatment need no extra
+  deps). Docs split: `docs/teaser-craft.md` is now the canonical
+  user-facing creative guide (PRD §§18–20 marked build-spec, pointer
+  added). New guard `tests/deterministic/test_install_immutability.py`
+  pins that command render is independent of siblings + every command
+  (incl. new ones) installs with the begin/end lifecycle. New
+  `commands/treatment.md` (heavy) — film treatment + 2-page brief from
+  the foundation, `--audience xprize` default (optimistic future, real
+  problem, stakes + arc, visual ambition); writes
+  `books/{book}/treatment.md` + `brief.md`; reveals the ending (unlike
+  a teaser). Doc-sync: docs/commands.md (new Movie/teaser section),
+  README, series-template CLAUDE.md, commands/help.md (movie topic),
+  FUTURE-TODOS (progress). Only existing-file edit was the additive
+  `project.py` fields. Regression gate held: **Tier 1+2 1503 → 1515
+  passed, 1 skipped, 0 failed.**
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1515
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +12 since 2026-05-01: movie-teaser Phase 0 + `/autonovel:treatment`
+  (project.py teaser/video round-trip + back-compat, install-
+  immutability guards, treatment command contract pickups). Prior
+  baseline below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-05-01 — **1503
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   Four shipped follow-ups in one batch:

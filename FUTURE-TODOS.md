@@ -1544,6 +1544,17 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   movie or video pipeline — plausibly ~20–30 hr for shot-prompt
   generation + provider profiles + beat-sheet, excluding the
   screenplay-typeset work it inherits from the parent entry.
+  **Progress (2026-06-05):** implementation plan written
+  (`docs/impl-plan-movie-teaser.md`); `pre-movies` safety tag created.
+  **Phase 0 shipped** — `src/autonovel/teaser/` package; additive
+  optional `teaser`/`video` dicts on `ProjectConfig`; `[video]`/
+  `[scripts]` extras stubs; docs split (`docs/teaser-craft.md` is now
+  the canonical creative guide); install-immutability guard tests.
+  **`/autonovel:treatment` shipped** — film treatment + 2-page brief
+  (X-Prize-shaped). Tier 1+2: 1503 → 1515. Remaining: Phase 1 teaser
+  beats + shot-prompts + prompt-critique, Phase 2 provider profiles +
+  consistency, Phase 3.5 Pollinations render + clip-critique, Phase 3
+  assembly.
 
 - **🚀 ULTRA-LONG-TERM: Script → full video pipeline.** Surfaced
   2026-05-01. The natural endpoint of the screenplay output above:

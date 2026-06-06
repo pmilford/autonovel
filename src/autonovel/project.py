@@ -95,6 +95,16 @@ class ProjectConfig:
     # `--provider` flag is passed. Common values: "pollinations",
     # "openai", "wikimedia". CLI flag overrides this.
     image: dict[str, Any] = field(default_factory=dict)
+    # Per-series movie/teaser overrides (FUTURE-TODOS movie-teaser mode;
+    # see docs/prd-movie-teaser-mode.md). Reserved keys include teaser
+    # defaults (length_s, pace, ending, aspect_ratio). Unknown keys are
+    # tolerated. Optional — omitted from YAML when empty.
+    teaser: dict[str, Any] = field(default_factory=dict)
+    # Default video provider + settings for teaser render (twin of
+    # `image`). Common `provider` values: "pollinations" (no-auth free
+    # default), "veo", "sora", "runway", "kling", "luma". CLI flag
+    # overrides. Optional — omitted from YAML when empty.
+    video: dict[str, Any] = field(default_factory=dict)
     # Series-level author — inherited by any BookEntry whose own
     # `author` field is unset. Optional; "Anonymous" if neither is set.
     author: str | None = None
@@ -112,6 +122,10 @@ class ProjectConfig:
             d["typeset"] = dict(self.typeset)
         if self.image:
             d["image"] = dict(self.image)
+        if self.teaser:
+            d["teaser"] = dict(self.teaser)
+        if self.video:
+            d["video"] = dict(self.video)
         if self.author is not None:
             d["author"] = self.author
         return d
@@ -205,6 +219,8 @@ def _from_dict(raw: dict[str, Any]) -> ProjectConfig:
         defaults=raw.get("defaults") or {},
         typeset=raw.get("typeset") or {},
         image=raw.get("image") or {},
+        teaser=raw.get("teaser") or {},
+        video=raw.get("video") or {},
         author=raw.get("author"),
     )
 

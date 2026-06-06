@@ -227,6 +227,16 @@ this to the user verbatim and stop, do not retry:
 >
 > Then re-run the command that just failed.
 
+## Movie / teaser mode (in progress)
+
+Adapting a book to the screen: `/autonovel:treatment --book <name>`
+writes a film treatment + a 2-page brief from the book's foundation
+(reveals the ending — it's a treatment, not a teaser). `--audience
+xprize` (default) frames it for the Future Vision X-Prize (optimistic
+future, real problem solved, stakes + arc, visual ambition). The
+trailer-generation commands (`teaser`, `shot-prompts`) follow. The
+creative how-to lives in `docs/teaser-craft.md`.
+
 ## Where to find more
 
 - README at the series-template repo (autonovel project) — install
@@ -234,3 +244,5 @@ this to the user verbatim and stop, do not retry:
 - `docs/commands.md` — every `/autonovel:*` command reference.
 - `docs/multi-book.md` — story-time gating and event ledger details.
 - `docs/writing-a-historical-series.md` — end-to-end walkthrough.
+- `docs/teaser-craft.md` — making a 1–3 min AI-video teaser;
+  `docs/prd-movie-teaser-mode.md` — the movie-mode build spec.

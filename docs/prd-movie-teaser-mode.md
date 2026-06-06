@@ -475,6 +475,16 @@ formats" and "🚀 ULTRA-LONG-TERM: Script → full video pipeline".
 
 # The creative / craft layer (v0.2)
 
+> 📖 **Docs split (Phase 0, 2026-06-05):** the *user-facing* version of
+> the creative layer (§§18–20) now lives in
+> [`teaser-craft.md`](teaser-craft.md) — the canonical craft guide and
+> **prompt material** (the CRAFT.md analogue the teaser commands read).
+> §§18–20 below are retained as the **build spec** (what the generator
+> must encode); `teaser-craft.md` is the readable guide a user opens.
+> Keep the two in sync; when they drift, `teaser-craft.md` is canonical
+> for *wording/coaching* and the PRD is canonical for *schema/behaviour*.
+> (§21 worked-projects stays here — it's scoping, not craft.)
+
 > §§7–11 are the *engine* — how to phrase prompts a video model obeys.
 > §§18–21 are the *director's chair* — what to point that engine at. For
 > a first-time video maker this is the more important half: a perfect

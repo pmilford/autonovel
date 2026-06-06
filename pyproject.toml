@@ -63,6 +63,15 @@ export = [
 tui = [
     "textual>=0.70",
 ]
+# Movie/teaser mode (FUTURE-TODOS; docs/prd-movie-teaser-mode.md).
+# Reserved opt-in extras for later phases. Phase 0 + the `treatment`
+# command need NO extra deps (pure prose + stdlib), so these stay empty
+# for now — they exist so the install surface is named and stable.
+# `[video]` will pull whatever the thin render adapter needs (e.g. an
+# HTTP client / provider SDK); `[scripts]` will pull screenplay-format
+# exporters. Base install and existing extras are unaffected.
+video = []
+scripts = []
 
 [project.scripts]
 autonovel = "autonovel.cli:main"

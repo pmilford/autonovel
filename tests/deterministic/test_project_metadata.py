@@ -170,6 +170,69 @@ def test_image_provider_round_trips(tmp_path: Path) -> None:
     assert cfg.image.get("provider") == "wikimedia"
 
 
+# --------------------- teaser + video dicts (movie-teaser mode) ---
+
+
+def test_teaser_and_video_dicts_round_trip(tmp_path: Path) -> None:
+    path = tmp_path / "project.yaml"
+    path.write_text(
+        "series_name: tiny\n"
+        "teaser:\n"
+        "  length_s: 180\n"
+        "  ending: reveal-vision\n"
+        "video:\n"
+        "  provider: pollinations\n",
+        encoding="utf-8",
+    )
+    cfg = project_mod.load(path)
+    assert cfg.teaser == {"length_s": 180, "ending": "reveal-vision"}
+    assert cfg.video == {"provider": "pollinations"}
+    # Dump round-trips both blocks.
+    out = tmp_path / "out.yaml"
+    project_mod.dump(cfg, out)
+    cfg2 = project_mod.load(out)
+    assert cfg2.teaser == {"length_s": 180, "ending": "reveal-vision"}
+    assert cfg2.video == {"provider": "pollinations"}
+
+
+def test_teaser_and_video_omitted_when_empty(tmp_path: Path) -> None:
+    """Backward-compat: a config with no teaser/video blocks must dump
+    without them, so existing project.yaml files don't gain noise."""
+    cfg = ProjectConfig(series_name="tiny")
+    assert cfg.teaser == {}
+    assert cfg.video == {}
+    out = tmp_path / "out.yaml"
+    project_mod.dump(cfg, out)
+    text = out.read_text(encoding="utf-8")
+    assert "teaser" not in text
+    assert "video" not in text
+
+
+def test_pre_movie_project_yaml_loads_unchanged(tmp_path: Path) -> None:
+    """A project.yaml authored before movie-teaser mode (no teaser/video
+    keys) loads cleanly and the dumped form is byte-identical to a config
+    that never had them — proves the additive fields can't perturb
+    existing series."""
+    path = tmp_path / "project.yaml"
+    path.write_text(
+        "series_name: house-of-bells\n"
+        "genre: historical-fiction\n"
+        "books:\n"
+        "  - name: the-bell\n"
+        "    pov: Tommaso\n"
+        "    status: drafted\n",
+        encoding="utf-8",
+    )
+    cfg = project_mod.load(path)
+    assert cfg.teaser == {}
+    assert cfg.video == {}
+    out = tmp_path / "out.yaml"
+    project_mod.dump(cfg, out)
+    text = out.read_text(encoding="utf-8")
+    assert "teaser" not in text
+    assert "video" not in text
+
+
 # --------------------- resolve-image-provider CLI helper -------
 
 

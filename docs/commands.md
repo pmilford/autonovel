@@ -131,6 +131,14 @@ checkpoint so `autonovel rollback` undoes the full operation.
 | `/autonovel:introduction --book <short-name> [--from auto\|user\|both] [--force]` | heavy | Generate front-matter content for the typeset PDF and ePub. `--from user` (default) scaffolds `books/<book>/preface.md` for the writer to fill in. `--from auto` AI-generates `books/<book>/introduction.md` (~600–1200 words, essay-form, grounded in the book's themes; never reveals plot past the inciting incident). `--from both` does both. typeset auto-includes whichever exist, in order Preface → Introduction, as `\chapter*{}` blocks before chapter 1. `--force` overwrites existing files. |
 | `/autonovel:typeset --book <short-name> [--pdf-only \| --epub-only] [--convert-vectors]` | light | Build PDF + ePub from chapters and typeset templates. Outputs `<book>_<YYYYMMDD>_<HHMM>.pdf` (per build, kept) plus `<book>_latest.pdf` (overwritten each successful build); same shape for `.epub`. Title and author come from `project.yaml :: books[<name>]` (set via `/autonovel:title`); falls back to `series_name` and "Anonymous". |
 | `/autonovel:landing --book <short-name> [--template <path>] [--url <canonical-url>]` | standard | Render a responsive landing page with og:image + structured data. |
+
+### Movie / teaser (in progress)
+
+Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Phase 0 + the treatment command have shipped; trailer-generation commands (`teaser`, `teaser-beats`, `shot-prompts`, `teaser-critique`) follow.
+
+| Command | Tier | Purpose |
+|---|---|---|
+| `/autonovel:treatment --book <short-name> [--pages <n>] [--audience xprize\|general] [--no-brief] [--force]` | heavy | Generate a film **treatment** (≤`--pages`, default 12) + a 2-page **brief/synopsis** from the book's foundation (outline + world + characters + canon, enriched by `chapters/*.md` when present). Present-tense; reveals the ending (a treatment hides nothing — unlike a teaser). `--audience xprize` (default) frames both for the Future Vision X-Prize: optimistic future, technology solving a real problem, genuine stakes + arc, visual ambition. Writes `books/<book>/treatment.md` + `books/<book>/brief.md`; `--force` to overwrite. |
 | `/autonovel:package --book <short-name> [--skip <t,t,...>] [--out <path>]` | light | End-to-end release bundle — PDF + ePub + covers + landing + audiobook, zipped. |
 
 ## Navigation commands
