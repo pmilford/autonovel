@@ -11,6 +11,49 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Flip the install default to NO model pin** (model_tier pinning
+  misbehaves under Claude Code). Reported 2026-06-06. The machinery
+  already exists: `claude_code.render(pin_model=…)` emits the `model:`
+  frontmatter field when `pin_model=True`, and `autonovel install
+  --no-model-pin` omits it so the session model wins (the `[1m]`
+  billing-gate recovery path — see docs/troubleshooting.md). Today the
+  default is `pin_model=True` (adapter, `installer.install_commands`,
+  and `cli.py::pin_model = not no_model_pin`). **Action:** make
+  *no-pin* the default — flip the defaults to `pin_model=False`, add a
+  `--pin-model` opt-in flag (keep `--no-model-pin` as a deprecated
+  no-op alias), and re-point `test_install_*`/troubleshooting docs.
+  Rationale: a per-command pin to a specific Opus/Sonnet/Haiku id keeps
+  silently downshifting users off their session model (incl. the `[1m]`
+  variant) and tripping "Usage credits required for 1M context";
+  inheriting the session model is the correct, least-surprising default.
+
+- **Pollinations free image endpoint now returns `402 Payment
+  Required`** — the `teaser-render` free default backend is broken
+  externally. Confirmed 2026-06-06 on the Fugger book: 35/35 image
+  requests `402`, clips dir never created (the dry-run plan + URLs were
+  correct — refused at the door, not a prompt bug). Pollinations has
+  gated anonymous generation behind auth/payment (their default `flux`
+  model). **Action:** (a) add a token/auth path to `teaser/render.py`
+  + `/autonovel:teaser-render` (`--token`, `video.token` in
+  project.yaml, or `POLLINATIONS_TOKEN` env → `Authorization: Bearer`
+  header / `?token=`); (b) try an explicitly *free* Pollinations model
+  via `--model` before assuming paywall; (c) document a fallback free
+  backend; until fixed, the free render path is non-functional and the
+  command should say so up front (detect 402 → actionable message, not
+  35 identical failures). Also fold in the rate-limit work below.
+
+- **Render adapter has no rate-limiting / backoff / 429 handling.**
+  `teaser/render.py::render()` does sequential GETs with a 180 s
+  timeout, **no delay between calls, no retry, no Retry-After / 429
+  honouring** (a 429 just becomes a per-clip "failed" you re-run). It is
+  NOT throttled to documented limits — Pollinations' anonymous tier is
+  ~1 request / 15 s (≈4/min). **Action:** add a configurable inter-request
+  delay (default to the provider's documented interval), exponential
+  backoff + `Retry-After` honouring on 429/503, and a small bounded
+  retry — keyed off the (fast-moving) `providers.py` table so the limit
+  lives in one place. Until then a 35×3-take batch will hammer the
+  endpoint well past its documented rate.
+
 - ~~**Edit-and-revise mode for an externally-written manuscript —
   Phase 1 (import + mode flip).**~~ **Shipped 2026-04-28.** New
   `autonovel import-book <name> --from <path>` CLI subcommand and
