@@ -1,6 +1,6 @@
 # PRD — Movie-script mode + 1–3 minute AI-video teaser generator
 
-> **Status:** Draft v0.2 — 2026-06-05. Author-prioritised.
+> **Status:** Draft v0.3 — 2026-06-05. Author-prioritised.
 > **Owner:** TBD. **Parent todo:** FUTURE-TODOS.md → "🎬 MOVIE-SCRIPT
 > MODE FOR AI VIDEO + 1–3 MINUTE TEASER GENERATOR".
 > **Relationship to other specs:** this is a *focused subset* of the
@@ -17,6 +17,13 @@
 > development tier (local 35B + free video/audio/speech stack). §23
 > scopes a *thin, stateless* video-API render adapter that stops short
 > of a full production system.
+>
+> **v0.3** reframes the free tier (§22) around **online tools the
+> runtime drives itself** (Pollinations no-auth image+video+audio as the
+> default free backend; local GPU demoted to optional fallback), and
+> adds **§24 — testing the tool, its results, and the prompts**: a
+> three-layer self-critique (prompts → clips → cut) that catches
+> failures cheapest-first, before spending time or money.
 
 ### Reading order
 
@@ -28,9 +35,12 @@
 - **§§18–21 — the creative / craft layer** ← start here if you've never
   made a video. Scene-vs-shot craft, coaching, creative defaults, and
   the Fugger + X-Prize worked examples.
-- **§22** — fully-free development toolchain (local 35B + free stack).
+- **§22** — fully-free dev tier: **online tools the runtime drives**
+  (Pollinations-first) + optional local fallback.
 - **§23** — open question: a thin video-API render adapter (vs a full
   production system).
+- **§24** — testing the tool, its results, and the prompts: the
+  three-layer self-critique loop.
 
 ---
 
@@ -734,7 +744,7 @@ or time on the real entry.
 > run a **~35B model locally** and has confirmed **watermarks + lower
 > resolution are acceptable** for these dev passes. Research pass
 > 2026-06-05; **all free-tier numbers are fast-moving — verify before
-> relying.** Sources in §22.5.
+> relying.** Sources in §22.6.
 
 ### 22.1 Verdict
 
@@ -745,7 +755,34 @@ That is *exactly right* for debugging the pipeline and developing the
 script. Plan to spend money only on the **final** X-Prize shots that
 need visual ambition.
 
-### 22.2 The local 35B is the brain, not the renderer
+### 22.2 Principle: drive online free tools, don't make the user run local ones
+
+> Author direction 2026-06-05: *"if we can only use online free tools
+> that you drive it will go much smoother."* Correct, and it's the
+> design default for the free tier.
+
+A local Wan/LTX/ComfyUI rig gives unlimited, watermark-free, private
+generation — but it makes the **human** the runtime: install CUDA, load
+checkpoints, click through ComfyUI graphs, move files. That breaks
+autonovel's core promise (the user should never have to leave the
+runtime / touch shell plumbing — see `feedback_no_shell_in_user_workflow`).
+
+So the free tier **leads with online tools the autonovel runtime can
+*drive itself*** — no-auth or free-API endpoints the agent calls,
+polls, and downloads from, exactly like the existing image path. Local
+GPU drops to an **optional fallback** for users who want unlimited
+no-watermark runs and don't mind running it (§22.4 Tier B).
+
+The enabling find: **Pollinations** — already wired into autonovel for
+images — is **no-auth, no-signup, free, URL-based**, and now exposes
+**image + video (Seedance, Veo-alpha, Wan-Fast *with keyframe support*)
++ audio** through one endpoint. Keyframes = consistency anchors (§10);
+audio = narration/SFX. That single backend can drive an entire free
+teaser pass with zero keys, zero local install, and code autonovel
+already has. This is what makes §23's thin render adapter shippable with
+a **free default backend** rather than a paid one.
+
+### 22.3 The local 35B is the brain, not the renderer
 
 The single highest-value free asset. A ~32–35B local model
 (**Qwen3-32B** is the current sweet spot for creative writing + reliable
@@ -758,40 +795,67 @@ should run cleanly on a **local-model runtime** (Codex/Gemini adapters
 or an Ollama-style backend), not assume a paid frontier model — the
 creative brain is free; only pixels cost money.
 
-### 22.3 Free tool stack (each layer)
+### 22.4 Free tool stack — Tier A (agent-driven online) first, Tier B (local) fallback
 
-| Layer | Free options (watermark/low-res OK) | Notes |
+**Tier A — online, the runtime drives it (default).** No local install;
+the agent submits → polls → downloads. Watermark/low-res fine for dev.
+
+| Layer | Agent-drivable free endpoint | Drive method |
 |---|---|---|
-| **Script/shot brain** | **Local 35B (Qwen3-32B etc.)** | Free, unlimited, private. The big win. |
-| **Reference images** (consistency anchors) | **Pollinations** (already wired in autonovel), **FLUX.1-schnell** local, SD/ComfyUI | Make canonical character/location refs here first (§10). |
-| **Video — local** | **Wan 2.1/2.2** (24 GB+, best quality), **LTX-Video** (runs ~12 GB, fast), **HunyuanVideo 1.5** (~14 GB w/ offload), Mochi/CogVideoX — via **ComfyUI** | Unlimited + watermark-free if you have the GPU. LTX = fastest iteration. |
-| **Video — free hosted** | **Seedance** (~100 free credits/day, no watermark, 1080p), **Kling** (~66 credits/day ≈ 6 clips), **Hailuo** (~3–5/day), **Luma** (~30/mo), **Pika** (150/mo), **Google Flow/Veo** free credits (~10–20 gens/mo, often no watermark) | Daily-reset tiers (Seedance/Kling) are best for iterating; watermarks fine for dev. **HF Spaces** host many models free. |
-| **Speech / narration / dialogue** | **Kokoro-82M** (fast, CPU-OK, fixed voices), **Chatterbox** (cloning, ~6 GB, beats EL-Turbo in blind tests), **XTTS-v2 / F5-TTS** (cloning; non-commercial licenses), **Edge-TTS** (free MS voices) | Local + free. Mind **non-commercial licenses** (XTTS CPML, F5 CC-BY-NC) for the *final* competition cut. |
-| **Music** | **Suno free** (~50 credits/day ≈ 10 songs; *non-commercial*), **MusicGen** local, CC libraries (YouTube Audio Library, Pixabay, FMA, Incompetech) | Suno free = non-commercial → use CC/licensed for the real entry. |
-| **SFX** | **freesound.org**, **Pixabay** | CC; check attribution. |
-| **Lip-sync** (if faces speak on-screen) | **SadTalker**, **LatentSync** (ByteDance), Wav2Lip, MuseTalk — open-source, free | Or avoid the problem: prefer VO + text cards over on-screen talking (§11). |
-| **Assembly / edit** | **DaVinci Resolve** (free, pro-grade), **Shotcut**, **Kdenlive**, **ffmpeg** (scriptable concat + crossfade + audio mux + burned text cards) | autonovel's v1.5 `teaser-assemble` already targets ffmpeg. |
+| **Reference images** (consistency anchors) | **Pollinations** (FLUX / GPT-Image / Seedream) — *already integrated* | no-auth URL `GET` |
+| **Video** | **Pollinations video** (Seedance, Veo-alpha, **Wan-Fast + keyframes**) | no-auth URL |
+| **Video (more credits)** | **ZSky** (1080p+audio, no card), **Magic Hour** (400 + 100/day), **fal.ai** ($10 ≈ 50–100 gens), **Replicate** (small free credits), **Leonardo** ($5) | free-key REST, async poll |
+| **Speech / narration / dialogue** | **Pollinations audio**; **Edge-TTS** (free MS voices, no key) | no-auth / free lib |
+| **Music** | **Pollinations audio**; CC libraries (YouTube Audio Library, Pixabay, FMA, Incompetech) | URL / static fetch |
+| **SFX** | **freesound.org**, **Pixabay** | API (free key) |
+| **Assembly** | **ffmpeg** (concat + crossfade + audio mux + burned text cards) | local binary the tool already shells (doctor checks it) |
 
-### 22.4 Recommended free end-to-end pass (30 s, ~10 shots)
+> **Pollinations alone** (no-auth image + video + audio) can drive an
+> entire free pass with zero keys and zero install — the smoothest
+> possible debug loop, and it reuses autonovel's existing integration.
+> Add ZSky/Magic Hour/fal free keys when you need more daily volume or
+> higher quality on specific shots.
 
-1. **Local 35B** writes/loads the script → beat-sheet → §8 shot JSON +
-   treatment/brief. (free, fast)
-2. **Pollinations / local FLUX** makes one **canonical reference image**
-   per character + key location. (free)
-3. **LTX-Video local** (fast iteration) or **Seedance/Kling free**
-   makes ~10 short clips, image-to-video off the refs; 2–3 takes each,
-   pick best. (free; watermark/low-res OK)
-4. **Kokoro/Chatterbox** for narration + sparse dialogue;
-   **Suno-free/CC** music bed; **freesound** SFX. (free)
-5. **ffmpeg / DaVinci** concat → music bed → 2–4 text cards → export. (free)
+**Tier B — local, the user runs it (optional, unlimited + no watermark).**
+Only for users who *want* to and have the GPU; never required.
 
+| Layer | Local option | Note |
+|---|---|---|
+| **Script/shot brain** | **Local ~35B (Qwen3-32B)** — see §22.3 | The one local piece that's *high value even for non-GPU users*; runs the free LLM side. |
+| **Video** | **Wan 2.1/2.2** (24 GB+), **LTX-Video** (~12 GB, fast), **HunyuanVideo 1.5** (~14 GB) via **ComfyUI** | Unlimited, watermark-free if you run it. |
+| **Speech** | **Kokoro-82M** (CPU-OK), **Chatterbox** (cloning ~6 GB) | Mind non-commercial licenses (XTTS/F5) for the final cut. |
+| **Music / lip-sync** | **MusicGen**; **SadTalker / LatentSync** | Prefer VO + text cards over on-screen talking (§11). |
+
+### 22.5 Recommended free end-to-end pass (30 s, ~10 shots), fully agent-driven
+
+1. **LLM brain** (local 35B *or* the runtime's own model) writes/loads
+   script → beat-sheet → §8 shot JSON + treatment/brief. (free)
+2. The tool drives **Pollinations** to make one **canonical reference
+   image** per character + key location. (free, no key)
+3. The tool drives **Pollinations video** (keyframes off the refs) for
+   ~10 short clips, 2–3 takes each, auto-download; spill to
+   **ZSky/Magic Hour/fal** free credits when daily volume runs out.
+   (free; watermark/low-res OK)
+4. The tool drives **Pollinations audio / Edge-TTS** for narration +
+   sparse dialogue; CC music bed; freesound SFX. (free)
+5. **ffmpeg** (already shelled by the tool) concat → music bed → 2–4
+   text cards → export. (free)
+
+Every step is something the autonovel runtime can invoke and poll
+itself — **no leaving the chat, no ComfyUI, no manual file shuffling.**
 Realistic quality: a watchable **animatic-grade** 30 s with sound —
-perfect for proving the system and iterating the script. Expect
-artifacts and some identity drift; that's the signal to upgrade *those*
-shots to paid Veo/Sora/Runway for the final entry.
+perfect for proving the system and iterating the script. Artifacts and
+identity drift are the signal to upgrade *those* shots to paid
+Veo/Sora/Runway for the final entry. This pass is the §23 thin render
+adapter pointed at its **free default backend (Pollinations)**.
 
-### 22.5 Sources (free-tier research, 2026-06-05; fast-moving)
+### 22.6 Sources (free-tier research, 2026-06-05; fast-moving)
 
+- **Agent-drivable free APIs** — Pollinations GitHub + docs
+  (no-auth image/**video** (Seedance, Veo-alpha, Wan-Fast+keyframes)/
+  **audio**); ZSky AI (free REST, 1080p+audio, no card); Magic Hour
+  (400 + 100/day); fal.ai ($10 ≈ 50–100 gens); Replicate (small free
+  credits); Leonardo ($5) — ZSky/VideoAI/Atlas Cloud/Eden AI roundups.
 - Open video models / VRAM — WaveSpeed, Pixazo, Hyperstack, Digen
   roundups (Wan 2.2, LTX-Video, HunyuanVideo 1.5).
 - Free hosted tiers — Atlas Cloud, Seedance, Veo3AI, Kensa roundups
@@ -847,7 +911,9 @@ image resolver). It does **exactly four things**:
 3. Pass through consistency anchors (reference image / first frame).
 4. Print a cost estimate + a manifest; honour `--dry-run` (estimate +
    the exact requests, submit nothing) and the **fully-free §22 path**
-   (point local Wan/LTX/ComfyUI or free hosted tiers via fal/Replicate).
+   — default `--provider pollinations` (no-auth, image+video+audio, the
+   smoothest agent-driven free backend), spilling to ZSky/Magic Hour/fal
+   free credits; local Wan/LTX is the optional Tier-B fallback.
 
 ### 23.2 The bright lines that keep it thin (explicit non-goals)
 
@@ -878,3 +944,134 @@ signal to stop and promote the work to the ultra-long-term entry.
 for v1, but is **softened** — a *thin, stateless, opt-in* render adapter
 is an accepted **Phase 3.5** target, distinct from the excluded full
 production system.
+
+## 24. Testing the tool, its results, and the prompts (self-critique)
+
+> Author direction 2026-06-05: add a section on *"testing the tool and
+> the results and the prompts / criticising them."*
+
+There are **two different kinds of testing** and the PRD needs both:
+- **Code correctness** — does the software work? (repo Tiers 1–3, §16.)
+- **Creative-output quality** — are the *prompts*, the *clips*, and the
+  *cut* any good? That's this section. It follows autonovel's existing
+  judge philosophy (`evaluate`, `adversarial-edit`, `reader-panel`,
+  `review`): **the machine criticises its own output before the human
+  spends time or money on it**, and quality is judged by an LLM/vision
+  model, never by brittle regex (`feedback_avoid_brittle_python`).
+
+### 24.1 Three things to critique — cheapest-to-fix first
+
+A bad shot is cheapest to catch as *text*, more expensive as a *clip*,
+most expensive in the *cut*. Critique gates run in that order:
+
+| Layer | What | Cost to fix | Judge |
+|---|---|---|---|
+| **Prompts** | the §8 shot prompts (text) | ~free (no generation) | LLM critic |
+| **Clips / frames** | the generated takes | a generation each | vision-LLM critic |
+| **Assembled teaser** | the cut + audio | a full pass | "viewer panel" |
+
+### 24.2 Prompt critique — the highest-ROI gate (free, pre-generation)
+
+Before any pixels are generated, an LLM critic scores **every shot
+prompt** and rewrites the weak ones. This is `adversarial-edit` for
+shot prompts and it runs free (local 35B or the runtime model). It
+checks each prompt against the rules already in this PRD:
+
+- **AI-legibility linter (§18.4):** one subject + one action + one move?
+  present tense? only what's in frame? no un-filmable abstraction? no
+  on-screen text? subject named identically?
+- **Schema completeness (§8):** all fields present; duration within the
+  provider's native cap; negative-prompt + dialogue in separate fields.
+- **Consistency (§10):** appearance phrasing identical to the
+  character's other shots; palette/lighting on the global anchors;
+  reference image assigned.
+- **On-brief (§21):** does the shot serve the beat and the
+  competition's judging criteria (stakes, character, *visual ambition*,
+  optimism)?
+- **Trailer craft (§11/§20):** right length/role for its slot; doesn't
+  spoil the ending.
+
+Output: per-shot `PASS / REWRITE / FLAG`, a one-line reason, and a
+rewritten prompt for REWRITE. Surfaced as `/autonovel:teaser-critique
+--book <name> [--layer prompts]`. **Catches most failures for $0** —
+the single most valuable test in the system.
+
+### 24.3 Clip / frame critique — a vision-LLM judge closes the loop
+
+After generation, a **vision-capable model** looks at the actual
+frames/clip (or extracted keyframes) and scores each take against *its
+own prompt's intent*:
+
+- Did it render the **intended subject, action, framing, camera move**?
+- **Identity match** vs the character's reference image (drift?).
+- **Artifacts:** extra/melting limbs, morphing, flicker, garbled text,
+  physics breaks (§11 failure modes).
+- **On-palette / on-style** vs the global anchors.
+
+Output per take: a score + `KEEP / REGENERATE / UPGRADE-TO-PAID`
+verdict, and **auto-selection of the best take** for the cut (replaces
+manual review of N takes). The UPGRADE verdict is how the tool tells you
+*which specific shots* are worth paid Veo/Sora generation for the final
+entry — the rest stay on the free backend.
+
+### 24.4 Assembled-teaser critique — a "viewer panel"
+
+The `reader-panel` analogue for video. N personas (e.g. *festival
+juror*, *sci-fi fan*, *first-time viewer*, *the X-Prize rubric itself*)
+watch the assembled cut (storyboard+audio animatic is enough — no need
+to finish render) and react:
+
+- Does the **hook** grab in 5 s? Where does attention drop?
+- Any **confusion** (who/where/when unclear)?
+- Does it make you **want the film**? Does it **withhold** correctly?
+- Against the **X-Prize criteria**: optimism, genuine stakes + arc,
+  visual ambition — present and legible?
+
+Output: ranked, specific fixes ("hook is a static wide — open on the
+push-in from shot 4 instead"). Surfaced via `/autonovel:teaser-critique
+--layer cut` or folded into the existing `reader-panel`.
+
+### 24.5 The iteration loop (budget-capped)
+
+`critique → regenerate the worst N → re-critique`, bounded by a round
+cap and a spend cap. Free passes (Pollinations) run the loop at $0 to
+develop the script and shot list; only after the cut works do you spend
+on the shots the clip-critic flagged `UPGRADE-TO-PAID`. The loop logs
+every verdict so you can see convergence.
+
+### 24.6 Testing the generator itself (dev / regression methodology)
+
+Building the *tool* (not just using it) needs its own tests:
+
+- **Golden shot-set fixtures** — a few hand-blessed beats → expected
+  schema shape; assert the generator still produces valid, complete,
+  lint-passing prompts (Tier-1, mechanical).
+- **Prompt-generation regression** — same beat in → stable, schema-valid
+  out across releases (catches LLM-prompt drift, the same risk the Bells
+  Tier-4 fixture guards for prose).
+- **Provider A/B harness** — render the same critiqued prompt across
+  providers (incl. free Pollinations) and log critic scores side by side
+  — data for the `--provider` defaults and for "is the paid upgrade
+  worth it?".
+- **End-to-end on the Fugger book (§21.1)** — the full free pass is the
+  integration test; a real Pollinations generate + critique is the
+  Tier-3 smoke.
+- **Results log** — persist `{prompt, provider, take, critic_score,
+  verdict, cost}` under `books/<name>/teaser/critique_log.jsonl` so
+  prompt-gen quality is *measured over time*, not vibes. (Mirrors
+  `command-log.jsonl` / eval logs.)
+
+### 24.7 Tier mapping & the no-brittle-python line
+
+- **Tier 1 (deterministic):** critique-report JSON shape; the linter's
+  *mechanical* checks (field presence, duration ≤ provider cap, separate
+  negative/dialogue fields, identical-appearance-string check across a
+  character's shots); results-log shape.
+- **Tier 2 (contracts):** `reads:`/`writes:` for the new
+  `teaser-critique` command.
+- **Tier 3 (smoke):** one real free generate + prompt-critique +
+  frame-critique end-to-end on a fixture.
+- **Never regex-score quality.** "Is this prompt good / on-brief?" and
+  "does this clip match intent?" are LLM/vision-judge calls. The
+  mechanical layer only checks *structure*; the judge checks *quality*.
+  Extends §12's rubric and §16's tiers.
