@@ -104,7 +104,11 @@ Use *these* terms — the models are trained on them:
 
 autonovel pulls the era look from your `project.yaml` period/region and
 the palette/grade from `art/visual_style.json`, so you don't type these
-by hand.
+by hand. It also renders the prompt in each provider's **dialect** — full
+prose for Veo/Sora (and the generic/Pollinations default), terse
+comma-separated keywords for Runway, a concise description plus a Luma
+camera-motion enum for Luma — automatically from `--provider`. Same
+facts, the shape each tool wants.
 
 ## 6. Keeping a character consistent across clips
 
@@ -121,6 +125,13 @@ The hardest part. The workflow that works:
 
 Honest caveat: identity still drifts sometimes. Reference images reduce
 it; they don't perfect it. Lean on them and pick the best takes.
+
+`/autonovel:shot-prompts` assigns each recurring subject a canonical
+reference path (`teaser/refs/<name>.png`) and runs
+`autonovel mechanical teaser-refs-plan`, which tells you exactly which
+reference images you still need to make, which shots use each, and
+whether a `shared/art_references/` plate already covers one — so you're
+never grepping the refs dir by hand.
 
 ## 7. Creative defaults — your first-timer questions, answered
 

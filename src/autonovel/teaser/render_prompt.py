@@ -2,10 +2,23 @@
 
 The LLM fills the structured fields; this module assembles them into the
 canonical Veo/Sora field order so the wording/ordering is deterministic
-and consistent across shots. Phase 1 ships the ``generic`` dialect (one
-rich prose paragraph + separate negative + separate dialogue block);
-Phase 2 adds per-provider dialects (Veo prose / Sora +Dialogue / Runway
-terse / Luma enum). Unknown dialects fall back to ``generic``.
+and consistent across shots. This is a **format translation**, not a
+quality judgement — each provider's UI/API wants the same facts in a
+different shape (``feedback_avoid_brittle_python``: deterministic
+assembly, no word-lists, unknown values pass through verbatim).
+
+Dialects (keyed off ``providers.ProviderProfile.dialect``):
+
+- ``generic`` / ``veo`` / ``sora`` (and pollinations, kling) — one rich
+  **prose** paragraph in canonical order. Veo/Sora are trained on natural
+  language; this is their native shape.
+- ``runway`` — **terse**, comma-separated keyword phrases. Runway Gen-4
+  prefers compact descriptive tags over long prose.
+- ``luma`` — **enum**: concise description plus the camera move mapped to
+  Luma Dream Machine's enumerated motion control.
+
+``render_visual(shot, provider)`` is the dispatcher; unknown dialects
+fall back to prose.
 """
 
 from __future__ import annotations
@@ -13,19 +26,35 @@ from __future__ import annotations
 from . import providers
 from .shots import Shot
 
+# Canonical field order, shared by every dialect (PRD §8).
+# (label, accessor) — accessor returns the rendered fragment or "".
+
+
+def _framing(shot: Shot) -> str:
+    return ", ".join(p for p in (shot.shot_size, shot.camera_angle) if p)
+
+
+def _subject(shot: Shot) -> str:
+    subj = shot.subject_name.upper() if shot.subject_name else ""
+    if subj and shot.subject_appearance:
+        return f"{subj} ({shot.subject_appearance})"
+    return subj
+
+
+def _palette(shot: Shot, joiner: str = ", ") -> str:
+    return (joiner.join(shot.palette) + " palette") if shot.palette else ""
+
 
 def render_prose(shot: Shot) -> str:
     """The visual prompt as one paragraph, in canonical order:
     framing → subject+appearance → action → setting → lighting →
     palette → camera move → lens → style → mood."""
     parts: list[str] = []
-    framing = ", ".join(p for p in (shot.shot_size, shot.camera_angle) if p)
+    framing = _framing(shot)
     if framing:
         parts.append(framing.capitalize() + ".")
-    subj = shot.subject_name.upper() if shot.subject_name else ""
-    if subj and shot.subject_appearance:
-        parts.append(f"{subj} ({shot.subject_appearance})")
-    elif subj:
+    subj = _subject(shot)
+    if subj:
         parts.append(subj)
     if shot.action:
         parts.append(shot.action.rstrip("."))
@@ -48,6 +77,82 @@ def render_prose(shot: Shot) -> str:
     return (text + ".") if text and not text.endswith(".") else text
 
 
+def render_terse(shot: Shot) -> str:
+    """Comma-separated keyword phrases (Runway Gen-4 dialect). Same
+    canonical order as prose; no sentences, no trailing periods."""
+    frags = [
+        _framing(shot),
+        _subject(shot),
+        shot.action.rstrip("."),
+        shot.setting,
+        shot.lighting,
+        _palette(shot, joiner="/"),
+        shot.camera_movement,
+        shot.lens,
+        shot.style,
+        shot.mood,
+    ]
+    return ", ".join(f.strip() for f in frags if f and f.strip())
+
+
+# Luma Dream Machine exposes camera motion as an enumerated control; map
+# common free-text moves onto it. Unknown moves pass through verbatim so
+# the LLM's wording is never silently dropped.
+_LUMA_CAMERA = {
+    "static": "Static",
+    "push in": "Push In", "push-in": "Push In", "push_in": "Push In",
+    "dolly in": "Push In", "dolly-in": "Push In",
+    "pull out": "Pull Out", "pull-out": "Pull Out", "pull_out": "Pull Out",
+    "dolly out": "Pull Out", "dolly-out": "Pull Out",
+    "pan left": "Pan Left", "pan right": "Pan Right",
+    "tilt up": "Move Up", "tilt down": "Move Down",
+    "move left": "Move Left", "move right": "Move Right",
+    "move up": "Move Up", "move down": "Move Down",
+    "truck left": "Move Left", "truck right": "Move Right",
+    "orbit": "Orbit Left", "orbit left": "Orbit Left", "orbit right": "Orbit Right",
+    "crane up": "Crane Up", "crane down": "Crane Down",
+    "zoom in": "Zoom In", "zoom out": "Zoom Out",
+}
+
+
+def luma_camera(movement: str) -> str:
+    """Map a free-text camera move onto Luma's motion enum; pass through
+    unknown moves verbatim (lower-cased lookup, normalised separators)."""
+    key = movement.strip().lower().replace("_", " ").replace("-", " ").strip()
+    return _LUMA_CAMERA.get(key, movement.strip())
+
+
+def render_enum(shot: Shot) -> str:
+    """Luma dialect: a concise description plus an explicit
+    ``Camera: <enum>`` directive (Luma controls motion separately)."""
+    frags = [
+        _framing(shot),
+        _subject(shot),
+        shot.action.rstrip("."),
+        shot.setting,
+        shot.lighting,
+        _palette(shot, joiner="/"),
+        shot.lens,
+        shot.style,
+        shot.mood,
+    ]
+    desc = ", ".join(f.strip() for f in frags if f and f.strip())
+    if shot.camera_movement:
+        cam = luma_camera(shot.camera_movement)
+        desc = f"{desc}. Camera: {cam}" if desc else f"Camera: {cam}"
+    return desc
+
+
+def render_visual(shot: Shot, provider: str = "generic") -> str:
+    """Dispatch to the provider's render dialect. Unknown → prose."""
+    dialect = providers.get(provider).dialect
+    if dialect == "runway":
+        return render_terse(shot)
+    if dialect == "luma":
+        return render_enum(shot)
+    return render_prose(shot)
+
+
 def render_dialogue_block(shot: Shot) -> str:
     lines = []
     for d in shot.dialogue():
@@ -68,11 +173,11 @@ def render_markdown(shot: Shot, provider: str = "generic") -> str:
         out += [f"*Beat:* {shot.beat_note}", ""]
     out += [
         f"*Duration:* {shot.duration_s:g}s (cap {prof.max_clip_s:g}s, {prof.name}) · "
-        f"*Aspect:* {shot.aspect_ratio}",
+        f"*Aspect:* {shot.aspect_ratio} · *Dialect:* {prof.dialect}",
         "",
         "**Prompt**",
         "",
-        render_prose(shot) or "_(empty — fill the structured fields)_",
+        render_visual(shot, provider) or "_(empty — fill the structured fields)_",
         "",
     ]
     if shot.negative_prompt:

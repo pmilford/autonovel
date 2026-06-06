@@ -1175,8 +1175,32 @@
   README / series CLAUDE.md / teaser-craft.md / impl-plan /
   FUTURE-TODOS. No existing-module behaviour changed. Regression gate:
   **Tier 1+2 1546 → 1562 passed, 1 skipped, 0 failed.**
+- 2026-06-05 (movie-teaser Phase 2: render dialects + reference-image
+  consistency): additive. `render_prompt.py` gained per-provider render
+  **dialects** keyed off `providers.dialect` — `render_terse` (Runway:
+  comma-keywords), `render_enum` (Luma: concise + camera-motion enum via
+  `luma_camera()` mapping, unknown moves pass through verbatim), and the
+  `render_visual()` dispatcher (prose for veo/sora/generic/pollinations/
+  kling). `render_markdown` now renders via the dialect and prints the
+  dialect name; `render_prose` unchanged (no regression). New
+  `src/autonovel/teaser/refs.py` — per-subject **reference-image plan**
+  (which canonical ref each recurring subject needs, which shots use it,
+  which already exist in `teaser/refs/` or a `shared/art_references/`
+  plate, appearance-drift count). New mechanical CLI `teaser-refs-plan`
+  (additive subparser). `shot-prompts.md` wired to run it + note missing
+  refs. All format-translation + filesystem facts; no LLM, no
+  word-list quality gate. Doc-sync: commands.md (dialect note +
+  refs-plan row), teaser-craft.md (§5 dialects, §6 refs-plan),
+  module docstring, impl-plan, FUTURE-TODOS. No existing-module
+  behaviour changed. Regression gate: **Tier 1+2 1562 → 1570 passed,
+  1 skipped, 0 failed.**
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1570
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +8 since the 1562 mark: movie-teaser Phase 2 (render dialects +
+  refs.py reference-image plan + teaser-refs-plan CLI). Prior marks
+  below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1562
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +16 since the 1546 mark: movie-teaser Phase 1 final (teaser +

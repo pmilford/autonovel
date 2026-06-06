@@ -1571,9 +1571,16 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   re-runnable free critique = mechanical linter + LLM critic; read-only
   on teaser.json; writes `teaser/critique.md`). Plus a robustness guard
   (`shots.load` raises a clear error on malformed top-level JSON). Tier
-  1+2: 1546 → 1562. Remaining: Phase 2 provider dialects +
-  reference-image consistency, Phase 3.5 Pollinations render +
-  clip-critique, Phase 3 ffmpeg assembly.
+  1+2: 1546 → 1562.
+  **Phase 2 shipped (2026-06-05)** — per-provider render **dialects**
+  (`render_prompt.render_visual`: prose for veo/sora/generic/pollinations,
+  terse comma-keywords for Runway, concise + Luma camera-enum for Luma;
+  follows `--provider` automatically) and reference-image **consistency
+  anchors** (`teaser/refs.py` + `teaser-refs-plan` CLI: which canonical
+  ref each subject needs, which shots use it, which exist in `teaser/refs/`
+  or a `shared/art_references/` plate, which are missing — wired into
+  shot-prompts so no manual `ls`). Tier 1+2: 1562 → 1570. Remaining:
+  Phase 3.5 Pollinations render + clip-critique, Phase 3 ffmpeg assembly.
 
 - **🚀 ULTRA-LONG-TERM: Script → full video pipeline.** Surfaced
   2026-05-01. The natural endpoint of the screenplay output above:

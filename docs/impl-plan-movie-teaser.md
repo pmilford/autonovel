@@ -28,27 +28,27 @@
   critic, read-only, writes `teaser/critique.md`). Robustness guard on
   `shots.load`. `shot-prompts` validated end-to-end on the Fugger book
   (35 shots / 144s / clean critique).
+- **Phase 2** — per-provider render *dialects* in `render_prompt.py`
+  (`render_visual`: prose veo/sora/generic, terse Runway, Luma enum) +
+  `teaser/refs.py` reference-image plan + `teaser-refs-plan` CLI, wired
+  into shot-prompts; `shared/art_references/` fallback.
 
-**Baseline now:** Tier 1+2 = **1562 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1570 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.
 
 **NEXT (in order):**
-1. **Phase 2** — per-provider render *dialects* in `render_prompt.py`
-   (Veo prose / Sora +Dialogue block / Runway terse / Luma enum) keyed
-   off `providers.py`; reference-image **consistency anchors** per shot +
-   a `teaser/refs/` plan; integrate `shared/art_references/`.
-2. **Phase 3.5** — thin **Pollinations** render adapter
+1. **Phase 3.5** — thin **Pollinations** render adapter
    (`teaser/render.py` + `resolve-video-provider` twin of the image
    resolver + `/autonovel:teaser-render`): stateless submit→poll→download
    per shot, `--dry-run`, free default backend; **clip critique**
    (vision-LLM, KEEP/REGENERATE/UPGRADE-TO-PAID). Bright lines: clips on
    disk only, no state file, no auto-assembly (PRD §23.2).
-3. **Phase 3** — ffmpeg `cut_list.json` assembly + viewer-panel cut
+2. **Phase 3** — ffmpeg `cut_list.json` assembly + viewer-panel cut
    critique.
 
-Every step: hold the ≥1562 gate, additive-only, full doc-sync, append a
+Every step: hold the ≥1570 gate, additive-only, full doc-sync, append a
 STATE.md decision entry + bump the green count.
 
 ---

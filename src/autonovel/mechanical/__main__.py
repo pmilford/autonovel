@@ -22,6 +22,11 @@ Subcommands:
   wikimedia-fetch <File:title>     Download + center-crop one Commons image.
   render-novel-tex <template> [-s KEY=V ...]  Substitute @KEY@ placeholders (safer than sed).
   typeset-filename <slug> <kind>   Print canonical timestamped + latest filenames.
+  teaser-plan --length S [...]     Recommend a teaser beat/shot budget + per-role timing.
+  teaser-validate <teaser.json>    Validate the shot schema (hard errors; provider clip-cap).
+  teaser-critique <teaser.json>    Mechanical pre-generation critique (advisory flags).
+  teaser-render-prompt <t.json>    Render shot prompt markdown in the provider's dialect.
+  teaser-refs-plan <teaser.json>   Plan the canonical reference image per recurring subject.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -953,6 +958,44 @@ def _cmd_teaser_render_prompt(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
+    from ..teaser import shots as _shots, refs as _refs
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-refs-plan: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    base_dir = Path(args.path).resolve().parent
+    refs_dir = Path(args.refs_dir) if getattr(args, "refs_dir", None) else None
+    art_dir = (Path(args.art_references_dir)
+               if getattr(args, "art_references_dir", None) else None)
+    # When --refs-dir is given, resolve ref paths against its parent so a
+    # ref_path like "refs/jakob.png" lines up with the supplied dir.
+    resolve_base = refs_dir.parent if refs_dir else base_dir
+    plan = _refs.plan_refs(teaser, base_dir=resolve_base, art_references_dir=art_dir)
+    if getattr(args, "format", "human") == "json":
+        json.dump(plan.to_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    n, miss = len(plan.entries), len(plan.missing)
+    if not plan.entries:
+        print("no named subjects in this teaser — nothing to anchor.")
+        return 0
+    print(f"Reference-image plan — {n} subject(s), {miss} missing:")
+    for e in plan.entries:
+        mark = "✅" if e.exists else "⬜"
+        src = "" if e.source == "missing" else f" [{e.source}]"
+        drift = "" if e.appearance_variants <= 1 else f" ⚠️{e.appearance_variants} appearances"
+        print(f"  {mark} {e.subject} → {e.ref_path}{src} "
+              f"({len(e.shots)} shot(s)){drift}")
+        if e.suggested_ref:
+            print(f"      ↳ reuse shared plate: {e.suggested_ref}")
+    if miss:
+        print(f"\nGenerate the {miss} missing reference image(s) "
+              f"(art-curate / teaser-render), then re-run.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m autonovel.mechanical")
     sub = p.add_subparsers(dest="subcmd")
@@ -1265,6 +1308,20 @@ def main(argv: list[str] | None = None) -> int:
     trp.add_argument("--out-dir", dest="out_dir", default=None,
                      help="Write each shot to <out-dir>/shot_<id>.md instead of stdout.")
     trp.set_defaults(func=_cmd_teaser_render_prompt)
+
+    # --- movie-teaser mode (Phase 2: reference-image consistency) ---
+    trf = sub.add_parser("teaser-refs-plan",
+                         help="Plan the canonical reference image per recurring subject "
+                              "(which shots use each, which already exist on disk).")
+    trf.add_argument("path", help="Path to teaser.json.")
+    trf.add_argument("--refs-dir", dest="refs_dir", default=None,
+                     help="Reference-image dir (default: <teaser.json dir>/refs). "
+                          "ref paths are tested for existence here.")
+    trf.add_argument("--art-references-dir", dest="art_references_dir", default=None,
+                     help="Optional shared plate library (e.g. shared/art_references/) "
+                          "used as a fallback source for an existing reference.")
+    trf.add_argument("--format", choices=["json", "human"], default="human")
+    trf.set_defaults(func=_cmd_teaser_refs_plan)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

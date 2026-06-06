@@ -215,7 +215,8 @@ and can run them by hand for inspection / debugging.
 | `teaser-plan --length <s> [--provider <p>]` | Recommend a teaser beat/shot budget + per-role timing for a length (used by `teaser-beats` / `shot-prompts`). |
 | `teaser-validate <teaser.json> [--provider <p>]` | Validate the shot schema (hard structural errors; clip-cap per provider). Nonzero exit when invalid. |
 | `teaser-critique <teaser.json> [--provider <p>]` | Mechanical pre-generation critique (advisory flags: appearance-drift, thin-prompt, no-palette/-reference, multi-action, audio-unsupported, missing hook/button, length-mismatch). |
-| `teaser-render-prompt <teaser.json> [--shot <id>] [--out-dir <dir>] [--provider <p>]` | Render shot prompt markdown in canonical order from the schema; `--out-dir` writes `shot_<id>.md` files. |
+| `teaser-render-prompt <teaser.json> [--shot <id>] [--out-dir <dir>] [--provider <p>]` | Render shot prompt markdown in the provider's **render dialect** (prose for veo/sora/generic/pollinations; terse comma-keywords for runway; concise + Luma camera-enum for luma) and canonical order; `--out-dir` writes `shot_<id>.md` files. |
+| `teaser-refs-plan <teaser.json> [--refs-dir <d>] [--art-references-dir <d>]` | Plan the canonical **reference image** per recurring subject (consistency anchor): which shots use each, which already exist (in `teaser/refs/` or a shared `art_references/` plate), which are still missing. |
 
 `autonovel mechanical <subcmd> --help` shows full flags for any
 of them. Many emit JSON via `--format json` for piping.

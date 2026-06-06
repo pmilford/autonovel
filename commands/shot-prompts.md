@@ -118,11 +118,24 @@ of best-effort inputs.
 9. **Render the per-shot files.** `bash`:
    `autonovel mechanical teaser-render-prompt books/{book}/teaser/teaser.json --provider <name> --out-dir books/{book}/teaser/shots`
    — this writes `books/{book}/teaser/shots/shot_<id>.md` for every shot
-   in deterministic canonical order.
+   in the provider's **render dialect** (prose for veo/sora/generic/
+   pollinations; terse comma-keywords for runway; concise + a Luma camera
+   enum for luma) and deterministic canonical order. You don't pick the
+   dialect — it follows `--provider`.
+
+9a. **Reference-image plan (consistency anchors).** `bash`:
+    `autonovel mechanical teaser-refs-plan books/{book}/teaser/teaser.json --art-references-dir shared/art_references`
+    — lists the canonical reference image each recurring subject needs,
+    which shots use it, and which already exist (in `books/{book}/teaser/refs/`
+    or as a shared `shared/art_references/` plate). Reuse a shared plate
+    when one is suggested; otherwise note the missing refs in the summary
+    so the user can generate them (`/autonovel:art-curate`, or later
+    `/autonovel:teaser-render`). This kills the "which refs do I still
+    need?" `ls` workflow.
 
 10. Print a one-screen summary: shot count, total seconds vs target,
-    remaining advisory flags, estimated clip count incl. ~3× takes, and
-    the next step:
+    remaining advisory flags, missing reference images, estimated clip
+    count incl. ~3× takes, and the next step:
 
     ```
     🎬 Wrote books/{book}/teaser/teaser.json + N shot files in
