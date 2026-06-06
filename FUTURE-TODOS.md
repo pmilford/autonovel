@@ -1482,6 +1482,69 @@ prose ≈ 8 / 10, with investigation-heavy plots).
     vs PDF-only — likely all three; `.fdx` for pros, `.fountain` for
     git-friendly source-control, PDF for portability.
 
+- **🎬 MOVIE-SCRIPT MODE FOR AI VIDEO + 1–3 MINUTE TEASER GENERATOR
+  (near-term, user-prioritised 2026-06-05).** A focused subset of the
+  big "movie script + theater play" entry above, scoped tight enough
+  to actually ship. The user's intent: produce a *movie* script (the
+  combined entry covered movie + play, but the deliverable here is
+  specifically the screenplay/movie path), and from it auto-generate a
+  detailed, descriptive **1–3 minute teaser/preview** whose shots are
+  emitted as richly-described prompts ready to feed an AI video tool
+  (Sora 2 / Veo 3 / Runway Gen-4 / Kling, etc.). The script is the
+  spec; the teaser is the first shippable visual artefact — much
+  cheaper and more impressive than a full film, and it forces us to
+  solve the load-bearing problems (descriptive prompting, shot
+  decomposition, character/style consistency across clips) at a tiny
+  scale before the ultra-long-term full-video pipeline below.
+
+  Why teaser-first, not full-film-first: clips from every current
+  provider are short (~4–10 s native), so even a 1–3 min teaser is
+  already an assembled montage of 15–40 generated clips — the same
+  assembly + consistency machinery the full pipeline needs, but at a
+  cost and iteration speed a single author can actually run.
+
+  Scope of THIS item (the teaser, not the whole movie):
+   1. **Movie-script mode** — author/adapt a screenplay (reuse the
+      adapt + from-scratch shapes from the combined entry above), OR
+      derive a teaser straight from an existing autonovel book's
+      outline + key scenes without a full screenplay first.
+   2. **Teaser beat-sheet** — a light-tier command selects the 8–20
+      teaser-worthy beats (hook → escalation → title card → button)
+      from the script/outline, honouring trailer craft (withhold the
+      ending; lead with the hook; rhythm to a music bed).
+   3. **Descriptive shot-prompt generator** — the core deliverable.
+      Each beat → one or more shots, each shot emitted as a
+      provider-targeted, heavily-descriptive prompt using a structured
+      field schema (shot size · subject + appearance · action ·
+      setting · lighting · camera movement · lens/film-stock/look ·
+      mood · audio cue · negative prompt). Provider profiles tune the
+      phrasing/length per target (Runway = concise, Veo = rich
+      cinematography, Sora = audio-aware, Kling = its own conventions).
+      Pulls character appearance from `shared/characters.md` +
+      voice.md Part 4, setting from `shared/world.md`, period from
+      `project.yaml`. Output: hand-edit-friendly `.md` per shot plus a
+      machine `teaser.json`.
+   4. **Consistency anchors** — emit reference-image / first-frame /
+      character-reference guidance per shot so the same character and
+      location read consistently across the assembled clips (the known
+      hard part; reuse the cross-book illustration-coherence reference
+      library shared/art_references/).
+   5. **Assembly spec (optional v1.5)** — a `cut_list.json` + ffmpeg
+      concat with music bed + text cards to stitch user-generated
+      clips into the finished teaser. v1 can stop at "hand the prompts
+      + cut order to the user"; v1.5 automates the stitch.
+
+  This sits between the combined movie/play entry (its parent — share
+  the screenplay typeset + evaluator-rubric work) and the
+  ultra-long-term full-video pipeline (its superset — the teaser is
+  that pipeline run on a 2-minute spec). PRD: `docs/prd-movie-teaser-
+  mode.md` (drafted 2026-06-05, informed by a web-research pass on
+  current AI-video prompting; see the PRD's References section).
+  Cost: PRD-scoped; the teaser-only v1 is far smaller than the full
+  movie or video pipeline — plausibly ~20–30 hr for shot-prompt
+  generation + provider profiles + beat-sheet, excluding the
+  screenplay-typeset work it inherits from the parent entry.
+
 - **🚀 ULTRA-LONG-TERM: Script → full video pipeline.** Surfaced
   2026-05-01. The natural endpoint of the screenplay output above:
   drive a full video-generation pipeline from a parsed Fountain /
