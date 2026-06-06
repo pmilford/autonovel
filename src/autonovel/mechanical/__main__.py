@@ -849,6 +849,110 @@ def _cmd_resolve_image_provider(args: argparse.Namespace) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# Movie-teaser mode (docs/prd-movie-teaser-mode.md). Mechanical only — the
+# creative generation + LLM critique live in the slash-command bodies; these
+# helpers plan the budget, validate the schema, and run the mechanical
+# pre-generation critique so the precedence/rules live in one place.
+# --------------------------------------------------------------------------
+
+
+def _cmd_teaser_plan(args: argparse.Namespace) -> int:
+    from ..teaser import beats as _beats
+    data = _beats.plan(int(args.length), provider=getattr(args, "provider", "generic"))
+    if getattr(args, "format", "json") == "human":
+        st = data["structure"]
+        print(f"Teaser plan — {data['length_s']}s on {data['provider']} "
+              f"(clip cap {data['provider_clip_cap_s']:g}s, "
+              f"native audio: {data['provider_native_audio']})")
+        print(f"  beats: ~{data['beat_target']} (range {data['beat_range'][0]}-{data['beat_range'][1]})")
+        print(f"  shots: ~{data['shot_target']} (avg {data['avg_shot_s']:g}s each)")
+        print(f"  hook:       {st['hook']['seconds_each'][0]:g}-{st['hook']['seconds_each'][1]:g}s — {st['hook']['note']}")
+        print(f"  escalation: {st['escalation']['seconds_each'][0]:g}-{st['escalation']['seconds_each'][1]:g}s — {st['escalation']['note']}")
+        print(f"  title:      {st['title']['placement']} — {st['title']['note']}")
+        print(f"  button:     {st['button']['seconds'][0]:g}-{st['button']['seconds'][1]:g}s — {st['button']['note']}")
+    else:
+        json.dump(data, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_teaser_validate(args: argparse.Namespace) -> int:
+    from ..teaser import shots as _shots, providers as _prov
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-validate: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    prof = _prov.get(getattr(args, "provider", None) or teaser.provider)
+    problems = _shots.validate(teaser, prof)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"valid": not problems, "problems": problems}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        if problems:
+            print(f"❌ teaser invalid ({len(problems)} problem(s)):")
+            for p_ in problems:
+                print(f"  - {p_}")
+        else:
+            print(f"✅ teaser valid — {len(teaser.shots)} shots, "
+                  f"{teaser.total_duration_s():g}s total on {prof.name}.")
+    return 1 if problems else 0
+
+
+def _cmd_teaser_critique(args: argparse.Namespace) -> int:
+    from ..teaser import shots as _shots, critique as _crit, providers as _prov
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-critique: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    prof = _prov.get(getattr(args, "provider", None) or teaser.provider)
+    rep = _crit.critique(teaser, prof)
+    if getattr(args, "format", "human") == "json":
+        json.dump(rep.to_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        if not rep.findings:
+            print("✅ mechanical critique: no flags.")
+        else:
+            print(f"⚠️  mechanical critique: {len(rep.findings)} flag(s) "
+                  f"(advisory — fix the high-value ones before generating):")
+            for f in rep.findings:
+                where = f.shot_id or "teaser"
+                print(f"  - [{where}] {f.code}: {f.message}")
+    return 0
+
+
+def _cmd_teaser_render_prompt(args: argparse.Namespace) -> int:
+    from ..teaser import shots as _shots, render_prompt as _rp
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-render-prompt: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    provider = getattr(args, "provider", None) or teaser.provider
+    want = getattr(args, "shot", None)
+    rendered = [s for s in teaser.shots if (want is None or s.id == want)]
+    if want is not None and not rendered:
+        print(f"teaser-render-prompt: no shot with id {want!r}", file=sys.stderr)
+        return 2
+    out_dir = getattr(args, "out_dir", None)
+    if out_dir:
+        d = Path(out_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        written = []
+        for s in rendered:
+            fn = d / f"shot_{s.id}.md"
+            fn.write_text(_rp.render_markdown(s, provider), encoding="utf-8")
+            written.append(str(fn))
+        print(f"wrote {len(written)} shot file(s) to {out_dir}/")
+        return 0
+    for s in rendered:
+        print(_rp.render_markdown(s, provider))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m autonovel.mechanical")
     sub = p.add_subparsers(dest="subcmd")
@@ -1130,6 +1234,37 @@ def main(argv: list[str] | None = None) -> int:
     rip.add_argument("--cli-provider", dest="cli_provider", default=None,
                      help="Explicit per-call provider (the slash-command's --provider). Wins over project.yaml.")
     rip.set_defaults(func=_cmd_resolve_image_provider)
+
+    # --- movie-teaser mode (Phase 1) ---
+    tpl = sub.add_parser("teaser-plan",
+                         help="Recommend a beat/shot budget + per-role timing for a teaser length.")
+    tpl.add_argument("--length", type=int, required=True, help="Teaser length in seconds.")
+    tpl.add_argument("--provider", default="generic", help="Target video provider (clip cap shapes the budget).")
+    tpl.add_argument("--format", choices=["json", "human"], default="json")
+    tpl.set_defaults(func=_cmd_teaser_plan)
+
+    tvl = sub.add_parser("teaser-validate",
+                         help="Validate a teaser.json against the shot schema (hard structural errors).")
+    tvl.add_argument("path", help="Path to teaser.json.")
+    tvl.add_argument("--provider", default=None, help="Override the provider for the clip-cap check.")
+    tvl.add_argument("--format", choices=["json", "human"], default="human")
+    tvl.set_defaults(func=_cmd_teaser_validate)
+
+    tcr = sub.add_parser("teaser-critique",
+                         help="Mechanical pre-generation critique of a teaser.json (advisory flags).")
+    tcr.add_argument("path", help="Path to teaser.json.")
+    tcr.add_argument("--provider", default=None)
+    tcr.add_argument("--format", choices=["json", "human"], default="human")
+    tcr.set_defaults(func=_cmd_teaser_critique)
+
+    trp = sub.add_parser("teaser-render-prompt",
+                         help="Render a shot's provider-ready prompt markdown from teaser.json.")
+    trp.add_argument("path", help="Path to teaser.json.")
+    trp.add_argument("--shot", default=None, help="Render only this shot id (default: all).")
+    trp.add_argument("--provider", default=None)
+    trp.add_argument("--out-dir", dest="out_dir", default=None,
+                     help="Write each shot to <out-dir>/shot_<id>.md instead of stdout.")
+    trp.set_defaults(func=_cmd_teaser_render_prompt)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

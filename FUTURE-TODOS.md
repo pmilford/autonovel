@@ -1551,10 +1551,21 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   `[scripts]` extras stubs; docs split (`docs/teaser-craft.md` is now
   the canonical creative guide); install-immutability guard tests.
   **`/autonovel:treatment` shipped** — film treatment + 2-page brief
-  (X-Prize-shaped). Tier 1+2: 1503 → 1515. Remaining: Phase 1 teaser
-  beats + shot-prompts + prompt-critique, Phase 2 provider profiles +
-  consistency, Phase 3.5 Pollinations render + clip-critique, Phase 3
-  assembly.
+  (X-Prize-shaped). Tier 1+2: 1503 → 1515.
+  **Phase 1 shipped (2026-06-05)** — `src/autonovel/teaser/{shots,beats,
+  render_prompt,providers,critique}.py`; mechanical CLI `teaser-plan` /
+  `teaser-validate` / `teaser-critique` / `teaser-render-prompt`;
+  `/autonovel:teaser-beats` (beat-sheet on the hook→escalation→title→
+  button arc) and `/autonovel:shot-prompts` (structured shot schema →
+  provider-ready prompts + teaser.json + per-shot markdown, with a free
+  mechanical+LLM pre-generation critique incl. appearance-drift /
+  clip-cap / one-action / palette / consistency checks). All free, no
+  generation. Tier 1+2: 1515 → 1546. First validated end-to-end on the
+  Fugger book (treatment + brief committed to medieval-king-maker, tag
+  `first-movie-brief`). Remaining: `/autonovel:teaser` orchestrator +
+  standalone `teaser-critique` command, Phase 2 provider dialects +
+  reference-image consistency, Phase 3.5 Pollinations render +
+  clip-critique, Phase 3 ffmpeg assembly.
 
 - **🚀 ULTRA-LONG-TERM: Script → full video pipeline.** Surfaced
   2026-05-01. The natural endpoint of the screenplay output above:

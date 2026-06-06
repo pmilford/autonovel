@@ -131,15 +131,17 @@ checkpoint so `autonovel rollback` undoes the full operation.
 | `/autonovel:introduction --book <short-name> [--from auto\|user\|both] [--force]` | heavy | Generate front-matter content for the typeset PDF and ePub. `--from user` (default) scaffolds `books/<book>/preface.md` for the writer to fill in. `--from auto` AI-generates `books/<book>/introduction.md` (~600–1200 words, essay-form, grounded in the book's themes; never reveals plot past the inciting incident). `--from both` does both. typeset auto-includes whichever exist, in order Preface → Introduction, as `\chapter*{}` blocks before chapter 1. `--force` overwrites existing files. |
 | `/autonovel:typeset --book <short-name> [--pdf-only \| --epub-only] [--convert-vectors]` | light | Build PDF + ePub from chapters and typeset templates. Outputs `<book>_<YYYYMMDD>_<HHMM>.pdf` (per build, kept) plus `<book>_latest.pdf` (overwritten each successful build); same shape for `.epub`. Title and author come from `project.yaml :: books[<name>]` (set via `/autonovel:title`); falls back to `series_name` and "Anonymous". |
 | `/autonovel:landing --book <short-name> [--template <path>] [--url <canonical-url>]` | standard | Render a responsive landing page with og:image + structured data. |
+| `/autonovel:package --book <short-name> [--skip <t,t,...>] [--out <path>]` | light | End-to-end release bundle — PDF + ePub + covers + landing + audiobook, zipped. |
 
 ### Movie / teaser (in progress)
 
-Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Phase 0 + the treatment command have shipped; trailer-generation commands (`teaser`, `teaser-beats`, `shot-prompts`, `teaser-critique`) follow.
+Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Shipped: `treatment`, `teaser-beats`, `shot-prompts` (Phase 0 + Phase 1). Next: the `/autonovel:teaser` orchestrator, a standalone `teaser-critique`, the Pollinations render adapter, and ffmpeg assembly.
 
 | Command | Tier | Purpose |
 |---|---|---|
 | `/autonovel:treatment --book <short-name> [--pages <n>] [--audience xprize\|general] [--no-brief] [--force]` | heavy | Generate a film **treatment** (≤`--pages`, default 12) + a 2-page **brief/synopsis** from the book's foundation (outline + world + characters + canon, enriched by `chapters/*.md` when present). Present-tense; reveals the ending (a treatment hides nothing — unlike a teaser). `--audience xprize` (default) frames both for the Future Vision X-Prize: optimistic future, technology solving a real problem, genuine stakes + arc, visual ambition. Writes `books/<book>/treatment.md` + `books/<book>/brief.md`; `--force` to overwrite. |
-| `/autonovel:package --book <short-name> [--skip <t,t,...>] [--out <path>]` | light | End-to-end release bundle — PDF + ePub + covers + landing + audiobook, zipped. |
+| `/autonovel:teaser-beats --book <short-name> [--length 30\|60\|90\|120\|180] [--provider generic\|veo\|sora\|runway\|kling\|luma\|pollinations] [--force]` | standard | Select 8–20 teaser beats on the hook → escalation → title → button arc from the treatment/outline + eval_logs, to a budget from `teaser-plan`. Writes the hand-editable `books/<book>/teaser/beats.md`. Free; no generation. |
+| `/autonovel:shot-prompts --book <short-name> [--provider <name>] [--length <s>] [--force]` | heavy | Turn the beat-sheet into provider-ready, heavily-described shot prompts. Fills the structured shot schema (verbatim character appearance, palette lock, one action/one move, content-word negative prompt, consistency anchors), runs a **free pre-generation critique** (mechanical `teaser-critique` + an LLM rewrite pass), then writes `books/<book>/teaser/teaser.json` + per-shot `books/<book>/teaser/shots/shot_<id>.md`. No generation cost. |
 
 ## Navigation commands
 
@@ -208,6 +210,10 @@ and can run them by hand for inspection / debugging.
 | `build-tex <chapters_dir>` | Build chapters_content.tex from .md files. |
 | `build-epub-md <chapters_dir>` | Concatenate ch_NN.md → one ePub-ready markdown. |
 | `spine-width --pages N` | Cover canvas spec (spine + canvas + px). |
+| `teaser-plan --length <s> [--provider <p>]` | Recommend a teaser beat/shot budget + per-role timing for a length (used by `teaser-beats` / `shot-prompts`). |
+| `teaser-validate <teaser.json> [--provider <p>]` | Validate the shot schema (hard structural errors; clip-cap per provider). Nonzero exit when invalid. |
+| `teaser-critique <teaser.json> [--provider <p>]` | Mechanical pre-generation critique (advisory flags: appearance-drift, thin-prompt, no-palette/-reference, multi-action, audio-unsupported, missing hook/button, length-mismatch). |
+| `teaser-render-prompt <teaser.json> [--shot <id>] [--out-dir <dir>] [--provider <p>]` | Render shot prompt markdown in canonical order from the schema; `--out-dir` writes `shot_<id>.md` files. |
 
 `autonovel mechanical <subcmd> --help` shows full flags for any
 of them. Many emit JSON via `--format json` for piping.

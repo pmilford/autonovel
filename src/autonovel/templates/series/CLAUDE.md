@@ -229,13 +229,19 @@ this to the user verbatim and stop, do not retry:
 
 ## Movie / teaser mode (in progress)
 
-Adapting a book to the screen: `/autonovel:treatment --book <name>`
-writes a film treatment + a 2-page brief from the book's foundation
-(reveals the ending — it's a treatment, not a teaser). `--audience
-xprize` (default) frames it for the Future Vision X-Prize (optimistic
-future, real problem solved, stakes + arc, visual ambition). The
-trailer-generation commands (`teaser`, `shot-prompts`) follow. The
-creative how-to lives in `docs/teaser-craft.md`.
+Adapting a book to the screen, in order:
+1. `/autonovel:treatment --book <name>` — film treatment + 2-page brief
+   (reveals the ending; `--audience xprize` default frames it for the
+   Future Vision X-Prize: optimistic future, real problem solved, stakes
+   + arc, visual ambition).
+2. `/autonovel:teaser-beats --book <name> [--length 180]` — pick the
+   hook → escalation → title → button beats (free).
+3. `/autonovel:shot-prompts --book <name> [--provider <p>]` — turn beats
+   into provider-ready shot prompts with a free pre-generation critique;
+   writes `teaser/teaser.json` + `teaser/shots/shot_*.md` (free).
+
+Then take the prompts to your video tool (Pollinations is the free
+no-key option). The creative how-to lives in `docs/teaser-craft.md`.
 
 ## Where to find more
 

@@ -205,6 +205,22 @@ watermark, text, subtitles, flicker, morphing`. **Never** write "no
 walls" / "don't show…" — the model reads the content words, so negation
 backfires.
 
+## 10. The commands
+
+The craft above is applied by these commands (run in order):
+
+1. `/autonovel:treatment --book <name>` — film treatment + 2-page brief
+   (reveals the ending; X-Prize-shaped by default).
+2. `/autonovel:teaser-beats --book <name> [--length 180]` — selects the
+   hook → escalation → title → button beats to a budget. Writes
+   `teaser/beats.md` (edit it freely).
+3. `/autonovel:shot-prompts --book <name> [--provider <p>]` — turns beats
+   into provider-ready shot prompts, runs a free pre-generation critique,
+   and writes `teaser/teaser.json` + `teaser/shots/shot_*.md`.
+
+All three are free (no generation). Then take the shot prompts to your
+video tool — Pollinations is the free, no-key option (PRD §22).
+
 ---
 
 *See [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md) for the

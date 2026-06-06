@@ -1142,8 +1142,30 @@
   FUTURE-TODOS (progress). Only existing-file edit was the additive
   `project.py` fields. Regression gate held: **Tier 1+2 1503 → 1515
   passed, 1 skipped, 0 failed.**
+- 2026-06-05 (movie-teaser Phase 1: teaser-beats + shot-prompts):
+  additive. New `src/autonovel/teaser/{shots,beats,render_prompt,
+  providers,critique}.py` (shot schema + teaser.json I/O + hard
+  validation incl. provider clip-cap; beat/shot budget planner;
+  canonical-order prompt render; provider capability table as data;
+  mechanical pre-generation critique). New mechanical CLI branches
+  `teaser-plan` / `teaser-validate` / `teaser-critique` /
+  `teaser-render-prompt` (additive subparsers; existing untouched).
+  New commands `/autonovel:teaser-beats` (standard) + `/autonovel:
+  shot-prompts` (heavy, authors schema → validate hard-gate +
+  mechanical critique + LLM rewrite pass → render per-shot markdown;
+  all free). LLM/quality stays in command bodies; Python is
+  structure-only. Doc-sync across commands.md / README / series
+  CLAUDE.md / help.md / teaser-craft.md / FUTURE-TODOS. No existing-
+  module behaviour changed. Regression gate: **Tier 1+2 1515 → 1546
+  passed, 1 skipped, 0 failed.** Deferred: `/autonovel:teaser`
+  orchestrator + standalone teaser-critique command.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1546
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +31 since the 1515 mark: movie-teaser Phase 1 (teaser shots/beats/
+  render/critique modules + 4 mechanical CLI helpers + teaser-beats /
+  shot-prompts commands). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1515
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +12 since 2026-05-01: movie-teaser Phase 0 + `/autonovel:treatment`
