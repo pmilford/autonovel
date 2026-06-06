@@ -1,6 +1,6 @@
 # PRD — Movie-script mode + 1–3 minute AI-video teaser generator
 
-> **Status:** Draft v0.1 — 2026-06-05. Author-prioritised.
+> **Status:** Draft v0.2 — 2026-06-05. Author-prioritised.
 > **Owner:** TBD. **Parent todo:** FUTURE-TODOS.md → "🎬 MOVIE-SCRIPT
 > MODE FOR AI VIDEO + 1–3 MINUTE TEASER GENERATOR".
 > **Relationship to other specs:** this is a *focused subset* of the
@@ -9,9 +9,28 @@
 > video pipeline" entry. It deliberately stops at a teaser so a single
 > author can run it end-to-end at real cost and iteration speed.
 >
-> Sections marked **⏳ RESEARCH-PENDING** are being filled from a live
-> web-research pass on 2025–2026 AI-video prompting (see References).
-> Do not hand-author those from memory — reconcile against the report.
+> **v0.2 adds the creative layer** (§§18–21): scene/shot-description
+> craft, a "film-school-in-a-box" coaching layer for first-time video
+> makers, concrete creative defaults (shot length, cast size, hook,
+> ending reveal-vs-withhold), and two worked target projects (the
+> Fugger book + the Future Vision X-Prize entry). §22 is the fully-free
+> development tier (local 35B + free video/audio/speech stack). §23
+> scopes a *thin, stateless* video-API render adapter that stops short
+> of a full production system.
+
+### Reading order
+
+- **§§1–3** — why, goals, users.
+- **§§4–6** — command surface, data inputs, file layout.
+- **§§7–11** — the technical prompting engine (providers, schema,
+  cinematography vocabulary, consistency, teaser craft) — *research-grounded*.
+- **§§12–17** — rubric, phasing, testing, doc-sync, risks, references.
+- **§§18–21 — the creative / craft layer** ← start here if you've never
+  made a video. Scene-vs-shot craft, coaching, creative defaults, and
+  the Fugger + X-Prize worked examples.
+- **§22** — fully-free development toolchain (local 35B + free stack).
+- **§23** — open question: a thin video-API render adapter (vs a full
+  production system).
 
 ---
 
@@ -364,8 +383,12 @@ beat coverage carries over from `scenes.py`.
   `shared/art_references/` integration.
 - **Phase 3 (v1.5) — assembly.** `cut_list.json` + ffmpeg concat +
   music bed + text cards → finished `.mp4` from user-supplied clips.
-- **Phase 4+ — API rendering.** Folds into the ultra-long-term
-  video-pipeline entry; out of scope for this PRD.
+- **Phase 3.5 (open question) — thin render adapter.** Optionally call
+  a video API to turn one shot prompt into one clip on disk — *without*
+  the full production system. See §23.
+- **Phase 4+ — full API-driven production.** State tracking,
+  stale-detection, coherence fine-tuning, auto-assembly. Folds into the
+  ultra-long-term video-pipeline entry; out of scope for this PRD.
 
 ## 14. Testing (per repo tiers)
 
@@ -437,3 +460,421 @@ before implementation.
 
 Parent todos: FUTURE-TODOS.md "Movie script + theater play output
 formats" and "🚀 ULTRA-LONG-TERM: Script → full video pipeline".
+
+---
+
+# The creative / craft layer (v0.2)
+
+> §§7–11 are the *engine* — how to phrase prompts a video model obeys.
+> §§18–21 are the *director's chair* — what to point that engine at. For
+> a first-time video maker this is the more important half: a perfect
+> prompt for the wrong shot still makes a bad teaser. The design
+> principle for this whole layer: **autonovel already coaches prose
+> craft (CRAFT.md, the explaining judge, the `💡 Maybe try` hints); the
+> teaser path should coach film craft the same way — teach, don't just
+> emit.**
+
+## 18. Scriptwriting & scene/shot-description craft
+
+### 18.1 The vocabulary, defined once (beat → scene → shot → clip)
+
+A first-timer's biggest confusion is these four words. The tool should
+use them consistently and define them in output:
+
+- **Beat** — a single story turning point ("she discovers the ledger is
+  forged"). A teaser is built from ~8–20 beats.
+- **Scene** — a continuous dramatic unit in one place + time. One scene
+  may contain several beats.
+- **Shot** — one camera setup: one framing, one move. *This is the unit
+  a video model renders.* One scene → many shots.
+- **Clip** — the actual generated 4–10 s video file for one shot. Often
+  2–4 takes per shot, best one kept.
+
+The pipeline is therefore: **story → beats (teaser arc) → scenes →
+shots (the schema in §8) → clips (generated) → cut (assembled).** The
+v1 commands stop at *shots* (prompts); the user generates clips and
+cuts.
+
+### 18.2 The dual-audience problem (the core craft insight)
+
+A scene description has to serve **two readers at once**, and they want
+opposite things:
+
+| Reader | Wants | Hates |
+|---|---|---|
+| **The human** (you, editing) | narrative meaning, emotion, why this beat matters | a dry list of nouns |
+| **The video model** | concrete visible nouns, one action, present tense, what's literally in frame | interiority, abstraction, metaphor, backstory, "she realizes…" |
+
+So every `shot_NN.md` should carry **both renderings**:
+1. **Beat note** (1 line, human): *"Tommaso realizes the accounts don't
+   balance — the moment the conspiracy becomes real to him."*
+2. **Shot prompt** (the §8 schema, machine): *"Medium close-up,
+   low-angle. TOMMASO (late 20s, ink-stained fingers, plain woollen
+   doublet) snaps the ledger shut, jaw tightening, one slow exhale.
+   Candlelit counting-house, ledgers stacked behind. Warm low-key
+   light, amber/walnut palette. Slow push-in. 85mm, shallow depth of
+   field. Shot on 35mm film. Tense."*
+
+The translation between them is the load-bearing skill, and it's a skill
+autonovel already has, inverted:
+
+### 18.3 Externalizing interiority (reuse show-don't-tell, backwards)
+
+Novels live in interiority ("she wondered if he'd betray her"). **Film
+has no narrator — the camera can only show behavior.** The adapter must
+convert interior states into *visible action*:
+
+- *anxious* → grips the table edge, jaw tight, one hard swallow
+- *suspicious* → eyes flick to the door, hand drifts off the cup
+- *triumphant* → the smallest smile, shoulders drop
+
+autonovel already ships `show-dont-tell` (a scanner for tell-candidate
+interiority lines) and `pov-bleed`. The teaser adapter runs the **same
+detection and inverts the fix**: every interiority line in the source
+becomes a casting note for *visible behavior* in the shot. This is a
+genuine reuse win and should be called out as a Phase-1 dependency.
+
+### 18.4 Rules for an AI-legible shot description (the linter)
+
+The shot-prompt generator (and a teaser-specific lint) should enforce:
+
+- **One subject doing one thing; one camera move.** (Echoes §8.)
+- **Present tense, active, concrete.** "Rain hammers the cobbles," not
+  "it had been raining."
+- **Only what's in frame.** No backstory, no off-screen causes, no
+  "because."
+- **No un-filmable abstraction/metaphor.** "Her world collapses" →
+  pick the visible image that *means* that.
+- **Period/wardrobe/props explicit** (pulled from `world.md` +
+  `project.yaml :: period`).
+- **No legible on-screen text** — render title/subtitle cards in the
+  editor, not the model (§11).
+- **No named real people / trademarked characters** (also a
+  competition-rules concern; see §21).
+- **Name the subject identically every time** (consistency; §10).
+
+### 18.5 From a finished novel vs from scratch
+
+- **Adapting the Fugger book:** the prose already has scenes, beats,
+  dialogue, POV, and per-character voice (voice.md Part 4). Adaptation =
+  *select + externalize + compress*, not invent. Read `eval_logs/`
+  pacing + irreversible-change to find the shots that must survive.
+- **From scratch (the X-Prize sci-fi entry):** the foundation
+  (world/characters/outline) is medium-agnostic — generate it normally,
+  then enter teaser mode. The drafter writes *shots*, not chapters.
+
+## 19. Creative coaching — "film-school-in-a-box"
+
+The user has never made a video and explicitly wants the system to
+*teach* while it works. This is a first-class feature, not a docs
+afterthought. Three coaching surfaces:
+
+1. **Inline rationale in every command.** Like the existing `💡 Maybe
+   try` hints, each teaser command explains *why* it made a choice:
+   *"I gave the hook a 5 s wide establishing shot and cut the
+   escalation to 1.5 s shots — slow-in, fast-middle is standard trailer
+   rhythm. Change `--pace` to override."* Coaching rides on output the
+   user already reads.
+
+2. **A dedicated explainer:** `/autonovel:teaser-coach [--topic
+   hook|pacing|cast|ending|shots|consistency|cost]` — a heavy-tier
+   Socratic guide that answers the beginner questions in §20 *in the
+   context of this book*, citing the user's own beats. Mirrors
+   `/autonovel:explain`-style help.
+
+3. **A "director's questions" pass.** Before generating, the beat-sheet
+   command asks (and proposes answers to) the questions a director must
+   settle: *What's the one image someone remembers? What question does
+   this make the viewer ask? What are we deliberately NOT showing? Whose
+   face carries it?* The user can accept the proposals or steer.
+
+Coaching content lives in a reference doc consumed by the prompts —
+**`docs/teaser-craft.md`** (a CRAFT.md analogue for film), so the
+guidance is prompt material, versioned, and improvable, not hardcoded in
+command bodies.
+
+## 20. Creative defaults & first-timer answers
+
+Concrete, opinionated defaults — the literal answers to "how long?",
+"how many?", "how to hook?", "hint or surprise?". The tool ships these
+as defaults *with the reasoning attached*, and every one is overridable.
+
+### 20.1 Shot & scene length
+
+| Question | Default | Why |
+|---|---|---|
+| How long is one **shot**? | **2–4 s** average | AI clips are 4–10 s native; trailers cut fast. Generate short, pick best (§5). |
+| How long is the **hook**? | one **4–6 s** shot | The opening image needs room to land before you start cutting. |
+| How fast does the **escalation** cut? | down to **1–2 s** | Accelerating cuts = rising tension. |
+| How long is the **final image**? | **3–5 s** hold | Let the last beat breathe; leave them with it. |
+| How many shots in a **30 s** teaser? | **~8–12** | Dev/debug size. (The X-Prize target is 3 min ≈ **35–60 shots**.) |
+
+### 20.2 How many characters?
+
+- **Teaser cast: 1 hero face, at most 2–3 named faces total.** More
+  faces = more identity drift (§10) and less emotional clarity. A teaser
+  sells *one* person's stakes. Crowds/silhouettes/backs-of-heads are
+  free — they don't need consistency locking. **Default: foreground one
+  protagonist; everyone else is atmosphere.**
+
+### 20.3 How to hook (the first 5 seconds)
+
+Pick **one** (the coach proposes based on the book):
+- **Strongest single image** — the most striking visual in the world.
+- **A dramatic question** — show a situation that demands "…what
+  happens next?"
+- **A provocative line** (text card or one spoken line) — *"They told us
+  the war was over."*
+- **Disorientation→orientation** — a strange close-up, then pull out to
+  reveal the world.
+
+Rule: **intrigue, don't explain.** No exposition in the first 5 s.
+
+### 20.4 The ending: hint or surprise? (the question the user asked)
+
+A teaser and a *full trailer* answer this differently, and the X-Prize
+context tips the scale — so the tool makes it an explicit choice:
+
+- **Default (teaser): tease the QUESTION, withhold the ANSWER.** Show
+  the stakes and the world; never show the resolution. End on the
+  unanswered question or a "button" (a final hook *after* the title)
+  that deepens the mystery. This is the safe, standard move.
+- **The X-Prize twist:** the brief asks you to *"show a future worth
+  building."* For an optimistic-sci-fi entry, the **vision** (the hopeful
+  future) is often the *point* — so you may **reveal the vision but
+  withhold the cost/journey**: hint that humanity *earns* it through
+  struggle, show the destination, hide the road. "Reveal the what,
+  withhold the how."
+- **Never** spoil a twist ending or the final emotional beat — that's
+  what the film is for.
+
+The `--ending hint|reveal-vision|withhold` flag (default `withhold`)
+encodes this, and `/autonovel:teaser-coach --topic ending` explains the
+tradeoff against *this* story.
+
+### 20.5 Other sensible defaults
+
+| Knob | Default | Note |
+|---|---|---|
+| Aspect ratio | **16:9** | Festival/competition standard; `9:16` for social. |
+| Audio | temp **music bed + 1–2 dialogue stings + SFX** | Music carries a teaser; dialogue is sparing (§11). |
+| Text cards | **2–4 short cards** | Carry narrative cheaply; dodge AI lipsync (§11). |
+| Title card | at **~⅔** point | Brand beat before the button. |
+| Palette | **3–5 colours**, fixed | Seamless edit + consistency (§9). |
+
+## 21. Worked target projects
+
+Two real sources drive development; they exercise different halves of
+the system.
+
+### 21.1 The Fugger book — pipeline shakedown (debug source)
+
+Near-complete historical novel already in the autonovel pipeline. Role:
+**prove adaptation end-to-end** on real, rich source material with a
+full foundation (world, cast, voice.md Part 4, eval_logs). It is *not*
+the competition entry (wrong genre — historical, not optimistic future),
+but it's the ideal debug corpus: run `/autonovel:teaser --book fugger
+--from script` on **free tools** (§22) to shake out the beat-sheet,
+externalization, consistency anchors, and assembly before spending money
+or time on the real entry.
+
+### 21.2 The Future Vision X-Prize entry — the goal
+
+> **Source:** futurevisionxprize.com (fetched 2026-06-05). **Re-verify
+> rules before submitting.**
+
+- **What:** XPRIZE Foundation global **sci-fi film competition** — show
+  *"a future worth building."* Optimistic, technology-forward futures
+  where *"humanity earns the future through struggle, ingenuity, and
+  courage."* Presenting donor Jed McCaleb; sponsor Salesforce; partners
+  incl. Google, Roddenberry Foundation, Republic Film.
+- **Deliverables (this is decisive for the PRD):**
+  1. **A 3-minute-maximum trailer** — *"any creation method
+     acceptable… AI, traditional filming, animation — it's all fair
+     game."* → maps directly to teaser mode at the **top** of the
+     1–3 min range (≈35–60 shots).
+  2. **An up-to-12-page treatment** + **a 2-page written brief with
+     synopsis.** → **a prose deliverable autonovel is *already* built
+     for.** This is a major fit and a reason to add a **competition
+     mode** that emits the treatment + brief from the same foundation.
+- **Judging:** technology solving real problems · optimistic (not
+  dystopian) worldbuilding · compelling narrative with genuine **stakes
+  + character arcs** · **visual ambition**. → the teaser must show
+  *ambition* (scale, vfx-forward shots) *and* a real character arc, not
+  just pretty plates.
+- **AI policy:** AI-generated content explicitly **welcomed**.
+- **Timeline:** creation Feb–Aug 2026 · **submission deadline
+  2026-08-15** · finalists Aug 2026 · finals in LA 2026-09-25.
+- **Prizes:** Grand $2.6M ($100K screenplay dev + $2.5M production
+  equity); 4 runners-up $100K; top-10 $10K; pool $3.5M+.
+
+**Implications for the PRD:**
+1. **Add a competition/treatment deliverable** to scope: a
+   `/autonovel:treatment --book <name> [--pages 12] [--brief]` that
+   emits the ≤12-page treatment + 2-page synopsis brief from
+   world/outline/characters. Low-risk (pure prose, autonovel's
+   wheelhouse) and directly required by the entry. *Promote from
+   "open question" to a v1 goal for competition mode.*
+2. **Target length = 3:00** for the X-Prize teaser profile; ship a
+   `--length 180` preset tuned for it.
+3. **Optimistic-sci-fi framing** — the from-scratch foundation for the
+   entry needs the "earned hopeful future" thesis baked into world +
+   outline; the teaser's §20.4 ending defaults to `reveal-vision`.
+4. **Deadline is real (~10 weeks from 2026-06-05).** Sequence work so a
+   *rough, free* full 3-min cut exists early, then upgrade shots to paid
+   generation where visual ambition needs it.
+5. **Rights hygiene** — no trademarked/real-person likenesses in
+   prompts (§18.4); confirm AI-content + music licensing terms before
+   submission.
+
+## 22. Fully-free development tier
+
+> Goal (user, 2026-06-05): do **free passes to debug the system and
+> develop the script** before paying for premium generation. User can
+> run a **~35B model locally** and has confirmed **watermarks + lower
+> resolution are acceptable** for these dev passes. Research pass
+> 2026-06-05; **all free-tier numbers are fast-moving — verify before
+> relying.** Sources in §22.5.
+
+### 22.1 Verdict
+
+**Yes — a complete free 30 s / ~10-shot teaser with video + audio +
+speech is realistic today**, at "rough-cut / animatic" quality (visible
+artifacts, occasional identity drift, watermarks on some hosted tiers).
+That is *exactly right* for debugging the pipeline and developing the
+script. Plan to spend money only on the **final** X-Prize shots that
+need visual ambition.
+
+### 22.2 The local 35B is the brain, not the renderer
+
+The single highest-value free asset. A ~32–35B local model
+(**Qwen3-32B** is the current sweet spot for creative writing + reliable
+structured output on ~24 GB VRAM; Gemma-3-27B, Mistral-Small-24B,
+Yi-34B are alternates) runs the **entire LLM side for free**: script
+writing, beat-sheet, scene→shot decomposition, the §8 prompt JSON, the
+treatment + brief. Use **temp 0.8–1.1 for prose**, **0.2–0.4 for the
+JSON shot schema**. Implication for autonovel: the teaser commands
+should run cleanly on a **local-model runtime** (Codex/Gemini adapters
+or an Ollama-style backend), not assume a paid frontier model — the
+creative brain is free; only pixels cost money.
+
+### 22.3 Free tool stack (each layer)
+
+| Layer | Free options (watermark/low-res OK) | Notes |
+|---|---|---|
+| **Script/shot brain** | **Local 35B (Qwen3-32B etc.)** | Free, unlimited, private. The big win. |
+| **Reference images** (consistency anchors) | **Pollinations** (already wired in autonovel), **FLUX.1-schnell** local, SD/ComfyUI | Make canonical character/location refs here first (§10). |
+| **Video — local** | **Wan 2.1/2.2** (24 GB+, best quality), **LTX-Video** (runs ~12 GB, fast), **HunyuanVideo 1.5** (~14 GB w/ offload), Mochi/CogVideoX — via **ComfyUI** | Unlimited + watermark-free if you have the GPU. LTX = fastest iteration. |
+| **Video — free hosted** | **Seedance** (~100 free credits/day, no watermark, 1080p), **Kling** (~66 credits/day ≈ 6 clips), **Hailuo** (~3–5/day), **Luma** (~30/mo), **Pika** (150/mo), **Google Flow/Veo** free credits (~10–20 gens/mo, often no watermark) | Daily-reset tiers (Seedance/Kling) are best for iterating; watermarks fine for dev. **HF Spaces** host many models free. |
+| **Speech / narration / dialogue** | **Kokoro-82M** (fast, CPU-OK, fixed voices), **Chatterbox** (cloning, ~6 GB, beats EL-Turbo in blind tests), **XTTS-v2 / F5-TTS** (cloning; non-commercial licenses), **Edge-TTS** (free MS voices) | Local + free. Mind **non-commercial licenses** (XTTS CPML, F5 CC-BY-NC) for the *final* competition cut. |
+| **Music** | **Suno free** (~50 credits/day ≈ 10 songs; *non-commercial*), **MusicGen** local, CC libraries (YouTube Audio Library, Pixabay, FMA, Incompetech) | Suno free = non-commercial → use CC/licensed for the real entry. |
+| **SFX** | **freesound.org**, **Pixabay** | CC; check attribution. |
+| **Lip-sync** (if faces speak on-screen) | **SadTalker**, **LatentSync** (ByteDance), Wav2Lip, MuseTalk — open-source, free | Or avoid the problem: prefer VO + text cards over on-screen talking (§11). |
+| **Assembly / edit** | **DaVinci Resolve** (free, pro-grade), **Shotcut**, **Kdenlive**, **ffmpeg** (scriptable concat + crossfade + audio mux + burned text cards) | autonovel's v1.5 `teaser-assemble` already targets ffmpeg. |
+
+### 22.4 Recommended free end-to-end pass (30 s, ~10 shots)
+
+1. **Local 35B** writes/loads the script → beat-sheet → §8 shot JSON +
+   treatment/brief. (free, fast)
+2. **Pollinations / local FLUX** makes one **canonical reference image**
+   per character + key location. (free)
+3. **LTX-Video local** (fast iteration) or **Seedance/Kling free**
+   makes ~10 short clips, image-to-video off the refs; 2–3 takes each,
+   pick best. (free; watermark/low-res OK)
+4. **Kokoro/Chatterbox** for narration + sparse dialogue;
+   **Suno-free/CC** music bed; **freesound** SFX. (free)
+5. **ffmpeg / DaVinci** concat → music bed → 2–4 text cards → export. (free)
+
+Realistic quality: a watchable **animatic-grade** 30 s with sound —
+perfect for proving the system and iterating the script. Expect
+artifacts and some identity drift; that's the signal to upgrade *those*
+shots to paid Veo/Sora/Runway for the final entry.
+
+### 22.5 Sources (free-tier research, 2026-06-05; fast-moving)
+
+- Open video models / VRAM — WaveSpeed, Pixazo, Hyperstack, Digen
+  roundups (Wan 2.2, LTX-Video, HunyuanVideo 1.5).
+- Free hosted tiers — Atlas Cloud, Seedance, Veo3AI, Kensa roundups
+  (Seedance ~100/day no-watermark, Kling ~66/day, Hailuo, Luma, Pika).
+- Google Veo free access — Veo3AI / Google Developers (Flow free
+  credits, AI Studio limits).
+- Open TTS — CodeSOTA, PromptQuorum, Nerdynav (Kokoro, Chatterbox,
+  XTTS-v2, F5-TTS, licenses).
+- Local creative LLMs — PromptQuorum, SiliconFlow (Qwen3-32B best 32B).
+- Music + lip-sync — Suno/Udio free tiers; SadTalker / LatentSync /
+  lipsync.com open-source roundup.
+
+> ⚠️ **Licensing caveat for the competition cut:** several free tools are
+> *non-commercial* (XTTS, F5-TTS, Suno-free, Udio-free) or watermark
+> output. Fine for dev passes; for the X-Prize submission, swap to
+> commercially-licensed or properly-attributed assets and verify each
+> tool's terms.
+
+## 23. Open question — a thin "render this shot" tool vs a full production system
+
+> Raised by the author 2026-06-05: *"can we add a tool that calls the
+> video APIs? Not sure we can make that work without doing a full video
+> production system…"* — exactly the right worry. This section draws the
+> line so the feature can exist without swallowing the project.
+
+**The fear is justified — but only if we let it scope-creep.** The thing
+that turns "call an API" into "a full video production system" is *not*
+the API call. It's everything *around* it: per-shot state tracking,
+stale-vs-current detection, re-render-only-what-changed graphs,
+cross-shot coherence fine-tuning, automated edit/assembly, and a preview
+loop. Those are the ultra-long-term pipeline (§13 Phase 4+, and the
+FUTURE-TODOS video-pipeline entry). They are big.
+
+**The API call itself is small and well-bounded.** Every provider
+(§§7–8) is the same async shape: `submit(prompt, params) → poll(job) →
+download(clip)`. That's a ~stateless helper, and autonovel already has
+the exact pattern for the image side: `resolve-image-provider` +
+`art-curate` apply a CLI→project.yaml→default precedence and call an
+image provider. A **thin render adapter is the video twin of that**, and
+nothing more.
+
+### 23.1 Proposed scope of the *thin* tool (deliberately minimal)
+
+`/autonovel:teaser-render --book <name> [--shots <range>] [--provider
+veo|runway|kling|luma|fal|replicate] [--takes N] [--dry-run]`, backed by
+`autonovel mechanical resolve-video-provider` (precedence twin of the
+image resolver). It does **exactly four things**:
+
+1. Read `teaser.json` / `shot_NN.md`, render each shot to the chosen
+   provider's request shape (reuse §8 per-provider render rules).
+2. Submit, poll with backoff, download `--takes` clips per shot to
+   `books/<name>/teaser/clips/<shot>_takeN.mp4`.
+3. Pass through consistency anchors (reference image / first frame).
+4. Print a cost estimate + a manifest; honour `--dry-run` (estimate +
+   the exact requests, submit nothing) and the **fully-free §22 path**
+   (point local Wan/LTX/ComfyUI or free hosted tiers via fal/Replicate).
+
+### 23.2 The bright lines that keep it thin (explicit non-goals)
+
+The render tool **stops at "clips on disk."** It does **NOT**:
+- track which clips are stale vs current (no `video-state.json`),
+- decide *what* to re-render (the human picks `--shots`),
+- assemble/edit (that's v1.5 `teaser-assemble`, already separate),
+- do coherence fine-tuning / LoRA training,
+- run a preview/iteration UI.
+
+So the tool is **stateless per invocation**: prompts in → clips out. The
+human (or the separate assembly step) is the state machine. That's the
+whole trick — it's a *renderer*, not a *pipeline*. If a feature request
+would add memory of prior runs or automatic re-render decisions, it
+belongs in Phase 4+, not here.
+
+### 23.3 Recommendation
+
+**Defer to Phase 3.5, build it thin, and gate it behind an explicit
+flag.** v1 still ships prompts-only (the durable value); the thin
+renderer is a convenience that reuses the image-provider precedence
+machinery and the §8 render rules. Because it's stateless and
+provider-pluggable (incl. the free §22 backends), it does *not* commit
+us to the full production system — and if it ever starts to, that's the
+signal to stop and promote the work to the ultra-long-term entry.
+
+**Update to §2 non-goals:** the "no API rendering in v1" non-goal stands
+for v1, but is **softened** — a *thin, stateless, opt-in* render adapter
+is an accepted **Phase 3.5** target, distinct from the excluded full
+production system.
