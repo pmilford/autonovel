@@ -555,7 +555,7 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 `remove-chapter`, `deepen-character`, `add-subplot`, `foreshadow`,
 `rename-character`).
 
-- **Movie / teaser (in progress):** `treatment` turns a book's
+- **Movie / teaser:** `treatment` turns a book's
   foundation into a film **treatment + 2-page brief** (the prose
   deliverables a screen story — and the Future Vision X-Prize — needs
   alongside a trailer); `teaser` is the one-command trailer pipeline
@@ -565,8 +565,9 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   the mechanical linter + an LLM critic — all with a free pre-generation
   critique, no generation cost. `teaser-render` then turns the prompts
   into **actual clips** via a free, no-key backend (Pollinations) and runs
-  a vision critique (KEEP / REGENERATE / UPGRADE-TO-PAID) — stateless,
-  nothing assembled. ffmpeg assembly is next. See
+  a vision critique (KEEP / REGENERATE / UPGRADE-TO-PAID); `teaser-assemble`
+  stitches the clips into one video with ffmpeg and runs a viewer-panel cut
+  critique — the whole pipeline from a finished book to a teaser. See
   [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md) and
   the creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md).
 

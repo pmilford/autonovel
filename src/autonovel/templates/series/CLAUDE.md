@@ -227,7 +227,7 @@ this to the user verbatim and stop, do not retry:
 >
 > Then re-run the command that just failed.
 
-## Movie / teaser mode (in progress)
+## Movie / teaser mode
 
 Adapting a book to the screen, in order:
 1. `/autonovel:treatment --book <name>` — film treatment + 2-page brief
@@ -251,6 +251,12 @@ Adapting a book to the screen, in order:
    critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID. Clips
    land in `teaser/clips/`; stateless, nothing assembled. `--dry-run`
    prints the request plan for $0.
+5. `/autonovel:teaser-assemble --book <name> [--audio <path>]` — stitch
+   the clips into one teaser video with ffmpeg (builds an editable
+   `teaser/cut_list.json`), then a viewer-panel cut critique (hook lands?
+   accelerates? button withholds?) → `teaser/assembly-report.md`. Add the
+   title/subtitle cards in an editor (the report lists them). ffmpeg
+   required.
 
 Pollinations is the free no-key backend `teaser-render` drives for you.
 The creative how-to lives in `docs/teaser-craft.md`.

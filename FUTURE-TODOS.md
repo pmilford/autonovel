@@ -1588,8 +1588,19 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   UPGRADE-TO-PAID clip critique → advisory `clips/render-report.md`).
   Bright lines held: clips on disk only, no state file, no auto-assembly,
   paid providers only recommended. `--dry-run` plans for $0; watermarks/
-  low-res fine for dev. Tier 1+2: 1570 → 1584. Remaining: Phase 3 ffmpeg
-  assembly (`cut_list.json` → mp4 + viewer-panel cut critique).
+  low-res fine for dev. Tier 1+2: 1570 → 1584.
+  **Phase 3 shipped (2026-06-05)** — ffmpeg assembly: `teaser/assemble.py`
+  (`CutList` schema + `build_cut_list` from teaser+clips + a PURE
+  `ffmpeg_command` planner — image slideshow or video trim+concat, audio
+  bed, never runs ffmpeg) + `teaser-cut-list`/`teaser-ffmpeg-cmd` CLIs +
+  `/autonovel:teaser-assemble` (ffmpeg check → cut_list.json → run ffmpeg
+  via bash → viewer-panel cut critique → assembly-report.md). v1: hard
+  cuts, no burned-in text (cards go in an editor), missing clip skipped.
+  Tier 1+2: 1584 → 1600. **✅ The movie-teaser pipeline is now
+  end-to-end** (treatment → teaser → teaser-critique → teaser-render →
+  teaser-assemble). Future polish: crossfades/transitions, burned-in
+  title cards via an editor-export, native-audio (Veo/Sora) paths,
+  `--kind video` on more providers.
 
 - **🚀 ULTRA-LONG-TERM: Script → full video pipeline.** Surfaced
   2026-05-01. The natural endpoint of the screenplay output above:

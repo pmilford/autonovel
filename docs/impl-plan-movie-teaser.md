@@ -39,17 +39,28 @@
   dry-run plan → download → vision KEEP/REGENERATE/UPGRADE-TO-PAID
   critique → `clips/render-report.md`). Bright lines held: clips on disk
   only, no state file, no auto-assembly, paid providers only recommended.
+- **Phase 3** — ffmpeg assembly: `teaser/assemble.py` (`CutList` +
+  `build_cut_list` + PURE `ffmpeg_command` planner; never runs ffmpeg) +
+  `teaser-cut-list`/`teaser-ffmpeg-cmd` CLIs + `/autonovel:teaser-assemble`
+  (ffmpeg via `bash` + viewer-panel cut critique). v1: hard cuts, no
+  burned-in text.
 
-**Baseline now:** Tier 1+2 = **1584 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1600 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.
 
-**NEXT (in order):**
-1. **Phase 3** — ffmpeg `cut_list.json` assembly + viewer-panel cut
-   critique.
+**STATUS: ✅ The movie-teaser pipeline is complete end-to-end** —
+`treatment` → `teaser` (`teaser-beats` → `shot-prompts`) →
+`teaser-critique` → `teaser-render` → `teaser-assemble`. All planned
+phases (0, 1, 1-final, 2, 3.5, 3) shipped, additive, regression-gated.
 
-Every step: hold the ≥1584 gate, additive-only, full doc-sync, append a
+**Future polish (not blocking):** crossfades/transitions in the
+cut-list; burned-in title cards via an editor-export step; native-audio
+(Veo/Sora) generation paths; `--kind video` validated on more providers;
+a smoke (Tier-3) test that renders one real Pollinations clip.
+
+Every step: hold the ≥1600 gate, additive-only, full doc-sync, append a
 STATE.md decision entry + bump the green count.
 
 ---

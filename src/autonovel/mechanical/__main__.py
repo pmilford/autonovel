@@ -29,6 +29,8 @@ Subcommands:
   teaser-refs-plan <teaser.json>   Plan the canonical reference image per recurring subject.
   resolve-video-provider [...]     Resolve video provider from CLI + project.yaml + default.
   teaser-render <teaser.json>      Render clips via the free no-key adapter (Pollinations).
+  teaser-cut-list <teaser.json>    Build an editable cut_list.json from teaser + clips on disk.
+  teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -1092,6 +1094,74 @@ def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
+    """Build an editable cut_list.json from teaser.json + the clips on
+    disk (Phase 3). Plan-only — never runs ffmpeg."""
+    from ..teaser import shots as _shots, assemble as _asm
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-cut-list: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    base = Path(args.path).resolve().parent
+    clips_dir = Path(args.clips_dir) if getattr(args, "clips_dir", None) else base / "clips"
+    cut, missing = _asm.build_cut_list(
+        teaser, clips_dir, kind=args.kind,
+        width=args.width, height=args.height, fps=args.fps,
+        audio_bed=getattr(args, "audio", None), take=args.take,
+    )
+    out = Path(args.out) if getattr(args, "out", None) else base / "cut_list.json"
+    if not cut.entries:
+        print(f"teaser-cut-list: no clips found in {clips_dir}/ "
+              f"(render them first: /autonovel:teaser-render). "
+              f"{len(missing)} shot(s) missing.", file=sys.stderr)
+        return 2
+    _asm.dump(cut, out)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"out": str(out), "entries": len(cut.entries),
+                   "total_s": cut.total_duration_s(), "missing": missing},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        print(f"Wrote {out} — {len(cut.entries)} clip(s), "
+              f"{cut.total_duration_s():g}s ({cut.kind}).")
+        if missing:
+            print(f"  ⬜ {len(missing)} shot(s) with no clip yet: {', '.join(missing)}")
+    return 0
+
+
+def _cmd_teaser_ffmpeg_cmd(args: argparse.Namespace) -> int:
+    """Print the ffmpeg command that stitches a cut_list.json into one
+    mp4. The command body runs it via the `bash` tool."""
+    from ..teaser import assemble as _asm
+    try:
+        cut = _asm.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-ffmpeg-cmd: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    base = Path(args.path).resolve().parent
+    out_path = (Path(args.out) if getattr(args, "out", None)
+                else base / f"{_slugify_title(cut.title)}_teaser.mp4")
+    try:
+        cmd = _asm.ffmpeg_command_str(cut, out_path)
+    except ValueError as exc:
+        print(f"teaser-ffmpeg-cmd: {exc}", file=sys.stderr)
+        return 2
+    if getattr(args, "format", "human") == "json":
+        json.dump({"command": cmd, "out": str(out_path),
+                   "entries": len(cut.entries)}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        print(cmd)
+    return 0
+
+
+def _slugify_title(title: str) -> str:
+    import re
+    s = re.sub(r"[^a-z0-9]+", "_", (title or "teaser").strip().lower())
+    return s.strip("_") or "teaser"
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m autonovel.mechanical")
     sub = p.add_subparsers(dest="subcmd")
@@ -1451,6 +1521,33 @@ def main(argv: list[str] | None = None) -> int:
                      help="Build + print the request plan; download nothing.")
     tre.add_argument("--format", choices=["json", "human"], default="human")
     tre.set_defaults(func=_cmd_teaser_render)
+
+    # --- movie-teaser mode (Phase 3: ffmpeg assembly) ---
+    tcl = sub.add_parser("teaser-cut-list",
+                         help="Build an editable cut_list.json from teaser.json + the "
+                              "rendered clips on disk (plan only; never runs ffmpeg).")
+    tcl.add_argument("path", help="Path to teaser.json.")
+    tcl.add_argument("--clips-dir", dest="clips_dir", default=None,
+                     help="Where the clips live (default: <teaser.json dir>/clips).")
+    tcl.add_argument("--kind", choices=["image", "video"], default="image",
+                     help="image = still-image slideshow (default); video = clips.")
+    tcl.add_argument("--audio", default=None, help="Optional audio-bed file to mix in.")
+    tcl.add_argument("--fps", type=int, default=30)
+    tcl.add_argument("--width", type=int, default=854)
+    tcl.add_argument("--height", type=int, default=480)
+    tcl.add_argument("--take", type=int, default=1, help="Which take to use per shot.")
+    tcl.add_argument("--out", default=None, help="Output path (default: <dir>/cut_list.json).")
+    tcl.add_argument("--format", choices=["json", "human"], default="human")
+    tcl.set_defaults(func=_cmd_teaser_cut_list)
+
+    tfc = sub.add_parser("teaser-ffmpeg-cmd",
+                         help="Print the ffmpeg command that stitches a cut_list.json into "
+                              "one mp4 (the command body runs it via bash).")
+    tfc.add_argument("path", help="Path to cut_list.json.")
+    tfc.add_argument("--out", default=None,
+                     help="Output mp4 (default: <dir>/<title>_teaser.mp4).")
+    tfc.add_argument("--format", choices=["json", "human"], default="human")
+    tfc.set_defaults(func=_cmd_teaser_ffmpeg_cmd)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

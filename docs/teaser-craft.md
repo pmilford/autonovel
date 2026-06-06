@@ -241,10 +241,17 @@ The craft above is applied by these commands:
    backend, then a vision critique marks each clip **KEEP / REGENERATE /
    UPGRADE-TO-PAID**. Clips land in `teaser/clips/`; stateless, nothing
    assembled. `--dry-run` shows the request plan for $0.
+5. `/autonovel:teaser-assemble --book <name> [--audio <path>]` — stitch
+   the clips into one teaser video with ffmpeg (via an editable
+   `teaser/cut_list.json`), then a **viewer-panel cut critique** judges
+   the whole cut (does the hook land, does it accelerate, does the button
+   withhold?) → `teaser/assembly-report.md`. v1 is hard cuts; add the
+   title/subtitle cards in an editor (models garble text — §4).
 
 Steps 1–3 are free with no generation; step 4 downloads clips from a
 free, no-key backend — Pollinations (PRD §22), which `teaser-render`
-drives for you. Watermarks and low resolution are fine for dev passes.
+drives for you (watermarks/low-res are fine for dev passes); step 5 runs
+ffmpeg locally.
 
 ---
 

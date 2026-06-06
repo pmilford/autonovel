@@ -1216,8 +1216,35 @@
   §10, module docstring, impl-plan, FUTURE-TODOS. No existing-module
   behaviour changed. Regression gate: **Tier 1+2 1570 → 1584 passed,
   1 skipped, 0 failed.**
+- 2026-06-05 (movie-teaser Phase 3: ffmpeg cut-list assembly + viewer-
+  panel cut critique): additive. New `src/autonovel/teaser/assemble.py` —
+  `CutList`/`CutEntry` schema + I/O, `build_cut_list(teaser, clips_dir)`
+  (default cut from teaser + clips on disk; skips + reports shots with no
+  clip), and `ffmpeg_command()`/`ffmpeg_command_str()` — a PURE planner
+  that builds the ffmpeg argv (image slideshow `-loop 1 -t dur` or video
+  `trim`+concat; optional audio bed + `-shortest`) but **never runs
+  ffmpeg** (mirrors mechanical/audio.py). New mechanical CLI
+  `teaser-cut-list` + `teaser-ffmpeg-cmd`. New command
+  `/autonovel:teaser-assemble` (standard) — ffmpeg-presence check → build/
+  reuse cut_list.json → plan cmd → run ffmpeg via `bash` (the audiobook-
+  assemble division of labour) → viewer-panel cut critique (hook/
+  escalation/title/button) → `teaser/assembly-report.md`. v1 thin: hard
+  cuts only, no burned-in text (cards listed for the editor), missing
+  clip skipped not fatal. Doc-sync: commands.md (movie row + 2 mechanical
+  rows + header now "full pipeline shipped"), help.md, README (dropped
+  "in progress"), series CLAUDE.md, teaser-craft.md §10, module
+  docstring, impl-plan, FUTURE-TODOS. **Movie-teaser pipeline now
+  end-to-end: treatment → teaser → teaser-critique → teaser-render →
+  teaser-assemble.** No existing-module behaviour changed. Regression
+  gate: **Tier 1+2 1584 → 1600 passed, 1 skipped, 0 failed.**
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1600
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +16 since the 1584 mark: movie-teaser Phase 3 (assemble.py cut-list +
+  ffmpeg planner + teaser-cut-list/teaser-ffmpeg-cmd CLIs + teaser-
+  assemble command → 10 explicit + 6 auto contract tests). Prior marks
+  below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1584
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +14 since the 1570 mark: movie-teaser Phase 3.5 (render.py adapter +

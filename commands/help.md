@@ -56,11 +56,11 @@ workflow. Topics:
                  Output (PDF, ePub, audiobook).
   front-matter — title / introduction / glossary / appendix /
                  cover-composite / cover-print.
-  movie        — treatment (film treatment + 2-page brief) +
-                 teaser (one-command: teaser-beats → shot-prompts,
-                 provider-ready shot prompts) + teaser-critique
-                 (free pre-gen critique) + teaser-render (free
-                 Pollinations clips + vision KEEP/REGENERATE critique).
+  movie        — full teaser pipeline: treatment (film treatment +
+                 2-page brief) → teaser (teaser-beats → shot-prompts) →
+                 teaser-critique (free pre-gen critique) → teaser-render
+                 (free Pollinations clips + vision critique) →
+                 teaser-assemble (ffmpeg stitch + cut critique).
                  X-Prize-shaped. See docs/teaser-craft.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.

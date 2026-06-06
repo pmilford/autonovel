@@ -133,9 +133,9 @@ checkpoint so `autonovel rollback` undoes the full operation.
 | `/autonovel:landing --book <short-name> [--template <path>] [--url <canonical-url>]` | standard | Render a responsive landing page with og:image + structured data. |
 | `/autonovel:package --book <short-name> [--skip <t,t,...>] [--out <path>]` | light | End-to-end release bundle — PDF + ePub + covers + landing + audiobook, zipped. |
 
-### Movie / teaser (in progress)
+### Movie / teaser
 
-Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Shipped: `treatment`, `teaser` (orchestrator), `teaser-beats`, `shot-prompts`, `teaser-critique` (Phase 0 + Phase 1), `teaser-render` (Phase 3.5 — free Pollinations clips + vision critique). Next: ffmpeg assembly. The planning commands (treatment → shot-prompts, critique) are **free, no generation**; `teaser-render` downloads clips from a free no-key backend.
+Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Full pipeline shipped: `treatment` → `teaser` (orchestrator: `teaser-beats` → `shot-prompts`) → `teaser-critique` → `teaser-render` (free Pollinations clips + vision critique) → `teaser-assemble` (ffmpeg stitch + viewer-panel cut critique). The planning commands (treatment → shot-prompts, critique) are **free, no generation**; `teaser-render` downloads clips from a free no-key backend; `teaser-assemble` runs ffmpeg locally.
 
 | Command | Tier | Purpose |
 |---|---|---|
@@ -145,6 +145,7 @@ Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative gui
 | `/autonovel:shot-prompts --book <short-name> [--provider <name>] [--length <s>] [--force]` | heavy | Turn the beat-sheet into provider-ready, heavily-described shot prompts. Fills the structured shot schema (verbatim character appearance, palette lock, one action/one move, content-word negative prompt, consistency anchors), runs a **free pre-generation critique** (mechanical `teaser-critique` + an LLM rewrite pass), then writes `books/<book>/teaser/teaser.json` + per-shot `books/<book>/teaser/shots/shot_<id>.md`. No generation cost. |
 | `/autonovel:teaser-critique --book <short-name> [--provider <name>]` | standard | Standalone, re-runnable **free pre-generation critique** of a (hand-edited) `teaser.json`: the mechanical linter + an LLM critic pass that scores each shot against trailer craft and the beat it serves. **Read-only** on `teaser.json`; writes an advisory `books/<book>/teaser/critique.md` with concrete rewrite suggestions. |
 | `/autonovel:teaser-render --book <short-name> [--provider pollinations\|veo\|sora\|runway\|luma] [--kind image\|video] [--takes <n>] [--shot <id>] [--height <px>] [--dry-run]` | standard | Render the shot prompts into **actual clips** via a free no-key backend (Pollinations; watermarks/low-res OK for dev). **Stateless** — clips land in `books/<book>/teaser/clips/`, no state file, nothing assembled. `--dry-run` prints every request URL for $0. Then a **vision clip critique** marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID into `clips/render-report.md`; paid providers are only ever *recommended*, never auto-called. |
+| `/autonovel:teaser-assemble --book <short-name> [--kind image\|video] [--audio <path>] [--fps <n>] [--take <n>] [--force]` | standard | Stitch the rendered clips into **one teaser video** via ffmpeg. Builds an editable `cut_list.json` (ordered clips + durations + text-card notes + optional audio bed), runs ffmpeg (v1: hard cuts; image slideshow or video clips), then a **viewer-panel cut critique** (hook lands? accelerates? button withholds?) → `assembly-report.md`. No burned-in text (cards go in an editor); ffmpeg required. |
 
 ## Navigation commands
 
@@ -220,6 +221,8 @@ and can run them by hand for inspection / debugging.
 | `teaser-refs-plan <teaser.json> [--refs-dir <d>] [--art-references-dir <d>]` | Plan the canonical **reference image** per recurring subject (consistency anchor): which shots use each, which already exist (in `teaser/refs/` or a shared `art_references/` plate), which are still missing. |
 | `resolve-video-provider [--project-yaml <p>] [--cli-provider <X>]` | Resolve the active **video** provider: CLI override → `project.yaml :: video.provider` → `pollinations` (free default). Twin of `resolve-image-provider`. |
 | `teaser-render <teaser.json> [--out-dir <d>] [--provider <p>] [--kind image\|video] [--takes <n>] [--shot <id>] [--height <px>] [--dry-run]` | Render clips via the free no-key adapter (Pollinations). Stateless submit→download (one file per shot/take); `--dry-run` builds the URL plan without downloading; failures isolate per clip. No assembly. |
+| `teaser-cut-list <teaser.json> [--clips-dir <d>] [--kind image\|video] [--audio <p>] [--fps <n>] [--take <n>]` | Build an editable `cut_list.json` from teaser.json + the clips on disk (ordered clips + durations + text-card notes). Plan only; reports shots with no clip. |
+| `teaser-ffmpeg-cmd <cut_list.json> [--out <mp4>]` | Print the (shell-ready) ffmpeg command that stitches a cut-list into one mp4. The command body runs it via `bash`; Python never invokes ffmpeg. |
 
 `autonovel mechanical <subcmd> --help` shows full flags for any
 of them. Many emit JSON via `--format json` for piping.
