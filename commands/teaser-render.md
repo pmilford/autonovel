@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-render
 description: Render the teaser's shot prompts into actual clips. Free offline `stub` keyframes validate the whole pipeline at zero cost/quota; `grok` (free dialogue+music, no card) is the default real backend. Then a vision critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID. Stateless — clips land on disk, nothing is assembled.
-argument-hint: "--book <short-name> [--provider stub|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--dry-run]"
+argument-hint: "--book <short-name> [--provider stub|gemini|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--refs] [--voices] [--from-keyframes] [--film-style <s>] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--dry-run]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -57,6 +57,15 @@ kontext, `pollinations` flux-kontext) so identity holds across shots. Only
 approved/locked subjects flow (the approval gate); pending ones are
 skipped with a warning. `--film-style "<style>"` swaps the book's
 typeset art style for a photoreal film look without editing teaser.json.
+
+**Voices (`--voices`).** The dialogue **text** lives in each shot's
+`audio.dialogue`; the video model (grok/veo) speaks it with lipsync. For
+`--kind video`, `--voices` injects each speaker's **locked, age-resolved
+voice descriptor** (from `refs.yaml` `voice`/`voice_ages`, picked by the
+shot's `story_year`) into the prompt so the voice stays consistent
+scene-to-scene and ages with the character. Approval-gated (only
+locked/approved speakers flow). Set the descriptors in
+`/autonovel:teaser-refs`. SFX + ambience from `audio` are appended too.
 
 **Image-to-video (`--from-keyframes`).** The two-stage path that keeps
 identity AND adds motion: first render reference-conditioned **keyframes**

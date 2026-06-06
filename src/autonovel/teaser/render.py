@@ -129,6 +129,7 @@ def build_request(
     reference_images: tuple[str, ...] = (),
     style_override: str | None = None,
     init_image: str = "",
+    voices: dict[str, str] | None = None,
 ) -> RenderRequest:
     """Build the deterministic download request for one shot/take.
 
@@ -141,6 +142,12 @@ def build_request(
     prompt = render_prompt.render_visual(shot, provider)
     if style_override and shot.style and shot.style in prompt:
         prompt = prompt.replace(shot.style, style_override)
+    # Video gen: append the audio spec (dialogue + locked/aged voice + sfx +
+    # ambience) so the model speaks the lines and lip-syncs (Phase 5.5/5.6).
+    if kind == "video":
+        audio_spec = render_prompt.render_audio_for_prompt(shot, voices or {})
+        if audio_spec:
+            prompt = f"{prompt}\n\n{audio_spec}"
     if width is None:
         width, height = aspect_to_size(shot.aspect_ratio, height)
     seed = _seed_for(shot, take)
@@ -193,6 +200,7 @@ def plan(
     style_override: str | None = None,
     from_keyframes: bool = False,
     keyframe_dir: Path | None = None,
+    shot_voices: dict[str, dict[str, str]] | None = None,
 ) -> list[RenderRequest]:
     """Build the request plan for every shot (× ``takes``). Pure — no I/O.
 
@@ -211,6 +219,7 @@ def plan(
     keyframe on disk just falls back to text-to-video.
     """
     shot_refs = shot_refs or {}
+    shot_voices = shot_voices or {}
     reqs: list[RenderRequest] = []
     teaser_dir = Path(out_dir).parent
     kf_dir = Path(keyframe_dir) if keyframe_dir is not None else Path(out_dir)
@@ -238,12 +247,13 @@ def plan(
                 if cand.exists():
                     init_image = str(cand)
                     break
+        voices = shot_voices.get(s.id) or {}
         for t in range(1, max(1, takes) + 1):
             reqs.append(build_request(
                 s, provider=provider, kind=kind, out_dir=out_dir,
                 width=width, height=height, take=t, model=model,
                 reference_images=tuple(refs), style_override=style_override,
-                init_image=init_image,
+                init_image=init_image, voices=voices,
             ))
     return reqs
 

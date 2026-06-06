@@ -163,6 +163,40 @@ def render_dialogue_block(shot: Shot) -> str:
     return "\n".join(lines)
 
 
+def render_audio_for_prompt(
+    shot: Shot, voices: dict[str, str] | None = None,
+) -> str:
+    """Compact audio spec appended to the BACKEND prompt for video gen
+    (Phase 5.5/5.6) — so the model speaks the lines (with lipsync) and
+    lays the SFX/ambience. ``voices`` maps a speaker name → its locked,
+    age-resolved voice descriptor, injected so the voice holds scene to
+    scene. Empty string when the shot has no audio. Plain text (not
+    markdown) — it is concatenated onto the visual prompt.
+    """
+    voices = voices or {}
+    out: list[str] = []
+    amb = (shot.audio.get("ambience") or "").strip()
+    sfx = (shot.audio.get("sfx") or "").strip()
+    dlg = shot.dialogue()
+    if dlg:
+        out.append("Dialogue (speak aloud, lip-synced):")
+        for d in dlg:
+            spk = (d.get("speaker") or "").strip()
+            line = (d.get("line") or "").strip()
+            if not line:
+                continue
+            # Per-line voice override wins over the manifest descriptor.
+            desc = (d.get("voice") or voices.get(spk) or "").strip()
+            who = spk or "Narrator"
+            vtag = f" [voice: {desc}]" if desc else ""
+            out.append(f'- {who}{vtag}: "{line}"')
+    if sfx:
+        out.append(f"Sound effects: {sfx}.")
+    if amb:
+        out.append(f"Ambience: {amb}.")
+    return "\n".join(out)
+
+
 def render_markdown(shot: Shot, provider: str = "generic") -> str:
     """The hand-edit-friendly per-shot file: human beat note + the
     rendered prompt + the separate negative/dialogue/consistency fields.

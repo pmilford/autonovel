@@ -85,6 +85,13 @@ load-bearing — stop if it is missing (run `/autonovel:teaser` or
      against the locked `appearance` + `constraints` and ask them to
      confirm likeness/period. On `--approve <NAME>` (or user assent) edit
      `refs.yaml` to set that subject's `status: locked`.
+   - **voice (lock + age)** — for speaking characters, set a locked
+     `voice:` descriptor (timbre/accent/register) and, when the character
+     ages across the story, `birth_year:` + `voice_ages:` (each `{name,
+     descriptor, from_year, to_year}`). `/autonovel:teaser-render --voices`
+     injects the descriptor — auto-selected by each shot's `story_year` —
+     so the video model keeps the voice consistent scene-to-scene and ages
+     it. The voice is part of the locked character (approval-gated).
 
 5. **Re-run the status** (`--format json`) and report. When
    `all_approved` is true, the references are ready to anchor a real

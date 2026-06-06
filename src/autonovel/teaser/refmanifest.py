@@ -71,6 +71,13 @@ class CharacterRef:
     ref_path: str = ""            # teaser-relative path to the approved plate
     kind: str = "character"       # character | location | prop (ordering hint)
     shots: list[str] = field(default_factory=list)  # shot ids this subject is in
+    # --- voice (Phase 5.6): the locked voice the video model is steered to
+    # produce. `voice` is the base descriptor; `voice_ages` are named age
+    # variants (each {name, descriptor, from_year?, to_year?}); `birth_year`
+    # lets a shot's story_year auto-select the right variant. ---
+    voice: str = ""
+    birth_year: int | None = None
+    voice_ages: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"subject": self.subject, "source": self.source}
@@ -88,11 +95,53 @@ class CharacterRef:
             d["kind"] = self.kind
         if self.shots:
             d["shots"] = list(self.shots)
+        if self.voice:
+            d["voice"] = self.voice
+        if self.birth_year is not None:
+            d["birth_year"] = self.birth_year
+        if self.voice_ages:
+            d["voice_ages"] = [dict(v) for v in self.voice_ages]
         return d
 
     @property
     def approved(self) -> bool:
         return self.status in ("approved", "locked")
+
+    def resolve_voice(self, year: int | None = None) -> str:
+        """Resolve the voice descriptor for an in-story ``year`` (Phase
+        5.6). With ``year`` and age variants, pick the variant whose
+        ``from_year``/``to_year`` window contains it (open-ended bounds
+        allowed), else the variant whose ``from_year`` is the latest one
+        not after ``year``; fall back to the base ``voice``."""
+        base = self.voice
+        if year is None or not self.voice_ages:
+            return base
+        # Exact window match first.
+        best: dict[str, Any] | None = None
+        best_from = None
+        for v in self.voice_ages:
+            lo = v.get("from_year")
+            hi = v.get("to_year")
+            if (lo is None or year >= lo) and (hi is None or year <= hi):
+                desc = (v.get("descriptor") or "").strip()
+                if desc:
+                    return desc
+            # Track the latest from_year <= year as a fallback.
+            if lo is not None and year >= lo and (best_from is None or lo > best_from):
+                best, best_from = v, lo
+        if best and (best.get("descriptor") or "").strip():
+            return best["descriptor"].strip()
+        return base
+
+    def age_variant_name(self, year: int | None = None) -> str:
+        """The variant *name* chosen for ``year`` (for reporting)."""
+        if year is None or not self.voice_ages:
+            return "base"
+        for v in self.voice_ages:
+            lo, hi = v.get("from_year"), v.get("to_year")
+            if (lo is None or year >= lo) and (hi is None or year <= hi):
+                return str(v.get("name") or "?")
+        return "base"
 
 
 @dataclass
@@ -132,6 +181,9 @@ def load(path: Path) -> RefManifest:
             kind = "character"
         shots_raw = entry.get("shots") or []
         shots = [str(s) for s in shots_raw] if isinstance(shots_raw, list) else []
+        ages_raw = entry.get("voice_ages") or []
+        voice_ages = [dict(v) for v in ages_raw if isinstance(v, dict)]
+        birth = entry.get("birth_year")
         subjects.append(CharacterRef(
             subject=str(entry["subject"]),
             source=src,
@@ -143,6 +195,9 @@ def load(path: Path) -> RefManifest:
             ref_path=str(entry.get("ref_path", "")),
             kind=kind,
             shots=shots,
+            voice=str(entry.get("voice", "")),
+            birth_year=(int(birth) if isinstance(birth, (int, float)) else None),
+            voice_ages=voice_ages,
         ))
     return RefManifest(subjects=subjects)
 

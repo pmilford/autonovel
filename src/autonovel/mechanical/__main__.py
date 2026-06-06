@@ -1052,6 +1052,43 @@ def _load_teaser_refs_map(teaser_path: Path, manifest: str | None) -> dict[str, 
     return {sid: groups[0] + groups[1] for sid, groups in out.items()}
 
 
+def _load_teaser_voices_map(teaser_path: Path, manifest: str | None) -> dict[str, dict[str, str]]:
+    """Map each shot id → {speaker → locked, age-resolved voice descriptor}.
+
+    Reads `refs.yaml`; for each dialogue speaker whose character is
+    **approved/locked** (the same approval gate as faces), resolves the
+    voice for that shot's `story_year` (auto-aging). Only speakers with a
+    descriptor are included. Empty when no manifest / no voices defined.
+    """
+    from ..teaser import refs as _refs, refmanifest as _rm, shots as _shots
+    base = teaser_path.resolve().parent
+    man_path = Path(manifest) if manifest else base / "refs.yaml"
+    if not man_path.exists():
+        return {}
+    try:
+        man = _rm.load(man_path)
+        teaser = _shots.load(teaser_path)
+    except Exception:  # noqa: BLE001
+        return {}
+    by_slug = {_refs.slug(cr.subject): cr for cr in man.subjects if cr.approved}
+    out: dict[str, dict[str, str]] = {}
+    for s in teaser.shots:
+        speakers: dict[str, str] = {}
+        for d in s.dialogue():
+            spk = (d.get("speaker") or "").strip()
+            if not spk:
+                continue
+            cr = by_slug.get(_refs.slug(spk))
+            if cr is None:
+                continue
+            desc = cr.resolve_voice(getattr(s, "story_year", None))
+            if desc:
+                speakers[spk] = desc
+        if speakers:
+            out[s.id] = speakers
+    return out
+
+
 def _cmd_teaser_render(args: argparse.Namespace) -> int:
     """Render teaser clips via the thin free render adapter (Phase 3.5).
 
@@ -1087,6 +1124,16 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
                   file=sys.stderr)
     kf_dir = (Path(args.keyframe_dir) if getattr(args, "keyframe_dir", None)
               else None)
+    # Locked, age-resolved voices for spoken shots (video only).
+    voices_map = None
+    if getattr(args, "use_voices", False) and kind == "video":
+        voices_map = _load_teaser_voices_map(
+            Path(args.path), getattr(args, "refs_manifest", None))
+        if not voices_map:
+            print("teaser-render: --voices given but no approved character "
+                  "voices found in refs.yaml (set `voice:`/`voice_ages:` and "
+                  "approve the speakers in /autonovel:teaser-refs).",
+                  file=sys.stderr)
     reqs = _render.plan(
         teaser, provider=provider, kind=kind, out_dir=out_dir,
         width=getattr(args, "width", None), height=args.height,
@@ -1094,7 +1141,7 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
         only_shot=getattr(args, "shot", None),
         shot_refs=refs_map, style_override=getattr(args, "film_style", None),
         from_keyframes=getattr(args, "from_keyframes", False),
-        keyframe_dir=kf_dir,
+        keyframe_dir=kf_dir, shot_voices=voices_map,
     )
     if getattr(args, "shot", None) and not reqs:
         print(f"teaser-render: no shot with id {args.shot!r}", file=sys.stderr)
@@ -1724,6 +1771,11 @@ def main(argv: list[str] | None = None) -> int:
                      help="Replace each shot's `style` text with this string in "
                           "the prompt (e.g. a photoreal cinematic look for the "
                           "movie path, without touching teaser.json).")
+    tre.add_argument("--voices", dest="use_voices", action="store_true",
+                     help="Inject each speaker's locked, age-resolved voice "
+                          "descriptor (refs.yaml `voice`/`voice_ages`, picked by "
+                          "the shot's story_year) into the video prompt so the "
+                          "voice holds scene-to-scene. Video only; approval-gated.")
     tre.add_argument("--from-keyframes", dest="from_keyframes", action="store_true",
                      help="Image-to-video: animate each shot from its existing "
                           "keyframe (shot_<id>.png) as the start frame "

@@ -85,8 +85,16 @@
   `--audio` music bed **ducks under the dialogue** (sidechaincompress) by
   default instead of replacing it. `teaser-cut-list`/`teaser-assemble`
   gained `--audio-mode`/`--clip-audio`/`--no-clip-audio`. 10 tests.
+- **Phase 5.5+5.6** — **audio→prompt + voice lock/age**: fixed the gap
+  where `render_visual` dropped the shot `audio` block; new
+  `render_audio_for_prompt` appended for `--kind video` (dialogue + sfx +
+  ambience). `CharacterRef` gained `voice`/`birth_year`/`voice_ages[]` +
+  `resolve_voice(year)` (auto-age from a shot's `story_year`); `Shot`
+  gained `story_year`; `teaser-render --voices` injects each approved
+  speaker's age-resolved descriptor (`_load_teaser_voices_map`,
+  approval-gated). Voices live in refs.yaml. 11 tests.
 
-**Baseline now:** Tier 1+2 = **1665 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1676 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

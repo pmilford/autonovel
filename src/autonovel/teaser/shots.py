@@ -45,6 +45,9 @@ class Shot:
     last_frame: str | None = None
     seed: int | None = None
     text_card: str | None = None
+    # In-story year of this shot (Phase 5.6) — drives auto voice-aging:
+    # a character's age variant is picked from this year. Optional.
+    story_year: int | None = None
     # Human-facing one-line beat note (the dual-render pair; PRD §18.2).
     beat_note: str = ""
 
@@ -76,6 +79,8 @@ class Shot:
             d["seed"] = self.seed
         if self.text_card is not None:
             d["text_card"] = self.text_card
+        if self.story_year is not None:
+            d["story_year"] = self.story_year
         if self.beat_note:
             d["beat_note"] = self.beat_note
         return d
@@ -106,6 +111,7 @@ class Shot:
             last_frame=d.get("last_frame"),
             seed=d.get("seed"),
             text_card=d.get("text_card"),
+            story_year=d.get("story_year"),
             beat_note=d.get("beat_note", ""),
         )
 

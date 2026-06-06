@@ -1371,7 +1371,33 @@
   behaviour changed (image slideshow + bed path preserved). Regression
   gate: **Tier 1+2 1655 → 1665 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 5.5+5.6: audio→prompt + voice lock/age):
+  additive. **Gap found:** `render_visual` (the backend prompt) omitted the
+  shot `audio` block entirely — only the human `.md` showed it — so
+  grok/veo never received the dialogue/SFX. **5.5:** new
+  `render_prompt.render_audio_for_prompt(shot, voices)` (compact dialogue +
+  per-speaker voice tag + sfx + ambience); `build_request` appends it to the
+  prompt **for `--kind video` only**; `plan` threads `shot_voices`.
+  **5.6 (voice lock + age):** `refmanifest.CharacterRef` gained `voice`,
+  `birth_year`, `voice_ages[]` ({name,descriptor,from_year,to_year}) +
+  `resolve_voice(year)`/`age_variant_name(year)` (auto-age from a shot's
+  story-time; per-line `voice` override wins). `Shot` gained optional
+  `story_year`. `teaser-render --voices` + `_load_teaser_voices_map`
+  (reads refs.yaml, **approval-gated**, resolves each speaker's voice by
+  the shot's `story_year`). Voices live in refs.yaml (one manifest/gate for
+  face + voice). Design confirmed with user: auto-age from story-time,
+  storage in refs.yaml. New tests: `test_teaser_phase56.py` (11). Doc-sync:
+  teaser-render.md, teaser-refs.md, teaser-render-providers.md (audio/voice
+  table + section), commands.md (2 rows), FUTURE-TODOS (scene-transitions +
+  music-generation TODOs added), STATE, impl-plan. No existing-module
+  behaviour changed (audio only appended for video shots that declare it).
+  Regression gate: **Tier 1+2 1665 → 1676 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1676
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +11 since the 1665 mark: movie-teaser Phase 5.5+5.6 (audio-to-prompt
+  wiring + voice lock/age → 11 phase-5.6 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1665
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +10 since the 1655 mark: movie-teaser Phase 5.4 (audio-bed ducking +
