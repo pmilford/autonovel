@@ -563,7 +563,10 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   then `shot-prompts` turns them into provider-ready, heavily-described
   **shot prompts**); `teaser-critique` re-checks a hand-edited teaser with
   the mechanical linter + an LLM critic — all with a free pre-generation
-  critique, no generation cost. Render/assembly commands are next. See
+  critique, no generation cost. `teaser-render` then turns the prompts
+  into **actual clips** via a free, no-key backend (Pollinations) and runs
+  a vision critique (KEEP / REGENERATE / UPGRADE-TO-PAID) — stateless,
+  nothing assembled. ffmpeg assembly is next. See
   [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md) and
   the creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md).
 

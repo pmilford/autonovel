@@ -1194,8 +1194,35 @@
   module docstring, impl-plan, FUTURE-TODOS. No existing-module
   behaviour changed. Regression gate: **Tier 1+2 1562 → 1570 passed,
   1 skipped, 0 failed.**
+- 2026-06-05 (movie-teaser Phase 3.5: thin free render adapter + clip
+  critique): additive. New `src/autonovel/teaser/render.py` — stateless
+  Pollinations render adapter: deterministic per-(shot,take) URL +
+  seed (`crc32`, explicit `shot.seed` honoured), aspect→size (480p dev
+  default; watermarks/low-res OK), `build_request`/`plan`/`render` with
+  an injectable httpx client seam (mirrors export/wikimedia; tests never
+  hit the network). Failures isolate per-clip; one bad download never
+  aborts the batch. New mechanical CLI `resolve-video-provider` (twin of
+  resolve-image-provider: CLI → `project.yaml::video.provider` →
+  pollinations) and `teaser-render` (`--dry-run` builds the URL plan for
+  $0; `--kind image|video`; `--takes`; `--shot`; `--height`). New command
+  `/autonovel:teaser-render` (standard) — resolve provider → dry-run plan
+  → download clips → **vision clip critique** (KEEP/REGENERATE/
+  UPGRADE-TO-PAID) → advisory `teaser/clips/render-report.md`. BRIGHT
+  LINES held (PRD §23.2): clips on disk only, **no state file**, **no
+  auto-assembly**, paid providers only ever *recommended* (never
+  auto-called). HTTP (not LLM) in Python is consistent with the existing
+  wikimedia-fetch download. Doc-sync: commands.md (movie row + 2
+  mechanical rows), help.md, README, series CLAUDE.md, teaser-craft.md
+  §10, module docstring, impl-plan, FUTURE-TODOS. No existing-module
+  behaviour changed. Regression gate: **Tier 1+2 1570 → 1584 passed,
+  1 skipped, 0 failed.**
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1584
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +14 since the 1570 mark: movie-teaser Phase 3.5 (render.py adapter +
+  resolve-video-provider + teaser-render CLI + teaser-render command →
+  8 explicit + 6 auto contract tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1570
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +8 since the 1562 mark: movie-teaser Phase 2 (render dialects +

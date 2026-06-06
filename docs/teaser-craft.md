@@ -236,9 +236,15 @@ The craft above is applied by these commands:
 3. `/autonovel:teaser-critique --book <name>` — re-run the free critique
    (mechanical linter + LLM critic) on a hand-edited `teaser.json`; writes
    an advisory `teaser/critique.md`. Read-only on the teaser.
+4. `/autonovel:teaser-render --book <name> [--kind image|video] [--dry-run]`
+   — render the prompts into actual clips via the free no-key Pollinations
+   backend, then a vision critique marks each clip **KEEP / REGENERATE /
+   UPGRADE-TO-PAID**. Clips land in `teaser/clips/`; stateless, nothing
+   assembled. `--dry-run` shows the request plan for $0.
 
-All of these are free (no generation). Then take the shot prompts to your
-video tool — Pollinations is the free, no-key option (PRD §22).
+Steps 1–3 are free with no generation; step 4 downloads clips from a
+free, no-key backend — Pollinations (PRD §22), which `teaser-render`
+drives for you. Watermarks and low resolution are fine for dev passes.
 
 ---
 

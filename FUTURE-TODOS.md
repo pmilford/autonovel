@@ -1579,8 +1579,17 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   anchors** (`teaser/refs.py` + `teaser-refs-plan` CLI: which canonical
   ref each subject needs, which shots use it, which exist in `teaser/refs/`
   or a `shared/art_references/` plate, which are missing — wired into
-  shot-prompts so no manual `ls`). Tier 1+2: 1562 → 1570. Remaining:
-  Phase 3.5 Pollinations render + clip-critique, Phase 3 ffmpeg assembly.
+  shot-prompts so no manual `ls`). Tier 1+2: 1562 → 1570.
+  **Phase 3.5 shipped (2026-06-05)** — thin free render adapter
+  (`teaser/render.py`: stateless deterministic-seed Pollinations URLs,
+  injectable httpx seam, per-clip failure isolation) + `teaser-render`
+  and `resolve-video-provider` CLIs + `/autonovel:teaser-render` command
+  (resolve → dry-run plan → download → vision KEEP/REGENERATE/
+  UPGRADE-TO-PAID clip critique → advisory `clips/render-report.md`).
+  Bright lines held: clips on disk only, no state file, no auto-assembly,
+  paid providers only recommended. `--dry-run` plans for $0; watermarks/
+  low-res fine for dev. Tier 1+2: 1570 → 1584. Remaining: Phase 3 ffmpeg
+  assembly (`cut_list.json` → mp4 + viewer-panel cut critique).
 
 - **🚀 ULTRA-LONG-TERM: Script → full video pipeline.** Surfaced
   2026-05-01. The natural endpoint of the screenplay output above:

@@ -135,7 +135,7 @@ checkpoint so `autonovel rollback` undoes the full operation.
 
 ### Movie / teaser (in progress)
 
-Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Shipped: `treatment`, `teaser` (orchestrator), `teaser-beats`, `shot-prompts`, `teaser-critique` (Phase 0 + Phase 1). Next: the Pollinations render adapter, and ffmpeg assembly. All Phase-0/1 commands are **free** (no generation).
+Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Shipped: `treatment`, `teaser` (orchestrator), `teaser-beats`, `shot-prompts`, `teaser-critique` (Phase 0 + Phase 1), `teaser-render` (Phase 3.5 — free Pollinations clips + vision critique). Next: ffmpeg assembly. The planning commands (treatment → shot-prompts, critique) are **free, no generation**; `teaser-render` downloads clips from a free no-key backend.
 
 | Command | Tier | Purpose |
 |---|---|---|
@@ -144,6 +144,7 @@ Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative gui
 | `/autonovel:teaser-beats --book <short-name> [--length 30\|60\|90\|120\|180] [--provider generic\|veo\|sora\|runway\|kling\|luma\|pollinations] [--force]` | standard | Select 8–20 teaser beats on the hook → escalation → title → button arc from the treatment/outline + eval_logs, to a budget from `teaser-plan`. Writes the hand-editable `books/<book>/teaser/beats.md`. Free; no generation. |
 | `/autonovel:shot-prompts --book <short-name> [--provider <name>] [--length <s>] [--force]` | heavy | Turn the beat-sheet into provider-ready, heavily-described shot prompts. Fills the structured shot schema (verbatim character appearance, palette lock, one action/one move, content-word negative prompt, consistency anchors), runs a **free pre-generation critique** (mechanical `teaser-critique` + an LLM rewrite pass), then writes `books/<book>/teaser/teaser.json` + per-shot `books/<book>/teaser/shots/shot_<id>.md`. No generation cost. |
 | `/autonovel:teaser-critique --book <short-name> [--provider <name>]` | standard | Standalone, re-runnable **free pre-generation critique** of a (hand-edited) `teaser.json`: the mechanical linter + an LLM critic pass that scores each shot against trailer craft and the beat it serves. **Read-only** on `teaser.json`; writes an advisory `books/<book>/teaser/critique.md` with concrete rewrite suggestions. |
+| `/autonovel:teaser-render --book <short-name> [--provider pollinations\|veo\|sora\|runway\|luma] [--kind image\|video] [--takes <n>] [--shot <id>] [--height <px>] [--dry-run]` | standard | Render the shot prompts into **actual clips** via a free no-key backend (Pollinations; watermarks/low-res OK for dev). **Stateless** — clips land in `books/<book>/teaser/clips/`, no state file, nothing assembled. `--dry-run` prints every request URL for $0. Then a **vision clip critique** marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID into `clips/render-report.md`; paid providers are only ever *recommended*, never auto-called. |
 
 ## Navigation commands
 
@@ -217,6 +218,8 @@ and can run them by hand for inspection / debugging.
 | `teaser-critique <teaser.json> [--provider <p>]` | Mechanical pre-generation critique (advisory flags: appearance-drift, thin-prompt, no-palette/-reference, multi-action, audio-unsupported, missing hook/button, length-mismatch). |
 | `teaser-render-prompt <teaser.json> [--shot <id>] [--out-dir <dir>] [--provider <p>]` | Render shot prompt markdown in the provider's **render dialect** (prose for veo/sora/generic/pollinations; terse comma-keywords for runway; concise + Luma camera-enum for luma) and canonical order; `--out-dir` writes `shot_<id>.md` files. |
 | `teaser-refs-plan <teaser.json> [--refs-dir <d>] [--art-references-dir <d>]` | Plan the canonical **reference image** per recurring subject (consistency anchor): which shots use each, which already exist (in `teaser/refs/` or a shared `art_references/` plate), which are still missing. |
+| `resolve-video-provider [--project-yaml <p>] [--cli-provider <X>]` | Resolve the active **video** provider: CLI override → `project.yaml :: video.provider` → `pollinations` (free default). Twin of `resolve-image-provider`. |
+| `teaser-render <teaser.json> [--out-dir <d>] [--provider <p>] [--kind image\|video] [--takes <n>] [--shot <id>] [--height <px>] [--dry-run]` | Render clips via the free no-key adapter (Pollinations). Stateless submit→download (one file per shot/take); `--dry-run` builds the URL plan without downloading; failures isolate per clip. No assembly. |
 
 `autonovel mechanical <subcmd> --help` shows full flags for any
 of them. Many emit JSON via `--format json` for piping.

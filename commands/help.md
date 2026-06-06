@@ -59,8 +59,9 @@ workflow. Topics:
   movie        — treatment (film treatment + 2-page brief) +
                  teaser (one-command: teaser-beats → shot-prompts,
                  provider-ready shot prompts) + teaser-critique
-                 (free pre-gen critique). X-Prize-shaped; all free.
-                 See docs/teaser-craft.md.
+                 (free pre-gen critique) + teaser-render (free
+                 Pollinations clips + vision KEEP/REGENERATE critique).
+                 X-Prize-shaped. See docs/teaser-craft.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   sweeps       — multi-chapter operations: draft-pass,

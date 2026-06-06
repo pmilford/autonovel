@@ -245,9 +245,15 @@ Adapting a book to the screen, in order:
 3. `/autonovel:teaser-critique --book <name>` — re-check a hand-edited
    `teaser.json` (mechanical linter + LLM critic); writes an advisory
    `teaser/critique.md`. Read-only on the teaser; free.
+4. `/autonovel:teaser-render --book <name> [--kind image|video] [--dry-run]`
+   — render the shot prompts into actual clips via the free no-key
+   Pollinations backend (watermarks/low-res fine for dev), then a vision
+   critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID. Clips
+   land in `teaser/clips/`; stateless, nothing assembled. `--dry-run`
+   prints the request plan for $0.
 
-Then take the prompts to your video tool (Pollinations is the free
-no-key option). The creative how-to lives in `docs/teaser-craft.md`.
+Pollinations is the free no-key backend `teaser-render` drives for you.
+The creative how-to lives in `docs/teaser-craft.md`.
 
 ## Where to find more
 

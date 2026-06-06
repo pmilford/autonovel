@@ -27,6 +27,8 @@ Subcommands:
   teaser-critique <teaser.json>    Mechanical pre-generation critique (advisory flags).
   teaser-render-prompt <t.json>    Render shot prompt markdown in the provider's dialect.
   teaser-refs-plan <teaser.json>   Plan the canonical reference image per recurring subject.
+  resolve-video-provider [...]     Resolve video provider from CLI + project.yaml + default.
+  teaser-render <teaser.json>      Render clips via the free no-key adapter (Pollinations).
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -958,6 +960,100 @@ def _cmd_teaser_render_prompt(args: argparse.Namespace) -> int:
     return 0
 
 
+_DEFAULT_VIDEO_PROVIDER = "pollinations"
+
+
+def _cmd_resolve_video_provider(args: argparse.Namespace) -> int:
+    """Resolve the active *video* provider from CLI args + project.yaml.
+
+    Twin of ``resolve-image-provider`` (PRD §23). Precedence:
+      1. ``--cli-provider <X>`` — explicit per-call override.
+      2. ``project.yaml :: video.provider`` — the per-series default.
+      3. ``pollinations`` — repo-wide free, no-key default backend.
+    """
+    cli_provider = getattr(args, "cli_provider", None)
+    if cli_provider:
+        json.dump({"provider": cli_provider, "source": "cli"}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    project_yaml = getattr(args, "project_yaml", None)
+    if project_yaml:
+        try:
+            from ..project import load as load_project
+            cfg = load_project(Path(project_yaml))
+            value = cfg.video.get("provider")
+            if value:
+                json.dump({"provider": str(value), "source": "project.yaml"},
+                          sys.stdout, indent=2)
+                sys.stdout.write("\n")
+                return 0
+        except Exception:  # noqa: BLE001
+            pass
+    json.dump({"provider": _DEFAULT_VIDEO_PROVIDER, "source": "default"},
+              sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_teaser_render(args: argparse.Namespace) -> int:
+    """Render teaser clips via the thin free render adapter (Phase 3.5).
+
+    Stateless: builds the per-shot request plan, then (unless --dry-run)
+    downloads each clip to --out-dir. No state file, no assembly.
+    """
+    from ..teaser import shots as _shots, render as _render
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-render: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    provider = getattr(args, "provider", None) or teaser.provider or "pollinations"
+    out_dir = (Path(args.out_dir) if getattr(args, "out_dir", None)
+               else Path(args.path).resolve().parent / "clips")
+    reqs = _render.plan(
+        teaser, provider=provider, kind=args.kind, out_dir=out_dir,
+        width=getattr(args, "width", None), height=args.height,
+        takes=args.takes, model=getattr(args, "model", None),
+        only_shot=getattr(args, "shot", None),
+    )
+    if getattr(args, "shot", None) and not reqs:
+        print(f"teaser-render: no shot with id {args.shot!r}", file=sys.stderr)
+        return 2
+    human = getattr(args, "format", "human") == "human"
+    if getattr(args, "dry_run", False):
+        if human:
+            print(f"DRY RUN — {len(reqs)} request(s) ({args.kind}, {provider}); "
+                  f"nothing downloaded:")
+            for r in reqs:
+                print(f"  {r.shot_id} take{r.take} → {r.out_path}")
+                print(f"     {r.url}")
+        else:
+            json.dump({"dry_run": True, "count": len(reqs),
+                       "requests": [r.to_dict() for r in reqs]},
+                      sys.stdout, indent=2)
+            sys.stdout.write("\n")
+        return 0
+    results = _render.render(reqs)
+    ok = [r for r in results if r.ok]
+    bad = [r for r in results if not r.ok]
+    if human:
+        for r in results:
+            mark = "✅" if r.ok else "❌"
+            tail = f"{r.bytes} bytes" if r.ok else r.error
+            print(f"  {mark} {r.shot_id} take{r.take} → {r.out_path} ({tail})")
+        print(f"\n{len(ok)} rendered, {len(bad)} failed → {out_dir}/")
+        if bad:
+            print("Re-run teaser-render for the failed shots (free); then "
+                  "critique the clips in /autonovel:teaser-render.")
+    else:
+        json.dump({"dry_run": False, "rendered": len(ok), "failed": len(bad),
+                   "out_dir": str(out_dir),
+                   "results": [r.to_dict() for r in results]},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
     from ..teaser import shots as _shots, refs as _refs
     try:
@@ -1322,6 +1418,39 @@ def main(argv: list[str] | None = None) -> int:
                           "used as a fallback source for an existing reference.")
     trf.add_argument("--format", choices=["json", "human"], default="human")
     trf.set_defaults(func=_cmd_teaser_refs_plan)
+
+    # --- movie-teaser mode (Phase 3.5: free render adapter) ---
+    rvp = sub.add_parser("resolve-video-provider",
+                         help="Resolve the active video provider from CLI override + "
+                              "project.yaml (video.provider) + default (pollinations).")
+    rvp.add_argument("--project-yaml", dest="project_yaml", default=None,
+                     help="Path to project.yaml; `video.provider` is the per-series default.")
+    rvp.add_argument("--cli-provider", dest="cli_provider", default=None,
+                     help="Explicit per-call provider (wins over project.yaml).")
+    rvp.set_defaults(func=_cmd_resolve_video_provider)
+
+    tre = sub.add_parser("teaser-render",
+                         help="Render teaser clips via the free no-key adapter "
+                              "(Pollinations). Stateless submit→download; --dry-run "
+                              "builds the URL plan without spending bandwidth.")
+    tre.add_argument("path", help="Path to teaser.json.")
+    tre.add_argument("--out-dir", dest="out_dir", default=None,
+                     help="Where clips land (default: <teaser.json dir>/clips).")
+    tre.add_argument("--provider", default=None,
+                     help="Video provider (default: teaser.json provider, else pollinations).")
+    tre.add_argument("--kind", choices=["image", "video"], default="image",
+                     help="image = reliable free keyframe (default); video = experimental.")
+    tre.add_argument("--shot", default=None, help="Render only this shot id.")
+    tre.add_argument("--takes", type=int, default=1, help="Takes per shot (default 1).")
+    tre.add_argument("--width", type=int, default=None,
+                     help="Override width (default: derived from aspect ratio).")
+    tre.add_argument("--height", type=int, default=480,
+                     help="Output height in px (default 480 — low-res dev pass).")
+    tre.add_argument("--model", default=None, help="Optional backend model hint.")
+    tre.add_argument("--dry-run", dest="dry_run", action="store_true",
+                     help="Build + print the request plan; download nothing.")
+    tre.add_argument("--format", choices=["json", "human"], default="human")
+    tre.set_defaults(func=_cmd_teaser_render)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):
