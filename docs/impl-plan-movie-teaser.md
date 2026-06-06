@@ -73,8 +73,14 @@
   `refs/<slug>_ref.png`) into reference-capable backends; `--film-style`
   overrides the typeset art look. `refmanifest` gained `kind`/`shots`.
   12 phase-5.2 tests.
+- **Phase 5.3** — **image-to-video start frames**: `RenderRequest.
+  init_image` + `plan(from_keyframes=…, keyframe_dir=…)` auto-detect each
+  shot's `shot_<id>.png` keyframe and seed it as the video start frame;
+  backends `grok`/`veo`/`kie` attach it (data-URI / bytesBase64Encoded);
+  `teaser-render --from-keyframes`. Two-stage path: `--kind image --refs`
+  (locked keyframes) → `--kind video --from-keyframes` (motion). 8 tests.
 
-**Baseline now:** Tier 1+2 = **1647 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1655 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.
@@ -91,13 +97,12 @@ additive, regression-gated. Backend/key map:
 
 **Future polish (not blocking):** crossfades/transitions in the
 cut-list; burned-in title cards via an editor-export step; the Veo
-$300-credit **Vertex** path; image-to-video *start-frame* wiring so a
-generated keyframe seeds grok/veo motion (5.3); native-audio vs
+$300-credit **Vertex** path; native-audio vs
 `--audio` bed mixing in assemble; `--kind video` validated on more
 providers; a smoke (Tier-3) test that renders one real `stub`/`gemini`
 clip.
 
-Every step: hold the ≥1647 gate, additive-only, full doc-sync, append a
+Every step: hold the ≥1655 gate, additive-only, full doc-sync, append a
 STATE.md decision entry + bump the green count.
 
 ---

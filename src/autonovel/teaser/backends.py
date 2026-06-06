@@ -366,6 +366,11 @@ def _grok(req: Any, *, key: str, net: Net) -> bytes:
         "prompt": req.prompt,
         "duration": duration,
     }
+    # Image-to-video: animate from the shot's keyframe (Phase 5.3).
+    init = _init_image(req, net=net)
+    if init:
+        mime, b64 = init
+        body["image"] = f"data:{mime};base64,{b64}"
     created = net.post_json("https://api.x.ai/v1/videos/generations",
                             headers=auth, json=body)
     rid = _dig(created, "request_id") or _dig(created, "id")
@@ -408,6 +413,11 @@ def _kie(req: Any, *, key: str, net: Net) -> bytes:
             "duration": _clip_seconds(req, cap=10, default=8),
         },
     }
+    # Image-to-video start frame (Phase 5.3).
+    init = _init_image(req, net=net)
+    if init:
+        mime, b64 = init
+        body["input"]["image_url"] = f"data:{mime};base64,{b64}"
     created = net.post_json("https://api.kie.ai/api/v1/jobs/createTask",
                             headers=auth, json=body)
     task_id = _dig(created, "data", "taskId") or _dig(created, "taskId") or _dig(created, "data", "task_id")
@@ -465,8 +475,14 @@ def _veo(req: Any, *, key: str, net: Net) -> bytes:
     base = "https://generativelanguage.googleapis.com/v1beta"
     auth = {"x-goog-api-key": key}
     model = getattr(req, "model", None) or "veo-3.1-fast-generate-preview"
+    instance: dict[str, Any] = {"prompt": req.prompt}
+    # Image-to-video: seed the first frame with the shot's keyframe (5.3).
+    init = _init_image(req, net=net)
+    if init:
+        mime, b64 = init
+        instance["image"] = {"bytesBase64Encoded": b64, "mimeType": mime}
     body = {
-        "instances": [{"prompt": req.prompt}],
+        "instances": [instance],
         "parameters": {
             "aspectRatio": _aspect(req),
             "durationSeconds": str(_clip_seconds(req, cap=8, default=8)),
@@ -583,6 +599,16 @@ def _fal_video_url(obj: Any) -> str | None:
     return (_dig(obj, "video", "url") or _dig(obj, "videos", 0, "url")
             or _dig(obj, "images", 0, "url") or _dig(obj, "image", "url")
             or _dig(obj, "url"))
+
+
+def _init_image(req: Any, *, net: Net) -> tuple[str, str] | None:
+    """Load this shot's image-to-video start frame (Phase 5.3) → (mime,
+    base64), or None when the shot has no init frame. The composed,
+    identity-locked keyframe the video backend animates from."""
+    ref = getattr(req, "init_image", "") or ""
+    if not ref:
+        return None
+    return _load_ref(ref, net=net)
 
 
 def _load_ref(ref: str, *, net: Net) -> tuple[str, str]:

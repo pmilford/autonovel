@@ -70,6 +70,57 @@ to start.
   the whole flow be rehearsed for free. Likely a "Phase 5: character
   references" plan.
 
+- **Reference-conditioned rendering — GENERALIZE the manual Fugger spike
+  into the normal `autonovel:teaser` flow.** Requested 2026-06-06 (Fugger
+  book): *"this should be a general approach for videos, not just a manual
+  forcing"* and *"the prompts probably need updating too to pull the right
+  images/ages."* **Now built (Fugger spike, opt-in, works end-to-end):**
+  `gemini` registered as a reference-conditioned **image** backend (Nano
+  Banana 2 `gemini-3.1-flash-image-preview`, default; 2.5 / 3-pro
+  selectable); `RenderRequest.reference_images` is multi-image; the
+  gemini/fal backends attach N references; `teaser-render --refs` maps
+  **shot → ordered reference list** (characters first, then locations/
+  props, capped) by inverting each refs.yaml entity's `shots`; refs.yaml
+  entities gained `kind` (character|location|prop) + `shots` + an approval
+  gate; `--film-style` swaps the book's engraving style for a photoreal
+  film look without mutating teaser.json. Proven: faces hold across scenes;
+  Carpaccio's *wooden* Rialto plate fixes the 1591-stone-bridge anachronism;
+  shot 01b carries boy-portrait + Venice plate (true multi-ref); a Jakob
+  **age ladder** (boy 14 → youth 18 → man ~40 → elder ~62, lineage-morphed
+  so it's one face aging) is tagged per shot. **All of that is currently
+  HAND-FORCED** (manually editing refs.yaml, hand-running a lineage script,
+  hand-writing each variant's `shots:`). To make it the *normal* automated
+  flow:
+  1. **Auto-extract entities** in `teaser-refs --init`: scaffold not just
+     character subjects but **locations** (distinct `setting`s) and
+     recurring **props** as first-class entities, each listing its shots.
+  2. **Character age-ladder, auto.** A recurring character spans years; the
+     command should derive **age variants** from story-time (chapter dates /
+     treatment ages) and tag each shot to the right life-stage, then
+     **lineage-morph** the variants from one source so it is one face aging.
+     Today this is manual `Subject (boy)/(youth)/(man)/(elder)` entities.
+  3. **Prompt/appearance SYNC (the gap the user flagged).** The per-shot
+     appearance TEXT must match the chosen variant — today the reference
+     IMAGE pulls the right age (a youth renders ~17) but the shot's prompt
+     still says "boy of fourteen" / "in his fifties" (baked once at
+     `shot-prompts` time), which contradicts the image and can drag a shot
+     older. The render should pull the variant's appearance string ALONGSIDE
+     its image (an `appearance_override` parallel to `style_override`), or
+     `shot-prompts` should regenerate age-correct appearance per shot.
+  4. **Auto default-source suggestions** by entity type: real person →
+     period portrait (Dürer/Hans-Maler); real place → period painting WITH
+     anachronism guards (e.g. Carpaccio's wooden Rialto, NOT the 1591 stone
+     bridge a naïve search returns); invented/prop → `generate`. Present
+     these as defaults the user approves (the `art-directions → art-pick`
+     shape) rather than hand-declaring each `source_ref`.
+  5. **Carry refs to the VIDEO backends, not just gemini images.** Same
+     shot→refs map should feed grok/veo/kie image-to-video / character-ref
+     inputs (providers advertise `3-reference-images` / `characters+
+     input_reference` but the POST bodies don't attach images yet).
+  See project memory `teaser-reference-image-design` +
+  `gemini-image-key-location`. Likely folds into the "Phase 5: character
+  references" plan above.
+
 - **Veo on the $300 GCP credit via Vertex (ADC).** The shipped `veo`
   backend drives the Gemini **API-key** path. The $300 new-account
   welcome credit applies only on the **Vertex** path (gcloud ADC,

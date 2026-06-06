@@ -92,6 +92,26 @@ carries up to `--max-refs` (default 3); characters lead, locations/props
 follow. `--film-style "<style>"` overrides the book's typeset art style
 with a photoreal film look without editing `teaser.json`.
 
+## Image-to-video: keyframe → motion (`--from-keyframes`) — Phase 5.3
+
+The strongest free/cheap path keeps identity *and* adds motion in two
+stages:
+
+1. **Keyframes** — `teaser-render --kind image --refs` (e.g. `--provider
+   gemini`) composes one reference-conditioned still per shot at
+   `clips/shot_<id>.png`. Review/approve them cheaply (stills are far
+   cheaper than video).
+2. **Motion** — `teaser-render --kind video --from-keyframes` animates
+   each shot **from its own keyframe** as the start frame. `grok` sends it
+   as `image`, `veo` as `instances[].image.bytesBase64Encoded`, `kie` as
+   `input.image_url`. A shot with no keyframe falls back to text-to-video.
+   `--keyframe-dir` overrides where the stills live (default: the clips
+   dir).
+
+Because the keyframe already locks the character (it was rendered with
+`--refs`), the video inherits that identity — you spend video quota only
+once the still is right.
+
 ## The `flow` manual path (Google AI Pro)
 
 Flow (labs.google/flow) gives the highest quality with native

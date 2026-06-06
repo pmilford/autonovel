@@ -59,6 +59,12 @@ class RenderRequest:
     # kontext) condition the keyframe on these so a character's identity
     # holds across separately-generated shots. Empty ⇒ pure text-to-image.
     reference_images: tuple[str, ...] = ()
+    # Image-to-video START FRAME (Phase 5.3): a per-shot keyframe (local
+    # path or http URL) the video backends (grok/veo/kie) animate from, so
+    # the composed still becomes motion with its identity already locked.
+    # Distinct from reference_images (style/identity refs). Empty ⇒ pure
+    # text-to-video.
+    init_image: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -67,6 +73,7 @@ class RenderRequest:
             "width": self.width, "height": self.height, "take": self.take,
             "provider": self.provider, "duration_s": self.duration_s,
             "model": self.model, "reference_images": list(self.reference_images),
+            "init_image": self.init_image,
         }
 
 
@@ -121,6 +128,7 @@ def build_request(
     model: str | None = None,
     reference_images: tuple[str, ...] = (),
     style_override: str | None = None,
+    init_image: str = "",
 ) -> RenderRequest:
     """Build the deterministic download request for one shot/take.
 
@@ -155,7 +163,8 @@ def build_request(
         url = base + quote(prompt, safe="") + "?" + urlencode(params)
     else:
         ref_note = f" +{len(reference_images)} ref" if reference_images else ""
-        url = f"{provider}:async (POST at render time){ref_note}"
+        init_note = " +init-frame" if init_image else ""
+        url = f"{provider}:async (POST at render time){ref_note}{init_note}"
     ext = _EXT.get(kind, "png")
     suffix = f"_take{take}" if take > 1 else ""
     out_path = Path(out_dir) / f"shot_{shot.id}{suffix}.{ext}"
@@ -164,6 +173,7 @@ def build_request(
         prompt=prompt, seed=seed, width=width, height=height, take=take,
         provider=provider, duration_s=float(getattr(shot, "duration_s", 5.0) or 5.0),
         model=model, reference_images=tuple(reference_images),
+        init_image=init_image,
     )
 
 
@@ -181,6 +191,8 @@ def plan(
     shot_refs: dict[str, list[str]] | None = None,
     max_refs: int = 3,
     style_override: str | None = None,
+    from_keyframes: bool = False,
+    keyframe_dir: Path | None = None,
 ) -> list[RenderRequest]:
     """Build the request plan for every shot (× ``takes``). Pure — no I/O.
 
@@ -191,10 +203,17 @@ def plan(
     backends attach all of them (Gemini/fal take multiple) to keep both
     the cast and the place consistent across separately-generated shots.
     A shot's own ``reference_image`` is a final fallback.
+
+    ``from_keyframes`` (Phase 5.3, ``--kind video``): use each shot's
+    already-rendered keyframe (``<keyframe_dir>/shot_<id>.png``, default
+    ``keyframe_dir = out_dir``) as the image-to-video **start frame**, so
+    the composed, identity-locked still becomes motion. A shot with no
+    keyframe on disk just falls back to text-to-video.
     """
     shot_refs = shot_refs or {}
     reqs: list[RenderRequest] = []
     teaser_dir = Path(out_dir).parent
+    kf_dir = Path(keyframe_dir) if keyframe_dir is not None else Path(out_dir)
     for s in teaser.shots:
         if only_shot is not None and s.id != only_shot:
             continue
@@ -211,11 +230,20 @@ def plan(
         # hard-fails the shot (it just renders with fewer/no references).
         refs = [r for r in refs
                 if r.startswith("http") or Path(r).exists()][:max_refs]
+        # Image-to-video start frame: the shot's existing take-1 keyframe.
+        init_image = ""
+        if from_keyframes and kind == "video":
+            for ext in ("png", "jpg", "jpeg", "webp"):
+                cand = kf_dir / f"shot_{s.id}.{ext}"
+                if cand.exists():
+                    init_image = str(cand)
+                    break
         for t in range(1, max(1, takes) + 1):
             reqs.append(build_request(
                 s, provider=provider, kind=kind, out_dir=out_dir,
                 width=width, height=height, take=t, model=model,
                 reference_images=tuple(refs), style_override=style_override,
+                init_image=init_image,
             ))
     return reqs
 

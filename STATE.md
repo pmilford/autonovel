@@ -1335,7 +1335,28 @@
   absent. Regression gate: **Tier 1+2 1635 → 1647 passed, 1 skipped, 0
   failed.**
 
+- 2026-06-06 (movie-teaser Phase 5.3: image-to-video start frames):
+  additive. A composed keyframe (image) now seeds the video backends so
+  the identity-locked still becomes motion. `RenderRequest` gained
+  `init_image`; `build_request`/`plan` carry it; `plan(from_keyframes=True,
+  keyframe_dir=…)` auto-detects each shot's `shot_<id>.{png,jpg,jpeg,webp}`
+  (default dir = out_dir) for `--kind video` and sets it as the start
+  frame (image kind never seeds one). backends: `_init_image` helper +
+  `grok` (`image` data-URI), `veo` (`instances[].image.bytesBase64Encoded`
+  + mimeType), `kie` (`input.image_url` data-URI) attach it when present;
+  no init ⇒ unchanged text-to-video. `teaser-render` gained
+  `--from-keyframes` / `--keyframe-dir`. New tests:
+  `test_teaser_phase53.py` (8). Doc-sync: teaser-render.md (i2v workflow),
+  teaser-render-providers.md (keyframe→motion section), commands.md
+  (rows), STATE, impl-plan. No existing-module behaviour changed.
+  Regression gate: **Tier 1+2 1647 → 1655 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1655
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +8 since the 1647 mark: movie-teaser Phase 5.3 (image-to-video start
+  frames: init_image on request/plan/backends → 8 phase-5.3 tests).
+  Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1647
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +12 since the 1635 mark: movie-teaser Phase 5.2 (gemini reference-

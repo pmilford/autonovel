@@ -58,6 +58,13 @@ approved/locked subjects flow (the approval gate); pending ones are
 skipped with a warning. `--film-style "<style>"` swaps the book's
 typeset art style for a photoreal film look without editing teaser.json.
 
+**Image-to-video (`--from-keyframes`).** The two-stage path that keeps
+identity AND adds motion: first render reference-conditioned **keyframes**
+(`--kind image --refs`), then render **video** with `--from-keyframes` —
+each shot animates from its own `shot_<id>.png` as the start frame
+(`grok`/`veo`/`kie`). A shot with no keyframe just falls back to
+text-to-video. `--keyframe-dir` points elsewhere (default: the clips dir).
+
 Keys come from `--token`, then the matching env var, then a project-local
 `.env` (see `docs/teaser-render-providers.md`). Watermarks and low
 resolution are fine for the dev passes this is built for; upgrade

@@ -1085,12 +1085,16 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
             print("teaser-render: --refs given but no usable reference images "
                   "found in refs.yaml (run /autonovel:teaser-refs first).",
                   file=sys.stderr)
+    kf_dir = (Path(args.keyframe_dir) if getattr(args, "keyframe_dir", None)
+              else None)
     reqs = _render.plan(
         teaser, provider=provider, kind=kind, out_dir=out_dir,
         width=getattr(args, "width", None), height=args.height,
         takes=args.takes, model=getattr(args, "model", None),
         only_shot=getattr(args, "shot", None),
         shot_refs=refs_map, style_override=getattr(args, "film_style", None),
+        from_keyframes=getattr(args, "from_keyframes", False),
+        keyframe_dir=kf_dir,
     )
     if getattr(args, "shot", None) and not reqs:
         print(f"teaser-render: no shot with id {args.shot!r}", file=sys.stderr)
@@ -1713,6 +1717,13 @@ def main(argv: list[str] | None = None) -> int:
                      help="Replace each shot's `style` text with this string in "
                           "the prompt (e.g. a photoreal cinematic look for the "
                           "movie path, without touching teaser.json).")
+    tre.add_argument("--from-keyframes", dest="from_keyframes", action="store_true",
+                     help="Image-to-video: animate each shot from its existing "
+                          "keyframe (shot_<id>.png) as the start frame "
+                          "(grok/veo/kie). Use after a --kind image pass.")
+    tre.add_argument("--keyframe-dir", dest="keyframe_dir", default=None,
+                     help="Where the keyframes live for --from-keyframes "
+                          "(default: the clips/out dir).")
     tre.add_argument("--shot", default=None, help="Render only this shot id.")
     tre.add_argument("--takes", type=int, default=1, help="Takes per shot (default 1).")
     tre.add_argument("--width", type=int, default=None,
