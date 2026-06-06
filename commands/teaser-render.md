@@ -108,7 +108,14 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    provider, output dir, and **whether a key is present**. If `--dry-run`
    was passed, print the plan and **stop here** — write nothing.
 
-5. **Key / manual gates.**
+5. **Key / manual / approval gates.**
+   - **Approval gate (real renders only; `stub` is exempt).** Before
+     spending a quota-bearing backend, check character references: `bash`
+     `autonovel mechanical teaser-refs books/{book}/teaser/teaser.json --format json`
+     If `all_approved` is false, warn which subjects aren't locked yet and
+     recommend `/autonovel:teaser-refs --book {book}` first (identity will
+     drift without locked references). This is advisory — proceed if the
+     user insists, but say so.
    - If `manual` is true (`flow`): print the manual instructions — render
      the shots in Flow (labs.google/flow), export each MP4, drop them in
      `books/{book}/teaser/clips/` as `shot_<id>.mp4`, then run

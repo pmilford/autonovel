@@ -27,6 +27,7 @@ Subcommands:
   teaser-critique <teaser.json>    Mechanical pre-generation critique (advisory flags).
   teaser-render-prompt <t.json>    Render shot prompt markdown in the provider's dialect.
   teaser-refs-plan <teaser.json>   Plan the canonical reference image per recurring subject.
+  teaser-refs <teaser.json>        Character-reference manifest + approval status (Phase 5).
   resolve-video-provider [...]     Resolve video provider from CLI + project.yaml + default.
   teaser-render <teaser.json>      Render clips via the free no-key adapter (Pollinations).
   teaser-cut-list <teaser.json>    Build an editable cut_list.json from teaser + clips on disk.
@@ -1124,6 +1125,80 @@ def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_refs(args: argparse.Namespace) -> int:
+    """Character-reference manifest + approval status (Phase 5).
+
+    Merges the teaser's auto reference plan with a declared `refs.yaml`
+    manifest and reports, per recurring subject: the declared source, the
+    approval status, whether the plate exists on disk, and the one next
+    action (declare-source / fetch-source / generate / approve / ready).
+    `--init` scaffolds a starter manifest from the teaser when none exists.
+    """
+    from ..teaser import shots as _shots, refmanifest as _rm
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-refs: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    base = Path(args.path).resolve().parent
+    manifest_path = (Path(args.manifest) if getattr(args, "manifest", None)
+                     else base / "refs.yaml")
+    art_dir = (Path(args.art_references_dir)
+               if getattr(args, "art_references_dir", None) else None)
+
+    if getattr(args, "init", False):
+        if manifest_path.exists() and not getattr(args, "force", False):
+            print(f"teaser-refs: {manifest_path} exists — pass --force to overwrite.",
+                  file=sys.stderr)
+            return 2
+        manifest = _rm.scaffold_from_teaser(
+            teaser, base_dir=base, art_references_dir=art_dir)
+        _rm.dump(manifest, manifest_path)
+        print(f"Scaffolded {manifest_path} — {len(manifest.subjects)} subject(s). "
+              f"Edit each `source`/`source_ref`/`constraints`, then approve.")
+        return 0
+
+    if manifest_path.exists():
+        try:
+            manifest = _rm.load(manifest_path)
+        except Exception as exc:  # noqa: BLE001
+            print(f"teaser-refs: cannot read {manifest_path}: {exc}", file=sys.stderr)
+            return 2
+    else:
+        manifest = _rm.RefManifest()  # empty → every subject "declare-source"
+
+    status = _rm.build_status(teaser, manifest, base_dir=base,
+                              art_references_dir=art_dir)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"manifest": str(manifest_path),
+                   "manifest_exists": manifest_path.exists(),
+                   **status.to_dict()}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    if not status.rows:
+        print("no named subjects in this teaser — nothing to anchor.")
+        return 0
+    if not manifest_path.exists():
+        print(f"No manifest yet ({manifest_path.name}). Scaffold one with "
+              f"`--init`, then declare a source per subject.\n")
+    _MARK = {"ready": "✅", "approve": "🟡", "fetch-source": "⬜",
+             "generate": "⬜", "declare-source": "❓"}
+    print(f"Character references — {len(status.ready)}/{len(status.rows)} ready:")
+    for r in status.rows:
+        mark = _MARK.get(r.next_action, "•")
+        src = r.source if r.source != "undeclared" else "undeclared"
+        ref = f" ← {r.source_ref}" if r.source_ref else ""
+        drift = "" if r.appearance_variants <= 1 else f" ⚠️{r.appearance_variants} appearances"
+        print(f"  {mark} {r.subject} [{src}{ref}] status={r.status} "
+              f"({len(r.shots)} shot(s)){drift} → {r.next_action}")
+    if status.blocked:
+        print(f"\nApproval gate: {len(status.blocked)} subject(s) not yet "
+              f"approved/locked. Real renders should wait until these are "
+              f"locked (the offline `stub` backend is exempt).")
+    return 0
+
+
 def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
     """Build an editable cut_list.json from teaser.json + the clips on
     disk (Phase 3). Plan-only — never runs ffmpeg."""
@@ -1518,6 +1593,24 @@ def main(argv: list[str] | None = None) -> int:
                           "used as a fallback source for an existing reference.")
     trf.add_argument("--format", choices=["json", "human"], default="human")
     trf.set_defaults(func=_cmd_teaser_refs_plan)
+
+    # --- movie-teaser mode (Phase 5: character-reference manifest + approval) ---
+    trfm = sub.add_parser("teaser-refs",
+                          help="Character-reference manifest + approval status: declared "
+                               "source per subject, approval gate, next action. --init "
+                               "scaffolds refs.yaml from the teaser.")
+    trfm.add_argument("path", help="Path to teaser.json.")
+    trfm.add_argument("--manifest", default=None,
+                      help="Path to refs.yaml (default: <teaser.json dir>/refs.yaml).")
+    trfm.add_argument("--art-references-dir", dest="art_references_dir", default=None,
+                      help="Optional shared plate library (e.g. shared/art_references/).")
+    trfm.add_argument("--init", action="store_true",
+                      help="Scaffold a starter refs.yaml from the teaser (one pending "
+                           "subject each) instead of reporting status.")
+    trfm.add_argument("--force", action="store_true",
+                      help="With --init, overwrite an existing refs.yaml.")
+    trfm.add_argument("--format", choices=["json", "human"], default="human")
+    trfm.set_defaults(func=_cmd_teaser_refs)
 
     # --- movie-teaser mode (Phase 3.5: free render adapter) ---
     rvp = sub.add_parser("resolve-video-provider",

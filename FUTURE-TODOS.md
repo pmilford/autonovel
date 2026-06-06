@@ -11,6 +11,21 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Series/book directory nesting is confusing (clean up soon).**
+  Reported 2026-06-06. On the Fugger book the clips land at
+  `~/books/medieval-king-maker/books/medieval-king-maker/teaser/clips/`
+  — the series root and the book share the name `medieval-king-maker`,
+  so the autonovel layout (`<series>/books/<book>/…`) reads as a doubled
+  path. It is structurally correct (a series *contains* `books/<name>/`)
+  but looks broken when series-name == book-name, and the absolute path
+  is needlessly deep. **Action:** investigate — (a) when a series has a
+  single book whose name == series name, consider flattening or a
+  clearer default book name in `new-series`; (b) document the
+  `<series>/books/<book>/` layout prominently so it's not mistaken for a
+  bug; (c) sanity-check that no command writes a *second* `books/` level
+  by mistake. Audit `paths.py` + `new-series` scaffolding + the teaser
+  `out_dir` defaults.
+
 - ~~**Flip the install default to NO model pin.**~~ **Shipped
   2026-06-06.** `pin_model` now defaults to **False** across
   `claude_code.render`, `installer.install`, and `cli.py`; `autonovel

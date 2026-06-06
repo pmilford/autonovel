@@ -1282,7 +1282,38 @@
   line removed by default, by design). Regression gate: **Tier 1+2 1600
   → 1621 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 5.1: character-reference manifest +
+  approval gate): additive. New `src/autonovel/teaser/refmanifest.py` —
+  `CharacterRef` (subject, source wikimedia|local|generate, source_ref,
+  locked appearance, constraints, morph, status pending→approved→locked,
+  ref_path) + `RefManifest` (yaml load/dump w/ header, slug-insensitive
+  `get`) + `scaffold_from_teaser` (starter manifest from `refs.plan_refs`)
+  + `build_status` (merges auto plan with manifest → per-subject
+  `next_action`: declare-source/fetch-source/generate/approve/ready) +
+  `RefStatus.unapproved_subjects()` (the approval gate). New mechanical
+  CLI `teaser-refs` (`--init` scaffolds `books/{book}/teaser/refs.yaml`;
+  else prints status; json/human). New command `/autonovel:teaser-refs`
+  (standard) — scaffold → declare source (PD art via wikimedia-search/
+  -fetch, local via art-import, or generate) → approve/lock; advisory
+  approval gate wired into `teaser-render` step 5 (real renders only;
+  `stub` exempt). Reuses `refs.py`/`wikimedia-*`/`art-import` (no new
+  generation path). New tests: `test_teaser_phase5.py` (8). Doc-sync:
+  commands.md (slash row + mechanical row + pipeline summary), help.md
+  (movie section), series CLAUDE.md (step 3b), teaser-render.md
+  (approval-gate step), FUTURE-TODOS (dir-nesting TODO added). Mechanical
+  only; picking/approving/fetching are command-body LLM/interactive
+  steps. No existing-module behaviour changed. Regression gate: **Tier
+  1+2 1621 → 1635 passed, 1 skipped, 0 failed.** NEXT (Phase 5.2): feed
+  the locked reference image into the backends as the image-to-video /
+  image-conditioning input (grok/veo/kie `image` field) so approved refs
+  actually anchor real renders; optional morph-from-source step.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1635
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +14 since the 1621 mark: movie-teaser Phase 5.1 (refmanifest.py +
+  teaser-refs CLI + /autonovel:teaser-refs → 8 phase-5 tests + auto
+  contract/placeholder tests for the new command). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1621
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +21 since the 1600 mark: movie-teaser Phase 4 (backends.py multi-

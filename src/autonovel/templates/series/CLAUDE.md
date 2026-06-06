@@ -245,6 +245,11 @@ Adapting a book to the screen, in order:
 3. `/autonovel:teaser-critique --book <name>` — re-check a hand-edited
    `teaser.json` (mechanical linter + LLM critic); writes an advisory
    `teaser/critique.md`. Read-only on the teaser; free.
+3b. `/autonovel:teaser-refs --book <name> [--init]` — develop + **approve**
+   a reference image per recurring character before spending a real
+   render (public-domain art via wikimedia, a local image, or generate;
+   locks appearance/period/likeness in `teaser/refs.yaml`). Keeps identity
+   from drifting across clips; the offline `stub` backend is exempt.
 4. `/autonovel:teaser-render --book <name> [--provider <p>] [--kind auto|image|video] [--dry-run]`
    — render the shot prompts into actual clips. On a fresh teaser it first
    does a **free, offline `stub` render** (local placeholder keyframes —
