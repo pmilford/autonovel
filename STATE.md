@@ -1308,7 +1308,39 @@
   image-conditioning input (grok/veo/kie `image` field) so approved refs
   actually anchor real renders; optional morph-from-source step.
 
+- 2026-06-06 (movie-teaser Phase 5.2: reference-conditioned keyframes):
+  additive. Approved character references now actually anchor the render
+  so identity holds across separately-generated shots. New **`gemini`**
+  image backend (`backends._gemini_image`, Nano Banana 2/Pro) — synchronous
+  reference-conditioned photoreal stills, each `refs.yaml` portrait
+  attached as an `inline_data` part; `_load_ref` (local path / http URL →
+  base64) shared with `fal` (FLUX.1 Kontext for `--kind image`).
+  `RenderRequest` gained `model` + `reference_images`; `build_request`
+  gained `reference_images` + `style_override` (and pollinations
+  flux-kontext for an http ref); `plan` gained `shot_refs`/`max_refs`/
+  `style_override` (drops missing local refs, caps at max_refs, characters
+  before locations). `teaser-render` gained `--refs` / `--refs-manifest` /
+  `--film-style`; `_load_teaser_refs_map` reads `refs.yaml` via
+  `refmanifest`, **enforces the approval gate** (only approved/locked
+  subjects' refs flow), prefers `refs/<slug>_ref.png` over `ref_path`, and
+  resolves shots from the manifest `shots:` (fallback: auto plan).
+  `refmanifest.CharacterRef` gained `kind` (character|location|prop) +
+  `shots` (scaffold records them). providers.py: new `gemini` row,
+  `fal` now image+video. New tests: `test_teaser_phase52.py` (12). Doc-sync:
+  teaser-render.md (gemini + --refs/--film-style + reference workflow),
+  teaser-refs.md (portrait convention + render-with-refs next step),
+  teaser-render-providers.md (gemini row + reference-conditioning section),
+  commands.md (slash + mechanical rows). No existing-module behaviour
+  changed; pollinations/grok/veo/etc text paths unaffected when `--refs`
+  absent. Regression gate: **Tier 1+2 1635 → 1647 passed, 1 skipped, 0
+  failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1647
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +12 since the 1635 mark: movie-teaser Phase 5.2 (gemini reference-
+  conditioned image backend + refs threading + approval-gated refs map →
+  12 phase-5.2 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1635
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +14 since the 1621 mark: movie-teaser Phase 5.1 (refmanifest.py +

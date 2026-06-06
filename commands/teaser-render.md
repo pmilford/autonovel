@@ -30,6 +30,11 @@ Backends (capabilities are data — see `docs/teaser-render-providers.md`):
 
   - **`stub`** — offline placeholder keyframes (Pillow). No network/key/
     quota. **Use this first** to validate the pipeline.
+  - **`gemini`** — reference-conditioned photoreal **image keyframes**
+    (Nano Banana). With `--refs` every keyframe is conditioned on the
+    subject's approved portrait so a character's face holds across shots.
+    `--kind image`; needs `GEMINI_API_KEY` (~$0.04/img). The recommended
+    way to make the per-shot static keyframes.
   - **`grok`** — DEFAULT real backend. xAI Grok Imagine: native
     dialogue+music, **5 free gens/day + $25 signup, no card**. Needs a
     free `XAI_API_KEY`.
@@ -44,6 +49,14 @@ Backends (capabilities are data — see `docs/teaser-render-providers.md`):
     by hand, drop the MP4s in `clips/`; assembly stitches them.
   - **`pollinations`** — free **flux keyframe IMAGES** only (its free
     video is gone). Now needs a free account token (`POLLINATIONS_TOKEN`).
+
+**Reference-conditioned keyframes (`--refs`).** Pass `--refs` to feed each
+shot's **approved** character/location references (from `refs.yaml`, via
+`/autonovel:teaser-refs`) into reference-capable backends (`gemini`, `fal`
+kontext, `pollinations` flux-kontext) so identity holds across shots. Only
+approved/locked subjects flow (the approval gate); pending ones are
+skipped with a warning. `--film-style "<style>"` swaps the book's
+typeset art style for a photoreal film look without editing teaser.json.
 
 Keys come from `--token`, then the matching env var, then a project-local
 `.env` (see `docs/teaser-render-providers.md`). Watermarks and low

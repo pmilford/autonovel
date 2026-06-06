@@ -53,6 +53,12 @@ class RenderRequest:
     take: int = 1
     provider: str = "pollinations"
     duration_s: float = 5.0
+    model: str | None = None
+    # Canonical reference image(s) for this shot's subject — local paths or
+    # http(s) URLs. Reference-capable backends (gemini/fal/pollinations-
+    # kontext) condition the keyframe on these so a character's identity
+    # holds across separately-generated shots. Empty ⇒ pure text-to-image.
+    reference_images: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -60,6 +66,7 @@ class RenderRequest:
             "out_path": self.out_path, "prompt": self.prompt, "seed": self.seed,
             "width": self.width, "height": self.height, "take": self.take,
             "provider": self.provider, "duration_s": self.duration_s,
+            "model": self.model, "reference_images": list(self.reference_images),
         }
 
 
@@ -112,24 +119,43 @@ def build_request(
     height: int = _DEFAULT_HEIGHT,
     take: int = 1,
     model: str | None = None,
+    reference_images: tuple[str, ...] = (),
+    style_override: str | None = None,
 ) -> RenderRequest:
-    """Build the deterministic download request for one shot/take."""
+    """Build the deterministic download request for one shot/take.
+
+    ``reference_images`` are the subject's canonical reference plate(s) —
+    fed to reference-capable backends so identity holds across shots.
+    ``style_override`` replaces the shot's ``style`` text in the rendered
+    prompt (e.g. swap the book's engraving look for a photoreal film style
+    on the movie path) without mutating the teaser.json.
+    """
     prompt = render_prompt.render_visual(shot, provider)
+    if style_override and shot.style and shot.style in prompt:
+        prompt = prompt.replace(shot.style, style_override)
     if width is None:
         width, height = aspect_to_size(shot.aspect_ratio, height)
     seed = _seed_for(shot, take)
     # Pollinations is a plain GET (URL carries everything). The async
-    # backends (grok/kie/veo/magichour/fal) build their own POST bodies
-    # at render time — the request only needs the prompt + dims, so the
-    # `url` field is a human-readable note for the dry-run plan.
+    # backends (grok/kie/veo/magichour/fal/gemini) build their own POST
+    # bodies at render time — the request only needs the prompt + dims, so
+    # the `url` field is a human-readable note for the dry-run plan.
     if provider == "pollinations":
         params: dict[str, Any] = {"width": width, "height": height, "seed": seed}
         if model:
             params["model"] = model
+        # flux-kontext conditions on an image URL; only http(s) refs work
+        # here (Pollinations cannot read a local file). A local plate is
+        # ignored for pollinations — use gemini/fal to condition on those.
+        url_ref = next((r for r in reference_images if r.startswith("http")), None)
+        if url_ref:
+            params.setdefault("model", "flux-kontext")
+            params["image"] = url_ref
         base = POLLINATIONS_VIDEO if kind == "video" else POLLINATIONS_IMAGE
         url = base + quote(prompt, safe="") + "?" + urlencode(params)
     else:
-        url = f"{provider}:async (POST at render time)"
+        ref_note = f" +{len(reference_images)} ref" if reference_images else ""
+        url = f"{provider}:async (POST at render time){ref_note}"
     ext = _EXT.get(kind, "png")
     suffix = f"_take{take}" if take > 1 else ""
     out_path = Path(out_dir) / f"shot_{shot.id}{suffix}.{ext}"
@@ -137,6 +163,7 @@ def build_request(
         shot_id=shot.id, kind=kind, url=url, out_path=str(out_path),
         prompt=prompt, seed=seed, width=width, height=height, take=take,
         provider=provider, duration_s=float(getattr(shot, "duration_s", 5.0) or 5.0),
+        model=model, reference_images=tuple(reference_images),
     )
 
 
@@ -151,16 +178,44 @@ def plan(
     takes: int = 1,
     model: str | None = None,
     only_shot: str | None = None,
+    shot_refs: dict[str, list[str]] | None = None,
+    max_refs: int = 3,
+    style_override: str | None = None,
 ) -> list[RenderRequest]:
-    """Build the request plan for every shot (× ``takes``). Pure — no I/O."""
+    """Build the request plan for every shot (× ``takes``). Pure — no I/O.
+
+    ``shot_refs`` maps a shot id → an ordered list of canonical reference
+    images (local paths or URLs). A scene routinely needs SEVERAL — a
+    character portrait plus a location plate plus a key prop — so each
+    shot can carry up to ``max_refs`` of them; the reference-capable
+    backends attach all of them (Gemini/fal take multiple) to keep both
+    the cast and the place consistent across separately-generated shots.
+    A shot's own ``reference_image`` is a final fallback.
+    """
+    shot_refs = shot_refs or {}
     reqs: list[RenderRequest] = []
+    teaser_dir = Path(out_dir).parent
     for s in teaser.shots:
         if only_shot is not None and s.id != only_shot:
             continue
+        refs = list(shot_refs.get(s.id, []))
+        if not refs and getattr(s, "reference_image", ""):
+            # teaser.json reference_image is a relative placeholder path
+            # (e.g. "refs/ledger.png"); use it only if it exists on disk.
+            cand = Path(s.reference_image)
+            if not cand.is_absolute():
+                cand = teaser_dir / s.reference_image
+            if cand.exists():
+                refs = [str(cand)]
+        # Drop any local ref that does not exist so a missing plate never
+        # hard-fails the shot (it just renders with fewer/no references).
+        refs = [r for r in refs
+                if r.startswith("http") or Path(r).exists()][:max_refs]
         for t in range(1, max(1, takes) + 1):
             reqs.append(build_request(
                 s, provider=provider, kind=kind, out_dir=out_dir,
                 width=width, height=height, take=t, model=model,
+                reference_images=tuple(refs), style_override=style_override,
             ))
     return reqs
 

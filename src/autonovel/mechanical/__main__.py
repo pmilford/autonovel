@@ -1001,6 +1001,57 @@ def _cmd_resolve_video_provider(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_teaser_refs_map(teaser_path: Path, manifest: str | None) -> dict[str, list[str]]:
+    """Map each shot id → an ordered list of its **approved** reference images.
+
+    Reads the `refs.yaml` manifest (`/autonovel:teaser-refs`). For each
+    subject that is **approved/locked** (the approval gate — pending
+    subjects contribute nothing), the canonical realistic portrait
+    ``refs/<slug>_ref.png`` is preferred over the raw approved plate
+    (``ref_path``). The subject's shots come from its manifest `shots:`
+    list, falling back to the auto plan (which groups shots by
+    subject_name). Characters lead; locations/props follow, so the face is
+    the first (primary) reference a reference-capable backend sees. Only
+    images present on disk are included; paths are absolute.
+    """
+    from ..teaser import refs as _refs, refmanifest as _rm, shots as _shots
+    base = teaser_path.resolve().parent
+    man_path = Path(manifest) if manifest else base / "refs.yaml"
+    if not man_path.exists():
+        return {}
+    try:
+        man = _rm.load(man_path)
+    except Exception:  # noqa: BLE001
+        return {}
+    # Auto plan gives subject → shot ids when a manifest entry omits `shots`.
+    shots_by_slug: dict[str, list[str]] = {}
+    try:
+        teaser = _shots.load(teaser_path)
+        for e in _refs.plan_refs(teaser, base_dir=base).entries:
+            shots_by_slug[_refs.slug(e.subject)] = list(e.shots)
+    except Exception:  # noqa: BLE001
+        pass
+
+    out: dict[str, list[list[str]]] = {}
+    for cr in man.subjects:
+        if not cr.approved:  # APPROVAL GATE — only locked/approved refs flow
+            continue
+        slug = _refs.slug(cr.subject)
+        portrait = base / "refs" / f"{slug}_ref.png"
+        plate = base / cr.ref_path if cr.ref_path else None
+        chosen = (portrait if portrait.exists()
+                  else (plate if (plate and plate.exists()) else None))
+        if chosen is None:
+            continue
+        sids = list(cr.shots) or shots_by_slug.get(slug, [])
+        is_secondary = cr.kind in ("location", "prop")
+        for sid in sids:
+            out.setdefault(sid, [[], []])  # [characters, others]
+            (out[sid][1] if is_secondary else out[sid][0]).append(str(chosen))
+    # Flatten characters-then-others into one ordered list per shot.
+    return {sid: groups[0] + groups[1] for sid, groups in out.items()}
+
+
 def _cmd_teaser_render(args: argparse.Namespace) -> int:
     """Render teaser clips via the thin free render adapter (Phase 3.5).
 
@@ -1023,11 +1074,23 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
         kind = "image" if prof.kinds == ("image",) else "video"
     out_dir = (Path(args.out_dir) if getattr(args, "out_dir", None)
                else Path(args.path).resolve().parent / "clips")
+    # Reference-image consistency: map each subject → its canonical portrait
+    # (refs/<slug>_ref.png if generated, else the approved plate) from
+    # refs.yaml, so a reference-capable backend keeps characters consistent.
+    refs_map = None
+    if getattr(args, "use_refs", False):
+        refs_map = _load_teaser_refs_map(
+            Path(args.path), getattr(args, "refs_manifest", None))
+        if not refs_map:
+            print("teaser-render: --refs given but no usable reference images "
+                  "found in refs.yaml (run /autonovel:teaser-refs first).",
+                  file=sys.stderr)
     reqs = _render.plan(
         teaser, provider=provider, kind=kind, out_dir=out_dir,
         width=getattr(args, "width", None), height=args.height,
         takes=args.takes, model=getattr(args, "model", None),
         only_shot=getattr(args, "shot", None),
+        shot_refs=refs_map, style_override=getattr(args, "film_style", None),
     )
     if getattr(args, "shot", None) and not reqs:
         print(f"teaser-render: no shot with id {args.shot!r}", file=sys.stderr)
@@ -1633,10 +1696,23 @@ def main(argv: list[str] | None = None) -> int:
                      help="Where clips land (default: <teaser.json dir>/clips).")
     tre.add_argument("--provider", default=None,
                      help="Provider (default: teaser.json provider, else grok). "
-                          "One of: grok kie veo magichour fal flow pollinations.")
+                          "One of: gemini grok kie veo magichour fal flow "
+                          "pollinations. gemini = reference-conditioned photoreal "
+                          "image keyframes (Nano Banana).")
     tre.add_argument("--kind", choices=["auto", "image", "video"], default="auto",
-                     help="auto = image for pollinations, video for video backends "
-                          "(default); or force image|video.")
+                     help="auto = image for image-only backends (gemini/"
+                          "pollinations), video for video backends (default); "
+                          "or force image|video.")
+    tre.add_argument("--refs", dest="use_refs", action="store_true",
+                     help="Condition each shot on its subject's canonical "
+                          "reference portrait from refs.yaml (gemini/fal/"
+                          "pollinations-kontext) so characters stay consistent.")
+    tre.add_argument("--refs-manifest", dest="refs_manifest", default=None,
+                     help="Path to refs.yaml (default: <teaser.json dir>/refs.yaml).")
+    tre.add_argument("--film-style", dest="film_style", default=None,
+                     help="Replace each shot's `style` text with this string in "
+                          "the prompt (e.g. a photoreal cinematic look for the "
+                          "movie path, without touching teaser.json).")
     tre.add_argument("--shot", default=None, help="Render only this shot id.")
     tre.add_argument("--takes", type=int, default=1, help="Takes per shot (default 1).")
     tre.add_argument("--width", type=int, default=None,

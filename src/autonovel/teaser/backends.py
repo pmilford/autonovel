@@ -42,6 +42,7 @@ from typing import Any, Callable
 
 # Provider → ordered env-var names to look up the key/token under.
 ENV_VARS: dict[str, tuple[str, ...]] = {
+    "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
     "grok": ("XAI_API_KEY", "GROK_API_KEY"),
     "kie": ("KIE_API_KEY",),
     "veo": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
@@ -52,6 +53,8 @@ ENV_VARS: dict[str, tuple[str, ...]] = {
 
 # Where to point a user who is missing a key (free signup).
 KEY_HELP: dict[str, str] = {
+    "gemini": "Gemini API key at https://aistudio.google.com/apikey "
+              "(GEMINI_API_KEY; free tier available, image gen ~$0.04/img)",
     "grok": "free key at https://x.ai (5 gens/day + $25 signup, no card)",
     "kie": "free key at https://kie.ai (80 credits, no card)",
     "veo": "Gemini API key at https://aistudio.google.com/apikey (paid; "
@@ -530,10 +533,24 @@ def _fal(req: Any, *, key: str, net: Net) -> bytes:
     Ref: https://docs.fal.ai/  (queue: submit → status → response)
       POST https://queue.fal.run/{model}                 (Key <key>)
       GET  {status_url}  →  GET {response_url}
+
+    For ``--kind image`` with a reference plate this defaults to FLUX.1
+    Kontext (reference-conditioned editing); the plate is passed as an
+    ``image_url`` data-URI so a character's identity carries into the shot.
     """
     auth = {"Authorization": f"Key {key}"}
-    model = getattr(req, "model", None) or "fal-ai/ltx-video"
-    body = {"prompt": req.prompt, "aspect_ratio": _aspect(req)}
+    is_image = getattr(req, "kind", "video") == "image"
+    refs = list(getattr(req, "reference_images", ()) or ())
+    if is_image:
+        model = getattr(req, "model", None) or (
+            "fal-ai/flux-pro/kontext" if refs else "fal-ai/flux/dev")
+        body = {"prompt": req.prompt}
+        if refs:
+            mime, b64 = _load_ref(refs[0], net=net)
+            body["image_url"] = f"data:{mime};base64,{b64}"
+    else:
+        model = getattr(req, "model", None) or "fal-ai/ltx-video"
+        body = {"prompt": req.prompt, "aspect_ratio": _aspect(req)}
     created = net.post_json(f"https://queue.fal.run/{model}", headers=auth, json=body)
     status_url = _dig(created, "status_url")
     response_url = _dig(created, "response_url")
@@ -564,7 +581,77 @@ def _fal(req: Any, *, key: str, net: Net) -> bytes:
 
 def _fal_video_url(obj: Any) -> str | None:
     return (_dig(obj, "video", "url") or _dig(obj, "videos", 0, "url")
+            or _dig(obj, "images", 0, "url") or _dig(obj, "image", "url")
             or _dig(obj, "url"))
+
+
+def _load_ref(ref: str, *, net: Net) -> tuple[str, str]:
+    """Load a reference image (local path or http(s) URL) → (mime, base64).
+
+    Used by reference-conditioned image backends (gemini/fal) to attach a
+    subject's canonical portrait so identity holds across shots.
+    """
+    import base64 as _b64
+    if ref.startswith("http://") or ref.startswith("https://"):
+        data = net.get_bytes(ref)
+    else:
+        p = Path(ref)
+        if not p.exists():
+            raise RenderError(f"reference image not found: {ref}", kind="unsupported")
+        data = p.read_bytes()
+    ext = (Path(ref).suffix.lower().lstrip(".") or "png")
+    mime = {"jpg": "jpeg", "jpeg": "jpeg", "webp": "webp", "png": "png"}.get(ext, "png")
+    return f"image/{mime}", _b64.b64encode(data).decode("ascii")
+
+
+# Gemini native image models (June 2026). Default = Nano Banana 2.
+GEMINI_IMAGE_DEFAULT = "gemini-3.1-flash-image-preview"
+
+
+def _gemini_image(req: Any, *, key: str, net: Net) -> bytes:
+    """Gemini native image generation ("Nano Banana") — synchronous,
+    reference-conditioned, photoreal stills.
+
+    Ref: https://ai.google.dev/gemini-api/docs/image-generation
+      POST {base}/models/{model}:generateContent   (x-goog-api-key)
+      body.contents[0].parts = [{text}, {inline_data:{mime_type,data}}...]
+      generationConfig.responseModalities = ["TEXT","IMAGE"]
+    The generated image returns inline (base64) in the response — no second
+    fetch. Any reference images are attached as inline_data parts so the
+    subject's identity carries from the canonical portrait into the shot.
+    """
+    if getattr(req, "kind", "image") != "image":
+        raise RenderError("gemini backend renders images only (--kind image).",
+                          kind="unsupported")
+    base = "https://generativelanguage.googleapis.com/v1beta"
+    model = getattr(req, "model", None) or GEMINI_IMAGE_DEFAULT
+    auth = {"x-goog-api-key": key}
+    # Aspect is steered via the prompt (robust across API field-name churn).
+    aspect = _aspect(req)
+    prompt = f"{req.prompt}\n\n[Framing: {aspect} widescreen cinematic still.]"
+    parts: list[dict[str, Any]] = [{"text": prompt}]
+    for ref in getattr(req, "reference_images", ()) or ():
+        mime, b64 = _load_ref(ref, net=net)
+        parts.append({"inline_data": {"mime_type": mime, "data": b64}})
+    body = {
+        "contents": [{"parts": parts}],
+        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
+    }
+    resp = net.post_json(f"{base}/models/{model}:generateContent",
+                         headers=auth, json=body)
+    cand_parts = _dig(resp, "candidates", 0, "content", "parts", default=[]) or []
+    for p in cand_parts:
+        blob = p.get("inline_data") or p.get("inlineData")
+        if blob and blob.get("data"):
+            import base64 as _b64
+            return _b64.b64decode(blob["data"])
+    # No image part — surface any text/refusal the model returned.
+    txt = next((p.get("text") for p in cand_parts if p.get("text")), None)
+    raise RenderError(
+        f"gemini returned no image part"
+        + (f" (model said: {txt[:200]})" if txt else f": {str(resp)[:200]}"),
+        kind="backend",
+    )
 
 
 def make_stub(req: Any) -> bytes:
@@ -629,6 +716,7 @@ BACKENDS: dict[str, Callable[..., bytes]] = {
     "magichour": _magichour,
     "fal": _fal,
     "flow": _flow,
+    "gemini": _gemini_image,
 }
 
 MANUAL_PROVIDERS = ("flow",)

@@ -56,6 +56,9 @@ ACTIONS = (
 )
 
 
+KINDS = ("character", "location", "prop")
+
+
 @dataclass
 class CharacterRef:
     subject: str
@@ -66,6 +69,8 @@ class CharacterRef:
     morph: bool = True            # morph the source into shot framing vs verbatim
     status: str = "pending"       # pending | approved | locked
     ref_path: str = ""            # teaser-relative path to the approved plate
+    kind: str = "character"       # character | location | prop (ordering hint)
+    shots: list[str] = field(default_factory=list)  # shot ids this subject is in
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"subject": self.subject, "source": self.source}
@@ -79,6 +84,10 @@ class CharacterRef:
         d["status"] = self.status
         if self.ref_path:
             d["ref_path"] = self.ref_path
+        if self.kind != "character":
+            d["kind"] = self.kind
+        if self.shots:
+            d["shots"] = list(self.shots)
         return d
 
     @property
@@ -118,6 +127,11 @@ def load(path: Path) -> RefManifest:
         status = str(entry.get("status", "pending"))
         if status not in STATUSES:
             status = "pending"
+        kind = str(entry.get("kind", "character"))
+        if kind not in KINDS:
+            kind = "character"
+        shots_raw = entry.get("shots") or []
+        shots = [str(s) for s in shots_raw] if isinstance(shots_raw, list) else []
         subjects.append(CharacterRef(
             subject=str(entry["subject"]),
             source=src,
@@ -127,6 +141,8 @@ def load(path: Path) -> RefManifest:
             morph=bool(entry.get("morph", True)),
             status=status,
             ref_path=str(entry.get("ref_path", "")),
+            kind=kind,
+            shots=shots,
         ))
     return RefManifest(subjects=subjects)
 
@@ -168,6 +184,7 @@ def scaffold_from_teaser(
             appearance=e.appearance,
             ref_path=e.ref_path,
             status="pending",
+            shots=list(e.shots),
         ))
     return RefManifest(subjects=subjects)
 

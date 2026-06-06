@@ -19,6 +19,7 @@ re-check before relying on a free tier.
 | Provider | Role | Audio | Free tier | Card? | Key env | Scriptable |
 |---|---|---|---|---|---|---|
 | **`stub`** | **validate the pipeline** | — | offline placeholder keyframes, unlimited | no | — | yes (local Pillow) |
+| **`gemini`** | **reference-conditioned image keyframes** | n/a (stills) | small free tier; ~$0.04/img after | maybe | `GEMINI_API_KEY` | yes |
 | **`grok`** | **default real video** | ✅ dialogue+music | 5 gens/day + $25 signup | **no** | `XAI_API_KEY` | yes |
 | `kie` | multi-model backstop | ✅ | 80 credits, never expire | **no** | `KIE_API_KEY` | yes |
 | `veo` | premium quality | ✅ | $300 GCP credit (Vertex) / paid API | card (not charged on trial) | `GEMINI_API_KEY` | yes |
@@ -65,6 +66,31 @@ Where to get a free key:
   `/autonovel:teaser-assemble` (`--audio`).
 - **fal** — https://fal.ai → $20 one-time signup credit (no card to start).
 - **pollinations** — https://auth.pollinations.ai for a free account token.
+
+## Reference-conditioned keyframes (`--refs`) — Phase 5.2
+
+Identity drifts when each clip is generated independently. The fix is a
+**locked reference per subject** (a portrait/plate), fed into the keyframe
+generation so the same face/place recurs. Workflow:
+
+1. `/autonovel:teaser-refs --book <b> --init` → declare a source per
+   subject (PD art via `wikimedia-*`, a local image, or `generate`), lock
+   the appearance/constraints, and **approve** each. The canonical
+   portrait lives at `teaser/refs/<slug>_ref.png` (preferred) or the
+   manifest `ref_path`.
+2. `/autonovel:teaser-render --book <b> --provider gemini --kind image --refs`
+   → each shot's keyframe is conditioned on its subject's **approved**
+   references. The **approval gate** means pending subjects contribute no
+   reference (and you get a warning) — nothing un-vetted reaches a render.
+
+Reference-capable backends: **`gemini`** (Nano Banana — attaches each
+reference as an `inline_data` part; multiple refs supported: a character
+portrait + a location plate + a prop), **`fal`** (FLUX.1 Kontext for
+`--kind image` with a plate), and **`pollinations`** (flux-kontext, but
+only an *http(s)* reference URL — it cannot read a local file). Each shot
+carries up to `--max-refs` (default 3); characters lead, locations/props
+follow. `--film-style "<style>"` overrides the book's typeset art style
+with a photoreal film look without editing `teaser.json`.
 
 ## The `flow` manual path (Google AI Pro)
 

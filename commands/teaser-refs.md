@@ -76,9 +76,11 @@ load-bearing — stop if it is missing (run `/autonovel:teaser` or
      `autonovel mechanical wikimedia-fetch "<File:…>" --output books/{book}/teaser/refs/<slug>.png`
      For a local image, use `/autonovel:art-import` (or copy it to the
      `ref_path`). The plate becomes the morph/consistency anchor.
-   - **generate** — create a reference via the art pipeline
-     (`/autonovel:art-curate`) or a free `stub`/render pass, save it to
-     the subject's `ref_path`.
+   - **generate** — create the canonical realistic portrait. Save it as
+     `books/{book}/teaser/refs/<slug>_ref.png` (the path `--refs` prefers).
+     Best path: `gemini` conditioned on the fetched source —
+     `/autonovel:teaser-render --book {book} --shot <one> --provider gemini`
+     with the source as a reference — or `/autonovel:art-curate`.
    - **approve** — the plate exists; **show it to the user** (`file_read`)
      against the locked `appearance` + `constraints` and ask them to
      confirm likeness/period. On `--approve <NAME>` (or user assent) edit
@@ -95,8 +97,8 @@ load-bearing — stop if it is missing (run `/autonovel:teaser` or
    🎭 References for {book}: {ready}/{total} locked.
       Pending: {subject → next_action, …}
 
-   Next: finish the pending subjects, then render anchored to them:
-     /autonovel:teaser-render --book {book} --provider grok
+   Next: finish the pending subjects, then render anchored to them with --refs:
+     /autonovel:teaser-render --book {book} --provider gemini --kind image --refs
    (Validate free first: /autonovel:teaser-render --book {book} --provider stub)
    ```
 </workflow>

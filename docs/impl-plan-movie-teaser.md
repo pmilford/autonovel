@@ -63,10 +63,18 @@
   `teaser-refs` (`--init` scaffolds `refs.yaml`) + command
   `/autonovel:teaser-refs` (declare via wikimedia-*/art-import/generate
   → approve/lock); advisory gate wired into `teaser-render`. Reuses
-  `refs.py`/`wikimedia-*`/`art-import`. **NEXT (5.2):** feed locked refs
-  into the backends as image-to-video input (grok/veo/kie); morph step.
+  `refs.py`/`wikimedia-*`/`art-import`.
+- **Phase 5.2** — **reference-conditioned keyframes**: new `gemini`
+  image backend (Nano Banana, reference-conditioned photoreal stills) +
+  `_load_ref` shared with `fal` (FLUX.1 Kontext). `RenderRequest`/
+  `build_request`/`plan` carry `reference_images` + `style_override`;
+  `teaser-render --refs` threads each shot's **approved** references from
+  `refs.yaml` (`_load_teaser_refs_map`, approval-gated, prefers
+  `refs/<slug>_ref.png`) into reference-capable backends; `--film-style`
+  overrides the typeset art look. `refmanifest` gained `kind`/`shots`.
+  12 phase-5.2 tests.
 
-**Baseline now:** Tier 1+2 = **1635 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1647 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.
@@ -75,18 +83,21 @@
 `treatment` → `teaser` (`teaser-beats` → `shot-prompts`) →
 `teaser-critique` → `teaser-render` → `teaser-assemble`. All planned
 phases (0, 1, 1-final, 2, 3.5, 3) shipped, plus **Phase 4** (real free
-render backends + offline `stub` + model-pin flip), additive,
-regression-gated. Backend/key map: `docs/teaser-render-providers.md`.
+render backends + offline `stub` + model-pin flip) and **Phase 5**
+(5.1 character-reference manifest + approval gate; 5.2 reference-
+conditioned keyframes via `gemini`/`fal`/`pollinations-kontext`),
+additive, regression-gated. Backend/key map:
+`docs/teaser-render-providers.md`.
 
 **Future polish (not blocking):** crossfades/transitions in the
 cut-list; burned-in title cards via an editor-export step; the Veo
-$300-credit **Vertex** path; a **character-reference + approval**
-workflow (Phase 5 — seed refs from PD art, morph, lock before spend);
-native-audio vs `--audio` bed mixing in assemble; `--kind video`
-validated on more providers; a smoke (Tier-3) test that renders one real
-`stub`/`grok` clip.
+$300-credit **Vertex** path; image-to-video *start-frame* wiring so a
+generated keyframe seeds grok/veo motion (5.3); native-audio vs
+`--audio` bed mixing in assemble; `--kind video` validated on more
+providers; a smoke (Tier-3) test that renders one real `stub`/`gemini`
+clip.
 
-Every step: hold the ≥1635 gate, additive-only, full doc-sync, append a
+Every step: hold the ≥1647 gate, additive-only, full doc-sync, append a
 STATE.md decision entry + bump the green count.
 
 ---

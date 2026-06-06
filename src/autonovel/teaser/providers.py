@@ -61,6 +61,19 @@ PROVIDERS: dict[str, ProviderProfile] = {
         free_note="offline placeholder keyframes — no network/key/quota; "
                   "validate the pipeline before spending grok",
     ),
+    # Gemini native image generation ("Nano Banana"): reference-conditioned,
+    # photoreal stills. THE image backend for character consistency — every
+    # shot is conditioned on the subject's canonical reference portrait, so a
+    # face holds across separately-generated keyframes. Models (June 2026):
+    #   gemini-3.1-flash-image-preview  Nano Banana 2 (default; ~$0.045/img, 4K)
+    #   gemini-2.5-flash-image          Nano Banana   (~$0.039/img)
+    #   gemini-3-pro-image              Nano Banana Pro (~$0.134/img; best text)
+    "gemini": ProviderProfile(
+        "gemini", 8.0, False, True, "reference-images", "generic",
+        kinds=("image",), needs_key=True, min_interval_s=1.0,
+        free_note="Gemini image (Nano Banana 2/Pro); reference-conditioned "
+                  "photoreal stills, ~$0.04–0.13/img; key: GEMINI_API_KEY",
+    ),
     # xAI Grok Imagine — DEFAULT free video backend: native dialogue +
     # music + SFX, no credit card, 5 free gens/day + $25 signup credit.
     "grok": ProviderProfile(
@@ -93,8 +106,9 @@ PROVIDERS: dict[str, ProviderProfile] = {
     # depends on the chosen model).
     "fal": ProviderProfile(
         "fal", 10.0, True, True, "model-dependent", "generic",
-        kinds=("video",), needs_key=True, min_interval_s=1.0,
-        free_note="$20 one-time signup credit, no card; model-dependent audio",
+        kinds=("image", "video"), needs_key=True, min_interval_s=1.0,
+        free_note="$20 one-time signup credit, no card; image (flux-kontext/"
+                  "pulid reference-conditioned) + model-dependent video audio",
     ),
     # Flow (labs.google/flow) on a Google AI Pro sub — highest quality +
     # native audio, but GUI-ONLY: no API. teaser-render treats it as a
