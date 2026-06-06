@@ -52,14 +52,17 @@ def install(
     install_root: Path | None = None,
     commands_dir: Path | None = None,
     model_map: dict[str, str] | None = None,
-    pin_model: bool = True,
+    pin_model: bool = False,
     dry_run: bool = False,
 ) -> InstallResult:
     """Render every command into the runtime's install dir.
 
-    `pin_model=False` omits the `model:` frontmatter field — for
-    Claude Code, this is the recovery path when the user's session
-    model is `[1m]` and the per-command pin silently downshifts.
+    `pin_model` defaults to **False** — the `model:` frontmatter field
+    is omitted so the runtime's session model wins. This is the default
+    because a per-command pin silently downshifts Claude Code users on
+    a `[1m]` session model to the non-`[1m]` variant of the same tier
+    (the 1M-context billing gate). `pin_model=True` (CLI `--pin-model`)
+    restores per-tier pinning.
     Codex / Gemini adapters accept the kwarg for symmetry but may
     not honour it (their model resolution rules differ); see each
     adapter's `render()` for behaviour.

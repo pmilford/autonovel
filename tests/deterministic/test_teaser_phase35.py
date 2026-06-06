@@ -135,7 +135,9 @@ def test_cli_teaser_render_dry_run_downloads_nothing(tmp_path: Path) -> None:
 
 
 def test_cli_resolve_video_provider_default_and_override() -> None:
+    # Default video backend is now grok (free dialogue+music, no card);
+    # pollinations no longer offers free video.
     out = _run("resolve-video-provider")
-    assert json.loads(out.stdout) == {"provider": "pollinations", "source": "default"}
+    assert json.loads(out.stdout) == {"provider": "grok", "source": "default"}
     out2 = _run("resolve-video-provider", "--cli-provider", "veo")
     assert json.loads(out2.stdout) == {"provider": "veo", "source": "cli"}

@@ -962,7 +962,7 @@ def _cmd_teaser_render_prompt(args: argparse.Namespace) -> int:
     return 0
 
 
-_DEFAULT_VIDEO_PROVIDER = "pollinations"
+_DEFAULT_VIDEO_PROVIDER = "grok"
 
 
 def _cmd_resolve_video_provider(args: argparse.Namespace) -> int:
@@ -971,7 +971,10 @@ def _cmd_resolve_video_provider(args: argparse.Namespace) -> int:
     Twin of ``resolve-image-provider`` (PRD §23). Precedence:
       1. ``--cli-provider <X>`` — explicit per-call override.
       2. ``project.yaml :: video.provider`` — the per-series default.
-      3. ``pollinations`` — repo-wide free, no-key default backend.
+      3. ``grok`` — repo-wide free default video backend (native
+         dialogue+music, 5 free gens/day + $25 signup, no card; needs a
+         free XAI_API_KEY). Pollinations no longer offers free video, so
+         it is the image/keyframe default only (resolve-image-provider).
     """
     cli_provider = getattr(args, "cli_provider", None)
     if cli_provider:
@@ -1009,11 +1012,18 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"teaser-render: cannot read {args.path}: {exc}", file=sys.stderr)
         return 2
-    provider = getattr(args, "provider", None) or teaser.provider or "pollinations"
+    provider = getattr(args, "provider", None) or teaser.provider or "grok"
+    # `--kind auto` (default): pick image for image-only backends
+    # (pollinations), video for video backends (grok/veo/kie/...).
+    kind = args.kind
+    if kind == "auto":
+        from ..teaser import providers as _prov
+        prof = _prov.get(provider)
+        kind = "image" if prof.kinds == ("image",) else "video"
     out_dir = (Path(args.out_dir) if getattr(args, "out_dir", None)
                else Path(args.path).resolve().parent / "clips")
     reqs = _render.plan(
-        teaser, provider=provider, kind=args.kind, out_dir=out_dir,
+        teaser, provider=provider, kind=kind, out_dir=out_dir,
         width=getattr(args, "width", None), height=args.height,
         takes=args.takes, model=getattr(args, "model", None),
         only_shot=getattr(args, "shot", None),
@@ -1022,20 +1032,40 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
         print(f"teaser-render: no shot with id {args.shot!r}", file=sys.stderr)
         return 2
     human = getattr(args, "format", "human") == "human"
+    # Surface the key/manual status of the resolved provider up front so
+    # the dry-run plan honestly reports whether a live run can proceed.
+    from ..teaser import providers as _prov, backends as _be
+    prof = _prov.get(provider)
+    manual = _be.is_manual(provider)
+    key = None if (provider == "pollinations" or manual) else _be.resolve_key(
+        provider, token=getattr(args, "token", None))
+    key_ok = bool(key) or not prof.needs_key
     if getattr(args, "dry_run", False):
         if human:
-            print(f"DRY RUN — {len(reqs)} request(s) ({args.kind}, {provider}); "
+            print(f"DRY RUN — {len(reqs)} request(s) ({kind}, {provider}); "
                   f"nothing downloaded:")
+            if manual:
+                print(f"  ⚠️  {provider} is MANUAL (GUI-only): {prof.free_note}")
+            elif prof.needs_key and not key:
+                print(f"  ⚠️  no API key for {provider} — "
+                      f"{_be.KEY_HELP.get(provider, 'set the provider key')}")
             for r in reqs:
                 print(f"  {r.shot_id} take{r.take} → {r.out_path}")
                 print(f"     {r.url}")
         else:
             json.dump({"dry_run": True, "count": len(reqs),
+                       "provider": provider, "kind": kind,
+                       "needs_key": prof.needs_key, "key_present": bool(key),
+                       "manual": manual, "free_note": prof.free_note,
                        "requests": [r.to_dict() for r in reqs]},
                       sys.stdout, indent=2)
             sys.stdout.write("\n")
         return 0
-    results = _render.render(reqs)
+    results = _render.render(
+        reqs, token=getattr(args, "token", None),
+        delay=getattr(args, "delay", None),
+        max_retries=getattr(args, "max_retries", 4),
+    )
     ok = [r for r in results if r.ok]
     bad = [r for r in results if not r.ok]
     if human:
@@ -1500,16 +1530,20 @@ def main(argv: list[str] | None = None) -> int:
     rvp.set_defaults(func=_cmd_resolve_video_provider)
 
     tre = sub.add_parser("teaser-render",
-                         help="Render teaser clips via the free no-key adapter "
-                              "(Pollinations). Stateless submit→download; --dry-run "
-                              "builds the URL plan without spending bandwidth.")
+                         help="Render teaser clips. Default video backend is "
+                              "grok (free dialogue+music, no card); pollinations "
+                              "is the free keyframe-image backend. Stateless "
+                              "create→poll→download; --dry-run builds the plan "
+                              "(and reports key status) without spending anything.")
     tre.add_argument("path", help="Path to teaser.json.")
     tre.add_argument("--out-dir", dest="out_dir", default=None,
                      help="Where clips land (default: <teaser.json dir>/clips).")
     tre.add_argument("--provider", default=None,
-                     help="Video provider (default: teaser.json provider, else pollinations).")
-    tre.add_argument("--kind", choices=["image", "video"], default="image",
-                     help="image = reliable free keyframe (default); video = experimental.")
+                     help="Provider (default: teaser.json provider, else grok). "
+                          "One of: grok kie veo magichour fal flow pollinations.")
+    tre.add_argument("--kind", choices=["auto", "image", "video"], default="auto",
+                     help="auto = image for pollinations, video for video backends "
+                          "(default); or force image|video.")
     tre.add_argument("--shot", default=None, help="Render only this shot id.")
     tre.add_argument("--takes", type=int, default=1, help="Takes per shot (default 1).")
     tre.add_argument("--width", type=int, default=None,
@@ -1517,6 +1551,13 @@ def main(argv: list[str] | None = None) -> int:
     tre.add_argument("--height", type=int, default=480,
                      help="Output height in px (default 480 — low-res dev pass).")
     tre.add_argument("--model", default=None, help="Optional backend model hint.")
+    tre.add_argument("--token", default=None,
+                     help="Explicit provider API key/token (wins over env/.env).")
+    tre.add_argument("--delay", type=float, default=None,
+                     help="Seconds between requests (default: provider's polite "
+                          "interval). Backoff on 429/503 is automatic.")
+    tre.add_argument("--max-retries", dest="max_retries", type=int, default=4,
+                     help="Max retries on transient 429/503 (default 4).")
     tre.add_argument("--dry-run", dest="dry_run", action="store_true",
                      help="Build + print the request plan; download nothing.")
     tre.add_argument("--format", choices=["json", "human"], default="human")

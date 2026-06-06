@@ -11,48 +11,65 @@ to start.
 
 ## Near-term — pull into the next PR
 
-- **Flip the install default to NO model pin** (model_tier pinning
-  misbehaves under Claude Code). Reported 2026-06-06. The machinery
-  already exists: `claude_code.render(pin_model=…)` emits the `model:`
-  frontmatter field when `pin_model=True`, and `autonovel install
-  --no-model-pin` omits it so the session model wins (the `[1m]`
-  billing-gate recovery path — see docs/troubleshooting.md). Today the
-  default is `pin_model=True` (adapter, `installer.install_commands`,
-  and `cli.py::pin_model = not no_model_pin`). **Action:** make
-  *no-pin* the default — flip the defaults to `pin_model=False`, add a
-  `--pin-model` opt-in flag (keep `--no-model-pin` as a deprecated
-  no-op alias), and re-point `test_install_*`/troubleshooting docs.
-  Rationale: a per-command pin to a specific Opus/Sonnet/Haiku id keeps
-  silently downshifting users off their session model (incl. the `[1m]`
-  variant) and tripping "Usage credits required for 1M context";
-  inheriting the session model is the correct, least-surprising default.
+- ~~**Flip the install default to NO model pin.**~~ **Shipped
+  2026-06-06.** `pin_model` now defaults to **False** across
+  `claude_code.render`, `installer.install`, and `cli.py`; `autonovel
+  install` omits the `model:` field so the session model wins (no more
+  `[1m]` downshift). `--pin-model` is the explicit opt-in for per-tier
+  pinning; `--no-model-pin` kept as a deprecated no-op. Tests
+  (`test_adapter.py`) + `docs/troubleshooting.md` re-pointed.
 
-- **Pollinations free image endpoint now returns `402 Payment
-  Required`** — the `teaser-render` free default backend is broken
-  externally. Confirmed 2026-06-06 on the Fugger book: 35/35 image
-  requests `402`, clips dir never created (the dry-run plan + URLs were
-  correct — refused at the door, not a prompt bug). Pollinations has
-  gated anonymous generation behind auth/payment (their default `flux`
-  model). **Action:** (a) add a token/auth path to `teaser/render.py`
-  + `/autonovel:teaser-render` (`--token`, `video.token` in
-  project.yaml, or `POLLINATIONS_TOKEN` env → `Authorization: Bearer`
-  header / `?token=`); (b) try an explicitly *free* Pollinations model
-  via `--model` before assuming paywall; (c) document a fallback free
-  backend; until fixed, the free render path is non-functional and the
-  command should say so up front (detect 402 → actionable message, not
-  35 identical failures). Also fold in the rate-limit work below.
+- ~~**Pollinations free image endpoint returns `402 Payment Required`;
+  add a free video backend.**~~ **Shipped 2026-06-06 (Phase 4 render
+  backends).** Pollinations is now images-only with a free-token path
+  (`POLLINATIONS_TOKEN` → `Authorization: Bearer`) and **early-402
+  detection** (one actionable message, not 35 identical failures). Real
+  free *video* now comes from new backends: **`grok`** (default — native
+  dialogue+music, 5 free/day + $25, no card), `kie`, `veo`, `magichour`,
+  `fal`, and manual `flow`, plus an offline **`stub`** backend to
+  validate the pipeline for $0. See `docs/teaser-render-providers.md`.
 
-- **Render adapter has no rate-limiting / backoff / 429 handling.**
-  `teaser/render.py::render()` does sequential GETs with a 180 s
-  timeout, **no delay between calls, no retry, no Retry-After / 429
-  honouring** (a 429 just becomes a per-clip "failed" you re-run). It is
-  NOT throttled to documented limits — Pollinations' anonymous tier is
-  ~1 request / 15 s (≈4/min). **Action:** add a configurable inter-request
-  delay (default to the provider's documented interval), exponential
-  backoff + `Retry-After` honouring on 429/503, and a small bounded
-  retry — keyed off the (fast-moving) `providers.py` table so the limit
-  lives in one place. Until then a 35×3-take batch will hammer the
-  endpoint well past its documented rate.
+- ~~**Render adapter has no rate-limiting / backoff / 429 handling.**~~
+  **Shipped 2026-06-06.** `teaser/backends.py::RateLimiter` paces calls
+  ≥ the provider's `min_interval_s` (`providers.py`), retries 429/503
+  with bounded exponential backoff honouring `Retry-After`, and exposes
+  `--delay` / `--max-retries` on `teaser-render`.
+
+- **Character-reference development + approval workflow for teaser
+  keyframes.** Requested 2026-06-06 (Fugger book). Today
+  `teaser/refs.py` + `teaser-refs-plan` plan ONE canonical reference
+  image per recurring subject and check `teaser/refs/` +
+  `shared/art_references/`; `art-import` imports a user image and
+  `wikimedia-{search,fetch}` pull public-domain art. What's missing is a
+  deliberate, per-book **character-reference pipeline with an approval
+  gate**: (a) seed a subject's reference from a real source — e.g.
+  Dürer's *Portrait of Jakob Fugger* (PD via Wikimedia) for the
+  protagonist, or the Matthäus Schwarz *Klaidungsbüchlein* costume
+  sketches for his assistant — then image-to-image/morph it into the
+  shot's framing; (b) a per-book `entities`/`character_refs` manifest of
+  allowed sources + constraints (period dress, age, likeness limits);
+  (c) an **approve step** (pick/lock a reference before any shot spends a
+  real generation), reusing the `art-directions → art-pick` shape; (d)
+  feed the locked refs as the consistency anchor to the video backends
+  (grok/veo image-to-video). Keep it additive; the `stub` backend lets
+  the whole flow be rehearsed for free. Likely a "Phase 5: character
+  references" plan.
+
+- **Veo on the $300 GCP credit via Vertex (ADC).** The shipped `veo`
+  backend drives the Gemini **API-key** path. The $300 new-account
+  welcome credit applies only on the **Vertex** path (gcloud ADC,
+  `{region}-aiplatform.googleapis.com`, `publishers/google/models/...`).
+  Add a Vertex variant (ADC token, region config) so eligible users get
+  ~50 min of free with-audio Veo. Documented in
+  `docs/teaser-render-providers.md`; not yet wired.
+
+- **Native-audio vs audio-bed in teaser-assemble.** `grok`/`veo` clips
+  carry native dialogue+music; `magichour`/`stub` are silent. The
+  assemble step preserves clip audio by default and only mixes a bed when
+  `--audio` is passed — but if a user passes `--audio` *and* the clips
+  already have dialogue, the bed should duck/mix rather than replace.
+  Add a mix-vs-replace policy (and per-provider default) once real
+  renders are flowing.
 
 - ~~**Edit-and-revise mode for an externally-written manuscript —
   Phase 1 (import + mode flip).**~~ **Shipped 2026-04-28.** New

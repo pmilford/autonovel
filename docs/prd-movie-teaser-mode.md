@@ -749,6 +749,16 @@ or time on the real entry.
 
 ## 22. Fully-free development tier
 
+> **⚠️ Superseded for the render backend (2026-06-06).** The
+> Pollinations-first plan in this section broke externally: Pollinations
+> now 402s anonymous image gen and has no free video. The shipped free
+> tier is **Phase 4** — an offline `stub` backend to validate the
+> pipeline for $0, then `grok` (free dialogue+music, no card) as the
+> default real video backend, with `kie`/`veo`/`magichour`/`fal`/manual
+> `flow` alternatives. Canonical map: `docs/teaser-render-providers.md`.
+> The principles below (drive online free tools; watermarks/low-res OK
+> for dev) still hold.
+
 > Goal (user, 2026-06-05): do **free passes to debug the system and
 > develop the script** before paying for premium generation. User can
 > run a **~35B model locally** and has confirmed **watermarks + lower

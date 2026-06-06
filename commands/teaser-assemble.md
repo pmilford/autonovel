@@ -28,8 +28,9 @@ title land ~⅔ in, does the button withhold the ending, does the whole cut
 hold together?
 
 v1 is deliberately thin: **hard cuts** (concat), a still-image slideshow
-(the free Pollinations dev default — each shot held for its `duration_s`)
-or pre-made video clips, and an optional audio bed. **No burned-in text**
+(e.g. the free offline `stub` keyframes or Pollinations `flux` images —
+each shot held for its `duration_s`) or real video clips (grok/veo/…),
+and an optional audio bed. **No burned-in text**
 — title/subtitle cards belong in an editor (models garble text;
 `docs/teaser-craft.md` §4); the cut-list records each `text_card` as a
 note for you. Crossfades/transitions are a future pass.

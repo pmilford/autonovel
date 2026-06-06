@@ -236,11 +236,15 @@ The craft above is applied by these commands:
 3. `/autonovel:teaser-critique --book <name>` — re-run the free critique
    (mechanical linter + LLM critic) on a hand-edited `teaser.json`; writes
    an advisory `teaser/critique.md`. Read-only on the teaser.
-4. `/autonovel:teaser-render --book <name> [--kind image|video] [--dry-run]`
-   — render the prompts into actual clips via the free no-key Pollinations
-   backend, then a vision critique marks each clip **KEEP / REGENERATE /
-   UPGRADE-TO-PAID**. Clips land in `teaser/clips/`; stateless, nothing
-   assembled. `--dry-run` shows the request plan for $0.
+4. `/autonovel:teaser-render --book <name> [--provider <p>] [--kind auto|image|video] [--dry-run]`
+   — render the prompts into actual clips. On a fresh teaser it first
+   validates the chain **free and offline** via the `stub` backend (local
+   placeholder keyframes — no network/key/quota), then renders real video
+   on **`grok`** (free dialogue+music, no card) or another backend; a
+   vision critique marks each clip **KEEP / REGENERATE / UPGRADE-TO-PAID**.
+   Clips land in `teaser/clips/`; stateless, nothing assembled. `--dry-run`
+   shows the plan + key status for $0. Backend/key map:
+   `docs/teaser-render-providers.md`.
 5. `/autonovel:teaser-assemble --book <name> [--audio <path>]` — stitch
    the clips into one teaser video with ffmpeg (via an editable
    `teaser/cut_list.json`), then a **viewer-panel cut critique** judges
@@ -248,10 +252,10 @@ The craft above is applied by these commands:
    withhold?) → `teaser/assembly-report.md`. v1 is hard cuts; add the
    title/subtitle cards in an editor (models garble text — §4).
 
-Steps 1–3 are free with no generation; step 4 downloads clips from a
-free, no-key backend — Pollinations (PRD §22), which `teaser-render`
-drives for you (watermarks/low-res are fine for dev passes); step 5 runs
-ffmpeg locally.
+Steps 1–3 are free with no generation; step 4 validates the whole chain
+for **$0/zero-quota** via the offline `stub` backend before spending a
+real backend's limited free generations (`grok` = 5/day) — see
+`docs/teaser-render-providers.md`; step 5 runs ffmpeg locally.
 
 ---
 

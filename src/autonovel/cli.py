@@ -180,12 +180,18 @@ def _build_parser() -> argparse.ArgumentParser:
     inst.add_argument("--only", default=None, choices=["claude", "codex", "gemini"])
     inst.add_argument("--path", default=None,
                       help="Override the install root (default: the adapter's default).")
+    inst.add_argument("--pin-model", dest="pin_model", action="store_true",
+                      help=("Pin each command to its per-tier model via a "
+                             "`model:` frontmatter field. OFF by default: a "
+                             "per-command pin silently downshifts Claude Code "
+                             "users on a `[1m]` session model to the non-`[1m]` "
+                             "variant of the same tier (the 1M-context billing "
+                             "gate). Leave this off to let the session model win. "
+                             "See docs/troubleshooting.md."))
     inst.add_argument("--no-model-pin", dest="no_model_pin", action="store_true",
-                      help=("Omit the `model:` frontmatter field so the runtime's "
-                             "session model wins. Recovery path for Claude Code "
-                             "users on `[1m]` whose per-command pin silently "
-                             "downshifts to the non-`[1m]` variant. See "
-                             "docs/troubleshooting.md."))
+                      help=("Deprecated no-op — omitting the `model:` field is "
+                             "now the default. Kept so existing scripts/aliases "
+                             "don't break."))
     inst.add_argument("--dry-run", dest="dry_run", action="store_true",
                       help=("Print the list of files that WOULD be written into "
                              "each detected runtime's commands directory; touch "
@@ -733,7 +739,10 @@ def _cmd_install(args: argparse.Namespace) -> int:
         )
         return 2
     path = Path(args.path).resolve() if args.path else None
-    pin_model = not getattr(args, "no_model_pin", False)
+    # Default OFF: omit the `model:` pin so the session model wins (the
+    # `[1m]` billing-gate fix). `--pin-model` opts back in to per-tier
+    # pinning. `--no-model-pin` is now a no-op (kept for back-compat).
+    pin_model = getattr(args, "pin_model", False)
     dry_run = getattr(args, "dry_run", False)
     for adapter in adapters:
         result = installer_mod.install(
@@ -742,8 +751,11 @@ def _cmd_install(args: argparse.Namespace) -> int:
         )
         verb = "would install" if dry_run else "installed"
         print(f"{verb} [{result.adapter_name}] → {result.install_root}")
-        if not pin_model:
-            print("  (model: frontmatter omitted — session model wins)")
+        if pin_model:
+            print("  (model: frontmatter pinned per-tier — --pin-model)")
+        else:
+            print("  (model: frontmatter omitted — session model wins; "
+                  "--pin-model to pin per-tier)")
         for w in result.written:
             sigil = "~" if dry_run else "+"
             print(f"  {sigil} {w.relative_to(result.install_root)}")

@@ -245,12 +245,16 @@ Adapting a book to the screen, in order:
 3. `/autonovel:teaser-critique --book <name>` — re-check a hand-edited
    `teaser.json` (mechanical linter + LLM critic); writes an advisory
    `teaser/critique.md`. Read-only on the teaser; free.
-4. `/autonovel:teaser-render --book <name> [--kind image|video] [--dry-run]`
-   — render the shot prompts into actual clips via the free no-key
-   Pollinations backend (watermarks/low-res fine for dev), then a vision
-   critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID. Clips
-   land in `teaser/clips/`; stateless, nothing assembled. `--dry-run`
-   prints the request plan for $0.
+4. `/autonovel:teaser-render --book <name> [--provider <p>] [--kind auto|image|video] [--dry-run]`
+   — render the shot prompts into actual clips. On a fresh teaser it first
+   does a **free, offline `stub` render** (local placeholder keyframes —
+   no network/key/quota) so you can validate the whole render→assemble
+   chain for $0 before spending. The default real backend is **`grok`**
+   (free dialogue+music, no credit card — needs a free `XAI_API_KEY`);
+   `kie` / `veo` / `magichour` / `fal` / manual `flow` are alternatives.
+   A vision critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID.
+   Clips land in `teaser/clips/`; stateless, nothing assembled.
+   `--dry-run` prints the plan + key status for $0.
 5. `/autonovel:teaser-assemble --book <name> [--audio <path>]` — stitch
    the clips into one teaser video with ffmpeg (builds an editable
    `teaser/cut_list.json`), then a viewer-panel cut critique (hook lands?
@@ -258,8 +262,10 @@ Adapting a book to the screen, in order:
    title/subtitle cards in an editor (the report lists them). ffmpeg
    required.
 
-Pollinations is the free no-key backend `teaser-render` drives for you.
-The creative how-to lives in `docs/teaser-craft.md`.
+Validate the pipeline free with `stub`, then render real video with
+`grok` (or another backend). Put provider keys in a gitignored `.env` at
+the series root. Backend/key map: `docs/teaser-render-providers.md`; the
+creative how-to lives in `docs/teaser-craft.md`.
 
 ## Where to find more
 

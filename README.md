@@ -564,12 +564,16 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   **shot prompts**); `teaser-critique` re-checks a hand-edited teaser with
   the mechanical linter + an LLM critic — all with a free pre-generation
   critique, no generation cost. `teaser-render` then turns the prompts
-  into **actual clips** via a free, no-key backend (Pollinations) and runs
-  a vision critique (KEEP / REGENERATE / UPGRADE-TO-PAID); `teaser-assemble`
-  stitches the clips into one video with ffmpeg and runs a viewer-panel cut
-  critique — the whole pipeline from a finished book to a teaser. See
-  [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md) and
-  the creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md).
+  into **actual clips** — it validates the whole chain for **$0 and zero
+  quota** with an offline `stub` backend first, then renders for real via
+  `grok` (free dialogue+music, no credit card) or any of `kie` / `veo` /
+  `magichour` / `fal` / manual `flow` — and runs a vision critique (KEEP /
+  REGENERATE / UPGRADE-TO-PAID); `teaser-assemble` stitches the clips into
+  one video with ffmpeg and runs a viewer-panel cut critique — the whole
+  pipeline from a finished book to a teaser. See
+  [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md), the
+  creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md), and the
+  backend/key map [`docs/teaser-render-providers.md`](docs/teaser-render-providers.md).
 
 > **Confused which one to run when?** The drafting/revision commands
 > have a layered relationship — `draft-pass` and `revision-pass`

@@ -108,9 +108,10 @@ guard); never retry their reads.
    Edit any prompt in books/{book}/teaser/shots/ or the JSON directly,
    then re-critique with /autonovel:teaser-critique --book {book}.
 
-   Next: generate the clips from these prompts (free dev pass:
-   Pollinations — docs/teaser-craft.md / PRD §22), or wait for
-   /autonovel:teaser-render (Phase 3.5).
+   Next: generate the clips from these prompts with
+   /autonovel:teaser-render --book {book} — it validates the chain free
+   via the offline `stub` backend, then renders real video on `grok`
+   (free dialogue+music; see docs/teaser-render-providers.md).
    Re-run /autonovel:teaser --force to rebuild the whole teaser.
    ```
 </workflow>

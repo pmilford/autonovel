@@ -44,8 +44,19 @@
   `teaser-cut-list`/`teaser-ffmpeg-cmd` CLIs + `/autonovel:teaser-assemble`
   (ffmpeg via `bash` + viewer-panel cut critique). v1: hard cuts, no
   burned-in text.
+- **Phase 4** — **real free render backends** (`teaser/backends.py`):
+  Pollinations' free no-key promise broke externally (402 on images; no
+  free video), so this adds genuine free/cheap scriptable backends —
+  `grok` (DEFAULT; native dialogue+music, 5 free/day + $25, no card),
+  `kie`, `veo` (Gemini API), `magichour`, `fal`, manual `flow`, and an
+  offline `stub` to validate the pipeline for $0/zero-quota. `Net` HTTP
+  wrapper + `RateLimiter` (429/503 backoff) + key resolution (`--token`
+  → env → `.env`). Pollinations demoted to images-only + free-token +
+  early-402. `resolve-video-provider` default pollinations→grok.
+  Model-pin default flipped to OFF (`--pin-model` opt-in). New
+  `docs/teaser-render-providers.md`. See STATE 2026-06-06.
 
-**Baseline now:** Tier 1+2 = **1600 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1621 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.
@@ -53,14 +64,19 @@
 **STATUS: ✅ The movie-teaser pipeline is complete end-to-end** —
 `treatment` → `teaser` (`teaser-beats` → `shot-prompts`) →
 `teaser-critique` → `teaser-render` → `teaser-assemble`. All planned
-phases (0, 1, 1-final, 2, 3.5, 3) shipped, additive, regression-gated.
+phases (0, 1, 1-final, 2, 3.5, 3) shipped, plus **Phase 4** (real free
+render backends + offline `stub` + model-pin flip), additive,
+regression-gated. Backend/key map: `docs/teaser-render-providers.md`.
 
 **Future polish (not blocking):** crossfades/transitions in the
-cut-list; burned-in title cards via an editor-export step; native-audio
-(Veo/Sora) generation paths; `--kind video` validated on more providers;
-a smoke (Tier-3) test that renders one real Pollinations clip.
+cut-list; burned-in title cards via an editor-export step; the Veo
+$300-credit **Vertex** path; a **character-reference + approval**
+workflow (Phase 5 — seed refs from PD art, morph, lock before spend);
+native-audio vs `--audio` bed mixing in assemble; `--kind video`
+validated on more providers; a smoke (Tier-3) test that renders one real
+`stub`/`grok` clip.
 
-Every step: hold the ≥1600 gate, additive-only, full doc-sync, append a
+Every step: hold the ≥1621 gate, additive-only, full doc-sync, append a
 STATE.md decision entry + bump the green count.
 
 ---

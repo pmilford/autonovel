@@ -1238,7 +1238,56 @@
   teaser-assemble.** No existing-module behaviour changed. Regression
   gate: **Tier 1+2 1584 → 1600 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 4: real free render backends +
+  model-pin flip): additive. THREE strands, all behind the existing
+  thin-adapter line. (1) **Model-pin default flip** — `pin_model` now
+  defaults to **False** in `claude_code.render` / `installer.install` /
+  `cli.py`; `autonovel install` omits the `model:` frontmatter so the
+  session model wins (kills the `[1m]` billing-gate downshift).
+  `--pin-model` is the explicit opt-in; `--no-model-pin` kept as a
+  deprecated no-op. Only the Claude adapter is affected (Codex/Gemini
+  emit `suggested_model`, untouched). (2) **Multi-provider video
+  backends** — new `src/autonovel/teaser/backends.py`: a `Net` HTTP
+  wrapper (httpx client seam) + `RateLimiter` (paces ≥
+  `providers.min_interval_s`, 429/503 bounded exp-backoff honouring
+  `Retry-After`) + key resolution (`--token` → env → `.env` via
+  python-dotenv) + per-provider create→poll→download adapters: **`grok`**
+  (xAI Grok Imagine — DEFAULT video provider; native dialogue+music, 5
+  free/day + $25, no card), `kie`, `veo` (Gemini API path), `magichour`,
+  `fal`, manual `flow`, and an offline **`stub`** (Pillow placeholder
+  keyframes — no network/key/quota, to validate the pipeline for $0).
+  Pollinations demoted to **images-only** with a free-token path +
+  **early-402** detection (one actionable message, not N identical
+  failures). `render.py` dispatches by provider; `RenderRequest` gains
+  `provider`/`duration_s`. `resolve-video-provider` default flips
+  pollinations→**grok** (image default stays pollinations). `teaser-render`
+  gains `--kind auto`, `--token`, `--delay`, `--max-retries`; dry-run JSON
+  now reports `needs_key`/`key_present`/`manual`. (3) **`providers.py`**
+  capability table extended (kinds/needs_key/min_interval_s/free_note) +
+  rows for stub/grok/kie/magichour/fal/flow. New tests:
+  `test_teaser_phase4.py` (22) — key resolution, rate-limiter,
+  Net 402/auth/429, each backend via scripted client, stub offline,
+  missing-key/manual/402 fail-fast, CLI dry-run key status; offline
+  stub→cut-list→ffmpeg smoke verified by hand. Doc-sync: NEW
+  `docs/teaser-render-providers.md` (backend matrix + key setup +
+  Flow/Veo-$300 notes), `commands/teaser-render.md` (rewritten:
+  stub-first, key gates, manual flow), commands.md (movie row + 2
+  mechanical rows + install row + header), help.md (movie + install),
+  README, series CLAUDE.md, teaser-craft.md §10, teaser.md, teaser-
+  assemble.md, troubleshooting.md (two model-pin sections rewritten),
+  FUTURE-TODOS (3 items closed; character-refs + Veo-Vertex + audio-mix
+  added). Adapter tests re-pointed for the new pin default. `.env`
+  (gitignored) seeded with the user's `XAI_API_KEY`. No existing-module
+  behaviour changed; install-immutability holds (only Claude `model:`
+  line removed by default, by design). Regression gate: **Tier 1+2 1600
+  → 1621 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1621
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +21 since the 1600 mark: movie-teaser Phase 4 (backends.py multi-
+  provider render + stub + model-pin flip → 22 new phase-4 tests, minus
+  net adapter-test re-points). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1600
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +16 since the 1584 mark: movie-teaser Phase 3 (assemble.py cut-list +

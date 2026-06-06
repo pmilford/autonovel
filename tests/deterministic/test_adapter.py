@@ -36,7 +36,9 @@ One step only.
 
 def test_render_has_expected_frontmatter() -> None:
     cmd = parse_command_text(SAMPLE)
-    rendered = ClaudeCodeAdapter().render(cmd)
+    # Default is now pin_model=False (the [1m] billing-gate fix): no
+    # `model:` line. Opt in with pin_model=True for per-tier pinning.
+    rendered = ClaudeCodeAdapter().render(cmd, pin_model=True)
     head, _, _ = rendered.partition("\n---\n")
     assert "description: Sample for adapter tests." in head
     assert "argument-hint: <chapter-number> --book <short-name>" in head
@@ -49,13 +51,16 @@ def test_render_has_expected_frontmatter() -> None:
 
 
 def test_render_pin_model_false_omits_model_field() -> None:
-    """`--no-model-pin` recovery path for [1m] session-model
-    users — the rendered command should contain no `model:` line so
-    the runtime's session model wins."""
+    """Default (and explicit `pin_model=False`): the [1m] billing-gate
+    fix — the rendered command contains no `model:` line so the
+    runtime's session model wins."""
     cmd = parse_command_text(SAMPLE)
     rendered = ClaudeCodeAdapter().render(cmd, pin_model=False)
     head, _, _ = rendered.partition("\n---\n")
     assert "model:" not in head
+    # The default with no kwarg behaves identically.
+    head_default, _, _ = ClaudeCodeAdapter().render(cmd).partition("\n---\n")
+    assert "model:" not in head_default
 
 
 def test_install_no_model_pin_propagates_to_render(tmp_path) -> None:
@@ -78,7 +83,10 @@ def test_install_no_model_pin_propagates_to_render(tmp_path) -> None:
         assert "model:" not in head, f"{f} still pins model"
 
 
-def test_install_default_keeps_model_pin(tmp_path) -> None:
+def test_install_default_omits_model_pin(tmp_path) -> None:
+    """Default install now omits the `model:` pin (the [1m] billing-gate
+    fix). No installed Claude command should carry a `model:` line
+    unless the user passes --pin-model."""
     from autonovel.adapters import installer
     from autonovel.adapters.claude_code import ClaudeCodeAdapter
 
@@ -86,8 +94,20 @@ def test_install_default_keeps_model_pin(tmp_path) -> None:
     installer.install(ClaudeCodeAdapter(), install_root=install_root)
     files = list(install_root.rglob("*.md"))
     assert files
-    # At least one file should still contain `model:` since the
-    # default behaviour pins it.
+    for f in files:
+        head, _, _ = f.read_text(encoding="utf-8").partition("\n---\n")
+        assert "model:" not in head, f"{f} still pins model by default"
+
+
+def test_install_pin_model_true_pins(tmp_path) -> None:
+    """`--pin-model` (pin_model=True) restores per-tier pinning."""
+    from autonovel.adapters import installer
+    from autonovel.adapters.claude_code import ClaudeCodeAdapter
+
+    install_root = tmp_path / "claude-commands"
+    installer.install(ClaudeCodeAdapter(), install_root=install_root, pin_model=True)
+    files = list(install_root.rglob("*.md"))
+    assert files
     assert any("model:" in f.read_text(encoding="utf-8") for f in files)
 
 
@@ -107,6 +127,7 @@ def test_render_respects_custom_model_map() -> None:
     rendered = ClaudeCodeAdapter().render(
         cmd,
         model_map={"standard": "my-custom-model", "heavy": "x", "light": "y"},
+        pin_model=True,  # model_map only affects the pinned line
     )
     assert "model: my-custom-model" in rendered
 

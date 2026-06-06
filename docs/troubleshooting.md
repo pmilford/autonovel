@@ -47,15 +47,14 @@ Then re-run the command that failed. Foundation, drafting, and
 per-chapter eval all fit comfortably in 200k; you only feel the loss
 in whole-book review and multi-book series work.
 
-**Open question.** The autonovel command files all declare specific
-model names in their YAML frontmatter (`claude-sonnet-4-6` etc., none
-with `[1m]`). Claude Code is *supposed* to honour those as
-per-command overrides, but on at least one Claude Code version (PR-9
-testing on Claude Max), the session-level `[1m]` selection silently
-wins. If that's reproducible, the right fix may be to make
-autonovel's model-pinning opt-in via `project.yaml` so users on
-1M-by-default plans aren't downshifted at all. Open issue, not yet
-resolved — see `FUTURE-TODOS.md`.
+**Resolved (model-pin flip).** The per-command frontmatter `model:`
+pin was the culprit: on Claude Max with a `[1m]` session model, the
+non-`[1m]` per-command pin silently won and downshifted the session.
+Fix: **`autonovel install` no longer pins a `model:` by default** — the
+session model wins, so 1M-by-default users aren't downshifted at all.
+Per-tier pinning is now an explicit `--pin-model` opt-in. A finer-grained
+per-tier toggle via `project.yaml` remains a possible future option (see
+`FUTURE-TODOS.md`).
 
 **Why does Max not unlock /extra-usage automatically?** Don't know.
 That's between you and Anthropic billing. The two paths above both
@@ -139,25 +138,30 @@ lives), launch `claude` again, retry.
 ## My session model is `[1m]` and per-command pinning silently downshifts me
 
 When you select a `[1m]`-context model in Claude Code (e.g.
-`claude-opus-4-7[1m]`), each `/autonovel:*` command's frontmatter
-`model: claude-opus-4-7` (no `[1m]`) appears to win — silently
-downshifting your session out of 1M context. Recovery path:
+`claude-opus-4-7[1m]`), a per-command frontmatter `model:`
+`claude-opus-4-7` (no `[1m]`) appears to win — silently
+downshifting your session out of 1M context.
+
+**This is now the default behaviour's job to prevent.** As of the
+model-pin flip, `autonovel install` **omits the `model:` field by
+default**, so the runtime's session model always wins and you never
+lose 1M context. You don't need to do anything — a plain
+`autonovel install` is already safe.
+
+If you *want* per-command tier intent back (cheap Haiku for light
+commands, expensive Opus for heavy ones), opt in explicitly:
 
 ```bash
-autonovel install --no-model-pin
+autonovel install --pin-model
 ```
 
-This re-renders every command file *without* the `model:` field,
-so the runtime's session model wins on every invocation. You give
-up per-command tier intent (e.g. cheap Haiku for light commands,
-expensive Opus for heavy ones) in exchange for never losing 1M
-context. If you want to switch back, run `autonovel install` (no
-flag — the default re-pins).
+…but note that on a `[1m]` session this re-introduces the downshift.
+(`autonovel install --no-model-pin` is still accepted as a deprecated
+no-op, since omitting the pin is now the default.)
 
 The lessons-from-author-testing doc §8 has the longer narrative
-on why the interaction is non-obvious. FUTURE-TODOS continues to
-track a more granular fix where pinning is per-tier opt-out via
-project.yaml.
+on why the interaction is non-obvious. FUTURE-TODOS tracks a more
+granular future option where pinning is per-tier via project.yaml.
 
 ---
 

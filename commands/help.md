@@ -59,9 +59,11 @@ workflow. Topics:
   movie        — full teaser pipeline: treatment (film treatment +
                  2-page brief) → teaser (teaser-beats → shot-prompts) →
                  teaser-critique (free pre-gen critique) → teaser-render
-                 (free Pollinations clips + vision critique) →
+                 (offline `stub` to validate free, then `grok` real
+                 clips w/ dialogue+music + vision critique) →
                  teaser-assemble (ffmpeg stitch + cut critique).
-                 X-Prize-shaped. See docs/teaser-craft.md.
+                 X-Prize-shaped. See docs/teaser-craft.md +
+                 docs/teaser-render-providers.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   sweeps       — multi-chapter operations: draft-pass,
@@ -567,8 +569,10 @@ Environment setup:
 
 Maintenance:
 
-  autonovel install [--no-model-pin]   write /autonovel:* into runtime
-                                       command paths (idempotent)
+  autonovel install [--pin-model]      write /autonovel:* into runtime
+                                       command paths (idempotent). Default:
+                                       no model pin (session model wins);
+                                       --pin-model to pin per-tier.
   autonovel rollback                   restore from a checkpoint
   autonovel refresh-templates          re-copy package templates over
                                        a live series
