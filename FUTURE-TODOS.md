@@ -1562,8 +1562,16 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   clip-cap / one-action / palette / consistency checks). All free, no
   generation. Tier 1+2: 1515 → 1546. First validated end-to-end on the
   Fugger book (treatment + brief committed to medieval-king-maker, tag
-  `first-movie-brief`). Remaining: `/autonovel:teaser` orchestrator +
-  standalone `teaser-critique` command, Phase 2 provider dialects +
+  `first-movie-brief`); `shot-prompts` then validated on the same book
+  (35 shots, 144s, clean critique).
+  **Phase 1 final shipped (2026-06-05)** — `/autonovel:teaser` (the
+  one-command orchestrator: chains teaser-beats → shot-prompts, each in
+  a fresh `task` subagent for context hygiene; `--with-treatment`;
+  overwrite-guarded; free) and `/autonovel:teaser-critique` (standalone
+  re-runnable free critique = mechanical linter + LLM critic; read-only
+  on teaser.json; writes `teaser/critique.md`). Plus a robustness guard
+  (`shots.load` raises a clear error on malformed top-level JSON). Tier
+  1+2: 1546 → 1562. Remaining: Phase 2 provider dialects +
   reference-image consistency, Phase 3.5 Pollinations render +
   clip-critique, Phase 3 ffmpeg assembly.
 

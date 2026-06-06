@@ -135,13 +135,15 @@ checkpoint so `autonovel rollback` undoes the full operation.
 
 ### Movie / teaser (in progress)
 
-Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Shipped: `treatment`, `teaser-beats`, `shot-prompts` (Phase 0 + Phase 1). Next: the `/autonovel:teaser` orchestrator, a standalone `teaser-critique`, the Pollinations render adapter, and ffmpeg assembly.
+Build spec: [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md). Creative guide: [`teaser-craft.md`](teaser-craft.md). Shipped: `treatment`, `teaser` (orchestrator), `teaser-beats`, `shot-prompts`, `teaser-critique` (Phase 0 + Phase 1). Next: the Pollinations render adapter, and ffmpeg assembly. All Phase-0/1 commands are **free** (no generation).
 
 | Command | Tier | Purpose |
 |---|---|---|
 | `/autonovel:treatment --book <short-name> [--pages <n>] [--audience xprize\|general] [--no-brief] [--force]` | heavy | Generate a film **treatment** (≤`--pages`, default 12) + a 2-page **brief/synopsis** from the book's foundation (outline + world + characters + canon, enriched by `chapters/*.md` when present). Present-tense; reveals the ending (a treatment hides nothing — unlike a teaser). `--audience xprize` (default) frames both for the Future Vision X-Prize: optimistic future, technology solving a real problem, genuine stakes + arc, visual ambition. Writes `books/<book>/treatment.md` + `books/<book>/brief.md`; `--force` to overwrite. |
+| `/autonovel:teaser --book <short-name> [--length 30\|60\|90\|120\|180] [--provider <name>] [--with-treatment] [--force]` | standard | **The one-command teaser pipeline.** Chains `teaser-beats` → `shot-prompts`, each in a fresh `task` subagent (context hygiene), and prints one combined summary. `--with-treatment` runs `/autonovel:treatment` first when none exists. Produces `beats.md` + `teaser.json` + per-shot files. Free; no generation. |
 | `/autonovel:teaser-beats --book <short-name> [--length 30\|60\|90\|120\|180] [--provider generic\|veo\|sora\|runway\|kling\|luma\|pollinations] [--force]` | standard | Select 8–20 teaser beats on the hook → escalation → title → button arc from the treatment/outline + eval_logs, to a budget from `teaser-plan`. Writes the hand-editable `books/<book>/teaser/beats.md`. Free; no generation. |
 | `/autonovel:shot-prompts --book <short-name> [--provider <name>] [--length <s>] [--force]` | heavy | Turn the beat-sheet into provider-ready, heavily-described shot prompts. Fills the structured shot schema (verbatim character appearance, palette lock, one action/one move, content-word negative prompt, consistency anchors), runs a **free pre-generation critique** (mechanical `teaser-critique` + an LLM rewrite pass), then writes `books/<book>/teaser/teaser.json` + per-shot `books/<book>/teaser/shots/shot_<id>.md`. No generation cost. |
+| `/autonovel:teaser-critique --book <short-name> [--provider <name>]` | standard | Standalone, re-runnable **free pre-generation critique** of a (hand-edited) `teaser.json`: the mechanical linter + an LLM critic pass that scores each shot against trailer craft and the beat it serves. **Read-only** on `teaser.json`; writes an advisory `books/<book>/teaser/critique.md` with concrete rewrite suggestions. |
 
 ## Navigation commands
 

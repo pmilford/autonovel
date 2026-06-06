@@ -207,18 +207,26 @@ backfires.
 
 ## 10. The commands
 
-The craft above is applied by these commands (run in order):
+The craft above is applied by these commands:
 
 1. `/autonovel:treatment --book <name>` — film treatment + 2-page brief
    (reveals the ending; X-Prize-shaped by default).
-2. `/autonovel:teaser-beats --book <name> [--length 180]` — selects the
-   hook → escalation → title → button beats to a budget. Writes
-   `teaser/beats.md` (edit it freely).
-3. `/autonovel:shot-prompts --book <name> [--provider <p>]` — turns beats
-   into provider-ready shot prompts, runs a free pre-generation critique,
-   and writes `teaser/teaser.json` + `teaser/shots/shot_*.md`.
+2. `/autonovel:teaser --book <name> [--length 180] [--provider <p>]` —
+   **the one-command pipeline.** Runs steps 2a→2b for you, each in a
+   fresh subagent, and prints one summary. `--with-treatment` runs step 1
+   first when no treatment exists. Or run the two sub-steps yourself if
+   you want to hand-edit the beat-sheet between them:
+   - 2a. `/autonovel:teaser-beats --book <name> [--length 180]` — selects
+     the hook → escalation → title → button beats to a budget. Writes
+     `teaser/beats.md` (edit it freely).
+   - 2b. `/autonovel:shot-prompts --book <name> [--provider <p>]` — turns
+     beats into provider-ready shot prompts, runs a free pre-generation
+     critique, and writes `teaser/teaser.json` + `teaser/shots/shot_*.md`.
+3. `/autonovel:teaser-critique --book <name>` — re-run the free critique
+   (mechanical linter + LLM critic) on a hand-edited `teaser.json`; writes
+   an advisory `teaser/critique.md`. Read-only on the teaser.
 
-All three are free (no generation). Then take the shot prompts to your
+All of these are free (no generation). Then take the shot prompts to your
 video tool — Pollinations is the free, no-key option (PRD §22).
 
 ---

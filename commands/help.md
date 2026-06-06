@@ -56,10 +56,11 @@ workflow. Topics:
                  Output (PDF, ePub, audiobook).
   front-matter — title / introduction / glossary / appendix /
                  cover-composite / cover-print.
-  movie        — treatment (film treatment + 2-page brief) →
-                 teaser-beats → shot-prompts (provider-ready shot
-                 prompts, free pre-gen critique). X-Prize-shaped; see
-                 docs/teaser-craft.md.
+  movie        — treatment (film treatment + 2-page brief) +
+                 teaser (one-command: teaser-beats → shot-prompts,
+                 provider-ready shot prompts) + teaser-critique
+                 (free pre-gen critique). X-Prize-shaped; all free.
+                 See docs/teaser-craft.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   sweeps       — multi-chapter operations: draft-pass,

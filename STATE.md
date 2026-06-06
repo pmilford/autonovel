@@ -1159,8 +1159,30 @@
   module behaviour changed. Regression gate: **Tier 1+2 1515 → 1546
   passed, 1 skipped, 0 failed.** Deferred: `/autonovel:teaser`
   orchestrator + standalone teaser-critique command.
+- 2026-06-05 (movie-teaser Phase 1 *final*: teaser orchestrator +
+  teaser-critique): additive. New commands `/autonovel:teaser`
+  (standard — chains teaser-beats → shot-prompts, each in a fresh
+  `task` subagent for context hygiene; `--with-treatment` runs
+  treatment first when absent; overwrite-guarded; free) and
+  `/autonovel:teaser-critique` (standard — standalone re-runnable
+  free pre-generation critique = mechanical linter + LLM critic pass;
+  **read-only** on teaser.json; writes advisory `teaser/critique.md`).
+  Robustness: `teaser.shots.load` now raises a clear ValueError on a
+  non-object top-level JSON (was an opaque AttributeError when probing
+  the validator). LLM/quality stays in command bodies. Validated the
+  upstream `shot-prompts` end-to-end on the Fugger book (35 shots,
+  144s, clean critique). Doc-sync across commands.md / help.md /
+  README / series CLAUDE.md / teaser-craft.md / impl-plan /
+  FUTURE-TODOS. No existing-module behaviour changed. Regression gate:
+  **Tier 1+2 1546 → 1562 passed, 1 skipped, 0 failed.**
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1562
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +16 since the 1546 mark: movie-teaser Phase 1 final (teaser +
+  teaser-critique commands → 12 auto contract tests + 4 explicit
+  tests for the load() guard and the two command bodies). Prior marks
+  below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-05 — **1546
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +31 since the 1515 mark: movie-teaser Phase 1 (teaser shots/beats/

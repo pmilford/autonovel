@@ -143,7 +143,13 @@ class Teaser:
 
 
 def load(path: Path) -> Teaser:
-    return Teaser.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(
+            "teaser.json top level must be a JSON object "
+            '{"title", "length_s", "provider", "shots":[...]}'
+        )
+    return Teaser.from_dict(data)
 
 
 def dump(teaser: Teaser, path: Path) -> None:

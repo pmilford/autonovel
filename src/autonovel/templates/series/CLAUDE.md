@@ -234,11 +234,17 @@ Adapting a book to the screen, in order:
    (reveals the ending; `--audience xprize` default frames it for the
    Future Vision X-Prize: optimistic future, real problem solved, stakes
    + arc, visual ambition).
-2. `/autonovel:teaser-beats --book <name> [--length 180]` — pick the
-   hook → escalation → title → button beats (free).
-3. `/autonovel:shot-prompts --book <name> [--provider <p>]` — turn beats
-   into provider-ready shot prompts with a free pre-generation critique;
-   writes `teaser/teaser.json` + `teaser/shots/shot_*.md` (free).
+2. `/autonovel:teaser --book <name> [--length 180] [--provider <p>]` —
+   the one-command trailer pipeline: it runs `teaser-beats` (pick the
+   hook → escalation → title → button beats) then `shot-prompts` (turn
+   them into provider-ready shot prompts with a free pre-generation
+   critique), each in a fresh subagent. Writes `teaser/beats.md` +
+   `teaser/teaser.json` + `teaser/shots/shot_*.md` (free). Run the two
+   sub-commands individually if you want to hand-edit `beats.md` between
+   them.
+3. `/autonovel:teaser-critique --book <name>` — re-check a hand-edited
+   `teaser.json` (mechanical linter + LLM critic); writes an advisory
+   `teaser/critique.md`. Read-only on the teaser; free.
 
 Then take the prompts to your video tool (Pollinations is the free
 no-key option). The creative how-to lives in `docs/teaser-craft.md`.

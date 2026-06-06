@@ -22,31 +22,33 @@
   `teaser-validate` / `teaser-critique` / `teaser-render-prompt`;
   commands `/autonovel:teaser-beats` + `/autonovel:shot-prompts` (free,
   with built-in pre-generation critique).
+- **Phase 1 final** — `/autonovel:teaser` orchestrator (chains
+  teaser-beats → shot-prompts, each in a fresh `task` subagent) +
+  standalone `/autonovel:teaser-critique` (mechanical linter + LLM
+  critic, read-only, writes `teaser/critique.md`). Robustness guard on
+  `shots.load`. `shot-prompts` validated end-to-end on the Fugger book
+  (35 shots / 144s / clean critique).
 
-**Baseline now:** Tier 1+2 = **1546 passed, 1 skipped, 0 failed**
-(`pytest tests/deterministic tests/contracts`). HEAD `16eb224`. Rollback
-tag `pre-movies`. `autonovel` is editable-installed from this repo;
-re-run `autonovel install` after adding commands.
+**Baseline now:** Tier 1+2 = **1562 passed, 1 skipped, 0 failed**
+(`pytest tests/deterministic tests/contracts`). Rollback tag
+`pre-movies`. `autonovel` is editable-installed from this repo; re-run
+`autonovel install` after adding commands.
 
 **NEXT (in order):**
-1. **Phase 1 final** — `/autonovel:teaser` orchestrator (chains
-   teaser-beats → shot-prompts, via `task` subagents) + a standalone
-   `/autonovel:teaser-critique` command wrapping the mechanical critique
-   + the LLM critic pass.
-2. **Phase 2** — per-provider render *dialects* in `render_prompt.py`
+1. **Phase 2** — per-provider render *dialects* in `render_prompt.py`
    (Veo prose / Sora +Dialogue block / Runway terse / Luma enum) keyed
    off `providers.py`; reference-image **consistency anchors** per shot +
    a `teaser/refs/` plan; integrate `shared/art_references/`.
-3. **Phase 3.5** — thin **Pollinations** render adapter
+2. **Phase 3.5** — thin **Pollinations** render adapter
    (`teaser/render.py` + `resolve-video-provider` twin of the image
    resolver + `/autonovel:teaser-render`): stateless submit→poll→download
    per shot, `--dry-run`, free default backend; **clip critique**
    (vision-LLM, KEEP/REGENERATE/UPGRADE-TO-PAID). Bright lines: clips on
    disk only, no state file, no auto-assembly (PRD §23.2).
-4. **Phase 3** — ffmpeg `cut_list.json` assembly + viewer-panel cut
+3. **Phase 3** — ffmpeg `cut_list.json` assembly + viewer-panel cut
    critique.
 
-Every step: hold the ≥1546 gate, additive-only, full doc-sync, append a
+Every step: hold the ≥1562 gate, additive-only, full doc-sync, append a
 STATE.md decision entry + bump the green count.
 
 ---

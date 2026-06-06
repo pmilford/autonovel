@@ -558,10 +558,12 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 - **Movie / teaser (in progress):** `treatment` turns a book's
   foundation into a film **treatment + 2-page brief** (the prose
   deliverables a screen story — and the Future Vision X-Prize — needs
-  alongside a trailer); `teaser-beats` selects the hook → escalation →
-  title → button beats; `shot-prompts` turns them into provider-ready,
-  heavily-described **shot prompts** with a free pre-generation critique
-  (all free — no generation cost). Render/assembly commands are next. See
+  alongside a trailer); `teaser` is the one-command trailer pipeline
+  (`teaser-beats` selects the hook → escalation → title → button beats,
+  then `shot-prompts` turns them into provider-ready, heavily-described
+  **shot prompts**); `teaser-critique` re-checks a hand-edited teaser with
+  the mechanical linter + an LLM critic — all with a free pre-generation
+  critique, no generation cost. Render/assembly commands are next. See
   [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md) and
   the creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md).
 
