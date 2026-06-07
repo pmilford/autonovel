@@ -700,9 +700,10 @@ def make_stub(req: Any) -> bytes:
     the render → cut-list → ffmpeg-assembly chain can be validated for $0.
     Switch to a real backend (grok/veo/...) only once the pipeline works.
 
-    The frame is a seed-derived solid colour overlaid with the shot id,
-    role, duration, and a truncated prompt so you can eyeball ordering and
-    timing in the assembled slideshow.
+    The frame is a seed-derived solid colour overlaid with a readable
+    **scene card** — shot id/role/duration plus the location, the spoken
+    line, the plot beat, and any on-screen text card — so a static first-
+    pass review tells you what each beat *is*, not just its ordering.
     """
     try:
         from PIL import Image, ImageDraw
@@ -720,16 +721,51 @@ def make_stub(req: Any) -> bytes:
     b = 60 + ((seed >> 14) & 0x7F)
     img = Image.new("RGB", (w, h), (r, g, b))
     draw = ImageDraw.Draw(img)
-    prompt = (getattr(req, "prompt", "") or "")[:120]
-    lines = [
-        f"STUB · shot {getattr(req, 'shot_id', '?')} · take {getattr(req, 'take', 1)}",
-        f"{getattr(req, 'duration_s', 0):g}s · {w}x{h}",
-        prompt,
+    card = getattr(req, "card", {}) or {}
+    role = card.get("role", "")
+    header = f"shot {getattr(req, 'shot_id', '?')}"
+    if role:
+        header += f" · {role}"
+    header += f" · {getattr(req, 'duration_s', 0):g}s · take {getattr(req, 'take', 1)}"
+    # Labelled scene fields — the review payload (location / dialogue / plot /
+    # card), each wrapped to the frame width so nothing is clipped.
+    fields = [
+        ("LOCATION", card.get("location", "")),
+        ("DIALOGUE", card.get("dialogue", "")),
+        ("PLOT", card.get("plot", "")),
+        ("CARD", card.get("text_card", "")),
     ]
-    y = max(8, h // 2 - 24)
-    for line in lines:
-        draw.text((12, y), line, fill=(245, 245, 245))
+    if not any(v for _, v in fields):  # bare request (no shot) — show the prompt
+        fields = [("PROMPT", (getattr(req, "prompt", "") or "")[:240])]
+    # crude monospace wrap: ~ (w-24)/7 chars per line at the default PIL font.
+    per_line = max(16, (w - 24) // 7)
+
+    def _wrap(text: str) -> list[str]:
+        words, line, out = text.split(), "", []
+        for word in words:
+            if len(line) + len(word) + 1 > per_line:
+                out.append(line)
+                line = word
+            else:
+                line = f"{line} {word}".strip()
+        if line:
+            out.append(line)
+        return out or [""]
+
+    draw.text((12, 10), f"STUB · {header}", fill=(255, 255, 255))
+    y = 34
+    for label, value in fields:
+        if not value:
+            continue
+        wrapped = _wrap(value)
+        draw.text((12, y), f"{label}:", fill=(180, 220, 255))
         y += 16
+        for ln in wrapped[:4]:  # cap so a long field can't overrun the frame
+            draw.text((24, y), ln, fill=(245, 245, 245))
+            y += 15
+        y += 4
+        if y > h - 18:
+            break
     import io
     buf = io.BytesIO()
     img.save(buf, format="PNG")

@@ -481,9 +481,13 @@ _TEASER_NEXT: dict[str, tuple[str, str]] = {
         "Shots written — re-check the story spine / dialogue / cards before render."),
     "autonovel:teaser-critique": (
         "/autonovel:teaser-render --book {book} --provider stub",
-        "Validate the whole render→assemble chain FREE (offline stub) before a "
-        "real backend; the narrative gate blocks a real render until the spine "
-        "is complete."),
+        "If the critique flagged must-fix issues, run `/autonovel:teaser-revise "
+        "--book {book}` to APPLY them (no hand edits); when the render gate is "
+        "READY, validate the chain FREE with the stub before a real backend."),
+    "autonovel:teaser-revise": (
+        "/autonovel:teaser-critique --book {book}",
+        "Critique findings applied in place — re-critique to confirm the gate is "
+        "READY, then render."),
     "autonovel:teaser-refs": (
         "/autonovel:teaser-render --book {book} --provider gemini --kind image --refs",
         "References developed — render reference-conditioned keyframes, then "

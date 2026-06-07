@@ -143,17 +143,31 @@ gaps and proceed without retrying.
    does the button withhold the ending? cast discipline (one hero face)?}
    ```
 
-6. Print a one-screen summary: structurally valid?, mechanical flag count
-   by code, count of shots marked REWRITE, the single highest-value fix, and
-   the next step:
+6. Print a one-screen summary that **leads with the render-gate verdict and
+   the exact next command** (this is the line the user acts on — make it
+   unambiguous). Branch on whether the must-fix story-spine flags are
+   present:
 
+   **If the gate is READY** (no story-spine must-fix flags):
    ```
-   🔎 Wrote books/{book}/teaser/critique.md — {valid}; {k} mechanical flags,
-        {r}/{n} shots flagged for rewrite. Top fix: {one line}.
+   ✅ Render gate: READY — books/{book}/teaser/critique.md written.
+        {k} advisory flag(s) left ({r}/{n} shots could be sharpened).
+   Next: /autonovel:teaser-render --book {book} --provider stub   (validate free)
+         then a real backend.
+   ```
 
-   Apply the rewrites you agree with (edit teaser.json or the shot files,
-   or re-run /autonovel:shot-prompts --force), then re-run this to confirm.
+   **If the gate is BLOCKED** (must-fix flags remain):
    ```
+   ⚠️ Render gate: BLOCKED — {m} must-fix flag(s): {codes}.
+        Full report: books/{book}/teaser/critique.md.
+   Next: /autonovel:teaser-revise --book {book}
+         — APPLIES these fixes to teaser.json in place (no hand edits, no
+         regenerate). Then this command re-confirms. (For a clean re-author
+         instead, /autonovel:shot-prompts --book {book} --force.)
+   ```
+
+   Always name `/autonovel:teaser-revise` as the way to ACT on the findings
+   — the user should never be left to hand-edit unless they want to.
 </workflow>
 
 <acceptance>

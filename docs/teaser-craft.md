@@ -325,7 +325,15 @@ The craft above is applied by these commands:
      critique, and writes `teaser/teaser.json` + `teaser/shots/shot_*.md`.
 3. `/autonovel:teaser-critique --book <name>` — re-run the free critique
    (mechanical linter + LLM critic) on a hand-edited `teaser.json`; writes
-   an advisory `teaser/critique.md`. Read-only on the teaser.
+   an advisory `teaser/critique.md` and prints the **render-gate verdict**
+   (READY, or BLOCKED on listed flags). Read-only on the teaser.
+3b. `/autonovel:teaser-revise --book <name>` — **the fix loop.** Applies the
+   critique's findings to `teaser.json` *in place* (fills the spine,
+   strengthens dialogue/cards, repairs the 4-act order + stakes ladder,
+   rewrites weak shots) **without regenerating from scratch** — so you never
+   hand-edit and never lose good work. Re-critiques until the gate is READY.
+   This is the teaser analogue of the book's *evaluate → revise*; use
+   `shot-prompts --force` only when you want a clean re-author from the beats.
 4. `/autonovel:teaser-render --book <name> [--provider <p>] [--kind auto|image|video] [--dry-run]`
    — render the prompts into actual clips. On a fresh teaser it first
    validates the chain **free and offline** via the `stub` backend (local

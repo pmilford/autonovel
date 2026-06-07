@@ -22,7 +22,7 @@ quality is judged there, not here (feedback_avoid_brittle_python).
 from __future__ import annotations
 
 import zlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
@@ -65,6 +65,11 @@ class RenderRequest:
     # Distinct from reference_images (style/identity refs). Empty ⇒ pure
     # text-to-video.
     init_image: str = ""
+    # Structured scene info the offline `stub` keyframe draws so a static
+    # first-pass review reads clearly — role, location, the spoken line, the
+    # plot beat, the on-screen card. Label→value; review-only (real backends
+    # ignore it). Empty on a bare request.
+    card: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -73,7 +78,7 @@ class RenderRequest:
             "width": self.width, "height": self.height, "take": self.take,
             "provider": self.provider, "duration_s": self.duration_s,
             "model": self.model, "reference_images": list(self.reference_images),
-            "init_image": self.init_image,
+            "init_image": self.init_image, "card": dict(self.card),
         }
 
 
@@ -184,12 +189,30 @@ def build_request(
     ext = _EXT.get(kind, "png")
     suffix = f"_take{take}" if take > 1 else ""
     out_path = Path(out_dir) / f"shot_{shot.id}{suffix}.{ext}"
+    # Structured scene info for the offline stub keyframe (review-only): the
+    # reviewer of the free first pass should see, per card, the location, the
+    # spoken line, and the plot beat — not just a colour + prompt slice.
+    dlg = shot.dialogue()
+    first_line = ""
+    if dlg:
+        d0 = dlg[0]
+        spk = (d0.get("speaker") or "").strip()
+        ln = (d0.get("line") or "").strip()
+        first_line = f'{spk}: "{ln}"' if spk else (f'"{ln}"' if ln else "")
+    card = {
+        "role": shot.role,
+        "location": (shot.setting or "").strip(),
+        "dialogue": first_line,
+        "plot": (shot.beat_note or "").strip(),
+        "text_card": (shot.text_card or "").strip() if shot.text_card else "",
+    }
     return RenderRequest(
         shot_id=shot.id, kind=kind, url=url, out_path=str(out_path),
         prompt=prompt, seed=seed, width=width, height=height, take=take,
         provider=provider, duration_s=float(getattr(shot, "duration_s", 5.0) or 5.0),
         model=model, reference_images=tuple(reference_images),
         init_image=init_image,
+        card={k: v for k, v in card.items() if v},
     )
 
 

@@ -1601,7 +1601,35 @@
   teaser-refs.md, commands.md, STATE. Regression gate: **Tier 1+2 1767 →
   1773 passed, 1 skipped, 0 failed.**
 
+- 2026-06-07 (run-feedback round 2: teaser revise-loop + richer stub cards):
+  additive. (1) **The missing "revise" half of the teaser loop** —
+  `/autonovel:teaser-revise` (new heavy command) reads `teaser/critique.md`
+  + the mechanical flags and **applies them to `teaser.json` IN PLACE**
+  (fills the spine, strengthens dialogue/cards, repairs 4-act order + stakes
+  ladder, rewrites only flagged shots), preserving everything else,
+  archiving the prior script, re-validating + re-critiquing up to
+  `--max-rounds`. This mirrors the book's evaluate→revise; `shot-prompts
+  --force` stays the blind regenerate-from-scratch. Wired into the
+  next-step chain (`teaser-critique` → revise when BLOCKED → re-critique).
+  (2) **`teaser-critique` output now leads with the render-gate verdict** +
+  the exact next command (READY→render, BLOCKED→teaser-revise) so the user
+  never has to guess how to act on the critique. (3) **Richer stub cards** —
+  `RenderRequest.card` (role/location/dialogue/plot/text_card, filled by
+  `build_request`) drawn by `make_stub` as a wrapped, labelled scene card,
+  so the free offline first-pass review shows what each beat *is*, not just a
+  colour + prompt slice. New tests: `test_teaser_revise.py` (6). No
+  existing behaviour changed (card defaults
+  empty; revise is new). Doc-sync: new commands/teaser-revise.md,
+  teaser-critique.md (verdict), teaser-craft.md (§10 loop), commands.md
+  (row + pipeline line), STATE. `autonovel install` re-run. Regression gate:
+  **Tier 1+2 1773 → 1785 passed, 1 skipped, 0 failed** (+6 contract pickups for the new command, +6 deterministic).
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1785
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +12 since the 1773 mark: teaser revise-loop (new teaser-revise command +
+  4 contract pickups, critique verdict) + richer stub scene cards → 6
+  deterministic + 6 contract. Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1773
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +6 since the 1767 mark: run-feedback fixes (refs --init --force preserve
