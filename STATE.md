@@ -1461,7 +1461,40 @@
   = native = no prompt change; seam-fade off by default). Regression gate:
   **Tier 1+2 1696 → 1706 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 6: teaser storytelling — best practices
+  1, 4, 5, 6, 8 + script versioning): additive. The first real render read
+  as a set of disconnected clips — no throughline, no stakes, almost no
+  dialogue. Fix is upstream of the visuals: a **story spine**. New
+  `shots.Spine` (dramatic_question, logline, want, opposing_force,
+  emotional_arc, score_direction) on `Teaser`, serialized under
+  `teaser.json :: spine` and **omitted when empty** so pre-Phase-6 teasers
+  round-trip byte-identical. `teaser-beats` authors the spine + ties each
+  beat to a rising stakes ladder; `shot-prompts` copies the spine into
+  teaser.json, **mines 3–6 loaded dialogue lines** from the manuscript
+  (bp 5) and authors 2–4 premise **text cards** (bp 6); `critique.py`
+  gained teaser-level flags `no-dramatic-question` / `no-logline` /
+  `no-stakes` / `no-emotional-arc` / `thin-dialogue` (<2 spoken lines on an
+  audio provider) / `thin-text-cards`; `teaser-critique` judges the story
+  spine first. **Script versioning** (answers "can we re-run without losing
+  the old scripts?"): `takes.archive_script` + `teaser-archive-script` CLI
+  timestamp-copy `beats.md`/`teaser.json` to `teaser/script-takes/` before a
+  `--force` regenerate; the `refs/` portraits + location plates are reused
+  untouched. New `Teaser.dialogue_line_count()` / `text_card_count()`. New
+  tests: `test_teaser_phase6.py` (12). Doc-sync: teaser-beats.md,
+  shot-prompts.md, teaser-critique.md, teaser.md, teaser-craft.md (new §0
+  story spine + re-run note), prd-movie-teaser-mode.md (spine schema),
+  commands.md (command + mechanical rows + new archive-script row),
+  series-template CLAUDE.md, README, FUTURE-TODOS, STATE, impl-plan. No
+  existing-module behaviour changed (empty spine omitted; no new required
+  fields). `autonovel install` re-run. Regression gate: **Tier 1+2
+  1706 → 1718 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1718
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +12 since the 1706 mark: movie-teaser Phase 6 (story spine + dialogue
+  mining + text cards + critique spine flags + script versioning → 12
+  tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1706
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +10 since the 1696 mark: movie-teaser Phase 5.9 (score policy + audio

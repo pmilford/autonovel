@@ -559,11 +559,15 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   foundation into a film **treatment + 2-page brief** (the prose
   deliverables a screen story — and the Future Vision X-Prize — needs
   alongside a trailer); `teaser` is the one-command trailer pipeline
-  (`teaser-beats` selects the hook → escalation → title → button beats,
-  then `shot-prompts` turns them into provider-ready, heavily-described
-  **shot prompts**); `teaser-critique` re-checks a hand-edited teaser with
-  the mechanical linter + an LLM critic — all with a free pre-generation
-  critique, no generation cost. `teaser-render` then turns the prompts
+  (`teaser-beats` fixes the **story spine** — the dramatic question,
+  logline, want vs. opposing force, emotional arc — then selects the
+  hook → escalation → title → button beats that serve it and escalate;
+  `shot-prompts` turns them into provider-ready, heavily-described **shot
+  prompts**, **mining loaded dialogue lines** from the manuscript and
+  authoring premise **text cards** so the teaser actually tells a story);
+  `teaser-critique` re-checks a hand-edited teaser with the mechanical
+  linter + an LLM critic that judges the story spine first — all with a
+  free pre-generation critique, no generation cost. `teaser-render` then turns the prompts
   into **actual clips** — it validates the whole chain for **$0 and zero
   quota** with an offline `stub` backend first, then renders for real via
   `grok` (free dialogue+music, no credit card) or any of `kie` / `veo` /

@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 import shutil
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,39 @@ def archive_take(src: Path, takes_dir: Path) -> Path:
     takes_dir.mkdir(parents=True, exist_ok=True)
     n = next_take_number(takes_dir, shot_id, ext)
     dest = takes_dir / f"shot_{shot_id}_take{n}{ext}"
+    shutil.copy2(src, dest)
+    return dest
+
+
+def archive_script(src: Path, archive_dir: Path | None = None,
+                   *, when: datetime | None = None) -> Path | None:
+    """Timestamp-archive a teaser *script* artifact (``beats.md`` /
+    ``teaser.json`` / a shot file) before it is regenerated, so a
+    ``--force`` re-run never destroys the previous version (Phase 6).
+
+    Copies ``src`` to ``<archive_dir>/<stem>_<YYYYMMDD>_<HHMM><ext>``
+    (default ``archive_dir`` = ``<src dir>/script-takes``). Returns the
+    archived path, or ``None`` if ``src`` does not exist (nothing to keep —
+    a no-op, not an error). Never overwrites: a same-minute re-run gets a
+    ``_2``/``_3`` suffix. Pure filesystem; no LLM, no network.
+
+    The portraits/location reference *originals* live in ``refs/`` and are
+    untouched by this — only the generated scripts are versioned here, so a
+    full pipeline re-run keeps every prior script AND reuses the approved
+    references.
+    """
+    src = Path(src)
+    if not src.is_file():
+        return None
+    archive_dir = Path(archive_dir) if archive_dir else src.parent / "script-takes"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    stamp = (when or datetime.now()).strftime("%Y%m%d_%H%M")
+    base, ext = src.stem, src.suffix
+    dest = archive_dir / f"{base}_{stamp}{ext}"
+    n = 2
+    while dest.exists():
+        dest = archive_dir / f"{base}_{stamp}_{n}{ext}"
+        n += 1
     shutil.copy2(src, dest)
     return dest
 

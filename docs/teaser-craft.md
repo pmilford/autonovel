@@ -16,6 +16,52 @@ context of *your* story.
 
 ---
 
+## 0. The story spine — do this *before* picking a single shot
+
+The most common failure mode of an AI teaser is that it goes nowhere: a
+set of pretty clips of the same characters standing where and when they
+are, no question, no stakes, nobody saying anything that tells you what the
+story *is*. The fix is upstream of the visuals — fix the **spine** first,
+then every beat serves it. `teaser-beats` writes the spine into `beats.md`;
+`shot-prompts` copies it into `teaser.json`; `teaser-critique` checks the
+beats actually answer it. The six spine fields (Phase 6 best practices):
+
+- **Dramatic question (bp 1)** — the ONE question the teaser poses and
+  **never answers.** "Can a clerk outlast the bank that owns his country?"
+  Every beat must advance or complicate it; a beat that doesn't touch the
+  question is cut. This is the throughline that makes the cut *go
+  somewhere*.
+- **Logline (bp 6)** — the one-sentence premise the **text cards** carry.
+- **Want + opposing force (bp 4)** — what the protagonist wants and the
+  concrete force in the way. Conflict is the intrigue; without a stated
+  opposition the teaser has nothing to escalate.
+- **Emotional arc (bp 8)** — the tonal journey ("quiet unease → mounting
+  dread → defiant hope"). The cut should *move* along it: hook holds,
+  escalation tightens, button breathes.
+- **Score direction (bp 8)** — the single building musical cue the whole
+  cut rides (real trailers ride *one* score, not per-shot music; see §7 and
+  `teaser-render --score`).
+
+Two more best practices that turn the spine into something a viewer can
+read:
+
+- **Dialogue as payload, not ambience (bp 5).** A teaser must let you
+  *hear* the story. Mine **3-6 of the highest-voltage lines** from the
+  manuscript — a threat, a vow, a cost named aloud — adapt them short, and
+  spread them across the arc (the sharpest just before the title/button).
+  Generic chatter teaches the viewer nothing; loaded lines reveal a stake,
+  a relationship, or the genre in one breath. (Only spoken on
+  native-audio providers; otherwise carry them as text cards.)
+- **Stakes ladder, not a montage of equals.** Order the escalation beats
+  so each one's cost / danger / irreversibility exceeds the one before. If
+  beat 6 isn't scarier than beat 3, re-order or cut.
+
+`teaser-critique` raises `no-dramatic-question`, `no-logline`, `no-stakes`,
+`no-emotional-arc`, `thin-dialogue`, and `thin-text-cards` when these are
+missing — treat them as must-fix, not advisory.
+
+---
+
 ## 1. The words: beat → scene → shot → clip
 
 Four terms, used consistently:
@@ -256,6 +302,15 @@ Steps 1–3 are free with no generation; step 4 validates the whole chain
 for **$0/zero-quota** via the offline `stub` backend before spending a
 real backend's limited free generations (`grok` = 5/day) — see
 `docs/teaser-render-providers.md`; step 5 runs ffmpeg locally.
+
+**Re-running the whole pipeline (Phase 6).** Passing `--force` to
+`/autonovel:teaser` / `teaser-beats` / `shot-prompts` regenerates the
+scripts, but first **archives the previous `beats.md` / `teaser.json` to
+`teaser/script-takes/<name>_<UTC>.<ext>`** — so you never lose a script you
+preferred (re-promote one by copying it back). The character/location
+**reference originals in `teaser/refs/` are untouched**: a full re-run
+changes the scripts while reusing the approved portraits and location
+plates. Rendered clips are likewise versioned (`teaser-takes`, Phase 5.8).
 
 ---
 

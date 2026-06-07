@@ -66,7 +66,12 @@ guard); never retry their reads.
    "books/{book}/teaser/* already exists; pass `--force` to regenerate the
    whole teaser, or run `/autonovel:teaser-beats` / `/autonovel:shot-prompts`
    individually to redo just one stage." Pass `--force` through to both
-   sub-commands when supplied.
+   sub-commands when supplied. With `--force`, each sub-command **archives
+   the prior `beats.md` / `teaser.json` to `teaser/script-takes/`** before
+   regenerating (so a full re-run never loses a previous script), and the
+   character/location reference originals in `teaser/refs/` are reused
+   untouched — re-running the whole pipeline changes the scripts but keeps
+   the approved portraits and location plates.
 
 3. **(optional) Treatment.** If `--with-treatment` was passed AND
    `books/{book}/treatment.md` does not already exist, spawn a `task`
@@ -101,8 +106,10 @@ guard); never retry their reads.
 
    ```
    🎬 Teaser pipeline complete for {book} ({seconds}s, {provider}).
+        Question: "{the dramatic question — the spine the teaser rides}"
         beats.md  — {b} beats (hook {h} · escalation {e} · title {t} · button {bt})
         teaser.json — {n} shots, {total}s total · {valid} · {k} advisory flags left
+                      ({d} dialogue lines · {c} text cards)
         shots/    — {n} per-shot prompt files
 
    Edit any prompt in books/{book}/teaser/shots/ or the JSON directly,

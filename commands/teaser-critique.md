@@ -27,13 +27,21 @@ after you've reordered shots, rewritten prompts, or changed provider.
 It does two passes and writes one report:
 
   1. **Mechanical linter** (`autonovel mechanical teaser-critique`) —
-     deterministic flags: appearance-drift, thin-prompt, no-palette,
-     no-reference, multi-action, audio/negative unsupported for the
-     provider, missing hook/button, length-mismatch.
-  2. **LLM critic** — taste the mechanics can't judge: does each prompt obey
+     deterministic flags: **story-spine** (no-dramatic-question, no-logline,
+     no-stakes, no-emotional-arc, thin-dialogue, thin-text-cards),
+     appearance-drift, thin-prompt, no-palette, no-reference, multi-action,
+     audio/negative unsupported for the provider, missing hook/button,
+     length-mismatch.
+  2. **LLM critic** — taste the mechanics can't judge. **Story (Phase 6,
+     judge first):** does the teaser pose ONE dramatic question and never
+     answer it? Does each beat advance or complicate that question, and do
+     the stakes *rise* beat to beat (a ladder, not equals)? Do the mined
+     dialogue lines actually reveal stake/relationship/genre, or are they
+     filler? Do the text cards carry the premise? Does the cut move along
+     the stated emotional arc? **Then per shot:** does each prompt obey
      teaser-craft §4 (one subject, one action, present tense, only what's in
      frame, no un-filmable abstraction)? Is the appearance string reused
-     verbatim? Does the shot serve its beat and the teaser's arc (hook that
+     verbatim? Does the shot serve its beat and the arc (hook that
      intrigues, escalation that accelerates, a button that withholds the
      ending)? For X-Prize teasers: stakes, a real character, visual ambition.
 
@@ -67,9 +75,14 @@ gaps and proceed without retrying.
    `books/{book}/art/visual_style.json` (the canonical palette anchors — so
    you can flag a shot whose palette drifts from the series grade).
 
-4. **LLM critic pass.** `file_read` `books/{book}/teaser/teaser.json`. For
-   each shot, judge against `docs/teaser-craft.md` §4 (AI-legibility) and §6
-   (consistency), and against the beat it serves:
+4. **LLM critic pass.** `file_read` `books/{book}/teaser/teaser.json`.
+   **First judge the story spine** (`docs/teaser-craft.md` §0): is there a
+   real dramatic question that stays unanswered? do the beats answer it and
+   escalate? is there a stated want + opposing force? do the dialogue lines
+   and text cards make the story legible, or would a viewer "learn nothing"?
+   does the cut move along the emotional arc? Then, for each shot, judge
+   against `docs/teaser-craft.md` §4 (AI-legibility) and §6 (consistency),
+   and against the beat it serves:
    - **Legibility:** one subject, one action, one camera move, present
      tense, concrete, only-what's-in-frame, no un-filmable abstraction, no
      legible on-screen text, content-word negatives (never "no …").
@@ -93,6 +106,14 @@ gaps and proceed without retrying.
 
    ## Verdict
    {2-3 sentences: is this teaser generation-ready? the top 1-3 things to fix.}
+
+   ## Story spine
+   *Dramatic question:* {the question, or ⚠️ MISSING}
+   *Want vs. force:* {want — opposing force, or ⚠️ MISSING}
+   *Emotional arc:* {arc, or ⚠️ MISSING} · *Dialogue lines:* {n} ·
+   *Text cards:* {n}
+   {2-3 sentences: does it pose a question and withhold the answer? do the
+   beats escalate? does a viewer learn the story from the dialogue/cards?}
 
    ## Mechanical flags ({k})
    {table or list of the linter findings, grouped by code; "none" if clean.}
@@ -122,6 +143,8 @@ gaps and proceed without retrying.
 
 <acceptance>
 - `books/{book}/teaser/critique.md` exists with a `## Verdict`, a
+  `## Story spine` section (dramatic question / want vs. force / emotional
+  arc / dialogue + text-card counts, flagging any missing), a
   `## Mechanical flags` section reflecting the linter output, and per-shot
   notes that mark each shot KEEP or REWRITE.
 - The report states whether `teaser.json` is structurally valid (from

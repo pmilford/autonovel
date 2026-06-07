@@ -21,6 +21,63 @@ ROLES = ("hook", "escalation", "title", "button")
 
 
 @dataclass
+class Spine:
+    """The teaser's story spine (Phase 6 — narrative craft).
+
+    A teaser sells a *tone and a question*, not a tour of scenes. These
+    fields are the throughline that the per-shot beats must serve, so a
+    re-reader (and the critique) can check the teaser actually means
+    something. The LLM authors them in ``teaser-beats`` / ``shot-prompts``;
+    this module only round-trips the structure (never judges the wording).
+
+    - ``dramatic_question`` — the ONE question the teaser poses and never
+      answers (best-practice 1). Every beat advances or complicates it.
+    - ``logline`` — the one-sentence premise the text cards carry (bp 6).
+    - ``want`` / ``opposing_force`` — what the protagonist wants and what
+      stands in the way; conflict is what makes a teaser intriguing (bp 4).
+    - ``emotional_arc`` — the tonal journey, e.g. ``"unease → dread →
+      defiant hope"`` (bp 8).
+    - ``score_direction`` — the musical/tonal spine for the bed/score the
+      whole cut rides (bp 8).
+    """
+
+    dramatic_question: str = ""
+    logline: str = ""
+    want: str = ""
+    opposing_force: str = ""
+    emotional_arc: str = ""
+    score_direction: str = ""
+
+    def is_empty(self) -> bool:
+        return not any(
+            (self.dramatic_question, self.logline, self.want,
+             self.opposing_force, self.emotional_arc, self.score_direction)
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "dramatic_question": self.dramatic_question,
+            "logline": self.logline,
+            "want": self.want,
+            "opposing_force": self.opposing_force,
+            "emotional_arc": self.emotional_arc,
+            "score_direction": self.score_direction,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any] | None) -> "Spine":
+        d = d or {}
+        return cls(
+            dramatic_question=str(d.get("dramatic_question", "") or ""),
+            logline=str(d.get("logline", "") or ""),
+            want=str(d.get("want", "") or ""),
+            opposing_force=str(d.get("opposing_force", "") or ""),
+            emotional_arc=str(d.get("emotional_arc", "") or ""),
+            score_direction=str(d.get("score_direction", "") or ""),
+        )
+
+
+@dataclass
 class Shot:
     id: str
     role: str = "escalation"
@@ -125,15 +182,21 @@ class Teaser:
     title: str
     length_s: int = 90
     provider: str = "generic"
+    spine: Spine = field(default_factory=Spine)
     shots: list[Shot] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "title": self.title,
             "length_s": self.length_s,
             "provider": self.provider,
-            "shots": [s.to_dict() for s in self.shots],
         }
+        # Omit the spine block entirely when empty so existing teasers
+        # round-trip byte-identical (additive; nothing breaks).
+        if not self.spine.is_empty():
+            d["spine"] = self.spine.to_dict()
+        d["shots"] = [s.to_dict() for s in self.shots]
+        return d
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "Teaser":
@@ -141,11 +204,20 @@ class Teaser:
             title=str(d.get("title", "")),
             length_s=int(d.get("length_s", 90)),
             provider=d.get("provider", "generic"),
+            spine=Spine.from_dict(d.get("spine")),
             shots=[Shot.from_dict(s) for s in (d.get("shots") or [])],
         )
 
     def total_duration_s(self) -> float:
         return sum(s.duration_s for s in self.shots)
+
+    def dialogue_line_count(self) -> int:
+        """Total spoken dialogue lines across all shots (bp 5)."""
+        return sum(len(s.dialogue()) for s in self.shots)
+
+    def text_card_count(self) -> int:
+        """Number of shots that carry a text card (bp 6)."""
+        return sum(1 for s in self.shots if (s.text_card or "").strip())
 
 
 def load(path: Path) -> Teaser:

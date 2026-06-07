@@ -112,8 +112,24 @@
   carries the music); `teaser-assemble --audio-seam-fade` applies per-clip
   `afade` so native per-clip music doesn't pop at cuts. `_clip_seconds`
   snaps Veo to its fixed 4/6/8s set. 10 tests.
+- **Phase 6** — **teaser storytelling** (best practices 1, 4, 5, 6, 8 +
+  script versioning). The first real render read as disconnected clips, no
+  throughline, no dialogue. New `shots.Spine` on `Teaser` (dramatic
+  question, logline, want, opposing force, emotional arc, score direction;
+  `teaser.json :: spine`, omitted when empty → old teasers unchanged).
+  `teaser-beats` authors the spine + a rising stakes ladder; `shot-prompts`
+  copies it in, **mines 3–6 loaded dialogue lines** + 2–4 premise **text
+  cards**; `critique.py` gained spine flags (`no-dramatic-question`/
+  `no-logline`/`no-stakes`/`no-emotional-arc`/`thin-dialogue`/
+  `thin-text-cards`); `teaser-critique` judges the story first.
+  **Script versioning:** `takes.archive_script` + `teaser-archive-script`
+  timestamp `beats.md`/`teaser.json` to `teaser/script-takes/` before a
+  `--force` re-run; `refs/` originals reused untouched. 12 tests.
+  *Remaining (deferred):* bp 2/3/7/9/10/11/12 (4-act role enforcement,
+  stakes-ladder check, button-withholding + genre-signal + restraint gates,
+  and the standalone pre-render narrative gate).
 
-**Baseline now:** Tier 1+2 = **1706 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1718 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

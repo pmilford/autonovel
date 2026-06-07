@@ -34,6 +34,7 @@ Subcommands:
   teaser-transitions <teaser.json> Suggest scene-transition points (advisory; structured signals).
   teaser-takes <teaser.json>       List archived render takes per shot (versioned takes).
   teaser-take-pick <teaser.json>   Promote an archived take back to the latest pointer.
+  teaser-archive-script <file>     Timestamp-archive a script before a --force re-run (Phase 6).
   teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
 
 All subcommands print a single JSON object to stdout. Commands invoke
@@ -1272,6 +1273,25 @@ def _cmd_teaser_take_pick(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_archive_script(args: argparse.Namespace) -> int:
+    """Timestamp-archive a teaser script artifact before a --force re-run
+    overwrites it (Phase 6). No-op (exit 0) if the file does not exist —
+    so a first run never errors. The refs/ originals are untouched."""
+    from ..teaser import takes as _takes
+    archive_dir = Path(args.archive_dir) if getattr(args, "archive_dir", None) else None
+    dest = _takes.archive_script(Path(args.path), archive_dir)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"archived": str(dest) if dest else None,
+                   "source": args.path}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        if dest:
+            print(f"🗄️  archived previous script → {dest}")
+        else:
+            print(f"(nothing to archive — {args.path} does not exist yet)")
+    return 0
+
+
 def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
     from ..teaser import shots as _shots, refs as _refs
     try:
@@ -1981,6 +2001,16 @@ def main(argv: list[str] | None = None) -> int:
                      help="Clips dir (default: <teaser.json dir>/clips).")
     tkp.add_argument("--format", choices=["json", "human"], default="human")
     tkp.set_defaults(func=_cmd_teaser_take_pick)
+
+    tas = sub.add_parser("teaser-archive-script",
+                         help="Timestamp-archive a teaser script (beats.md / "
+                              "teaser.json / shot file) before a --force re-run "
+                              "overwrites it; refs/ originals untouched (Phase 6).")
+    tas.add_argument("path", help="Path to the script file to archive (no-op if absent).")
+    tas.add_argument("--archive-dir", dest="archive_dir", default=None,
+                     help="Archive dir (default: <file dir>/script-takes).")
+    tas.add_argument("--format", choices=["json", "human"], default="human")
+    tas.set_defaults(func=_cmd_teaser_archive_script)
 
     ttr = sub.add_parser("teaser-transitions",
                          help="Suggest where non-cut scene transitions are worth "

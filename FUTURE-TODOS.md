@@ -12,6 +12,24 @@ to start.
 ## Near-term — pull into the next PR
 
 - **Teaser CREATIVE/NARRATIVE quality — the teaser doesn't tell a story.**
+  **Phase 6 (best practices 1, 4, 5, 6, 8 + script versioning) shipped
+  2026-06-06.** The teaser data model gained a `spine` (dramatic question,
+  logline, want, opposing force, emotional arc, score direction — omitted
+  when empty so old teasers round-trip unchanged); `teaser-beats` authors
+  it + ties beats to a stakes ladder; `shot-prompts` copies it into
+  `teaser.json`, mines 3–6 loaded dialogue lines, and authors 2–4 premise
+  text cards; `teaser-critique` (mechanical + LLM) gained spine flags
+  (`no-dramatic-question`/`no-logline`/`no-stakes`/`no-emotional-arc`/
+  `thin-dialogue`/`thin-text-cards`) and judges the story first;
+  `teaser-archive-script` + the `--force` path version `beats.md`/
+  `teaser.json` into `teaser/script-takes/` so a full re-run never loses a
+  prior script while reusing the `refs/` originals. Tier 1+2: 1706 → 1718.
+  **Remaining (deferred per the user's selection):** bp 2 (4-act labelled
+  roles enforcement), 3 (mechanical stakes-ladder check), 7 (button-
+  withholding gate), 9 (genre-signal check), 10/11 (restraint + one-hero
+  enforcement), and 12 (the standalone pre-render narrative gate). Original
+  entry follows for context.
+
   Surfaced 2026-06-06 from the first real Fugger render. Diagnosis: *"it
   didn't go anywhere and didn't seem to mean anything; there wasn't enough
   dialogue to know anything about the story, or any intrigue — it wasn't a

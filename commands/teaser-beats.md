@@ -20,13 +20,23 @@ context_mode: book
 ---
 
 <purpose>
-Pick the moments a teaser is built from. A teaser sells a **tone and a
-question**, not the plot (see `docs/teaser-craft.md`). This command reads
-the story and selects 8-20 **beats** arranged on the teaser arc —
-**hook → escalation → title → button** — then writes a hand-editable
+Pick the moments a teaser is built from — **and the story spine that makes
+them mean something.** A teaser sells a **tone and a question**, not the
+plot (see `docs/teaser-craft.md`). This command reads the story, fixes a
+**spine** (the one dramatic question, the logline, the protagonist's want
+vs. the opposing force, the emotional arc), then selects 8-20 **beats**
+arranged on the teaser arc — **hook → escalation → title → button** — each
+chosen because it *advances or complicates the dramatic question* and
+*raises the stakes* over the beat before it. It writes a hand-editable
 beat-sheet at `books/{book}/teaser/beats.md`. The next command,
-`/autonovel:shot-prompts`, turns each beat into provider-ready shot
+`/autonovel:shot-prompts`, turns the spine + beats into provider-ready shot
 prompts.
+
+**Why the spine (Phase 6).** Without it, a teaser comes out as a set of
+disconnected clips of the same characters standing where/when they are — it
+goes nowhere and means nothing. The spine is the throughline every beat
+must serve, and `teaser-critique` checks it is present and answered by the
+beats. See `docs/teaser-craft.md` §0.
 
 It does NOT generate prompts or call any image/video tool. It is the
 cheap, free planning step you edit before spending anything.
@@ -48,10 +58,16 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    set, else `90`; use `180` for the Future Vision X-Prize 3-minute
    trailer), `--provider <name>` (default `generic`), `--force`.
 
-2. **Refusal-on-overwrite.** If `books/{book}/teaser/beats.md` already
-   exists with author edits and `--force` was not passed, stop with:
+2. **Refusal-on-overwrite, then archive.** If `books/{book}/teaser/beats.md`
+   already exists with author edits and `--force` was not passed, stop with:
    "books/{book}/teaser/beats.md already exists; pass `--force` to
-   regenerate or hand-edit it directly".
+   regenerate or hand-edit it directly". When `--force` **was** passed,
+   first preserve the old script so a re-run never destroys it — `bash`:
+   `autonovel mechanical teaser-archive-script books/{book}/teaser/beats.md`
+   (copies it to `teaser/script-takes/beats_<UTC>.md`; no-op if absent).
+   The character/location reference originals in `teaser/refs/` are **not**
+   touched — re-running the whole pipeline keeps every prior script *and*
+   reuses the approved portraits/plates.
 
 3. **Get the budget.** Use the `bash` tool:
    `autonovel mechanical teaser-plan --length <seconds> --provider <name> --format human`
@@ -67,46 +83,77 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    signals) — those earn teaser beats. Skim `books/{book}/chapters/*.md`
    only for the concrete image of a chosen beat (best-effort).
 
-5. **Select the beats** on the teaser arc, applying
-   `docs/teaser-craft.md` craft:
+5. **Fix the story spine FIRST** (Phase 6 — `docs/teaser-craft.md` §0).
+   Before picking a single beat, decide the throughline from the treatment
+   / outline / canon. This is what stops the teaser being a tour of scenes:
+   - **Dramatic question** (bp 1): the ONE question the teaser poses and
+     **never answers** ("Can a clerk outlast the bank that owns his
+     country?"). Every beat must advance or complicate it; if a candidate
+     beat doesn't touch the question, cut it.
+   - **Logline** (bp 6): the one-sentence premise the text cards will
+     carry.
+   - **Want vs. opposing force** (bp 4): what the protagonist wants and the
+     concrete force standing in the way. Pull both from the story; no
+     conflict → no intrigue.
+   - **Emotional arc** (bp 8): the tonal journey, e.g. *"quiet unease →
+     mounting dread → defiant hope."* The beats should *move* along it.
+   - **Score direction** (bp 8): one line on the musical spine the whole
+     cut rides (a single building cue, not per-shot music).
+
+6. **Select the beats** on the teaser arc so they *serve the spine*,
+   applying `docs/teaser-craft.md` craft:
    - **hook** (1 beat): the single most arresting image or the dramatic
-     question. Intrigue, don't explain.
-   - **escalation** (most beats): rising stakes, accelerating; each beat
-     a visible turn, not exposition.
+     question, made visible. Intrigue, don't explain.
+   - **escalation** (most beats): a **rising stakes ladder** — each beat's
+     cost/danger/irreversibility exceeds the one before (not a montage of
+     equals); each a visible turn, not exposition.
    - **title** (1 beat): where the title card lands (~2/3 in).
    - **button** (1 beat): a final beat AFTER the title that deepens the
      question. **Withhold the ending** — for `--audience`-style optimism
      (X-Prize) you may reveal the *vision* but never the *resolution*.
    Keep to ~one protagonist face (cast discipline, teaser-craft §7.2).
 
-6. **Write `books/{book}/teaser/beats.md`** in this shape (hand-editable;
-   shot-prompts reads it back):
+7. **Write `books/{book}/teaser/beats.md`** in this shape (hand-editable;
+   shot-prompts reads back the spine AND the beats):
 
    ```markdown
    # {Display Title} — Teaser beat-sheet
 
    *Length:* {seconds}s · *Provider target:* {provider} · *Beats:* {n}
 
-   <!-- Edit freely: reorder, rewrite, add/cut beats. Then run
+   <!-- Edit freely: reorder, rewrite, add/cut beats. The spine below is
+        load-bearing — shot-prompts copies it into teaser.json and
+        teaser-critique checks the beats answer it. Then run
         /autonovel:shot-prompts --book {book}. -->
+
+   ## Spine
+   - **Dramatic question:** {the one unanswered question}
+   - **Logline:** {one-sentence premise}
+   - **Want:** {what the protagonist wants}
+   - **Opposing force:** {what stands in the way}
+   - **Emotional arc:** {start tone → … → end tone}
+   - **Score direction:** {the one building musical cue}
 
    ## B01 — hook
    *Source:* {outline beat / eval peak / chapter N}
+   *Advances:* {how this beat touches the dramatic question}
    {One-line beat note: the visible moment + why it hooks.}
 
    ## B02 — escalation
+   *Stakes:* {what's now at risk — higher than B01}
    ...
 
    ## B{n} — button
    {The final after-title beat. Withhold the resolution.}
    ```
 
-7. Print a one-screen summary: beat count by role, target length, and the
-   next step:
+8. Print a one-screen summary: the dramatic question, beat count by role,
+   target length, and the next step:
 
    ```
    🎬 Wrote books/{book}/teaser/beats.md — {n} beats
         (hook {h} · escalation {e} · title {t} · button {b}), target {seconds}s.
+        Question: "{the dramatic question}"
 
    Edit the beats if you like, then:
      /autonovel:shot-prompts --book {book} --provider {provider}
@@ -115,11 +162,15 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
 
 <acceptance>
 - `books/{book}/teaser/beats.md` exists, opens with a
-  `# ... Teaser beat-sheet` heading, and lists beats with `## B<NN> —
-  <role>` headings where role ∈ {hook, escalation, title, button}.
+  `# ... Teaser beat-sheet` heading, carries a `## Spine` block (dramatic
+  question, logline, want, opposing force, emotional arc, score direction —
+  all non-empty), and lists beats with `## B<NN> — <role>` headings where
+  role ∈ {hook, escalation, title, button}.
 - Beat count is within the range printed by `teaser-plan` (≥6, ≤20),
-  with exactly one `hook` and at least one `button`.
+  with exactly one `hook` and at least one `button`. Each escalation beat
+  raises the stakes over the prior beat (a ladder, not equals).
 - The button beat does not reveal the story's resolution (withholding).
-- Refusal on overwrite without `--force` is the default.
+- Refusal on overwrite without `--force`; with `--force`, the prior
+  `beats.md` is archived to `teaser/script-takes/` before regenerating.
 - No image/video tool is invoked; the command is free.
 </acceptance>

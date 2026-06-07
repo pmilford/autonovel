@@ -235,13 +235,19 @@ Adapting a book to the screen, in order:
    Future Vision X-Prize: optimistic future, real problem solved, stakes
    + arc, visual ambition).
 2. `/autonovel:teaser --book <name> [--length 180] [--provider <p>]` —
-   the one-command trailer pipeline: it runs `teaser-beats` (pick the
-   hook → escalation → title → button beats) then `shot-prompts` (turn
-   them into provider-ready shot prompts with a free pre-generation
+   the one-command trailer pipeline: it runs `teaser-beats` (fix the
+   **story spine** — the dramatic question, logline, want vs. opposing
+   force, emotional arc — then pick the hook → escalation → title → button
+   beats that serve it and escalate) then `shot-prompts` (turn them into
+   provider-ready shot prompts, **mine 3–6 loaded dialogue lines** from the
+   manuscript + author premise **text cards**, with a free pre-generation
    critique), each in a fresh subagent. Writes `teaser/beats.md` +
    `teaser/teaser.json` + `teaser/shots/shot_*.md` (free). Run the two
    sub-commands individually if you want to hand-edit `beats.md` between
-   them.
+   them. Re-running with `--force` archives the prior scripts to
+   `teaser/script-takes/` and reuses the approved `teaser/refs/` originals,
+   so a full re-run changes the scripts without losing them or the
+   portraits/location plates.
 3. `/autonovel:teaser-critique --book <name>` — re-check a hand-edited
    `teaser.json` (mechanical linter + LLM critic); writes an advisory
    `teaser/critique.md`. Read-only on the teaser; free.

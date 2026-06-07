@@ -212,6 +212,27 @@ Key cross-provider rules the generator must encode:
   creativity* (Sora); Runway/Luma reward terser, camera-move-first
   phrasing. Provider profiles tune verbosity.
 
+**Teaser-level story spine** (Phase 6 — stored as `teaser.json :: spine`;
+authored in `teaser-beats`, copied by `shot-prompts`, checked by
+`teaser-critique`). It is the throughline the shots serve so the cut means
+something instead of being a tour of clips:
+
+```yaml
+spine:
+  dramatic_question: "Can a clerk outlast the bank that owns his country?"  # posed, never answered (bp 1)
+  logline: "A counting-house clerk takes on the empire's banker."          # the text cards carry it (bp 6)
+  want: "clear the forged ledger"                                          # protagonist's want (bp 4)
+  opposing_force: "the Fugger bank"                                        # the force in the way (bp 4)
+  emotional_arc: "unease → dread → defiant hope"                          # the cut moves along it (bp 8)
+  score_direction: "a single building string ostinato"                    # one cue, whole cut (bp 8)
+```
+
+The block is omitted entirely when empty, so pre-Phase-6 teasers
+round-trip unchanged. `teaser-critique` raises `no-dramatic-question`,
+`no-logline`, `no-stakes`, `no-emotional-arc`, `thin-dialogue`
+(<2 spoken lines on an audio provider), and `thin-text-cards` (<2 cards)
+when the spine/payload is thin.
+
 **Model-agnostic per-shot schema we implement** (stored in
 `teaser.json`; rendered to `shot_NN.md` and, later, to each provider's
 request shape):

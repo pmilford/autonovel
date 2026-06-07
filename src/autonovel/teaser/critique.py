@@ -96,6 +96,41 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
                     f"{prof.name} has no separate negative-prompt field — lean on positive "
                     f"prompting + references instead")
 
+    # --- story spine (Phase 6 — narrative craft). A teaser must mean
+    # something: pose a question, state a stake, let us hear the cast, and
+    # carry the premise. These are the flags that catch a "set of clips
+    # with no story" (advisory, like the rest — the LLM critic + the
+    # command body treat them as must-fix). ---
+    sp = teaser.spine
+    if not sp.dramatic_question.strip():
+        rep.add("", "no-dramatic-question",
+                "no dramatic question — name the ONE question the teaser poses and "
+                "never answers; every beat should advance or complicate it (bp 1)")
+    if not sp.logline.strip():
+        rep.add("", "no-logline",
+                "no logline — write the one-sentence premise the text cards carry (bp 6)")
+    if not sp.want.strip() or not sp.opposing_force.strip():
+        rep.add("", "no-stakes",
+                "no stated want + opposing force — surface what the protagonist wants "
+                "and what stands in the way; conflict is the intrigue (bp 4)")
+    if not sp.emotional_arc.strip():
+        rep.add("", "no-emotional-arc",
+                "no emotional arc — name the tonal journey (e.g. 'unease → dread → "
+                "defiant hope') so the cut builds instead of idling (bp 8)")
+
+    # --- dialogue + text cards carry the meaning (bp 5, bp 6). ---
+    dlg = teaser.dialogue_line_count()
+    if prof.audio and dlg < 2:
+        rep.add("", "thin-dialogue",
+                f"only {dlg} spoken line(s) on {prof.name} (native audio) — viewers "
+                f"learn nothing about the story; mine 3-6 loaded lines from the "
+                f"manuscript and assign them to shots (bp 5)")
+    cards = teaser.text_card_count()
+    if cards < 2:
+        rep.add("", "thin-text-cards",
+                f"only {cards} text card(s) — carry the premise/logline in 2-4 short "
+                f"cards (cheap narrative, dodges AI lipsync) (bp 6)")
+
     # --- teaser-level arc + length. ---
     roles = [s.role for s in teaser.shots]
     if "hook" not in roles:
