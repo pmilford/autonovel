@@ -11,6 +11,87 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Teaser CREATIVE/NARRATIVE quality — the teaser doesn't tell a story.**
+  Surfaced 2026-06-06 from the first real Fugger render. Diagnosis: *"it
+  didn't go anywhere and didn't seem to mean anything; there wasn't enough
+  dialogue to know anything about the story, or any intrigue — it wasn't a
+  teaser, it was a set of short clips with the same characters set
+  when/where they are."* The render *mechanics* now work; the **generative
+  craft** is the gap. The craft is already documented in
+  `docs/teaser-craft.md` (§7/§8) but `teaser-beats`/`shot-prompts` don't
+  *enforce* it — they select visually-distinct snapshots, not a rising arc,
+  and emit almost no dialogue. Encode + enforce these best practices
+  (researched 2026-06-06; sources in the session log — StudioBinder, Derek
+  Lieu, FriesenPress, Reedsy, MasterClass):
+  1. **One dramatic question / throughline.** `teaser-beats` must first
+     pick the *single* question the teaser poses and never answers, then
+     every beat must advance or complicate it. Reject a beat-sheet that is
+     a "tour" of scenes with no causal spine. (This is the root fix for
+     "didn't go anywhere.")
+  2. **Enforce the 4-act trailer shape with labelled, timecoded roles.**
+     Each beat carries a role: `cold-hook` (0–10s) → `premise` (10–30s) →
+     `escalation` (30–60s, accelerating) → `title` (~⅔) → `button` (final
+     5–10s). `teaser-beats` output is structured by role, not a flat list;
+     `teaser-critique` checks every role is present.
+  3. **Causal stakes ladder.** Beat N's stakes must exceed beat N-1's
+     (cost / danger / irreversibility rising). Add a stakes-ladder check —
+     a teaser is escalation, not a montage of equals.
+  4. **A stated want + an antagonistic force.** Surface what the
+     protagonist wants and what stands in the way; no conflict → no
+     intrigue. Pull these from the treatment/canon, not invented.
+  5. **Dialogue as narrative payload, not ambience.** Budget **3–6 short,
+     loaded lines** that reveal stakes/relationship/genre — *adapted from
+     the manuscript's best "trailer-worthy" lines*, not generic chatter.
+     This is the direct fix for "not enough dialogue to know anything."
+     `shot-prompts` should mine the chapters for the highest-voltage lines.
+  6. **Curated text cards carry the logline cheaply.** 2–4 cards delivering
+     the premise/question ("In a city built on debt…" → "one ledger could
+     burn it down"), dodging AI lipsync — already a craft default, make it
+     a required output with model-written card copy.
+  7. **Withhold the answer; end on a button.** Never resolve. End on the
+     unanswered question or a stinger *after* the title that deepens it.
+  8. **Tonal/emotional spine.** One emotional arc; cuts accelerate into a
+     title drop; hold the final image. Pick a trailerised score shape
+     (ties into the `--score`/music work).
+  9. **Genre signal in the first 10s.** The hook must telegraph genre +
+     tone so the viewer knows what *kind* of story this is.
+  10. **Restraint — scope without context.** Striking fragments that imply
+      a larger world; cut anything that is merely "characters standing
+      where/when they are." Do more with less.
+  11. **One hero face, clear want.** Anchor on a single protagonist's
+      stakes so the viewer cares (craft §7 already says this; enforce it
+      in beat selection — demote multi-protagonist sprawl).
+  12. **Narrative self-critique BEFORE render (new gate).** `teaser-critique`
+      today is a mechanical/shot-prompt linter. Add a **viewer-panel
+      narrative pass on the beat-sheet** that scores: does it pose a
+      question? escalate? state a stake? does dialogue reveal character?
+      does the button withhold? — with a hard gate so a flat "set of
+      clips" can't reach the (costly) render step. This is the single
+      highest-leverage change.
+  **Where it lands:** `commands/teaser-beats.md` (1–4, 6, 10, 11),
+  `commands/shot-prompts.md` (5 dialogue mining, 7 button, 9 hook),
+  `commands/teaser-critique.md` (12 narrative gate + role/ladder checks),
+  `docs/teaser-craft.md` (fold the researched best-practices in as prompt
+  material). Keep additive + regression-gated. Likely a "Phase 6: teaser
+  storytelling" plan. Pairs with the music/score work (8).
+
+- **Longer-term: apply the same best-practice *encoding* rigor to the
+  novel prose/script generation.** Raised 2026-06-06 alongside the teaser
+  craft gap: *"add a longer-term todo to improve the script writing in a
+  similar fashion."* The teaser fix above is a template — research the
+  external craft, distil concrete best practices, then **encode AND
+  enforce** them in the generating commands (not just document them).
+  Apply the same treatment to the book pipeline: audit `draft`/`revise`/
+  `brief`/`evaluate` against current best practice for scene construction
+  (goal→conflict→disaster / reaction→dilemma→decision scene-sequel
+  structure), dramatic-question-per-chapter, stakes escalation across the
+  arc, dialogue subtext, withholding/reveal cadence, and POV discipline —
+  beyond the existing rubric in `CRAFT.md`/`voice.md` Part 3. The pattern:
+  (a) web-research the craft, (b) add concrete checks to the LLM judge in
+  `evaluate`/`reader-panel` (not brittle Python — see
+  feedback_avoid_brittle_python), (c) feed the findings forward through
+  `brief`→`revise`. The teaser work proves the shape; generalise it.
+
 - ~~**Version every render/mp4 as a distinct take (never overwrite).**~~
   **Shipped 2026-06-06 (Phase 5.8).** New `teaser/takes.py`: each render is
   archived to `clips/takes/shot_<id>_take<N>.<ext>` (monotonic, never
@@ -196,6 +277,15 @@ to start.
   selects). Never destroy a prior take; `teaser-assemble` reads the
   selected take. Bonus: a vision-critique auto-pick of the best take.
   Pairs with the reference-conditioned-render generalization entry above.
+  **Applies to ALL written media, not just `clips/*.png`:** the video path
+  `video/shot_<id>.mp4` has the identical constant-name clobber (confirmed
+  2026-06-06 — re-rendering a shot overwrites its prior video take), and so
+  does the **assembled output** (`teaser-assemble` / the cut should write a
+  timestamped, never-overwritten copy under `teaser/cuts/` plus a stable
+  "latest" name, so earlier cuts survive — the Fugger run lost intermediate
+  MIXED cuts to a constant filename until a manual `cuts/` versioning copy
+  was bolted on). Version takes for png keyframes, mp4 clips, AND assembled
+  cuts uniformly.
 
 - **Veo on the $300 GCP credit via Vertex (ADC).** The shipped `veo`
   backend drives the Gemini **API-key** path. The $300 new-account
