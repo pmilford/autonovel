@@ -9,10 +9,12 @@ exact ffmpeg argv to stitch them — but it does NOT run ffmpeg. The
 ``bash`` tool (the same division of labour as ``audiobook-assemble``),
 then the viewer-panel cut critique judges the result.
 
-v1 scope (thin on purpose): hard cuts (concat), a still-image slideshow
-(the free Pollinations dev default) or pre-made video clips, and an
-optional audio bed. No burned-in text (title/subtitle cards belong in an
-editor — models garble text; teaser-craft §4), no crossfades yet.
+Scope: hard cuts + concat-compatible fades, a still-image slideshow, real
+video clips, OR a **mixed** cut that weaves video shots through a keyframe
+slideshow (Phase 8), an optional ducked audio bed, and — opt-in — burned-in
+title/stinger cards (Phase 8; off by default since models garble type and
+cards are normally added in an editor, teaser-craft §4). True overlapping
+cross-dissolves are still deferred (the xfade rework, FUTURE-TODOS).
 """
 
 from __future__ import annotations
@@ -39,10 +41,17 @@ class CutEntry:
     shot_id: str
     clip: str                # path to the chosen clip file
     duration_s: float = 4.0
-    text_card: str | None = None   # noted for the editor; NOT burned in
+    text_card: str | None = None   # the card text (a note, or burned in with --burn-titles)
     transition: str = "cut"        # how this clip ENTERS: cut | fade | dissolve
     fade_out: bool = False         # fade this clip OUT to black at its end
     transition_dur: float = 0.5    # fade length (seconds)
+    # Phase 8 — per-entry media so one cut can MIX dynamic video shots with
+    # static keyframes: "image" (held for duration_s, silent) | "video"
+    # (trimmed to duration_s, native audio). "" ⇒ infer from the cut's kind.
+    media: str = ""
+    # Phase 8 — how a burned-in text_card is placed: "title" (centered,
+    # large) | "stinger" (lower third, smaller).
+    card_kind: str = "stinger"
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -53,8 +62,12 @@ class CutEntry:
             d["fade_out"] = True
         if self.transition_dur != 0.5:
             d["transition_dur"] = self.transition_dur
+        if self.media:
+            d["media"] = self.media
         if self.text_card:
             d["text_card"] = self.text_card
+        if self.card_kind != "stinger":
+            d["card_kind"] = self.card_kind
         return d
 
     @classmethod
@@ -62,6 +75,12 @@ class CutEntry:
         trans = d.get("transition", "cut")
         if trans not in TRANSITIONS:
             trans = "cut"
+        media = str(d.get("media", "") or "")
+        if media not in ("", "image", "video"):
+            media = ""
+        card_kind = str(d.get("card_kind", "stinger") or "stinger")
+        if card_kind not in ("title", "stinger"):
+            card_kind = "stinger"
         return cls(
             shot_id=str(d.get("shot_id", "")),
             clip=str(d.get("clip", "")),
@@ -70,7 +89,16 @@ class CutEntry:
             transition=trans,
             fade_out=bool(d.get("fade_out", False)),
             transition_dur=float(d.get("transition_dur", 0.5)),
+            media=media,
+            card_kind=card_kind,
         )
+
+    def media_kind(self, cut_kind: str) -> str:
+        """Resolve this entry's media (explicit ``media`` else the cut kind;
+        a "mixed" cut with no explicit media falls back to image)."""
+        if self.media in ("image", "video"):
+            return self.media
+        return "video" if cut_kind == "video" else "image"
 
 
 # How clip audio (native dialogue/music) and an optional music bed combine.
@@ -102,6 +130,13 @@ class CutList:
     # score path) doesn't *pop* between shots. 0 ⇒ off. A true overlapping
     # cross-fade is the deferred xfade work (5.7b).
     audio_seam_fade: float = 0.0
+    # Phase 8 — burn the text cards into the picture with ffmpeg drawtext
+    # (opt-in). Off by default: models garble type, so cards are normally
+    # added in an editor (teaser-craft §4); this is for a quick self-contained
+    # cut. ``font_file`` is a .ttf/.otf path (e.g. EB Garamond); when unset,
+    # ffmpeg's default font is used (needs fontconfig).
+    burn_titles: bool = False
+    font_file: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -117,6 +152,10 @@ class CutList:
             d["clip_audio"] = self.clip_audio
         if self.audio_seam_fade:
             d["audio_seam_fade"] = self.audio_seam_fade
+        if self.burn_titles:
+            d["burn_titles"] = True
+        if self.font_file:
+            d["font_file"] = self.font_file
         return d
 
     @classmethod
@@ -135,6 +174,8 @@ class CutList:
             audio_mode=mode,
             clip_audio=(bool(clip_audio) if clip_audio is not None else None),
             audio_seam_fade=float(d.get("audio_seam_fade", 0.0)),
+            burn_titles=bool(d.get("burn_titles", False)),
+            font_file=d.get("font_file"),
             entries=[CutEntry.from_dict(e) for e in (d.get("entries") or [])],
         )
 
@@ -143,9 +184,12 @@ class CutList:
 
     def has_clip_audio(self) -> bool:
         """Whether the clips carry native audio (explicit, else inferred
-        from kind: video clips do, image stills don't)."""
+        from kind: video — and mixed cuts, whose video segments carry it —
+        do; an all-image slideshow does not)."""
         if self.clip_audio is not None:
             return self.clip_audio
+        if self.kind == "mixed":
+            return any(e.media_kind("mixed") == "video" for e in self.entries)
         return self.kind == "video"
 
     def resolve_audio_mode(self) -> str:
@@ -187,6 +231,8 @@ def build_cut_list(
     clip_audio: bool | None = None,
     transitions: bool = True,
     audio_seam_fade: float = 0.0,
+    burn_titles: bool = False,
+    font_file: str | None = None,
 ) -> tuple[CutList, list[str]]:
     """Build a default cut-list from the teaser + the clips on disk.
 
@@ -194,19 +240,42 @@ def build_cut_list(
     disk is skipped (and reported) — assembly proceeds with what exists so
     a single un-rendered shot never blocks a preview. Pure + filesystem
     reads; no ffmpeg, no LLM.
+
+    ``kind="mixed"`` (Phase 8) picks, per shot, the dynamic ``shot_<id>.mp4``
+    when present (native audio, trimmed to ``duration_s``) else the static
+    ``shot_<id>.png`` (held for ``duration_s``, silent) — so a real teaser
+    can weave a few motion shots through a keyframe slideshow.
     """
-    ext = _EXT.get(kind, "png")
+    suffix = lambda: f"_take{take}" if take > 1 else ""  # noqa: E731
+    role_by_id = {s.id: s.role for s in teaser.shots}
+
+    def _resolve(shot_id: str) -> tuple[Path | None, str]:
+        cd = Path(clips_dir)
+        sfx = suffix()
+        if kind == "mixed":
+            # prefer video (clips dir or a video/ subdir), else the still
+            for cand in (cd / f"shot_{shot_id}{sfx}.mp4",
+                         cd / "video" / f"shot_{shot_id}{sfx}.mp4"):
+                if cand.exists():
+                    return cand, "video"
+            still = cd / f"shot_{shot_id}{sfx}.png"
+            return (still if still.exists() else None), "image"
+        ext = _EXT.get(kind, "png")
+        clip = cd / f"shot_{shot_id}{sfx}.{ext}"
+        return (clip if clip.exists() else None), ("video" if kind == "video" else "image")
+
     entries: list[CutEntry] = []
     missing: list[str] = []
     for s in teaser.shots:
-        suffix = f"_take{take}" if take > 1 else ""
-        clip = Path(clips_dir) / f"shot_{s.id}{suffix}.{ext}"
-        if not clip.exists():
+        clip, media = _resolve(s.id)
+        if clip is None:
             missing.append(s.id)
             continue
         entries.append(CutEntry(
             shot_id=s.id, clip=str(clip), duration_s=s.duration_s,
             text_card=s.text_card,
+            media=(media if kind == "mixed" else ""),
+            card_kind=("title" if role_by_id.get(s.id) == "title" else "stinger"),
         ))
     # Safe transition defaults (Phase 5.7): ease in/out of black and fade
     # title cards. Everything else stays a hard cut — the artistic
@@ -224,6 +293,7 @@ def build_cut_list(
         audio_bed=audio_bed, entries=entries,
         audio_mode=audio_mode, clip_audio=clip_audio,
         audio_seam_fade=audio_seam_fade,
+        burn_titles=burn_titles, font_file=font_file,
     )
     return cut, missing
 
@@ -312,6 +382,38 @@ def _norm(s: str) -> str:
     return " ".join((s or "").lower().split())
 
 
+def _dt_escape(text: str) -> str:
+    """Escape text for ffmpeg ``drawtext`` (which lives inside one shell-
+    quoted -filter_complex arg). Backslash/colon/percent are ffmpeg-special;
+    the straight apostrophe is swapped for a typographic one to dodge the
+    nested-quote minefield entirely (it also just looks better on screen)."""
+    t = (text or "").replace("\\", "\\\\").replace(":", "\\:").replace("%", "\\%")
+    t = t.replace("'", "’").replace("\n", " ")
+    return t
+
+
+def _burn_chain(e: "CutEntry", w: int, h: int, font_file: str | None) -> str:
+    """A per-segment ``drawtext`` filter for a burned-in text card (Phase 8),
+    faded in/out over the segment, returned with a leading comma (or "").
+    Title cards sit centered + large; stingers ride the lower third. Timing
+    is segment-local because every segment is trimmed/held to duration_s."""
+    if not (e.text_card or "").strip():
+        return ""
+    dur = max(0.1, float(e.duration_s))
+    td = max(0.1, min(float(e.transition_dur) or 0.5, dur / 2.0))
+    text = _dt_escape(e.text_card)
+    ff = f"fontfile={font_file}:" if font_file else ""
+    if e.card_kind == "title":
+        size, y = max(24, w // 16), "(h-text_h)/2"
+    else:
+        size, y = max(16, w // 30), "h-text_h-(h/10)"
+    # alpha ramps 0→1 over td, holds, then 1→0 over the last td.
+    alpha = (f"alpha='if(lt(t,{td:g}),t/{td:g},"
+             f"if(gt(t,{dur - td:g}),({dur:g}-t)/{td:g},1))'")
+    return (f",drawtext={ff}text='{text}':x=(w-text_w)/2:y={y}:"
+            f"fontcolor=white:fontsize={size}:borderw=2:bordercolor=black@0.8:{alpha}")
+
+
 def _scale_pad(width: int, height: int) -> str:
     """A scale+pad chain that fits any source into WxH without distortion
     (letterbox/pillarbox), then locks SAR."""
@@ -343,27 +445,57 @@ def ffmpeg_command(cut_list: CutList, out_path: Path | str) -> list[str]:
     n = len(cut_list.entries)
     has_bed = bool(cut_list.audio_bed)
     mode = cut_list.resolve_audio_mode()
-    # Clip audio is only real for concatenated video clips that carry it.
-    use_clip_audio = (cut_list.kind == "video"
+    # Clip audio is only real for video (or mixed) cuts that carry it.
+    use_clip_audio = (cut_list.kind in ("video", "mixed")
                       and cut_list.has_clip_audio()
                       and mode in ("clip-only", "mix", "duck"))
 
+    # Per-entry media: explicit on a "mixed" cut, else the cut kind.
+    seg_video = [e.media_kind(cut_list.kind) == "video" for e in cut_list.entries]
+    is_mixed = cut_list.kind == "mixed"
+    burn = cut_list.burn_titles
+    ff = cut_list.font_file
+
     argv: list[str] = ["ffmpeg", "-y"]
-    for e in cut_list.entries:
-        if cut_list.kind == "image":
-            argv += ["-loop", "1", "-t", f"{e.duration_s:g}", "-i", e.clip]
-        else:
+    for i, e in enumerate(cut_list.entries):
+        if seg_video[i]:
             argv += ["-i", e.clip]
+        else:
+            argv += ["-loop", "1", "-t", f"{e.duration_s:g}", "-i", e.clip]
     if has_bed:
         argv += ["-i", cut_list.audio_bed]
     bed_idx = n if has_bed else None
 
+    # Mixed cuts need a silent audio source per *image* segment so the
+    # concat (a=1) has an audio pad for every segment alongside the video
+    # segments' native audio. One finite lavfi anullsrc per still.
+    sil_idx: dict[int, int] = {}
+    if is_mixed and use_clip_audio:
+        nxt = n + (1 if has_bed else 0)
+        for i, e in enumerate(cut_list.entries):
+            if not seg_video[i]:
+                argv += ["-f", "lavfi", "-t", f"{e.duration_s:g}",
+                         "-i", "anullsrc=r=44100:cl=stereo"]
+                sil_idx[i] = nxt
+                nxt += 1
+
     # Video chains + concat (carrying clip audio when we need it).
     chains: list[str] = []
     for i, e in enumerate(cut_list.entries):
-        pre = "" if cut_list.kind == "image" else f"trim=0:{e.duration_s:g},setpts=PTS-STARTPTS,"
-        chains.append(f"[{i}:v]{pre}{_scale_pad(w, h)},fps={fps}{_fade_chain(e)}[v{i}]")
-    if use_clip_audio:
+        pre = f"trim=0:{e.duration_s:g},setpts=PTS-STARTPTS," if seg_video[i] else ""
+        burn_f = _burn_chain(e, w, h, ff) if burn else ""
+        chains.append(
+            f"[{i}:v]{pre}{_scale_pad(w, h)},fps={fps}{_fade_chain(e)}{burn_f}[v{i}]")
+    if is_mixed and use_clip_audio:
+        # Normalize each segment's audio (native for video, silence for
+        # stills) to a common format, then concat a=1.
+        for i, e in enumerate(cut_list.entries):
+            src = f"[{i}:a]" if seg_video[i] else f"[{sil_idx[i]}:a]"
+            chains.append(f"{src}aformat=sample_rates=44100:channel_layouts=stereo,"
+                          f"asetpts=PTS-STARTPTS[a{i}]")
+        concat_inputs = "".join(f"[v{i}][a{i}]" for i in range(n))
+        chains.append(f"{concat_inputs}concat=n={n}:v=1:a=1[v][aclip]")
+    elif use_clip_audio:
         # Optional per-clip audio seam-fade (5.9): soften the music/SFX pop
         # at each hard cut without overlapping (concat-compatible).
         sf = max(0.0, float(cut_list.audio_seam_fade))

@@ -143,7 +143,16 @@
   backends. 12 tests. Remaining: auto-derive age windows from chapter
   dates, lineage-morph variant plates, auto default-source suggestions.
 
-**Baseline now:** Tier 1+2 = **1744 passed, 1 skipped, 0 failed**
+- **Phase 8** — **mixed assembly + burn-in title cards.** `teaser-assemble
+  --kind mixed` weaves dynamic `shot_<id>.mp4` shots (native audio) through
+  still `shot_<id>.png` keyframes (silence synthesized via `anullsrc`),
+  normalized to one WxH/AAC concat; `CutEntry.media`. `--burn-titles`
+  (+ `--font`) draws the text cards in with ffmpeg `drawtext` (title
+  centered, stingers lower-third, alpha-faded) — opt-in; `CutEntry.card_kind`
+  + `CutList.burn_titles`/`font_file`. 9 tests. Remaining: true
+  cross-dissolve (xfade overlap, 5.7b).
+
+**Baseline now:** Tier 1+2 = **1753 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

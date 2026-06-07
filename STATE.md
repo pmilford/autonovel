@@ -1528,7 +1528,32 @@
   install` re-run. Regression gate: **Tier 1+2 1732 → 1744 passed, 1
   skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 8: mixed assembly + burn-in title cards):
+  additive. (1) **Mixed assembly** — `teaser-cut-list --kind mixed` /
+  `teaser-assemble --kind mixed`: `build_cut_list` picks `shot_<id>.mp4`
+  (video, native audio, trimmed to duration_s) else `shot_<id>.png` (still,
+  held) per shot; `CutEntry.media` + `media_kind()`; `ffmpeg_command`
+  normalizes every segment to one WxH + stereo AAC and synthesizes per-still
+  silence (`anullsrc` lavfi inputs) so the concat `a=1` has an audio pad for
+  each segment, with the bed ducking/mixing over the concatenated track.
+  `has_clip_audio()` now true for mixed cuts with ≥1 video segment.
+  (2) **Burn-in title cards** — `--burn-titles` (+ `--font`): opt-in ffmpeg
+  `drawtext` per `text_card` (title-role centered/large, stingers
+  lower-third), alpha-faded over each segment; `CutEntry.card_kind`,
+  `CutList.burn_titles`/`font_file`, `_burn_chain` + `_dt_escape` (escape
+  `\\`/`:`/`%`, apostrophe → typographic to dodge the nested-quote
+  minefield). Timing is segment-local (every segment trimmed/held to
+  duration_s). Additive: image/video paths unchanged (phase3/5.4/5.9 tests
+  green); mixed/burn off by default. New tests: `test_teaser_phase8.py`
+  (9). Doc-sync: teaser-assemble.md, commands.md (assemble + cut-list
+  rows), FUTURE-TODOS, STATE, impl-plan. `autonovel install` re-run.
+  Regression gate: **Tier 1+2 1744 → 1753 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1753
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +9 since the 1744 mark: movie-teaser Phase 8 (mixed assembly + burn-in
+  title cards → 9 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1744
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +12 since the 1732 mark: movie-teaser Phase 7 (locations as refs +

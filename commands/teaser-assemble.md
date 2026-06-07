@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-assemble
 description: Stitch the rendered teaser clips into one video via ffmpeg, then run a viewer-panel cut critique (does the hook land, does it accelerate, does the button withhold?). Builds an editable cut_list.json first.
-argument-hint: "--book <short-name> [--kind image|video] [--audio <path>] [--audio-mode auto|duck|mix|clip-only|bed-only|none] [--no-clip-audio] [--no-transitions] [--fps <n>] [--take <n>] [--force]"
+argument-hint: "--book <short-name> [--kind image|video|mixed] [--audio <path>] [--audio-mode auto|duck|mix|clip-only|bed-only|none] [--no-clip-audio] [--no-transitions] [--burn-titles] [--font <path>] [--fps <n>] [--take <n>] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -27,13 +27,21 @@ the first few seconds, does the escalation actually accelerate, does the
 title land ~⅔ in, does the button withhold the ending, does the whole cut
 hold together?
 
-v1 is deliberately thin: mostly **hard cuts** (concat) with **fades**
-where they earn it, a still-image slideshow (e.g. the free offline `stub`
-keyframes or Pollinations `flux` images — each shot held for its
-`duration_s`) or real video clips (grok/veo/…), and an optional audio bed.
-**No burned-in text** — title/subtitle cards belong in an editor (models
-garble text; `docs/teaser-craft.md` §4); the cut-list records each
-`text_card` as a note for you.
+It can stitch a still-image slideshow (`--kind image` — each shot held for
+its `duration_s`), real video clips (`--kind video`), or a **mixed** cut
+(`--kind mixed`, Phase 8) that, per shot, uses the dynamic
+`shot_<id>.mp4` when present (native audio, trimmed to `duration_s`) else
+the static `shot_<id>.png` keyframe (held, silent) — the real-teaser shape
+of a few motion shots woven through a keyframe slideshow, all normalized to
+one WxH + stereo AAC so the concat works. Mostly **hard cuts** with
+**fades** where they earn it, plus an optional ducked audio bed.
+
+**Text cards.** By default the cut-list records each `text_card` as an
+editor note (models garble type; `docs/teaser-craft.md` §4). `--burn-titles`
+(opt-in, Phase 8) burns them in with ffmpeg `drawtext` — the `title`-role
+card centered + large, others lower-third, each faded over its segment;
+`--font <path>` picks a serif (e.g. EB Garamond). Use it for a quick
+self-contained cut; prefer an editor for final polish.
 
 **Transitions (Phase 5.7).** The build applies safe defaults: the teaser
 **fades in** from black on the first shot, **fades out** on the last, and
@@ -81,16 +89,18 @@ is reused when present (so your hand-edits survive); regenerate with
 `--force`.
 
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
-   `--kind image|video` (default `image` — matches the teaser-render
-   default), `--audio <path>` (a music-bed file), `--audio-mode
-   auto|duck|mix|clip-only|bed-only|none` (default `auto` — duck the bed
-   under native dialogue), `--no-clip-audio` (the video clips are silent,
-   e.g. magichour), `--no-transitions` (keep every cut hard — disables the
-   open/close/title fade defaults), `--audio-seam-fade <s>` (fade each
-   clip's audio at cuts so native per-clip music doesn't pop — for the
-   `--score native` path), `--fps <n>` (default 30), `--take <n>` (which
-   take per shot, default 1), `--force`. Confirm the book exists in
-   `project.yaml`.
+   `--kind image|video|mixed` (default `image`; `mixed` = video clip per
+   shot when present, else the still keyframe — Phase 8), `--audio <path>`
+   (a music-bed file), `--audio-mode auto|duck|mix|clip-only|bed-only|none`
+   (default `auto` — duck the bed under native dialogue), `--no-clip-audio`
+   (the video clips are silent, e.g. magichour), `--no-transitions` (keep
+   every cut hard — disables the open/close/title fade defaults),
+   `--burn-titles` (burn the text cards in with ffmpeg drawtext — Phase 8),
+   `--font <path>` (serif font file for burned titles, e.g. EB Garamond),
+   `--audio-seam-fade <s>` (fade each clip's audio at cuts so native
+   per-clip music doesn't pop — for the `--score native` path), `--fps <n>`
+   (default 30), `--take <n>` (which take per shot, default 1), `--force`.
+   Confirm the book exists in `project.yaml`.
 
 2. **ffmpeg check.** `bash`: `ffmpeg -version` (or `command -v ffmpeg`).
    If absent, stop with: "ffmpeg is required for assembly — `apt install
@@ -98,10 +108,12 @@ is reused when present (so your hand-edits survive); regenerate with
 
 3. **Build / reuse the cut-list.** If `books/{book}/teaser/cut_list.json`
    exists and `--force` was not passed, reuse it. Otherwise `bash`:
-   `autonovel mechanical teaser-cut-list books/{book}/teaser/teaser.json --kind <kind> [--audio <path>] [--audio-mode <mode>] [--no-clip-audio] --fps <n> --take <n> --format json`
+   `autonovel mechanical teaser-cut-list books/{book}/teaser/teaser.json --kind <kind> [--audio <path>] [--audio-mode <mode>] [--no-clip-audio] [--burn-titles] [--font <path>] --fps <n> --take <n> --format json`
    — this writes `books/{book}/teaser/cut_list.json` (ordered clips +
-   per-shot `duration_s` + any `text_card` notes + the audio policy) and
-   reports any shots with no clip on disk. For `--kind video` from
+   per-entry `media` for a `mixed` cut + per-shot `duration_s` + any
+   `text_card` notes + `burn_titles`/`font_file` + the audio policy) and
+   reports any shots with no clip on disk. With `--kind mixed` each shot
+   resolves to its `shot_<id>.mp4` (video) else `shot_<id>.png` (still). For `--kind video` from
    grok/veo/kie the clips carry native audio, so the bed ducks under it by
    default; pass `--no-clip-audio` only if the video backend was silent
    (magichour). If clips are missing, tell the user to render them
@@ -190,6 +202,11 @@ is reused when present (so your hand-edits survive); regenerate with
 - `books/{book}/teaser/assembly-report.md` exists with a verdict, a
   beat-by-beat hook/escalation/title/button critique, and the list of
   text cards to add in an editor.
-- No burned-in text is added by the model; v1 is hard cuts only; a shot
-  with no clip on disk is skipped (and reported), never a hard failure.
+- A `mixed` cut resolves each shot to its video clip when present else its
+  still keyframe, normalized to one WxH + stereo AAC (silence for stills);
+  a shot with no clip on disk is skipped (and reported), never a hard
+  failure.
+- No model-rendered type ever; text cards are editor notes by default and
+  only burned in (ffmpeg `drawtext`, title centered / stingers lower-third,
+  faded) when `--burn-titles` is passed.
 </acceptance>

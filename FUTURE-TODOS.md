@@ -277,6 +277,23 @@ to start.
   `gemini-image-key-location`. Likely folds into the "Phase 5: character
   references" plan above.
 
+- ~~**teaser-assemble: mixed static/dynamic + burn-in title cards.**~~
+  **Phase 8 shipped 2026-06-06.** (1) **Mixed assembly** — `--kind mixed`:
+  `build_cut_list` resolves each shot to `shot_<id>.mp4` (video, native
+  audio) else `shot_<id>.png` (still, held); `CutEntry.media` +
+  `media_kind()`; `ffmpeg_command` normalizes both to one WxH + stereo AAC,
+  synthesizing per-still silence (`anullsrc`) so the concat `a=1` has an
+  audio pad for every segment; the bed still ducks/mixes over the result.
+  (2) **Burn-in title cards** — `--burn-titles` (+ `--font`): opt-in ffmpeg
+  `drawtext` per `text_card` (title-role centered/large, stingers
+  lower-third), alpha-faded over each segment; `CutEntry.card_kind`,
+  `CutList.burn_titles`/`font_file`, `_burn_chain` + `_dt_escape` (colon/
+  percent escaped, apostrophe → typographic to dodge quote hell). Timing is
+  segment-local since every segment is trimmed/held to `duration_s`. Veo
+  4/6/8 snap already shipped (5.9). 9 tests (test_teaser_phase8). Tier 1+2
+  1744 → 1753. Wired on teaser-cut-list / teaser-assemble. **Remaining:**
+  true cross-dissolve (xfade overlap, 5.7b). Original entry follows.
+
 - **teaser-assemble: mixed static/dynamic + burn-in title cards.**
   Requested 2026-06-06 (Fugger book). Two gaps the Fugger movie hit, both
   hand-scripted in a one-off ffmpeg script (not in the pipeline):

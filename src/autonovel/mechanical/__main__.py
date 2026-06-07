@@ -1524,6 +1524,8 @@ def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
         clip_audio=getattr(args, "clip_audio", None),
         transitions=not getattr(args, "no_transitions", False),
         audio_seam_fade=getattr(args, "audio_seam_fade", 0.0),
+        burn_titles=getattr(args, "burn_titles", False),
+        font_file=getattr(args, "font", None),
     )
     out = Path(args.out) if getattr(args, "out", None) else base / "cut_list.json"
     if not cut.entries:
@@ -1538,8 +1540,13 @@ def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
                   sys.stdout, indent=2)
         sys.stdout.write("\n")
     else:
+        breakdown = ""
+        if cut.kind == "mixed":
+            nv = sum(1 for e in cut.entries if e.media_kind("mixed") == "video")
+            breakdown = f", {nv} video + {len(cut.entries) - nv} still"
+        burn = " · titles burned-in" if cut.burn_titles else ""
         print(f"Wrote {out} — {len(cut.entries)} clip(s), "
-              f"{cut.total_duration_s():g}s ({cut.kind}).")
+              f"{cut.total_duration_s():g}s ({cut.kind}{breakdown}){burn}.")
         if missing:
             print(f"  ⬜ {len(missing)} shot(s) with no clip yet: {', '.join(missing)}")
     return 0
@@ -2039,8 +2046,10 @@ def main(argv: list[str] | None = None) -> int:
     tcl.add_argument("path", help="Path to teaser.json.")
     tcl.add_argument("--clips-dir", dest="clips_dir", default=None,
                      help="Where the clips live (default: <teaser.json dir>/clips).")
-    tcl.add_argument("--kind", choices=["image", "video"], default="image",
-                     help="image = still-image slideshow (default); video = clips.")
+    tcl.add_argument("--kind", choices=["image", "video", "mixed"], default="image",
+                     help="image = still-image slideshow (default); video = clips; "
+                          "mixed (Phase 8) = per shot, the video clip if present "
+                          "(native audio) else the still keyframe (silent).")
     tcl.add_argument("--audio", default=None, help="Optional audio-bed file to mix in.")
     tcl.add_argument("--audio-mode", dest="audio_mode",
                      choices=list(_teaser_audio_modes()), default="auto",
@@ -2063,6 +2072,13 @@ def main(argv: list[str] | None = None) -> int:
                      help="Seconds of audio fade-in/out per clip at cut boundaries "
                           "(5.9) — softens per-clip native music pops on the "
                           "`--score native` path. 0 = off (default).")
+    tcl.add_argument("--burn-titles", dest="burn_titles", action="store_true",
+                     help="Burn the text cards into the picture with ffmpeg drawtext "
+                          "(Phase 8; opt-in — default is to add them in an editor). "
+                          "Title-role cards center large; others ride the lower third.")
+    tcl.add_argument("--font", default=None,
+                     help="Font file (.ttf/.otf) for --burn-titles, e.g. an EB "
+                          "Garamond path. Omit to use ffmpeg's default (needs fontconfig).")
     tcl.add_argument("--out", default=None, help="Output path (default: <dir>/cut_list.json).")
     tcl.add_argument("--format", choices=["json", "human"], default="human")
     tcl.set_defaults(func=_cmd_teaser_cut_list)
