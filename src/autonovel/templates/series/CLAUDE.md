@@ -7,6 +7,14 @@ you have shared context regardless of which command the user invokes.
 A "series" here is the unit of co-evolving lore. A standalone novel
 is a series with one book — same layout, same rules.
 
+> **Layout note:** a series *contains* its books under `books/<book>/`. So
+> a standalone novel's files live at `<series>/books/<book>/…` — and when
+> the book shares the series name, that path reads as
+> `my-novel/books/my-novel/…`. The repeated name is **correct, not a
+> doubled-path bug** (`autonovel doctor` confirms it; use a distinct book
+> short-name in `new-book` if you'd rather avoid the repetition). A literal
+> `books/books/` level *would* be a bug — doctor flags that as a PROBLEM.
+
 ## Layout
 
 ```

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .. import lock, project as project_mod
-from ..paths import SERIES_MARKER, SeriesLayout
+from ..paths import SERIES_MARKER, SeriesLayout, nesting_note
 
 
 # Map of external tool name → (doc string, install hint). Used by
@@ -272,6 +272,20 @@ def run(series_root: Path, *, fix: bool = False, export_tools: bool = True) -> D
                 report.fixed.append(f"created books/{b.name}/chapters/")
             else:
                 report.problems.append(f"books/{b.name}/chapters/ missing")
+
+    # Directory-nesting sanity (Phase 10). A real `books/books/` level is a
+    # bug (a command wrote a second nesting); a book whose name == the
+    # series-root name is *valid* but reads as a doubled path — warn so it
+    # isn't mistaken for the bug.
+    if (series.books / "books").is_dir():
+        report.problems.append(
+            "books/books/ exists — a doubled nesting level (a command wrote "
+            "books/ twice). The layout is <series>/books/<book>/, not "
+            "<series>/books/books/<book>/; move the inner book up one level.")
+    for b in cfg.books:
+        note = nesting_note(series_root, b.name)
+        if note:
+            report.warnings.append(f"nesting: {note}")
 
     info = lock.read(series.lock_file)
     if info is not None and lock.is_stale(series.lock_file):

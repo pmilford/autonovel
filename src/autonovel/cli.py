@@ -412,6 +412,10 @@ def _cmd_new_book(args: argparse.Namespace) -> int:
         return 2
     print(f"Created {result.book_root.relative_to(series.root.parent)}/")
     print(f"Edit {result.book_root.name}/seed.txt, then open the series in your runtime.")
+    from .paths import nesting_note
+    note = nesting_note(series.root, args.name)
+    if note:
+        print(f"note: {note}")
     return 0
 
 

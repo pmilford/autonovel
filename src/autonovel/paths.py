@@ -161,3 +161,25 @@ def find_series_root(start: Path | None = None) -> Path:
 
 def load_series(start: Path | None = None) -> SeriesLayout:
     return SeriesLayout(root=find_series_root(start))
+
+
+def looks_doubled(series_root: Path, book_name: str) -> bool:
+    """True when a book's name equals its series-root directory name, so the
+    (correct) ``<series>/books/<book>/`` layout reads as a doubled path
+    (``…/medieval-king-maker/books/medieval-king-maker/``). Structurally fine
+    — the series *contains* ``books/<name>/`` — but confusing; surfaced by
+    ``autonovel doctor`` and ``new-book`` so it never looks like a bug."""
+    return Path(series_root).name == book_name
+
+
+def nesting_note(series_root: Path, book_name: str) -> str:
+    """A one-line explanation of the doubled-looking path for a
+    series-name == book-name collision (empty when there is none)."""
+    if not looks_doubled(series_root, book_name):
+        return ""
+    return (
+        f"book {book_name!r} has the same name as its series, so its files "
+        f"live at {Path(series_root).name}/books/{book_name}/ — that doubled "
+        f"path is correct (a series contains books/<name>/), not a bug. Use a "
+        f"distinct book short-name if you'd rather avoid the repetition."
+    )

@@ -151,6 +151,20 @@ to start.
   1762. Wired into teaser-assemble's music section + providers doc.
   **Remaining:** auto-duration the bed to the cut length; more providers.
 
+- ~~**Series/book directory nesting is confusing (clean up soon).**~~
+  **Phase 10 shipped 2026-06-06.** The layout is structurally correct
+  (`<series>/books/<book>/`); the confusion is series-name == book-name
+  rendering as `…/<name>/books/<name>/`. `paths.looks_doubled` +
+  `nesting_note` describe it; `autonovel doctor` now WARNS on a name
+  collision and flags a *real* `books/books/` level as a PROBLEM;
+  `autonovel new-book` prints the note when the new book matches the series
+  name; the series-template CLAUDE.md documents the layout prominently
+  (repeated name = correct, not a bug). Audited paths.py / new-series /
+  new-book / teaser out_dir defaults — none write a second `books/` level.
+  5 tests (test_directory_nesting). Tier 1+2 1762 → 1767. **Remaining
+  (optional):** a `new-series --with-book` that picks a distinct default
+  book name. Original entry follows for context.
+
 - **Series/book directory nesting is confusing (clean up soon).**
   Reported 2026-06-06. On the Fugger book the clips land at
   `~/books/medieval-king-maker/books/medieval-king-maker/teaser/clips/`

@@ -1568,7 +1568,24 @@
   STATE, impl-plan. `autonovel install` re-run. Regression gate: **Tier 1+2
   1753 → 1762 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (Phase 10: directory-nesting clarity): additive, non-teaser.
+  The `<series>/books/<book>/` layout is correct; the confusion is
+  series-name == book-name → `…/<name>/books/<name>/`. New
+  `paths.looks_doubled` + `paths.nesting_note`; `doctor.run` WARNS on a
+  name collision (per book) and flags a literal `books/books/` level as a
+  PROBLEM; `new-book` prints the note on collision; series-template CLAUDE.md
+  documents the layout prominently. Audited paths.py / new-series / new-book
+  / teaser out_dir defaults — nothing writes a second `books/` level. No
+  existing behaviour changed (warnings only). New tests:
+  `test_directory_nesting.py` (5). Doc-sync: series-template CLAUDE.md,
+  commands.md (doctor row), FUTURE-TODOS, STATE. Regression gate: **Tier 1+2
+  1762 → 1767 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1767
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +5 since the 1762 mark: Phase 10 directory-nesting clarity (looks_doubled
+  + doctor checks → 5 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1762
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +9 since the 1753 mark: movie-teaser Phase 9 (music-generation backend:
