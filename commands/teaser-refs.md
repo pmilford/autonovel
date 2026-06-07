@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-refs
 description: Develop and approve character/location reference images for a teaser before spending a real render. Declares a source per recurring subject (public-domain art, a local image, or generate), locks the appearance, and gates real generation behind an approval step. Mechanical status + scaffold in Python; sourcing/approval here.
-argument-hint: "--book <short-name> [--init] [--subject <NAME>] [--approve <NAME>] [--force]"
+argument-hint: "--book <short-name> [--init] [--with-locations] [--subject <NAME>] [--approve <NAME>] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -44,14 +44,19 @@ load-bearing — stop if it is missing (run `/autonovel:teaser` or
 `/autonovel:shot-prompts` first). Do not retry other reads.
 
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
-   `--init` (scaffold the manifest), `--subject <NAME>` (work one
+   `--init` (scaffold the manifest), `--with-locations` (also scaffold a
+   plate per distinct setting — Phase 7), `--subject <NAME>` (work one
    subject), `--approve <NAME>` (mark one approved/locked), `--force`.
    Confirm the book exists in `project.yaml`.
 
 2. **Scaffold the manifest if missing.** `bash`:
-   `autonovel mechanical teaser-refs books/{book}/teaser/teaser.json --init [--force]`
+   `autonovel mechanical teaser-refs books/{book}/teaser/teaser.json --init [--with-locations] [--force]`
    This writes `books/{book}/teaser/refs.yaml` with one `pending` subject
-   per recurring character, appearance pre-filled. (Skip if it already
+   per recurring character, appearance pre-filled. Pass `--with-locations`
+   (recommend it for period pieces) to also scaffold one `kind: location`
+   entry per distinct `setting` — so a **place gets its own locked,
+   period-correct plate** (the fix for the naïve "1591 stone Rialto"
+   anachronism; declare a wooden-Rialto source instead). (Skip if it already
    exists and `--init` was not passed.)
 
 3. **Show the approval status.** `bash`:
@@ -92,6 +97,20 @@ load-bearing — stop if it is missing (run `/autonovel:teaser` or
      injects the descriptor — auto-selected by each shot's `story_year` —
      so the video model keeps the voice consistent scene-to-scene and ages
      it. The voice is part of the locked character (approval-gated).
+   - **appearance age ladder (Phase 7)** — when a character spans years,
+     set `appearance_ages:` (each `{name, appearance, from_year, to_year}`)
+     parallel to `voice_ages` — e.g. boy 14 → youth 18 → man 40 → elder 62.
+     `teaser-render` resolves each shot's appearance from its `story_year`
+     and feeds it as the prompt's appearance text (an `appearance_override`)
+     so the words match the age-correct reference plate instead of a stale
+     "boy of fourteen" baked at `shot-prompts` time. Generate one
+     lineage-morphed plate per life-stage from the single source (so it is
+     one face aging) and point each variant at it.
+   - **location (Phase 7)** — for a `kind: location` entry, declare a
+     **period-correct** `source_ref` (e.g. Carpaccio's wooden Rialto, NOT
+     the 1591 stone bridge) and `constraints`, then approve it like a face.
+     With `--refs`, the approved location plate is attached to every shot in
+     that setting (characters lead, the place follows).
 
 5. **Re-run the status** (`--format json`) and report. When
    `all_approved` is true, the references are ready to anchor a real
@@ -119,6 +138,12 @@ load-bearing — stop if it is missing (run `/autonovel:teaser` or
   it is approved/locked.
 - Public-domain sources are fetched via `wikimedia-search`/`-fetch`; local
   images via `art-import`; invented characters via `generate`.
+- With `--with-locations`, distinct settings are scaffolded/tracked as
+  `kind: location` subjects; their approved plates attach to every shot in
+  that setting via `--refs` (characters first, location follows).
+- An optional `appearance_ages` ladder per character lets `teaser-render`
+  pick the age-correct appearance text per shot `story_year` (matching the
+  reference plate), parallel to `voice_ages`.
 - No real (quota-bearing) generation is implied by this command — it only
   develops + approves references. The approval gate is advisory input to
   `/autonovel:teaser-render`; the offline `stub` backend is always exempt.

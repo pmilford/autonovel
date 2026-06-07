@@ -1500,7 +1500,40 @@
   re-run. Regression gate: **Tier 1+2 1706 → 1732 passed, 1 skipped,
   0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 7: character/location references —
+  generalize the Fugger spike): additive. (1) **Locations as first-class
+  refs** — `refs.plan_refs(include_locations=)` surfaces distinct settings
+  as `kind="location"` entries; `refmanifest.scaffold_from_teaser` /
+  `build_status` thread it; `teaser-refs --init --with-locations` +
+  `teaser-refs-plan --with-locations` (and `RefEntry.kind`). The existing
+  refs-map already orders characters-then-locations + applies the approval
+  gate, so declared+approved location plates attach to every shot in that
+  setting — the period-correct-place fix (wooden Rialto, not the 1591
+  bridge). (3) **Prompt/appearance sync** — `CharacterRef.appearance_ages`
+  (parallel to `voice_ages`) + `resolve_appearance(year)`;
+  `_load_teaser_appearances_map` resolves each shot's appearance by
+  `story_year`; `render.build_request(appearance_override=)` /
+  `plan(shot_appearances=)` swap the prompt's appearance text so it matches
+  the age-correct plate (boy→youth→man→elder). (5) **Refs reach the VIDEO
+  backends** — `backends._init_image` falls back to the shot's primary
+  reference plate as the image-to-video start frame (grok/veo/kie) when no
+  `--from-keyframes` keyframe exists, so locked identity reaches motion.
+  All additive: `include_locations`/age-ladder/override default off/empty;
+  no existing behaviour changed (phase2/5 ref tests green unchanged). New
+  tests: `test_teaser_phase7.py` (12). Remaining (logged): auto-derive age
+  windows from chapter dates, lineage-morph variant plates, auto
+  default-source suggestions per entity type. Doc-sync: teaser-refs.md,
+  teaser-render.md, teaser-craft.md (§6), teaser-render-providers.md,
+  commands.md (ref rows), FUTURE-TODOS, STATE, impl-plan. `autonovel
+  install` re-run. Regression gate: **Tier 1+2 1732 → 1744 passed, 1
+  skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1744
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +12 since the 1732 mark: movie-teaser Phase 7 (locations as refs +
+  appearance age ladder + refs to video backends → 12 tests). Prior
+  marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1732
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +26 since the 1706 mark: movie-teaser Phase 6 (all 12 best practices:

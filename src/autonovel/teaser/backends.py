@@ -605,10 +605,19 @@ def _fal_video_url(obj: Any) -> str | None:
 
 
 def _init_image(req: Any, *, net: Net) -> tuple[str, str] | None:
-    """Load this shot's image-to-video start frame (Phase 5.3) → (mime,
-    base64), or None when the shot has no init frame. The composed,
-    identity-locked keyframe the video backend animates from."""
+    """Load this shot's image-to-video start frame → (mime, base64), or None.
+
+    Priority: the explicit ``init_image`` (the composed, identity-locked
+    keyframe from `--from-keyframes`, Phase 5.3) first; otherwise, when the
+    shot carries reference images, the **primary character/location plate**
+    is used as the start frame (Phase 7) — so a text-to-video render still
+    inherits the locked identity even without a separate keyframe pass. This
+    is how the shot→refs map reaches the video backends (grok/veo/kie),
+    which each accept a single conditioning image."""
     ref = getattr(req, "init_image", "") or ""
+    if not ref:
+        refs = list(getattr(req, "reference_images", ()) or ())
+        ref = refs[0] if refs else ""
     if not ref:
         return None
     return _load_ref(ref, net=net)

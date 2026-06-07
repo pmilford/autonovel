@@ -128,6 +128,7 @@ def build_request(
     model: str | None = None,
     reference_images: tuple[str, ...] = (),
     style_override: str | None = None,
+    appearance_override: str | None = None,
     init_image: str = "",
     voices: dict[str, str] | None = None,
     score: str = "native",
@@ -139,10 +140,17 @@ def build_request(
     ``style_override`` replaces the shot's ``style`` text in the rendered
     prompt (e.g. swap the book's engraving look for a photoreal film style
     on the movie path) without mutating the teaser.json.
+    ``appearance_override`` replaces the shot's subject appearance text
+    (Phase 7) — so a shot's age-correct appearance (from the refs manifest's
+    age ladder, picked by ``story_year``) matches the reference image
+    instead of a stale "boy of fourteen" baked at shot-prompts time.
     """
     prompt = render_prompt.render_visual(shot, provider)
     if style_override and shot.style and shot.style in prompt:
         prompt = prompt.replace(shot.style, style_override)
+    if (appearance_override and shot.subject_appearance
+            and shot.subject_appearance in prompt):
+        prompt = prompt.replace(shot.subject_appearance, appearance_override)
     # Video gen: append the audio spec (dialogue + locked/aged voice + sfx +
     # ambience) so the model speaks the lines and lip-syncs (Phase 5.5/5.6).
     if kind == "video":
@@ -202,6 +210,7 @@ def plan(
     from_keyframes: bool = False,
     keyframe_dir: Path | None = None,
     shot_voices: dict[str, dict[str, str]] | None = None,
+    shot_appearances: dict[str, str] | None = None,
     score: str = "native",
 ) -> list[RenderRequest]:
     """Build the request plan for every shot (× ``takes``). Pure — no I/O.
@@ -222,6 +231,7 @@ def plan(
     """
     shot_refs = shot_refs or {}
     shot_voices = shot_voices or {}
+    shot_appearances = shot_appearances or {}
     reqs: list[RenderRequest] = []
     teaser_dir = Path(out_dir).parent
     kf_dir = Path(keyframe_dir) if keyframe_dir is not None else Path(out_dir)
@@ -250,11 +260,13 @@ def plan(
                     init_image = str(cand)
                     break
         voices = shot_voices.get(s.id) or {}
+        appearance_override = shot_appearances.get(s.id)
         for t in range(1, max(1, takes) + 1):
             reqs.append(build_request(
                 s, provider=provider, kind=kind, out_dir=out_dir,
                 width=width, height=height, take=t, model=model,
                 reference_images=tuple(refs), style_override=style_override,
+                appearance_override=appearance_override,
                 init_image=init_image, voices=voices, score=score,
             ))
     return reqs

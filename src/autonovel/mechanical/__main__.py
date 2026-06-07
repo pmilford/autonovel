@@ -1031,7 +1031,7 @@ def _load_teaser_refs_map(teaser_path: Path, manifest: str | None) -> dict[str, 
     shots_by_slug: dict[str, list[str]] = {}
     try:
         teaser = _shots.load(teaser_path)
-        for e in _refs.plan_refs(teaser, base_dir=base).entries:
+        for e in _refs.plan_refs(teaser, base_dir=base, include_locations=True).entries:
             shots_by_slug[_refs.slug(e.subject)] = list(e.shots)
     except Exception:  # noqa: BLE001
         pass
@@ -1093,6 +1093,36 @@ def _load_teaser_voices_map(teaser_path: Path, manifest: str | None) -> dict[str
     return out
 
 
+def _load_teaser_appearances_map(teaser_path: Path, manifest: str | None) -> dict[str, str]:
+    """Map each shot id → its subject's age-resolved appearance string (Phase 7).
+
+    Reads `refs.yaml`; for each shot whose named subject is **approved/locked**
+    and has an `appearance_ages` ladder, resolves the appearance for that
+    shot's `story_year` so the prompt text matches the age-correct reference
+    image (the `appearance_override`). Empty when no manifest / no age ladders.
+    """
+    from ..teaser import refs as _refs, refmanifest as _rm, shots as _shots
+    base = teaser_path.resolve().parent
+    man_path = Path(manifest) if manifest else base / "refs.yaml"
+    if not man_path.exists():
+        return {}
+    try:
+        man = _rm.load(man_path)
+        teaser = _shots.load(teaser_path)
+    except Exception:  # noqa: BLE001
+        return {}
+    by_slug = {_refs.slug(cr.subject): cr for cr in man.subjects if cr.approved}
+    out: dict[str, str] = {}
+    for s in teaser.shots:
+        cr = by_slug.get(_refs.slug(s.subject_name))
+        if cr is None or not cr.appearance_ages:
+            continue
+        resolved = cr.resolve_appearance(getattr(s, "story_year", None))
+        if resolved and resolved != (s.subject_appearance or "").strip():
+            out[s.id] = resolved
+    return out
+
+
 def _cmd_teaser_render(args: argparse.Namespace) -> int:
     """Render teaser clips via the thin free render adapter (Phase 3.5).
 
@@ -1138,6 +1168,11 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
                   "voices found in refs.yaml (set `voice:`/`voice_ages:` and "
                   "approve the speakers in /autonovel:teaser-refs).",
                   file=sys.stderr)
+    # Age-correct appearance text per shot (Phase 7) — applied whenever the
+    # refs.yaml manifest has an appearance age ladder, so the prompt's
+    # "boy of fourteen" matches the youth/elder reference actually used.
+    appearances_map = _load_teaser_appearances_map(
+        Path(args.path), getattr(args, "refs_manifest", None))
     reqs = _render.plan(
         teaser, provider=provider, kind=kind, out_dir=out_dir,
         width=getattr(args, "width", None), height=args.height,
@@ -1146,6 +1181,7 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
         shot_refs=refs_map, style_override=getattr(args, "film_style", None),
         from_keyframes=getattr(args, "from_keyframes", False),
         keyframe_dir=kf_dir, shot_voices=voices_map,
+        shot_appearances=appearances_map,
         score=getattr(args, "score", "native"),
     )
     if getattr(args, "shot", None) and not reqs:
@@ -1335,7 +1371,8 @@ def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
     # When --refs-dir is given, resolve ref paths against its parent so a
     # ref_path like "refs/jakob.png" lines up with the supplied dir.
     resolve_base = refs_dir.parent if refs_dir else base_dir
-    plan = _refs.plan_refs(teaser, base_dir=resolve_base, art_references_dir=art_dir)
+    plan = _refs.plan_refs(teaser, base_dir=resolve_base, art_references_dir=art_dir,
+                           include_locations=getattr(args, "with_locations", False))
     if getattr(args, "format", "human") == "json":
         json.dump(plan.to_dict(), sys.stdout, indent=2)
         sys.stdout.write("\n")
@@ -1386,10 +1423,15 @@ def _cmd_teaser_refs(args: argparse.Namespace) -> int:
                   file=sys.stderr)
             return 2
         manifest = _rm.scaffold_from_teaser(
-            teaser, base_dir=base, art_references_dir=art_dir)
+            teaser, base_dir=base, art_references_dir=art_dir,
+            include_locations=getattr(args, "with_locations", False))
         _rm.dump(manifest, manifest_path)
-        print(f"Scaffolded {manifest_path} — {len(manifest.subjects)} subject(s). "
-              f"Edit each `source`/`source_ref`/`constraints`, then approve.")
+        n_loc = sum(1 for s in manifest.subjects if s.kind == "location")
+        extra = f" (incl. {n_loc} location(s))" if n_loc else ""
+        print(f"Scaffolded {manifest_path} — {len(manifest.subjects)} subject(s){extra}. "
+              f"Edit each `source`/`source_ref`/`constraints`, then approve. "
+              f"For period places, set a period-correct `source_ref` to dodge "
+              f"anachronisms (e.g. the wooden Rialto, not the 1591 stone bridge).")
         return 0
 
     if manifest_path.exists():
@@ -1402,7 +1444,8 @@ def _cmd_teaser_refs(args: argparse.Namespace) -> int:
         manifest = _rm.RefManifest()  # empty → every subject "declare-source"
 
     status = _rm.build_status(teaser, manifest, base_dir=base,
-                              art_references_dir=art_dir)
+                              art_references_dir=art_dir,
+                              include_locations=getattr(args, "with_locations", False))
     if getattr(args, "format", "human") == "json":
         json.dump({"manifest": str(manifest_path),
                    "manifest_exists": manifest_path.exists(),
@@ -1878,6 +1921,9 @@ def main(argv: list[str] | None = None) -> int:
     trf.add_argument("--art-references-dir", dest="art_references_dir", default=None,
                      help="Optional shared plate library (e.g. shared/art_references/) "
                           "used as a fallback source for an existing reference.")
+    trf.add_argument("--with-locations", dest="with_locations", action="store_true",
+                     help="Also plan a reference plate per distinct setting/location "
+                          "(Phase 7) — period-correct place plates to dodge anachronisms.")
     trf.add_argument("--format", choices=["json", "human"], default="human")
     trf.set_defaults(func=_cmd_teaser_refs_plan)
 
@@ -1896,6 +1942,10 @@ def main(argv: list[str] | None = None) -> int:
                            "subject each) instead of reporting status.")
     trfm.add_argument("--force", action="store_true",
                       help="With --init, overwrite an existing refs.yaml.")
+    trfm.add_argument("--with-locations", dest="with_locations", action="store_true",
+                      help="Also scaffold/track a reference plate per distinct "
+                           "setting/location (Phase 7) — period-correct place plates "
+                           "to dodge anachronisms.")
     trfm.add_argument("--format", choices=["json", "human"], default="human")
     trfm.set_defaults(func=_cmd_teaser_refs)
 

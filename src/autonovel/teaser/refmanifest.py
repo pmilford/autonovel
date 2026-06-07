@@ -78,6 +78,14 @@ class CharacterRef:
     voice: str = ""
     birth_year: int | None = None
     voice_ages: list[dict[str, Any]] = field(default_factory=list)
+    # --- appearance age ladder (Phase 7): named age variants of the
+    # *visual* appearance string, parallel to voice_ages. Each is
+    # {name, appearance, from_year?, to_year?}; a shot's story_year picks
+    # the right life-stage so the prompt text matches the age-correct
+    # reference image (boy 14 → youth 18 → man 40 → elder 62). The actual
+    # lineage-morphed plates are still produced interactively; this is the
+    # selection + prompt-sync half. ---
+    appearance_ages: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"subject": self.subject, "source": self.source}
@@ -101,6 +109,8 @@ class CharacterRef:
             d["birth_year"] = self.birth_year
         if self.voice_ages:
             d["voice_ages"] = [dict(v) for v in self.voice_ages]
+        if self.appearance_ages:
+            d["appearance_ages"] = [dict(v) for v in self.appearance_ages]
         return d
 
     @property
@@ -143,6 +153,29 @@ class CharacterRef:
                 return str(v.get("name") or "?")
         return "base"
 
+    def resolve_appearance(self, year: int | None = None) -> str:
+        """Resolve the appearance string for an in-story ``year`` (Phase 7),
+        mirroring :meth:`resolve_voice`: exact age-window match first, else
+        the latest ``from_year`` not after ``year``, else the base
+        ``appearance``. Returns "" when nothing is set."""
+        base = self.appearance
+        if year is None or not self.appearance_ages:
+            return base
+        best: dict[str, Any] | None = None
+        best_from = None
+        for v in self.appearance_ages:
+            lo = v.get("from_year")
+            hi = v.get("to_year")
+            if (lo is None or year >= lo) and (hi is None or year <= hi):
+                desc = (v.get("appearance") or "").strip()
+                if desc:
+                    return desc
+            if lo is not None and year >= lo and (best_from is None or lo > best_from):
+                best, best_from = v, lo
+        if best and (best.get("appearance") or "").strip():
+            return best["appearance"].strip()
+        return base
+
 
 @dataclass
 class RefManifest:
@@ -183,6 +216,8 @@ def load(path: Path) -> RefManifest:
         shots = [str(s) for s in shots_raw] if isinstance(shots_raw, list) else []
         ages_raw = entry.get("voice_ages") or []
         voice_ages = [dict(v) for v in ages_raw if isinstance(v, dict)]
+        app_ages_raw = entry.get("appearance_ages") or []
+        appearance_ages = [dict(v) for v in app_ages_raw if isinstance(v, dict)]
         birth = entry.get("birth_year")
         subjects.append(CharacterRef(
             subject=str(entry["subject"]),
@@ -198,6 +233,7 @@ def load(path: Path) -> RefManifest:
             voice=str(entry.get("voice", "")),
             birth_year=(int(birth) if isinstance(birth, (int, float)) else None),
             voice_ages=voice_ages,
+            appearance_ages=appearance_ages,
         ))
     return RefManifest(subjects=subjects)
 
@@ -222,12 +258,17 @@ def scaffold_from_teaser(
     *,
     base_dir: Path | None = None,
     art_references_dir: Path | None = None,
+    include_locations: bool = False,
 ) -> RefManifest:
     """Build a starter manifest from the teaser's auto reference plan —
     one `pending` subject each, appearance pre-filled, source guessed
-    (`local` if a plate already exists, else `generate`)."""
+    (`local` if a plate already exists, else `generate`). With
+    ``include_locations`` (Phase 7), distinct settings are scaffolded as
+    `kind: location` subjects too, so a period place gets its own locked,
+    anachronism-guarded plate."""
     plan = _refs.plan_refs(teaser, base_dir=base_dir,
-                           art_references_dir=art_references_dir)
+                           art_references_dir=art_references_dir,
+                           include_locations=include_locations)
     subjects: list[CharacterRef] = []
     for e in plan.entries:
         source = "local" if e.exists else "generate"
@@ -239,6 +280,7 @@ def scaffold_from_teaser(
             appearance=e.appearance,
             ref_path=e.ref_path,
             status="pending",
+            kind=e.kind,
             shots=list(e.shots),
         ))
     return RefManifest(subjects=subjects)
@@ -313,11 +355,14 @@ def build_status(
     *,
     base_dir: Path | None = None,
     art_references_dir: Path | None = None,
+    include_locations: bool = False,
 ) -> RefStatus:
     """Merge the teaser's auto plan with the declared manifest and emit a
-    per-subject approval status with the one next action each."""
+    per-subject approval status with the one next action each. With
+    ``include_locations`` (Phase 7), distinct settings are also tracked."""
     plan = _refs.plan_refs(teaser, base_dir=base_dir,
-                           art_references_dir=art_references_dir)
+                           art_references_dir=art_references_dir,
+                           include_locations=include_locations)
     rows: list[RefStatusRow] = []
     for e in plan.entries:
         cr = manifest.get(e.subject)

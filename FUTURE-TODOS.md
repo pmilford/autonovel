@@ -204,6 +204,29 @@ to start.
   references" plan.
 
 - **Reference-conditioned rendering — GENERALIZE the manual Fugger spike
+  into the normal `autonovel:teaser` flow.** **Phase 7 shipped 2026-06-06
+  (most of it).** Done: (1) **locations as first-class refs** —
+  `teaser-refs --with-locations` scaffolds/tracks a `kind: location` plate
+  per distinct setting (refs.py `plan_refs(include_locations=)`,
+  refmanifest scaffold/status), with period-correct source guidance (the
+  Rialto anachronism fix); (3) **prompt/appearance sync** — `appearance_ages`
+  ladder on `CharacterRef` + `resolve_appearance(year)` +
+  `_load_teaser_appearances_map` + `build_request(appearance_override=)`, so
+  each shot's prompt text matches the age-correct plate by `story_year`;
+  (5) **refs reach the VIDEO backends** — `_init_image` falls back to the
+  shot's primary reference plate as the image-to-video start frame for
+  grok/veo/kie, and declared location plates attach via the existing
+  refs-map (characters first, place second). 12 tests (test_teaser_phase7).
+  Tier 1+2: 1732 → 1744. **Remaining:** (2) auto-DERIVE the age windows
+  from chapter dates / treatment ages (today you hand-author
+  `appearance_ages`/`voice_ages`), (2b) the actual **lineage-morph** that
+  makes the variant plates one face aging (interactive image-gen), and
+  (4) **auto default-source suggestions** per entity type (real person →
+  period portrait; real place → period painting with anachronism guards;
+  invented/prop → generate) presented as approve-able defaults. Original
+  entry follows for context.
+
+- **Reference-conditioned rendering — GENERALIZE the manual Fugger spike
   into the normal `autonovel:teaser` flow.** Requested 2026-06-06 (Fugger
   book): *"this should be a general approach for videos, not just a manual
   forcing"* and *"the prompts probably need updating too to pull the right

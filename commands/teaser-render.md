@@ -55,8 +55,16 @@ shot's **approved** character/location references (from `refs.yaml`, via
 `/autonovel:teaser-refs`) into reference-capable backends (`gemini`, `fal`
 kontext, `pollinations` flux-kontext) so identity holds across shots. Only
 approved/locked subjects flow (the approval gate); pending ones are
-skipped with a warning. `--film-style "<style>"` swaps the book's
-typeset art style for a photoreal film look without editing teaser.json.
+skipped with a warning. **Phase 7:** declared `kind: location` plates are
+attached too (characters first, the place second) — so a setting renders
+period-correctly; and on the **video** backends (grok/veo/kie) a shot with
+no keyframe uses its **primary reference plate as the image-to-video start
+frame**, so the locked identity reaches motion even without a separate
+keyframe pass. If the character has an `appearance_ages` ladder, the shot's
+prompt text is also swapped to the **age-correct appearance** for its
+`story_year` (matching the plate). `--film-style "<style>"` swaps the
+book's typeset art style for a photoreal film look without editing
+teaser.json.
 
 **Voices (`--voices`).** The dialogue **text** lives in each shot's
 `audio.dialogue`; the video model (grok/veo) speaks it with lipsync. For

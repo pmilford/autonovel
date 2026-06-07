@@ -201,6 +201,18 @@ The hardest part. The workflow that works:
 Honest caveat: identity still drifts sometimes. Reference images reduce
 it; they don't perfect it. Lean on them and pick the best takes.
 
+**Locations + age (Phase 7).** Lock **places** the same way you lock faces:
+`teaser-refs --with-locations` scaffolds one reference plate per distinct
+setting, so the same place recurs *and* renders period-correctly — declare
+a period-accurate source (the wooden Rialto, not the 1591 stone bridge) to
+dodge the anachronism a naïve search returns. For a character who **ages**
+across the story, give them an `appearance_ages` ladder (boy 14 → youth 18
+→ man 40 → elder 62, parallel to the `voice_ages` voice ladder); the render
+picks the age-correct appearance text for each shot's `story_year` so the
+prompt matches the life-stage plate. With `--refs`, approved character AND
+location plates flow into the image *and* video backends (a shot with no
+keyframe uses its primary plate as the image-to-video start frame).
+
 `/autonovel:shot-prompts` assigns each recurring subject a canonical
 reference path (`teaser/refs/<name>.png`) and runs
 `autonovel mechanical teaser-refs-plan`, which tells you exactly which

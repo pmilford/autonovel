@@ -92,6 +92,22 @@ carries up to `--max-refs` (default 3); characters lead, locations/props
 follow. `--film-style "<style>"` overrides the book's typeset art style
 with a photoreal film look without editing `teaser.json`.
 
+**Phase 7 — references reach the VIDEO backends too.** The video backends
+(`grok`/`veo`/`kie`) each take a single conditioning image. When a shot has
+no `--from-keyframes` keyframe, its **primary reference plate is used as the
+image-to-video start frame**, so the locked character/location identity
+reaches motion even without a separate keyframe pass (the keyframe still
+wins when present). Declare locations with `teaser-refs --with-locations`
+(one `kind: location` plate per distinct setting) so a period place renders
+correctly — declare a period-accurate `source_ref` (e.g. the wooden Rialto,
+not the 1591 stone bridge) to dodge the anachronism a naïve search returns.
+A character with an `appearance_ages` ladder (parallel to `voice_ages`) also
+gets its **prompt appearance text swapped to the age-correct life-stage**
+for each shot's `story_year`, so the words match the plate (boy → youth →
+man → elder). *Remaining/manual:* deriving the age windows from chapter
+dates automatically, the actual lineage-morph that makes the variant plates
+one face aging, and auto default-source suggestions per entity type.
+
 ## Image-to-video: keyframe → motion (`--from-keyframes`) — Phase 5.3
 
 The strongest free/cheap path keeps identity *and* adds motion in two

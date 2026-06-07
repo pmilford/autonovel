@@ -46,6 +46,7 @@ class RefEntry:
     source: str = "missing"    # "teaser" | "art_references" | "missing"
     appearance_variants: int = 1  # >1 ⇒ drift (also flagged by critique)
     suggested_ref: str | None = None  # a matching shared plate, when found
+    kind: str = "character"    # character | location (Phase 7)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -57,6 +58,7 @@ class RefEntry:
             "source": self.source,
             "appearance_variants": self.appearance_variants,
             "suggested_ref": self.suggested_ref,
+            "kind": self.kind,
         }
 
 
@@ -90,19 +92,36 @@ def _find_shared_plate(art_references_dir: Path | None, subj_slug: str) -> Path 
     return None
 
 
+def _resolve_existence(ref_path: str, subj_slug: str, base_dir: Path | None,
+                       art_references_dir: Path | None) -> tuple[bool, str, str | None]:
+    """Return (exists, source, suggested_plate) for a ref path."""
+    if base_dir is not None and (base_dir / ref_path).exists():
+        return True, "teaser", None
+    plate = _find_shared_plate(art_references_dir, subj_slug)
+    if plate is not None:
+        return True, "art_references", str(plate)
+    return False, "missing", None
+
+
 def plan_refs(
     teaser: Teaser,
     base_dir: Path | None = None,
     art_references_dir: Path | None = None,
+    *,
+    include_locations: bool = False,
 ) -> RefsPlan:
     """Build the per-subject reference-image plan.
 
     ``base_dir`` is the teaser directory (paths in ``reference_image`` are
     resolved against it to test existence). ``art_references_dir`` is an
     optional shared plate library (e.g. ``shared/art_references/``) used as
-    a fallback source. Pure structure + filesystem-existence; no LLM.
+    a fallback source. With ``include_locations`` (Phase 7), distinct shot
+    ``setting``s are surfaced as additional ``kind="location"`` entries
+    (after the characters) so a period place gets its own locked plate —
+    the fix for the "naïve search returns the 1591 stone Rialto" anachronism.
+    Pure structure + filesystem-existence; no LLM.
     """
-    # Group shots by named subject, preserving first-seen order.
+    # Group shots by named subject (characters), preserving first-seen order.
     order: list[str] = []
     grouped: dict[str, list] = {}
     for s in teaser.shots:
@@ -121,21 +140,40 @@ def plan_refs(
         variants = len(set(appearances))
         ref_paths = [g.reference_image for g in group if g.reference_image]
         ref_path = ref_paths[0] if ref_paths else f"refs/{slug(name)}.png"
-
-        exists = False
-        source = "missing"
-        suggested: str | None = None
-        if base_dir is not None and (base_dir / ref_path).exists():
-            exists, source = True, "teaser"
-        else:
-            plate = _find_shared_plate(art_references_dir, slug(name))
-            if plate is not None:
-                exists, source = True, "art_references"
-                suggested = str(plate)
-
+        exists, source, suggested = _resolve_existence(
+            ref_path, slug(name), base_dir, art_references_dir)
         entries.append(RefEntry(
             subject=name, appearance=appearance, ref_path=ref_path,
             shots=[g.id for g in group], exists=exists, source=source,
             appearance_variants=max(1, variants), suggested_ref=suggested,
+            kind="character",
         ))
+
+    if include_locations:
+        # Distinct settings become location plates (one per place), so the
+        # same place is rendered consistently AND period-correctly.
+        loc_order: list[str] = []
+        loc_shots: dict[str, list[str]] = {}
+        for s in teaser.shots:
+            setting = (s.setting or "").strip()
+            if not setting:
+                continue
+            if setting not in loc_shots:
+                loc_shots[setting] = []
+                loc_order.append(setting)
+            loc_shots[setting].append(s.id)
+        for setting in loc_order:
+            ref_path = f"refs/loc_{slug(setting)}.png"
+            exists, source, suggested = _resolve_existence(
+                ref_path, f"loc_{slug(setting)}", base_dir, art_references_dir)
+            # also try the bare slug in the shared plate library
+            if not exists:
+                plate = _find_shared_plate(art_references_dir, slug(setting))
+                if plate is not None:
+                    exists, source, suggested = True, "art_references", str(plate)
+            entries.append(RefEntry(
+                subject=setting, appearance=setting, ref_path=ref_path,
+                shots=list(loc_shots[setting]), exists=exists, source=source,
+                appearance_variants=1, suggested_ref=suggested, kind="location",
+            ))
     return RefsPlan(entries=entries)

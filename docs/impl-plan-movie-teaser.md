@@ -131,7 +131,19 @@
   timestamp `beats.md`/`teaser.json` to `teaser/script-takes/` before a
   `--force` re-run; `refs/` originals reused untouched. 26 tests.
 
-**Baseline now:** Tier 1+2 = **1732 passed, 1 skipped, 0 failed**
+- **Phase 7** — **character/location references** (generalize the Fugger
+  spike). Locations become first-class refs (`refs.plan_refs(
+  include_locations=)`, `teaser-refs [--init] --with-locations`,
+  `RefEntry.kind`) so a period place gets its own anachronism-guarded
+  plate; an `appearance_ages` ladder (parallel to `voice_ages`) +
+  `resolve_appearance(year)` + `build_request(appearance_override=)` swap
+  each shot's prompt appearance to the age-correct life-stage by
+  `story_year`; and `_init_image` falls back to the primary reference plate
+  as the image-to-video start frame so refs reach the grok/veo/kie video
+  backends. 12 tests. Remaining: auto-derive age windows from chapter
+  dates, lineage-morph variant plates, auto default-source suggestions.
+
+**Baseline now:** Tier 1+2 = **1744 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.
