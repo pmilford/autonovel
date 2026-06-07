@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-render
 description: Render the teaser's shot prompts into actual clips. Free offline `stub` keyframes validate the whole pipeline at zero cost/quota; `grok` (free dialogue+music, no card) is the default real backend. Then a vision critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID. Stateless — clips land on disk, nothing is assembled.
-argument-hint: "--book <short-name> [--provider stub|gemini|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--refs] [--voices] [--score native|bed|none] [--from-keyframes] [--film-style <s>] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--no-archive] [--dry-run]"
+argument-hint: "--book <short-name> [--provider stub|gemini|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--refs] [--voices] [--score native|bed|none] [--from-keyframes] [--film-style <s>] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--no-archive] [--auto-regenerate] [--max-regen <n>] [--dry-run]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -139,9 +139,12 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    (render just one), `--height <px>` (default 480), `--token <key>`,
    `--delay <s>` (override the polite inter-request interval),
    `--score native|bed|none` (background-music policy for video, 5.9),
-   `--no-archive` (don't keep prior takes), `--skip-narrative-gate`
-   (override the story gate, below), `--dry-run`. Confirm the book exists
-   in `project.yaml`.
+   `--no-archive` (don't keep prior takes), `--auto-regenerate` (on a paid
+   backend, automatically re-render the clips the vision critique marks
+   REGENERATE — bounded by `--max-regen`; `stub` auto-regenerates for free
+   regardless), `--max-regen <n>` (cap on auto-regenerations, default 3),
+   `--skip-narrative-gate` (override the story gate, below), `--dry-run`.
+   Confirm the book exists in `project.yaml`.
 
 2. **Validate the pipeline FREE first (unless the user named a provider).**
    If no `--provider` was passed and `books/{book}/teaser/clips/` has no
@@ -218,6 +221,29 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    (For `stub` clips, the critique is trivially KEEP — they are
    placeholders to prove the pipeline, not final art.)
 
+7b. **Auto-regenerate the REGENERATE clips (spend-gated).** This is the
+   render-side analogue of the script critique→revise loop — but rendering
+   **costs money/quota**, so it is bounded and never silent on a paid
+   backend:
+   - **Offline `stub`** (free) → automatically re-render every REGENERATE
+     shot and re-critique, up to `--max-regen` rounds. No spend, so just do
+     it.
+   - **Paid/quota backends** (gemini/grok/veo/kie/…) → only when
+     `--auto-regenerate` was passed. Re-render the REGENERATE shots one at a
+     time (`bash`: `autonovel mechanical teaser-render … --shot <id> …`,
+     which lands a fresh take), re-critique each, and **stop at the
+     `--max-regen` cap** (default 3 total regenerations). Report the
+     estimated added spend. Without `--auto-regenerate`, do NOT re-spend —
+     just list the REGENERATE shots and the one-line `--shot` command to fix
+     each (the current behaviour).
+   - **Never** auto-act on **UPGRADE-TO-PAID** — switching a shot to a paid
+     provider is a spend decision the user makes explicitly.
+   A REGENERATE on a `role: title` / text-card shot is now handled at the
+   source: those shots render **text-free** (the no-legible-type negative is
+   injected automatically) and the title is burned in at assembly
+   (`--burn-titles`) — so a hallucinated-title shot is fixed by re-rendering,
+   not doomed to recur.
+
 8. **Write `books/{book}/teaser/clips/render-report.md`** — advisory only
    (NOT a manifest; nothing reads it back):
 
@@ -247,10 +273,14 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    ```
    🎞️  Rendered {ok}/{total} clips → books/{book}/teaser/clips/ ({provider}).
         KEEP {k} · REGENERATE {r} · UPGRADE-TO-PAID {u}.
+        {auto-regen: re-rendered {x} REGENERATE shot(s) (~${cost}); now KEEP.}
 
    Validate the stitch (free): /autonovel:teaser-assemble --book {book}
-   Re-run the REGENERATE shots:
+   {If REGENERATE remain and you didn't pass --auto-regenerate:}
+   Re-run them (free on stub; ~$0.045/img on gemini):
      /autonovel:teaser-render --book {book} --shot <id> --takes 3
+     (or add --auto-regenerate next time to do this automatically, capped
+      by --max-regen)
    ```
 </workflow>
 
@@ -264,6 +294,11 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
   teaser has no story spine / thin dialogue/cards; `stub`, single-`--shot`,
   and `--skip-narrative-gate` runs are exempt, and `--dry-run` reports it
   rather than refusing.
+- REGENERATE clips are auto-re-rendered for free on `stub`, and on a paid
+  backend only with `--auto-regenerate` (bounded by `--max-regen`, default
+  3); UPGRADE-TO-PAID is never auto-acted. `role: title` / text-card shots
+  render **text-free** (no-legible-type negative injected) — the title is
+  burned in at assembly, not set by the model.
 - `--dry-run` prints the full request plan and reports `key_present` for
   the resolved provider, and writes nothing.
 - The default *video* provider is the free `grok` (resolved via

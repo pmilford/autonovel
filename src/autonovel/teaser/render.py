@@ -39,6 +39,14 @@ USER_AGENT = "autonovel/0.2 (https://github.com/pmilford/autonovel; teaser rende
 _EXT = {"image": "png", "video": "mp4"}
 _DEFAULT_HEIGHT = 480  # 480p dev default — watermarks + low res are fine for dev passes.
 
+# Terms appended to the negative prompt of a title / text-card shot so the
+# model renders a clean, TEXT-FREE plate (the title/card is burned in post —
+# models garble type; teaser-craft §4). Stops the hallucinated-title failure.
+_NO_TEXT_TERMS = (
+    "text", "letters", "words", "typography", "lettering",
+    "captions", "subtitles", "title card", "watermark", "signature",
+)
+
 
 @dataclass
 class RenderRequest:
@@ -65,6 +73,11 @@ class RenderRequest:
     # Distinct from reference_images (style/identity refs). Empty ⇒ pure
     # text-to-video.
     init_image: str = ""
+    # The shot's negative prompt (what to keep OUT of frame), folded into the
+    # prompt as a trailing "Negative prompt:" line so EVERY backend receives
+    # it — previously authored but never sent, which let title shots
+    # hallucinate legible type.
+    negative_prompt: str = ""
     # Structured scene info the offline `stub` keyframe draws so a static
     # first-pass review reads clearly — role, location, the spoken line, the
     # plot beat, the on-screen card. Label→value; review-only (real backends
@@ -78,7 +91,8 @@ class RenderRequest:
             "width": self.width, "height": self.height, "take": self.take,
             "provider": self.provider, "duration_s": self.duration_s,
             "model": self.model, "reference_images": list(self.reference_images),
-            "init_image": self.init_image, "card": dict(self.card),
+            "init_image": self.init_image, "negative_prompt": self.negative_prompt,
+            "card": dict(self.card),
         }
 
 
@@ -156,6 +170,19 @@ def build_request(
     if (appearance_override and shot.subject_appearance
             and shot.subject_appearance in prompt):
         prompt = prompt.replace(shot.subject_appearance, appearance_override)
+    # Negative prompt — fold it into the prompt as a trailing labelled line so
+    # every backend honours it (it was never sent before). A title shot, or
+    # any shot carrying a text_card, ALSO gets strong no-legible-type terms:
+    # the card text is burned in post (--burn-titles / an editor), never set
+    # by the model — this stops the "model hallucinates a wrong title" failure.
+    negative = (shot.negative_prompt or "").strip()
+    wants_text_free = shot.role == "title" or bool((shot.text_card or "").strip())
+    if wants_text_free:
+        for term in _NO_TEXT_TERMS:
+            if term not in negative.lower():
+                negative = f"{negative}, {term}" if negative else term
+    if negative:
+        prompt = f"{prompt}\nNegative prompt: {negative}"
     # Video gen: append the audio spec (dialogue + locked/aged voice + sfx +
     # ambience) so the model speaks the lines and lip-syncs (Phase 5.5/5.6).
     if kind == "video":
@@ -211,7 +238,7 @@ def build_request(
         prompt=prompt, seed=seed, width=width, height=height, take=take,
         provider=provider, duration_s=float(getattr(shot, "duration_s", 5.0) or 5.0),
         model=model, reference_images=tuple(reference_images),
-        init_image=init_image,
+        init_image=init_image, negative_prompt=negative,
         card={k: v for k, v in card.items() if v},
     )
 

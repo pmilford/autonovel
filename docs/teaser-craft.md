@@ -303,8 +303,20 @@ one camera move + a short clip; render text in the editor not the model;
 higher resolution; change one thing at a time; and a **negative prompt**
 written as content words — `blurry, distorted hands, extra limbs,
 watermark, text, subtitles, flicker, morphing`. **Never** write "no
-walls" / "don't show…" — the model reads the content words, so negation
-backfires.
+walls" / "don't show…" *inside the scene description* — the model reads the
+content words, so inline negation backfires; the negative belongs in its
+own labelled section, which `teaser-render` now appends automatically (it
+was previously authored but dropped).
+
+**Title cards never set type in the model.** A `role: title` (or any
+text-card) shot renders **text-free**: `teaser-render` auto-injects a
+no-legible-type negative (`text, letters, typography, title card, …`) so the
+model makes a clean plate, and the title is **burned in at assembly**
+(`teaser-assemble --burn-titles`) — this is the fix for the classic
+"model hallucinates a wrong/garbled title" failure. The vision critique's
+REGENERATE verdicts are re-rendered automatically on the free `stub`, and on
+a paid backend only with `teaser-render --auto-regenerate` (capped by
+`--max-regen`) so a re-render loop can't quietly run up a bill.
 
 ## 10. The commands
 

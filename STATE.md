@@ -1638,7 +1638,28 @@
   two-stage flow). Doc-sync: teaser.md, commands.md (row), STATE. `autonovel
   install` re-run. Regression gate: **Tier 1+2 1786 passed, 1 skipped.**
 
+- 2026-06-07 (render-side: text-free titles + sent negatives + spend-gated
+  auto-regenerate): additive. Root-cause for the "model hallucinated a wrong
+  title" run: the authored `negative_prompt` was **never sent** to any
+  backend. Fixed — `RenderRequest.negative_prompt` + `build_request` folds it
+  into the prompt as a trailing `Negative prompt:` line (all backends now
+  honour it); a `role: title` / text-card shot auto-gets `_NO_TEXT_TERMS`
+  (text/letters/typography/title card/…) so it renders TEXT-FREE (title
+  burned in at assembly). Render-side critique→regenerate loop (the analogue
+  of the script revise loop, but SPEND-GATED): `teaser-render` command body
+  auto-re-renders REGENERATE clips for free on `stub`, and on a paid backend
+  only with `--auto-regenerate` (bounded by `--max-regen`, default 3);
+  UPGRADE-TO-PAID is never auto-acted. New tests: `test_teaser_negative.py`
+  (6). No existing behaviour changed (no negative + non-title ⇒ prompt
+  unchanged). Doc-sync: teaser-render.md, teaser-craft.md (§9), commands.md
+  (row), STATE. `autonovel install` re-run. Regression gate: **Tier 1+2
+  1792 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1792
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +6 since the 1786 mark: render-side text-free titles + sent negatives +
+  auto-regenerate (6 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1786
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +1 since the 1785 mark: teaser orchestrator next-step → render (Stage 3
