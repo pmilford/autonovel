@@ -57,7 +57,12 @@ load-bearing — stop if it is missing (run `/autonovel:teaser` or
    entry per distinct `setting` — so a **place gets its own locked,
    period-correct plate** (the fix for the naïve "1591 stone Rialto"
    anachronism; declare a wooden-Rialto source instead). (Skip if it already
-   exists and `--init` was not passed.)
+   exists and `--init` was not passed.) **`--init --force` is
+   non-destructive:** every already-declared entry is preserved — locked/
+   approved status, source, appearance, constraints, voice + age ladders,
+   and `ref_path` survive (only each subject's `shots` list refreshes; new
+   subjects are added `pending`). Re-scaffolding never wipes hand-locked
+   plates.
 
 3. **Show the approval status.** `bash`:
    `autonovel mechanical teaser-refs books/{book}/teaser/teaser.json --format json`

@@ -1581,7 +1581,31 @@
   commands.md (doctor row), FUTURE-TODOS, STATE. Regression gate: **Tier 1+2
   1762 → 1767 passed, 1 skipped, 0 failed.**
 
+- 2026-06-07 (run-feedback fixes: refs data-loss + teaser next-step +
+  gate clarity): additive bug-fixes from a real Fugger run. (1) **Data-loss
+  bug:** `teaser-refs --init --force` rebuilt every subject as `pending`,
+  dropping hand-locked plates. `scaffold_from_teaser(preserve=…)` now does a
+  non-destructive merge — an already-declared subject is kept verbatim
+  (status/source/appearance/constraints/voice/voice_ages/appearance_ages/
+  ref_path), only `shots` refreshes, new subjects added pending, and orphan
+  locked subjects retained; the CLI loads the existing manifest on `--force`
+  and reports `Preserved N approved/locked`. (2) **Flow clarity:** teaser/
+  movie commands no longer show "draft chapter N+1" as the next step —
+  `lifecycle._teaser_next_step` maps each teaser command to the teaser-flow
+  next (treatment→teaser→critique→render→assemble), used by `_end` before
+  the chapter pipeline. (3) **Gate message:** the narrative-gate refusal now
+  names the regenerate fix (`shot-prompts --force`) and calls out a
+  totally-absent `spine` block (teaser.json predating the story pass). New
+  tests: `test_teaser_flow_fixes.py` (6). No existing behaviour changed
+  (preserve defaults None; non-teaser next-step unchanged). Doc-sync:
+  teaser-refs.md, commands.md, STATE. Regression gate: **Tier 1+2 1767 →
+  1773 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1773
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +6 since the 1767 mark: run-feedback fixes (refs --init --force preserve
+  + teaser-flow next-step + gate message → 6 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1767
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +5 since the 1762 mark: Phase 10 directory-nesting clarity (looks_doubled

@@ -129,7 +129,12 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
 
     lock.release(series.lock_file)
 
-    ns = _next_step_for(series, book) if book else None
+    # Teaser-family commands chain among themselves; everything else uses
+    # the chapter pipeline. This stops "draft chapter N+1" from showing as
+    # the next step during teaser/movie work (flow clarity, Phase 6+).
+    ns = None
+    if book:
+        ns = _teaser_next_step(command_name, book) or _next_step_for(series, book)
     if next_standard_step_override is not None:
         # Sweep commands writing a custom multi-line closer. Use
         # provided rationale, or fall back to the auto-computed one
@@ -454,6 +459,64 @@ def _substitute_placeholders(path: str, ctx: dict[str, str]) -> str | None:
         return _PATH_PLACEHOLDER.sub(repl, path)
     except KeyError:
         return None
+
+
+# Teaser/movie-mode commands chain among THEMSELVES, not into the chapter
+# pipeline — so after `teaser-render` the next step is `teaser-assemble`, not
+# "draft chapter N+1". Each maps to (next command template, rationale). The
+# `{book}` placeholder is filled with the active book. (Phase 6+ flow clarity.)
+_TEASER_NEXT: dict[str, tuple[str, str]] = {
+    "autonovel:treatment": (
+        "/autonovel:teaser --book {book} --length 180",
+        "Treatment written — build the teaser beat-sheet + shot prompts from it."),
+    "autonovel:teaser": (
+        "/autonovel:teaser-critique --book {book}",
+        "Beats + shots written — free pre-render check that the story spine is "
+        "complete (the render gate needs it) before spending anything."),
+    "autonovel:teaser-beats": (
+        "/autonovel:shot-prompts --book {book}",
+        "Beat-sheet written — turn the spine + beats into provider-ready shots."),
+    "autonovel:shot-prompts": (
+        "/autonovel:teaser-critique --book {book}",
+        "Shots written — re-check the story spine / dialogue / cards before render."),
+    "autonovel:teaser-critique": (
+        "/autonovel:teaser-render --book {book} --provider stub",
+        "Validate the whole render→assemble chain FREE (offline stub) before a "
+        "real backend; the narrative gate blocks a real render until the spine "
+        "is complete."),
+    "autonovel:teaser-refs": (
+        "/autonovel:teaser-render --book {book} --provider gemini --kind image --refs",
+        "References developed — render reference-conditioned keyframes, then "
+        "--from-keyframes for motion."),
+    "autonovel:teaser-render": (
+        "/autonovel:teaser-assemble --book {book}",
+        "Clips rendered to teaser/clips/ — stitch them into one teaser video."),
+    "autonovel:teaser-assemble": (
+        "/autonovel:teaser-assemble --book {book} --force",
+        "Cut assembled — review teaser/<title>_teaser_latest.mp4; re-cut by "
+        "editing teaser/cut_list.json (reorder/trim/transitions) and re-running."),
+    "autonovel:teaser-transitions": (
+        "/autonovel:teaser-assemble --book {book}",
+        "Transition candidates surfaced — apply the ones you like, then assemble."),
+    "autonovel:teaser-takes": (
+        "/autonovel:teaser-assemble --book {book}",
+        "Takes listed — promote one with teaser-take-pick, then assemble."),
+    "autonovel:teaser-take-pick": (
+        "/autonovel:teaser-assemble --book {book}",
+        "Take promoted — re-assemble to use it."),
+}
+
+
+def _teaser_next_step(command_name: str, book: str) -> object | None:
+    """Teaser-flow next step for a movie-mode command (else None so the
+    caller falls back to the chapter pipeline). Keeps the postamble from
+    suggesting "draft chapter N+1" in the middle of teaser work."""
+    entry = _TEASER_NEXT.get(command_name)
+    if entry is None:
+        return None
+    from .next_step import NextStep
+    cmd, rationale = entry
+    return NextStep(command=cmd.format(book=book), rationale=rationale)
 
 
 def _next_step_for(series: SeriesLayout, book: str) -> object:

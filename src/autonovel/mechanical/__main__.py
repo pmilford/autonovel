@@ -1200,15 +1200,27 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
         gate_fail = _crit.story_gate_failures(_crit.critique(teaser, _prov_g.get(provider)))
     gate_override = getattr(args, "skip_narrative_gate", False)
     if gate_fail and not gate_override and not getattr(args, "dry_run", False):
+        # A totally-absent spine means the teaser.json predates the Phase-6
+        # storytelling pass — the cleanest fix is to regenerate it.
+        no_spine = teaser.spine.is_empty()
         print("teaser-render: ⛔ narrative gate — this teaser has no story yet, so "
               "a real render would waste quota. Fix these for free, then re-run:",
               file=sys.stderr)
         for f in gate_fail:
             print(f"  - {f.code}: {f.message}", file=sys.stderr)
-        print("  Validate offline first with `--provider stub`, re-author with "
-              "/autonovel:shot-prompts, or override with --skip-narrative-gate.\n"
-              "  See /autonovel:teaser-critique and docs/teaser-craft.md §0.",
-              file=sys.stderr)
+        if no_spine:
+            print("  This teaser.json has NO `spine` block (it predates the story "
+                  "pass). Regenerate it: `/autonovel:shot-prompts --book <b> --force` "
+                  "(authors the spine + mines dialogue + writes cards; the old script "
+                  "is archived). Or paste the spine block from teaser/critique.md into "
+                  "teaser.json by hand.", file=sys.stderr)
+        else:
+            print("  Re-author with `/autonovel:shot-prompts --book <b> --force`, or "
+                  "hand-edit teaser.json (see teaser/critique.md for the exact text).",
+                  file=sys.stderr)
+        print("  Validate offline anytime with `--provider stub`; override with "
+              "--skip-narrative-gate. See /autonovel:teaser-critique + "
+              "docs/teaser-craft.md §0.", file=sys.stderr)
         return 3
     human = getattr(args, "format", "human") == "human"
     # Surface the key/manual status of the resolved provider up front so
@@ -1479,14 +1491,27 @@ def _cmd_teaser_refs(args: argparse.Namespace) -> int:
             print(f"teaser-refs: {manifest_path} exists — pass --force to overwrite.",
                   file=sys.stderr)
             return 2
+        # Non-destructive merge (data-loss fix): on --force, load the existing
+        # manifest and PRESERVE every declared/locked entry — a re-scaffold
+        # must never wipe hand-locked plates / approvals.
+        preserve = None
+        kept = 0
+        if manifest_path.exists():
+            try:
+                preserve = _rm.load(manifest_path)
+                kept = sum(1 for s in preserve.subjects if s.status in ("approved", "locked"))
+            except Exception:  # noqa: BLE001
+                preserve = None
         manifest = _rm.scaffold_from_teaser(
             teaser, base_dir=base, art_references_dir=art_dir,
-            include_locations=getattr(args, "with_locations", False))
+            include_locations=getattr(args, "with_locations", False),
+            preserve=preserve)
         _rm.dump(manifest, manifest_path)
         n_loc = sum(1 for s in manifest.subjects if s.kind == "location")
         extra = f" (incl. {n_loc} location(s))" if n_loc else ""
-        print(f"Scaffolded {manifest_path} — {len(manifest.subjects)} subject(s){extra}. "
-              f"Edit each `source`/`source_ref`/`constraints`, then approve. "
+        kept_msg = (f" Preserved {kept} approved/locked entry(ies)." if kept else "")
+        print(f"Scaffolded {manifest_path} — {len(manifest.subjects)} subject(s){extra}."
+              f"{kept_msg} Edit each `source`/`source_ref`/`constraints`, then approve. "
               f"For period places, set a period-correct `source_ref` to dodge "
               f"anachronisms (e.g. the wooden Rialto, not the 1591 stone bridge).")
         return 0

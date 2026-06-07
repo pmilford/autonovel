@@ -259,18 +259,44 @@ def scaffold_from_teaser(
     base_dir: Path | None = None,
     art_references_dir: Path | None = None,
     include_locations: bool = False,
+    preserve: "RefManifest | None" = None,
 ) -> RefManifest:
     """Build a starter manifest from the teaser's auto reference plan —
     one `pending` subject each, appearance pre-filled, source guessed
     (`local` if a plate already exists, else `generate`). With
     ``include_locations`` (Phase 7), distinct settings are scaffolded as
     `kind: location` subjects too, so a period place gets its own locked,
-    anachronism-guarded plate."""
+    anachronism-guarded plate.
+
+    **Non-destructive merge (data-loss fix).** When ``preserve`` is given
+    (the existing ``refs.yaml`` on a re-scaffold / ``--init --force``), an
+    already-declared subject is **kept verbatim** — its source, locked
+    appearance/constraints, approval ``status``, voice + age ladders, and
+    ``ref_path`` survive; only its ``shots`` list (and any not-yet-set
+    fields) refresh from the new plan. Subjects that exist in ``preserve``
+    but are no longer in the teaser are also retained, so a hand-locked
+    plate is never silently dropped because a shot was renamed.
+    """
     plan = _refs.plan_refs(teaser, base_dir=base_dir,
                            art_references_dir=art_references_dir,
                            include_locations=include_locations)
     subjects: list[CharacterRef] = []
+    used_slugs: set[str] = set()
     for e in plan.entries:
+        used_slugs.add(_refs.slug(e.subject))
+        prior = preserve.get(e.subject) if preserve else None
+        if prior is not None:
+            # Keep the declared/locked entry; just refresh the shot mapping
+            # (and backfill an appearance/ref_path if they were never set).
+            prior.shots = list(e.shots)
+            if not prior.appearance:
+                prior.appearance = e.appearance
+            if not prior.ref_path:
+                prior.ref_path = e.ref_path
+            if prior.kind == "character" and e.kind != "character":
+                prior.kind = e.kind
+            subjects.append(prior)
+            continue
         source = "local" if e.exists else "generate"
         source_ref = e.suggested_ref or "" if e.exists else ""
         subjects.append(CharacterRef(
@@ -283,6 +309,12 @@ def scaffold_from_teaser(
             kind=e.kind,
             shots=list(e.shots),
         ))
+    # Retain declared subjects no longer in the plan (e.g. a renamed shot) so
+    # locked work is never lost.
+    if preserve is not None:
+        for cr in preserve.subjects:
+            if _refs.slug(cr.subject) not in used_slugs:
+                subjects.append(cr)
     return RefManifest(subjects=subjects)
 
 
