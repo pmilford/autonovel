@@ -32,6 +32,8 @@ Subcommands:
   teaser-render <teaser.json>      Render clips via the free no-key adapter (Pollinations).
   teaser-cut-list <teaser.json>    Build an editable cut_list.json from teaser + clips on disk.
   teaser-transitions <teaser.json> Suggest scene-transition points (advisory; structured signals).
+  teaser-takes <teaser.json>       List archived render takes per shot (versioned takes).
+  teaser-take-pick <teaser.json>   Promote an archived take back to the latest pointer.
   teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
 
 All subcommands print a single JSON object to stdout. Commands invoke
@@ -1184,21 +1186,88 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
     )
     ok = [r for r in results if r.ok]
     bad = [r for r in results if not r.ok]
+    # Versioned takes (Phase 5.8): archive each successful clip into
+    # <out_dir>/takes/ under a fresh take number so re-renders never
+    # destroy an earlier one. The primary shot_<id>.<ext> stays "latest".
+    archived = 0
+    if ok and not getattr(args, "no_archive", False):
+        from ..teaser import takes as _takes
+        takes_dir = out_dir / "takes"
+        for r in ok:
+            try:
+                _takes.archive_take(Path(r.out_path), takes_dir)
+                archived += 1
+            except Exception:  # noqa: BLE001
+                pass  # archiving is best-effort; never fail a render over it
     if human:
         for r in results:
             mark = "✅" if r.ok else "❌"
             tail = f"{r.bytes} bytes" if r.ok else r.error
             print(f"  {mark} {r.shot_id} take{r.take} → {r.out_path} ({tail})")
         print(f"\n{len(ok)} rendered, {len(bad)} failed → {out_dir}/")
+        if archived:
+            print(f"  archived {archived} take(s) → {out_dir}/takes/ "
+                  f"(earlier renders kept; promote one with teaser-take-pick)")
         if bad:
             print("Re-run teaser-render for the failed shots (free); then "
                   "critique the clips in /autonovel:teaser-render.")
     else:
         json.dump({"dry_run": False, "rendered": len(ok), "failed": len(bad),
-                   "out_dir": str(out_dir),
+                   "archived": archived, "out_dir": str(out_dir),
                    "results": [r.to_dict() for r in results]},
                   sys.stdout, indent=2)
         sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_teaser_takes(args: argparse.Namespace) -> int:
+    """List the archived takes per shot (Phase 5.8)."""
+    from ..teaser import takes as _takes
+    base = Path(args.path).resolve().parent
+    clips_dir = Path(args.clips_dir) if getattr(args, "clips_dir", None) else base / "clips"
+    takes_dir = clips_dir / "takes"
+    listing = _takes.list_takes(takes_dir)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"takes_dir": str(takes_dir),
+                   "shots": {sid: [t.to_dict() for t in ts]
+                             for sid, ts in listing.items()}},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    if not listing:
+        print(f"No archived takes yet in {takes_dir}/ "
+              f"(render some: /autonovel:teaser-render).")
+        return 0
+    print(f"Archived takes — {sum(len(v) for v in listing.values())} across "
+          f"{len(listing)} shot(s):")
+    for sid in sorted(listing):
+        latest = clips_dir / f"shot_{sid}.png"
+        takes = listing[sid]
+        print(f"  {sid}: {len(takes)} take(s) — "
+              + ", ".join(f"take{t.take} ({t.bytes}b)" for t in takes))
+    print("\nPromote an earlier take to 'latest':\n"
+          "  autonovel mechanical teaser-take-pick <teaser.json> --shot <id> --take <N>")
+    return 0
+
+
+def _cmd_teaser_take_pick(args: argparse.Namespace) -> int:
+    """Promote an archived take back to the latest pointer (Phase 5.8)."""
+    from ..teaser import takes as _takes
+    base = Path(args.path).resolve().parent
+    clips_dir = Path(args.clips_dir) if getattr(args, "clips_dir", None) else base / "clips"
+    takes_dir = clips_dir / "takes"
+    try:
+        dest = _takes.promote_take(takes_dir, clips_dir, args.shot, args.take)
+    except FileNotFoundError as exc:
+        print(f"teaser-take-pick: {exc}", file=sys.stderr)
+        return 2
+    if getattr(args, "format", "human") == "json":
+        json.dump({"shot": args.shot, "take": args.take, "latest": str(dest)},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        print(f"✅ shot {args.shot}: take {args.take} is now latest → {dest}\n"
+              f"   Re-assemble to use it: /autonovel:teaser-assemble.")
     return 0
 
 
@@ -1392,19 +1461,34 @@ def _cmd_teaser_ffmpeg_cmd(args: argparse.Namespace) -> int:
         print(f"teaser-ffmpeg-cmd: cannot read {args.path}: {exc}", file=sys.stderr)
         return 2
     base = Path(args.path).resolve().parent
-    out_path = (Path(args.out) if getattr(args, "out", None)
-                else base / f"{_slugify_title(cut.title)}_teaser.mp4")
+    # Versioned output (Phase 5.8): timestamp the mp4 so a re-assemble never
+    # clobbers a cut you preferred; the command body copies it to `latest`.
+    latest = None
+    slug = f"{_slugify_title(cut.title)}_teaser"
+    if getattr(args, "out", None):
+        out_path = Path(args.out)
+    elif getattr(args, "versioned", False):
+        from .typeset import output_filename, latest_filename
+        out_path = base / output_filename(slug, "mp4")
+        latest = str(base / latest_filename(slug, "mp4"))
+    else:
+        out_path = base / f"{slug}.mp4"
     try:
         cmd = _asm.ffmpeg_command_str(cut, out_path)
     except ValueError as exc:
         print(f"teaser-ffmpeg-cmd: {exc}", file=sys.stderr)
         return 2
     if getattr(args, "format", "human") == "json":
-        json.dump({"command": cmd, "out": str(out_path),
-                   "entries": len(cut.entries)}, sys.stdout, indent=2)
+        payload = {"command": cmd, "out": str(out_path), "entries": len(cut.entries)}
+        if latest:
+            payload["latest"] = latest
+        json.dump(payload, sys.stdout, indent=2)
         sys.stdout.write("\n")
     else:
         print(cmd)
+        if latest:
+            import shlex as _shlex
+            print(f"# then: cp {_shlex.quote(str(out_path))} {_shlex.quote(latest)}")
     return 0
 
 
@@ -1828,6 +1912,9 @@ def main(argv: list[str] | None = None) -> int:
                           "interval). Backoff on 429/503 is automatic.")
     tre.add_argument("--max-retries", dest="max_retries", type=int, default=4,
                      help="Max retries on transient 429/503 (default 4).")
+    tre.add_argument("--no-archive", dest="no_archive", action="store_true",
+                     help="Don't archive each render into clips/takes/ "
+                          "(default: keep every take so an earlier one survives).")
     tre.add_argument("--dry-run", dest="dry_run", action="store_true",
                      help="Build + print the request plan; download nothing.")
     tre.add_argument("--format", choices=["json", "human"], default="human")
@@ -1864,6 +1951,25 @@ def main(argv: list[str] | None = None) -> int:
     tcl.add_argument("--format", choices=["json", "human"], default="human")
     tcl.set_defaults(func=_cmd_teaser_cut_list)
 
+    ttk = sub.add_parser("teaser-takes",
+                         help="List archived render takes per shot (Phase 5.8).")
+    ttk.add_argument("path", help="Path to teaser.json (clips dir = <dir>/clips).")
+    ttk.add_argument("--clips-dir", dest="clips_dir", default=None,
+                     help="Clips dir (default: <teaser.json dir>/clips).")
+    ttk.add_argument("--format", choices=["json", "human"], default="human")
+    ttk.set_defaults(func=_cmd_teaser_takes)
+
+    tkp = sub.add_parser("teaser-take-pick",
+                         help="Promote an archived take back to the latest "
+                              "pointer so the next assemble uses it (Phase 5.8).")
+    tkp.add_argument("path", help="Path to teaser.json (clips dir = <dir>/clips).")
+    tkp.add_argument("--shot", required=True, help="Shot id to promote a take for.")
+    tkp.add_argument("--take", required=True, type=int, help="Take number to promote.")
+    tkp.add_argument("--clips-dir", dest="clips_dir", default=None,
+                     help="Clips dir (default: <teaser.json dir>/clips).")
+    tkp.add_argument("--format", choices=["json", "human"], default="human")
+    tkp.set_defaults(func=_cmd_teaser_take_pick)
+
     ttr = sub.add_parser("teaser-transitions",
                          help="Suggest where non-cut scene transitions are worth "
                               "considering (time jumps, location changes, pace shifts, "
@@ -1880,6 +1986,10 @@ def main(argv: list[str] | None = None) -> int:
                          help="Print the ffmpeg command that stitches a cut_list.json into "
                               "one mp4 (the command body runs it via bash).")
     tfc.add_argument("path", help="Path to cut_list.json.")
+    tfc.add_argument("--versioned", action="store_true",
+                     help="Timestamp the output (`<title>_teaser_<UTC>.mp4`) and "
+                          "report a `latest` pointer the command body copies to, so "
+                          "a re-assemble never clobbers an earlier cut (Phase 5.8).")
     tfc.add_argument("--out", default=None,
                      help="Output mp4 (default: <dir>/<title>_teaser.mp4).")
     tfc.add_argument("--format", choices=["json", "human"], default="human")

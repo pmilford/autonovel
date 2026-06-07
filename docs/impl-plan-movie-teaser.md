@@ -100,8 +100,14 @@
   structured signals (date jumps, location changes, pace shifts) — the LLM
   places them. `--no-transitions` opts out. `dissolve`→fade-in for now
   (true cross-dissolve = xfade, 5.7b). 11 tests.
+- **Phase 5.8** — **versioned takes** (`teaser/takes.py`): each render
+  archived to `clips/takes/shot_<id>_take<N>.<ext>` (monotonic, never
+  overwritten); `shot_<id>.<ext>` stays latest. `teaser-takes` lists,
+  `teaser-take-pick` promotes an earlier take. `teaser-ffmpeg-cmd
+  --versioned` timestamps the mp4 + `_latest` pointer. `--no-archive`
+  opts out. 8 tests.
 
-**Baseline now:** Tier 1+2 = **1687 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1696 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

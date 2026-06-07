@@ -85,6 +85,12 @@ It is deliberately **thin** (PRD §23.2):
   - **Stateless.** Clips land in `books/{book}/teaser/clips/` and that's
     it — no state file, no manifest the rest of the pipeline depends on.
     Re-running just re-downloads.
+  - **Versioned takes (5.8).** Every render is also archived to
+    `books/{book}/teaser/clips/takes/shot_<id>_take<N>.<ext>` (monotonic,
+    never overwritten); `shot_<id>.<ext>` stays the "latest" pointer the
+    cut-list/assemble read. So a re-render never loses an earlier take —
+    list them with `teaser-takes` and promote one with `teaser-take-pick`.
+    `--no-archive` opts out.
   - **No assembly.** This stops at per-shot clip files. Stitching them
     into one video is a separate step (`/autonovel:teaser-assemble`).
   - **`--dry-run`** prints the exact request plan **and reports whether a
@@ -110,8 +116,9 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    image for `stub`/`pollinations`, video for the video backends),
    `--takes <n>` (default 1; over-generate and pick best), `--shot <id>`
    (render just one), `--height <px>` (default 480), `--token <key>`,
-   `--delay <s>` (override the polite inter-request interval), `--dry-run`.
-   Confirm the book exists in `project.yaml`.
+   `--delay <s>` (override the polite inter-request interval),
+   `--no-archive` (don't keep prior takes), `--dry-run`. Confirm the book
+   exists in `project.yaml`.
 
 2. **Validate the pipeline FREE first (unless the user named a provider).**
    If no `--provider` was passed and `books/{book}/teaser/clips/` has no

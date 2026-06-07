@@ -1423,7 +1423,29 @@
   subscription; environment/billing, not a code bug.) Tier 1+2 1687 →
   1688.
 
+- 2026-06-06 (movie-teaser Phase 5.8: versioned takes): additive. New
+  `src/autonovel/teaser/takes.py` — `archive_take` copies each render into
+  `clips/takes/shot_<id>_take<N>.<ext>` (monotonic `next_take_number`,
+  never overwrites) while `shot_<id>.<ext>` stays the latest pointer;
+  `list_takes` + `promote_take` (promote an earlier take back to latest);
+  `parse_clip_name`. `teaser-render` archives each ok clip by default
+  (`--no-archive` opts out; JSON gains `archived`). New CLIs `teaser-takes`
+  (list) + `teaser-take-pick --shot --take` (promote). `teaser-ffmpeg-cmd
+  --versioned` timestamps the mp4 (reuses typeset `output_filename`/
+  `latest_filename`) + returns a `latest` the command body copies to;
+  teaser-assemble body uses it. New tests: `test_teaser_phase58.py` (8).
+  Doc-sync: teaser-render.md, teaser-assemble.md, commands.md (render +
+  assemble rows + 3 mechanical rows), FUTURE-TODOS (closed), STATE,
+  impl-plan. No existing-module behaviour changed (render still writes the
+  same latest file; archiving is an added copy). Regression gate: **Tier
+  1+2 1688 → 1696 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1696
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +8 since the 1688 mark: movie-teaser Phase 5.8 (versioned takes:
+  takes.py + teaser-takes/teaser-take-pick + --versioned mp4 → 8 tests).
+  Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1688
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +1 since the 1687 mark: Veo durationSeconds-as-int regression guard.

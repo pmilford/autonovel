@@ -107,13 +107,18 @@ is reused when present (so your hand-edits survive); regenerate with
    shifts. Skip silently if there are no meaningful candidates.
 
 4. **Plan the ffmpeg command.** `bash`:
-   `autonovel mechanical teaser-ffmpeg-cmd books/{book}/teaser/cut_list.json --format json`
-   Read the `command` (a shell-ready ffmpeg invocation) and `out` (the
-   target mp4, e.g. `books/{book}/teaser/<title>_teaser.mp4`).
+   `autonovel mechanical teaser-ffmpeg-cmd books/{book}/teaser/cut_list.json --versioned --format json`
+   Read the `command` (a shell-ready ffmpeg invocation), `out` (the
+   timestamped target mp4, e.g.
+   `books/{book}/teaser/<title>_teaser_<UTC>.mp4`), and `latest` (the
+   `<title>_teaser_latest.mp4` pointer). `--versioned` keeps every cut so a
+   re-assemble never clobbers one you preferred.
 
-5. **Assemble.** `bash`: run the `command` from step 4 verbatim. Confirm
-   the output mp4 exists and report its size/duration. If ffmpeg errors,
-   surface the tail of its stderr — do not retry blindly.
+5. **Assemble.** `bash`: run the `command` from step 4 verbatim, then
+   `cp <out> <latest>` so `<title>_teaser_latest.mp4` always points at the
+   newest cut (prior timestamped cuts are kept). Confirm the output mp4
+   exists and report its size/duration. If ffmpeg errors, surface the tail
+   of its stderr — do not retry blindly.
 
 6. **Viewer-panel cut critique.** Review the assembled cut against
    `docs/teaser-craft.md` §8 (the shape of the 60–180 s):
