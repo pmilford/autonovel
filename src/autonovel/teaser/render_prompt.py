@@ -203,6 +203,12 @@ def render_audio_for_prompt(
         out.append(f"Sound effects: {sfx}.")
     if amb:
         out.append(f"Ambience: {amb}.")
+    # Per-shot music cue (Phase 9): a one-off dramatic stinger only. Emitted
+    # ONLY on the `native` path — on the `bed`/`none` paths a single
+    # teaser-wide bed carries the music, so the model must add no score.
+    music = (shot.audio.get("music") or "").strip()
+    if score == "native" and music:
+        out.append(f"Music: {music}.")
     if score in ("bed", "none"):
         out.append("No musical score or background music — diegetic/source "
                    "sound only (dialogue, sfx, ambience).")

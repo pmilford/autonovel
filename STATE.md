@@ -1549,7 +1549,31 @@
   rows), FUTURE-TODOS, STATE, impl-plan. `autonovel install` re-run.
   Regression gate: **Tier 1+2 1744 → 1753 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 9: music-generation backend): additive.
+  New `teaser/music.py` — generate one cohesive trailer bed from a prompt
+  (default = the teaser spine's `score_direction`, the Phase-6 tie-in):
+  `generate_bed(provider=stub|musicgen|elevenlabs)`; `stub` writes a valid
+  stereo silent WAV offline (stdlib `wave`) so the generate→assemble chain
+  works for $0, `musicgen` (HF Inference `facebook/musicgen-*`, free
+  `HF_TOKEN`) + `elevenlabs` (`ELEVENLABS_API_KEY`) POST via the injectable
+  client seam; reuses backends' `.env` key resolution + typed `RenderError`.
+  `teaser-music <teaser.json>` CLI writes a versioned
+  `teaser/music/<title>_bed_<UTC>.<ext>` + `_latest`, `--dry-run` reports
+  key status; fed to `teaser-assemble --audio`. Added the per-shot
+  `audio.music` prompt line in `render_audio_for_prompt` — emitted ONLY on
+  `--score native` (one-off cues; the single bed carries music on bed/none).
+  Additive: stub needs no key; no existing behaviour changed. New tests:
+  `test_teaser_phase9.py` (9). Doc-sync: teaser-assemble.md (music section),
+  teaser-render-providers.md, teaser-craft.md (§0), commands.md, FUTURE-TODOS,
+  STATE, impl-plan. `autonovel install` re-run. Regression gate: **Tier 1+2
+  1753 → 1762 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1762
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +9 since the 1753 mark: movie-teaser Phase 9 (music-generation backend:
+  stub silent-WAV + musicgen/elevenlabs + audio.music line → 9 tests).
+  Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1753
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +9 since the 1744 mark: movie-teaser Phase 8 (mixed assembly + burn-in

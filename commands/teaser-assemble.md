@@ -64,11 +64,16 @@ dialogue** by default (sidechain compression) instead of replacing it.
 clip audio, so a bed is simply the track. If your video clips are silent
 (e.g. magichour), pass `--no-clip-audio` so a bed becomes the track.
 
-**Music / score (Phase 5.9).** A trailer wants *one continuous* score.
+**Music / score (Phase 5.9 + 9).** A trailer wants *one continuous* score.
 Two paths: (a) render with `teaser-render --score bed`, then supply one
 music file here (`--audio track.mp3`) — it's ducked under the dialogue and
-carries the whole teaser (the pro-trailer path; `track.mp3` is just a
-royalty-free/your-own file, not another API). (b) render with `--score
+carries the whole teaser (the pro-trailer path). The bed can be your own
+royalty-free file **or generated** with `bash`: `autonovel mechanical
+teaser-music books/{book}/teaser/teaser.json [--provider stub|musicgen|
+elevenlabs] [--duration <s>]` — it scores from the teaser spine's
+`score_direction` and writes a versioned `teaser/music/<title>_bed_*.{wav,
+flac,mp3}` (the `stub` provider is an offline silent WAV to rehearse the
+chain for $0); pass that path to `--audio`. (b) render with `--score
 native` (the model scores each clip) — the music won't flow across cuts,
 so pass `--audio-seam-fade 0.2` to fade each clip's audio in/out at the
 cuts so it doesn't *pop*. (A true overlapping cross-fade is the deferred

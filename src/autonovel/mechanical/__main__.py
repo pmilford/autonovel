@@ -34,6 +34,7 @@ Subcommands:
   teaser-transitions <teaser.json> Suggest scene-transition points (advisory; structured signals).
   teaser-takes <teaser.json>       List archived render takes per shot (versioned takes).
   teaser-take-pick <teaser.json>   Promote an archived take back to the latest pointer.
+  teaser-music <teaser.json>       Generate a cohesive music bed from a prompt (Phase 9).
   teaser-archive-script <file>     Timestamp-archive a script before a --force re-run (Phase 6).
   teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
 
@@ -1357,6 +1358,62 @@ def _cmd_teaser_archive_script(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_music(args: argparse.Namespace) -> int:
+    """Generate one cohesive music bed for the teaser (Phase 9).
+
+    Defaults the prompt to the teaser spine's `score_direction`; writes a
+    versioned, never-overwritten file under `teaser/music/` (the `stub`
+    provider makes a silent WAV offline so the chain works for $0). Feed the
+    result to `teaser-assemble --audio <path>`."""
+    from ..teaser import shots as _shots, music as _music
+    from ..teaser.backends import RenderError as _RErr
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-music: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    base = Path(args.path).resolve().parent
+    provider = getattr(args, "provider", "stub") or "stub"
+    prompt = (getattr(args, "prompt", None)
+              or (teaser.spine.score_direction or "").strip()
+              or "cinematic trailer score, single building cue, no vocals")
+    music_dir = (Path(args.out_dir) if getattr(args, "out_dir", None)
+                 else base / "music")
+    from .typeset import output_filename, latest_filename
+    ext = _music.output_ext(provider)
+    slug = f"{_slugify_title(teaser.title)}_bed"
+    out = music_dir / output_filename(slug, ext)
+    latest = music_dir / latest_filename(slug, ext)
+    if getattr(args, "dry_run", False):
+        need = _music.needs_key(provider)
+        key = _music.music_key(provider, token=getattr(args, "token", None)) if need else None
+        json.dump({"dry_run": True, "provider": provider, "prompt": prompt,
+                   "needs_key": need, "key_present": bool(key),
+                   "out": str(out), "duration_s": float(args.duration)},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    try:
+        path = _music.generate_bed(
+            prompt, out, provider=provider, duration_s=float(args.duration),
+            token=getattr(args, "token", None), model=getattr(args, "model", None))
+    except _RErr as exc:
+        print(f"teaser-music: {exc}", file=sys.stderr)
+        return 2
+    import shutil as _sh
+    _sh.copy2(path, latest)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"out": str(path), "latest": str(latest), "provider": provider,
+                   "prompt": prompt}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        print(f"🎵 Wrote {path} (+ {latest.name})\n"
+              f"   prompt: {prompt}\n"
+              f"   Lay it under the cut: /autonovel:teaser-assemble --book <b> "
+              f"--audio {path}")
+    return 0
+
+
 def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
     from ..teaser import shots as _shots, refs as _refs
     try:
@@ -2101,6 +2158,26 @@ def main(argv: list[str] | None = None) -> int:
                      help="Clips dir (default: <teaser.json dir>/clips).")
     tkp.add_argument("--format", choices=["json", "human"], default="human")
     tkp.set_defaults(func=_cmd_teaser_take_pick)
+
+    tmu = sub.add_parser("teaser-music",
+                         help="Generate one cohesive music bed from a prompt "
+                              "(default: the spine's score_direction); stub = "
+                              "offline silent WAV (Phase 9).")
+    tmu.add_argument("path", help="Path to teaser.json.")
+    tmu.add_argument("--provider", choices=["stub", "musicgen", "elevenlabs"],
+                     default="stub", help="Music backend (default stub = offline).")
+    tmu.add_argument("--prompt", default=None,
+                     help="Music prompt (default: teaser spine score_direction).")
+    tmu.add_argument("--duration", type=float, default=30.0,
+                     help="Bed length in seconds (default 30).")
+    tmu.add_argument("--out-dir", dest="out_dir", default=None,
+                     help="Output dir (default: <teaser dir>/music).")
+    tmu.add_argument("--model", default=None, help="Optional backend model hint.")
+    tmu.add_argument("--token", default=None, help="Explicit API key (wins over env/.env).")
+    tmu.add_argument("--dry-run", dest="dry_run", action="store_true",
+                     help="Show the plan + key status; generate nothing.")
+    tmu.add_argument("--format", choices=["json", "human"], default="human")
+    tmu.set_defaults(func=_cmd_teaser_music)
 
     tas = sub.add_parser("teaser-archive-script",
                          help="Timestamp-archive a teaser script (beats.md / "

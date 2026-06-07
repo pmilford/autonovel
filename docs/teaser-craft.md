@@ -40,7 +40,10 @@ beats actually answer it. The six spine fields (Phase 6 best practices):
   escalation tightens, button breathes.
 - **Score direction (bp 8)** — the single building musical cue the whole
   cut rides (real trailers ride *one* score, not per-shot music; see §7 and
-  `teaser-render --score`).
+  `teaser-render --score`). It doubles as the **music-bed prompt**:
+  `teaser-music` scores the bed from this line (`--provider stub` for an
+  offline $0 placeholder, `musicgen`/`elevenlabs` for real audio), and
+  `teaser-assemble --audio` ducks it under the dialogue.
 - **Genre/tone (bp 9)** — what *kind* of story this is. The **hook must
   telegraph the genre in the first ~10 s** — a viewer should know they're
   watching a historical thriller (or a gothic romance, …) before they know

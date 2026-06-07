@@ -152,7 +152,15 @@
   + `CutList.burn_titles`/`font_file`. 9 tests. Remaining: true
   cross-dissolve (xfade overlap, 5.7b).
 
-**Baseline now:** Tier 1+2 = **1753 passed, 1 skipped, 0 failed**
+- **Phase 9** — **music-generation backend** (`teaser/music.py`): generate
+  one cohesive bed from a prompt (default = spine `score_direction`) —
+  `stub` (offline silent WAV, $0), `musicgen` (HF Inference, free
+  `HF_TOKEN`), `elevenlabs`. `teaser-music` CLI writes a versioned
+  `teaser/music/<title>_bed_<UTC>.<ext>` → fed to `teaser-assemble --audio`.
+  Added the per-shot `audio.music` prompt line (native-score path only).
+  9 tests. Remaining: auto-duration the bed to the cut length.
+
+**Baseline now:** Tier 1+2 = **1762 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

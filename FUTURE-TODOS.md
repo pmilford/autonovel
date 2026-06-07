@@ -138,11 +138,18 @@ to start.
   clips with cumulative offsets + audio acrossfade); `dissolve` currently
   degrades to a fade-in.
 
-- **Music GENERATION (not just a bed).** Today music is a user-supplied
-  `--audio` file, ducked under dialogue (5.4). There's no music-*generator*
-  backend. **Action:** add a free/cheap music backend (e.g. a text-to-music
-  API) so a teaser can score itself from a prompt; feed the result as the
-  bed. Until then, document that the user brings the music file.
+- ~~**Music GENERATION (not just a bed).**~~ **Phase 9 shipped 2026-06-06.**
+  New `teaser/music.py` + `teaser-music` CLI generates one cohesive bed from
+  a prompt (default = the spine's `score_direction`, tying into Phase 6):
+  `stub` (offline silent WAV via stdlib `wave` — $0 chain test), `musicgen`
+  (HF Inference, free `HF_TOKEN`), `elevenlabs` (`ELEVENLABS_API_KEY`),
+  reusing the backends key-resolution + injectable-client seam + typed
+  `RenderError`. Versioned output `teaser/music/<title>_bed_<UTC>.<ext>` +
+  `_latest`. Also added the per-shot `audio.music` prompt line (emitted only
+  on the `--score native` path — one-off cues; the bed carries the music on
+  the `bed`/`none` paths). 9 tests (test_teaser_phase9). Tier 1+2 1753 →
+  1762. Wired into teaser-assemble's music section + providers doc.
+  **Remaining:** auto-duration the bed to the cut length; more providers.
 
 - **Series/book directory nesting is confusing (clean up soon).**
   Reported 2026-06-06. On the Fugger book the clips land at

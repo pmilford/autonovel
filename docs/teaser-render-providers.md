@@ -162,8 +162,14 @@ Where each piece is **specified** and **generated**:
     one-time AI export) — **not another API/key/sync service**; ffmpeg
     lays it across the whole timeline in one pass.
   - `none` — no music.
-  A prompt-driven **music generator** backend (so the bed scores itself)
-  is a FUTURE-TODO; not needed for flow today.
+  A prompt-driven **music generator** (so the bed scores itself) shipped in
+  Phase 9: `autonovel mechanical teaser-music <teaser.json> [--provider
+  stub|musicgen|elevenlabs] [--prompt …] [--duration …]` writes a versioned
+  bed under `teaser/music/` (default prompt = the spine's `score_direction`).
+  `stub` makes a silent WAV offline (test the chain for $0); `musicgen`
+  (Hugging Face Inference, free `HF_TOKEN`) and `elevenlabs`
+  (`ELEVENLABS_API_KEY`) generate real audio. Feed the result to
+  `teaser-assemble --audio <bed>` for the `--score bed` path.
 
 ### Provider duration quirks
 - **Veo** accepts only a **fixed** set of clip lengths (**4 / 6 / 8s**);
