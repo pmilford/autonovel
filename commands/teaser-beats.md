@@ -99,19 +99,30 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
      mounting dread → defiant hope."* The beats should *move* along it.
    - **Score direction** (bp 8): one line on the musical spine the whole
      cut rides (a single building cue, not per-shot music).
+   - **Genre/tone** (bp 9): name what *kind* of story this is (historical
+     thriller, gothic romance, …) so the **hook telegraphs it in the first
+     ~10 s** — the viewer should know the genre before they know the plot.
 
-6. **Select the beats** on the teaser arc so they *serve the spine*,
-   applying `docs/teaser-craft.md` craft:
-   - **hook** (1 beat): the single most arresting image or the dramatic
-     question, made visible. Intrigue, don't explain.
-   - **escalation** (most beats): a **rising stakes ladder** — each beat's
-     cost/danger/irreversibility exceeds the one before (not a montage of
-     equals); each a visible turn, not exposition.
-   - **title** (1 beat): where the title card lands (~2/3 in).
-   - **button** (1 beat): a final beat AFTER the title that deepens the
-     question. **Withhold the ending** — for `--audience`-style optimism
-     (X-Prize) you may reveal the *vision* but never the *resolution*.
-   Keep to ~one protagonist face (cast discipline, teaser-craft §7.2).
+6. **Select the beats** on the teaser arc so they *serve the spine*, in the
+   strict **4-act order** (bp 2), applying `docs/teaser-craft.md` craft:
+   - **hook** (EXACTLY one, FIRST beat): the single most arresting image or
+     the dramatic question, made visible — and it must signal the **genre**
+     (bp 9). Intrigue, don't explain.
+   - **escalation** (most beats): a **rising stakes ladder** (bp 3) — each
+     beat's cost/danger/irreversibility exceeds the one before (not a
+     montage of equals); each a visible turn, not exposition. Order them so
+     the stakes only rise.
+   - **title** (1 beat): where the title card lands (~2/3 in, after the
+     escalation, before the button).
+   - **button** (1 beat, LAST): a final beat AFTER the title that deepens
+     the question. **Withhold the ending** (bp 7) — for `--audience`-style
+     optimism (X-Prize) you may reveal the *vision* but never the
+     *resolution*.
+   **Restraint** (bp 10): cut any candidate beat that is merely "the
+   character standing where/when they are" — keep only beats that imply a
+   larger world or turn the question. **One hero face** (bp 11): build the
+   teaser around ONE protagonist's stakes; ≤3 named faces total, the rest
+   silhouettes/crowd (cast discipline, teaser-craft §7.2).
 
 7. **Write `books/{book}/teaser/beats.md`** in this shape (hand-editable;
    shot-prompts reads back the spine AND the beats):
@@ -133,14 +144,15 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    - **Opposing force:** {what stands in the way}
    - **Emotional arc:** {start tone → … → end tone}
    - **Score direction:** {the one building musical cue}
+   - **Genre:** {what kind of story — the hook must telegraph it}
 
    ## B01 — hook
    *Source:* {outline beat / eval peak / chapter N}
    *Advances:* {how this beat touches the dramatic question}
-   {One-line beat note: the visible moment + why it hooks.}
+   {One-line beat note: the visible moment + why it hooks + the genre it signals.}
 
    ## B02 — escalation
-   *Stakes:* {what's now at risk — higher than B01}
+   *Stakes:* {what's now at risk — strictly higher than B01}
    ...
 
    ## B{n} — button
@@ -163,12 +175,13 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
 <acceptance>
 - `books/{book}/teaser/beats.md` exists, opens with a
   `# ... Teaser beat-sheet` heading, carries a `## Spine` block (dramatic
-  question, logline, want, opposing force, emotional arc, score direction —
-  all non-empty), and lists beats with `## B<NN> — <role>` headings where
-  role ∈ {hook, escalation, title, button}.
-- Beat count is within the range printed by `teaser-plan` (≥6, ≤20),
-  with exactly one `hook` and at least one `button`. Each escalation beat
-  raises the stakes over the prior beat (a ladder, not equals).
+  question, logline, want, opposing force, emotional arc, score direction,
+  **genre** — all non-empty), and lists beats with `## B<NN> — <role>`
+  headings where role ∈ {hook, escalation, title, button}.
+- Beat count is within the range printed by `teaser-plan` (≥6, ≤20), in
+  **4-act order**: exactly one `hook` (first), ≥1 `escalation` with a
+  rising stakes ladder, one `title` (~2/3 in), one `button` (last). ≤3
+  named faces.
 - The button beat does not reveal the story's resolution (withholding).
 - Refusal on overwrite without `--force`; with `--force`, the prior
   `beats.md` is archived to `teaser/script-takes/` before regenerating.

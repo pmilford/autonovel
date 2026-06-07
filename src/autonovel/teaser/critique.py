@@ -117,6 +117,10 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
         rep.add("", "no-emotional-arc",
                 "no emotional arc — name the tonal journey (e.g. 'unease → dread → "
                 "defiant hope') so the cut builds instead of idling (bp 8)")
+    if not sp.genre.strip():
+        rep.add("", "no-genre",
+                "no genre/tone — name what KIND of story this is so the hook can "
+                "telegraph it in the first ~10s (bp 9)")
 
     # --- dialogue + text cards carry the meaning (bp 5, bp 6). ---
     dlg = teaser.dialogue_line_count()
@@ -131,14 +135,81 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
                 f"only {cards} text card(s) — carry the premise/logline in 2-4 short "
                 f"cards (cheap narrative, dodges AI lipsync) (bp 6)")
 
-    # --- teaser-level arc + length. ---
+    # --- teaser-level arc + 4-act role order (bp 2). ---
     roles = [s.role for s in teaser.shots]
     if "hook" not in roles:
         rep.add("", "no-hook", "no shot with role 'hook' — the teaser needs an opener")
+    elif roles[0] != "hook":
+        rep.add("", "hook-not-first",
+                "the 'hook' is not the first shot — the arresting image must open "
+                "the teaser (bp 2)")
+    if roles.count("hook") > 1:
+        rep.add("", "multiple-hooks",
+                f"{roles.count('hook')} 'hook' shots — a teaser has exactly one "
+                f"opening hook (bp 2)")
+    if "title" not in roles:
+        rep.add("", "no-title",
+                "no shot with role 'title' — place the brand/title beat ~2/3 in (bp 2)")
     if "button" not in roles:
         rep.add("", "no-button", "no shot with role 'button' — end on a hook after the title")
+    elif roles[-1] != "button":
+        rep.add("", "button-not-last",
+                "the 'button' is not the final shot — the withholding stinger must "
+                "close the teaser (bp 2, bp 7)")
+    # title should land after the escalation and before the button (~2/3 in).
+    if "title" in roles and "button" in roles:
+        if roles.index("title") > len(roles) - 1 - roles[::-1].index("button"):
+            rep.add("", "title-after-button",
+                    "the title card lands after the button — title goes ~2/3 in, "
+                    "then the button closes (bp 2)")
+
+    # --- rising stakes ladder across the escalation (bp 3). ---
+    esc = [s for s in teaser.shots if s.role == "escalation"]
+    if esc:
+        unranked = [s for s in esc if s.stakes_level is None]
+        if unranked:
+            rep.add("", "no-stakes-ladder",
+                    f"{len(unranked)}/{len(esc)} escalation shots have no "
+                    f"stakes_level — rank them so each beat raises the stakes over "
+                    f"the last (a ladder, not a montage of equals) (bp 3)")
+        else:
+            levels = [s.stakes_level for s in esc]
+            if any(b < a for a, b in zip(levels, levels[1:])):
+                rep.add("", "stakes-not-rising",
+                        f"escalation stakes_level dips ({levels}) — order the "
+                        f"escalation so the stakes only rise (bp 3)")
+
+    # --- cast discipline: one hero face (bp 11). ---
+    names = {s.subject_name.strip() for s in teaser.shots if s.subject_name.strip()}
+    if len(names) > 3:
+        rep.add("", "cast-sprawl",
+                f"{len(names)} named faces ({', '.join(sorted(names))}) — a teaser "
+                f"sells ONE hero's stakes; keep ≤3 named faces and make the rest "
+                f"silhouettes/crowd (no consistency lock needed) (bp 11)")
+
     total = teaser.total_duration_s()
     if teaser.length_s and abs(total - teaser.length_s) > max(8.0, 0.25 * teaser.length_s):
         rep.add("", "length-mismatch",
                 f"shots total {total:g}s vs target {teaser.length_s}s — add/trim shots")
     return rep
+
+
+# Finding codes that BLOCK a real render (Phase 6 narrative gate, bp 12):
+# their presence means the teaser has no story yet, so spending a real
+# generation would be wasted. Ordering/ladder/cast flags stay advisory (a
+# deliberate artistic choice shouldn't hard-block a render); the offline
+# `stub` backend is exempt from the gate entirely.
+STORY_GATE_CODES = (
+    "no-dramatic-question", "no-logline", "no-stakes", "no-emotional-arc",
+    "no-genre", "thin-dialogue", "thin-text-cards", "no-hook", "no-button",
+)
+
+
+def story_gate_failures(report: Report) -> list[Finding]:
+    """The blocking narrative-gate findings in ``report`` (bp 12)."""
+    return [f for f in report.findings if f.code in STORY_GATE_CODES]
+
+
+def story_ready(report: Report) -> bool:
+    """True when no blocking narrative-gate finding is present (bp 12)."""
+    return not story_gate_failures(report)

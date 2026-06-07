@@ -28,17 +28,26 @@ It does two passes and writes one report:
 
   1. **Mechanical linter** (`autonovel mechanical teaser-critique`) —
      deterministic flags: **story-spine** (no-dramatic-question, no-logline,
-     no-stakes, no-emotional-arc, thin-dialogue, thin-text-cards),
+     no-stakes, no-emotional-arc, no-genre, thin-dialogue, thin-text-cards),
+     **4-act order** (hook-not-first, multiple-hooks, no-title,
+     button-not-last, title-after-button), **stakes ladder**
+     (no-stakes-ladder, stakes-not-rising), **cast** (cast-sprawl),
      appearance-drift, thin-prompt, no-palette, no-reference, multi-action,
-     audio/negative unsupported for the provider, missing hook/button,
-     length-mismatch.
+     audio/negative unsupported for the provider, length-mismatch. The
+     story-spine subset is the **render gate** (`teaser-render` refuses a
+     real generation while any is present; `stub` is exempt) — bp 12.
   2. **LLM critic** — taste the mechanics can't judge. **Story (Phase 6,
      judge first):** does the teaser pose ONE dramatic question and never
-     answer it? Does each beat advance or complicate that question, and do
-     the stakes *rise* beat to beat (a ladder, not equals)? Do the mined
-     dialogue lines actually reveal stake/relationship/genre, or are they
-     filler? Do the text cards carry the premise? Does the cut move along
-     the stated emotional arc? **Then per shot:** does each prompt obey
+     answer it (bp 1, 7)? Does each beat advance or complicate that
+     question, and do the stakes *rise* beat to beat (a ladder, not equals,
+     bp 3)? Does the **hook signal the genre** in the first ~10 s (bp 9)?
+     Do the mined dialogue lines actually reveal stake/relationship/genre,
+     or are they filler (bp 5)? Do the text cards carry the premise (bp 6)?
+     Does the cut move along the stated emotional arc (bp 8)? Is it built on
+     ONE hero face (bp 11)? Is every shot earning its place, or is some shot
+     just "the character standing where/when they are" — **restraint**, cut
+     it (bp 10)? Does the button **withhold** the resolution (bp 7)?
+     **Then per shot:** does each prompt obey
      teaser-craft §4 (one subject, one action, present tense, only what's in
      frame, no un-filmable abstraction)? Is the appearance string reused
      verbatim? Does the shot serve its beat and the arc (hook that
@@ -89,10 +98,13 @@ gaps and proceed without retrying.
    - **Consistency:** the subject's appearance string is identical to every
      other shot with that subject; palette holds the 3-5 anchors.
    - **Service:** the shot earns its place — the hook intrigues without
-     explaining, escalation shots accelerate and raise stakes, the title
-     lands ~⅔ in, the button deepens the question and does NOT reveal the
-     resolution. (X-Prize: stakes + a real character + visual ambition + an
-     *earned* optimistic future.)
+     explaining *and signals the genre* (bp 9), escalation shots accelerate
+     and raise stakes on a rising ladder (bp 3), the title lands ~⅔ in, the
+     button deepens the question and does NOT reveal the resolution (bp 7).
+     **Restraint** (bp 10): flag any shot that is just "the character
+     standing where/when they are" — REWRITE or cut. **Cast** (bp 11): one
+     hero face; demote extra named faces. (X-Prize: stakes + a real
+     character + visual ambition + an *earned* optimistic future.)
    Rank shots worst-first; for each weak shot, write a one-line diagnosis
    and a concrete rewritten prompt suggestion.
 
@@ -110,10 +122,13 @@ gaps and proceed without retrying.
    ## Story spine
    *Dramatic question:* {the question, or ⚠️ MISSING}
    *Want vs. force:* {want — opposing force, or ⚠️ MISSING}
-   *Emotional arc:* {arc, or ⚠️ MISSING} · *Dialogue lines:* {n} ·
-   *Text cards:* {n}
-   {2-3 sentences: does it pose a question and withhold the answer? do the
-   beats escalate? does a viewer learn the story from the dialogue/cards?}
+   *Genre:* {genre, or ⚠️ MISSING} · *Emotional arc:* {arc, or ⚠️ MISSING}
+   *Dialogue lines:* {n} · *Text cards:* {n} · *4-act order:* {ok | issues}
+   *Stakes ladder:* {rising | flat/dips} · *Named faces:* {n}
+   *Render gate:* {READY | BLOCKED — lists the story flags that block a real render}
+   {2-3 sentences: does it pose a question and withhold the answer? does the
+   hook signal the genre? do the beats escalate? does a viewer learn the
+   story from the dialogue/cards? one hero face? any filler shots to cut?}
 
    ## Mechanical flags ({k})
    {table or list of the linter findings, grouped by code; "none" if clean.}
@@ -143,8 +158,9 @@ gaps and proceed without retrying.
 
 <acceptance>
 - `books/{book}/teaser/critique.md` exists with a `## Verdict`, a
-  `## Story spine` section (dramatic question / want vs. force / emotional
-  arc / dialogue + text-card counts, flagging any missing), a
+  `## Story spine` section (dramatic question / want vs. force / genre /
+  emotional arc / dialogue + text-card counts / 4-act order / stakes ladder
+  / named faces / **render-gate READY-or-BLOCKED**, flagging any missing), a
   `## Mechanical flags` section reflecting the linter output, and per-shot
   notes that mark each shot KEEP or REWRITE.
 - The report states whether `teaser.json` is structurally valid (from

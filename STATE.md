@@ -1461,39 +1461,51 @@
   = native = no prompt change; seam-fade off by default). Regression gate:
   **Tier 1+2 1696 → 1706 passed, 1 skipped, 0 failed.**
 
-- 2026-06-06 (movie-teaser Phase 6: teaser storytelling — best practices
-  1, 4, 5, 6, 8 + script versioning): additive. The first real render read
-  as a set of disconnected clips — no throughline, no stakes, almost no
-  dialogue. Fix is upstream of the visuals: a **story spine**. New
-  `shots.Spine` (dramatic_question, logline, want, opposing_force,
-  emotional_arc, score_direction) on `Teaser`, serialized under
-  `teaser.json :: spine` and **omitted when empty** so pre-Phase-6 teasers
-  round-trip byte-identical. `teaser-beats` authors the spine + ties each
-  beat to a rising stakes ladder; `shot-prompts` copies the spine into
-  teaser.json, **mines 3–6 loaded dialogue lines** from the manuscript
-  (bp 5) and authors 2–4 premise **text cards** (bp 6); `critique.py`
-  gained teaser-level flags `no-dramatic-question` / `no-logline` /
-  `no-stakes` / `no-emotional-arc` / `thin-dialogue` (<2 spoken lines on an
-  audio provider) / `thin-text-cards`; `teaser-critique` judges the story
-  spine first. **Script versioning** (answers "can we re-run without losing
-  the old scripts?"): `takes.archive_script` + `teaser-archive-script` CLI
-  timestamp-copy `beats.md`/`teaser.json` to `teaser/script-takes/` before a
-  `--force` regenerate; the `refs/` portraits + location plates are reused
-  untouched. New `Teaser.dialogue_line_count()` / `text_card_count()`. New
-  tests: `test_teaser_phase6.py` (12). Doc-sync: teaser-beats.md,
-  shot-prompts.md, teaser-critique.md, teaser.md, teaser-craft.md (new §0
-  story spine + re-run note), prd-movie-teaser-mode.md (spine schema),
-  commands.md (command + mechanical rows + new archive-script row),
-  series-template CLAUDE.md, README, FUTURE-TODOS, STATE, impl-plan. No
-  existing-module behaviour changed (empty spine omitted; no new required
-  fields). `autonovel install` re-run. Regression gate: **Tier 1+2
-  1706 → 1718 passed, 1 skipped, 0 failed.**
+- 2026-06-06 (movie-teaser Phase 6: teaser storytelling — ALL 12 best
+  practices + script versioning): additive. The first real render read as a
+  set of disconnected clips — no throughline, no stakes, almost no
+  dialogue. Fix is upstream of the visuals: a **story spine** + enforced
+  trailer craft. New `shots.Spine` (dramatic_question, logline, want,
+  opposing_force, emotional_arc, score_direction, genre) on `Teaser` +
+  per-shot `stakes_level`, serialized under `teaser.json :: spine` /
+  `stakes_level` and **omitted when empty/None** so pre-Phase-6 teasers
+  round-trip byte-identical. Best-practice map: bp1 dramatic question, bp2
+  4-act order (hook-first/title-~⅔/button-last), bp3 rising stakes ladder,
+  bp4 want+opposing force, bp5 dialogue mining (3–6 loaded lines), bp6
+  premise text cards, bp7 withhold-the-answer button, bp8 emotional arc +
+  score direction, bp9 genre-signalling hook, bp10 restraint (cut filler),
+  bp11 one hero face (≤3 named), bp12 **render gate**. `teaser-beats`
+  authors the spine + 4-act ladder; `shot-prompts` copies the spine, mines
+  dialogue, writes cards, sets `stakes_level`, enforces order/restraint/
+  cast; `critique.py` gained story-spine flags (`no-dramatic-question`/
+  `no-logline`/`no-stakes`/`no-emotional-arc`/`no-genre`/`thin-dialogue`/
+  `thin-text-cards`), 4-act flags (`hook-not-first`/`multiple-hooks`/
+  `no-title`/`button-not-last`/`title-after-button`), stakes-ladder flags
+  (`no-stakes-ladder`/`stakes-not-rising`), `cast-sprawl`, plus
+  `STORY_GATE_CODES`/`story_gate_failures`/`story_ready`. **bp 12 gate:**
+  `teaser-render` refuses a real generation (exit 3) while any story-spine
+  flag is present — `stub` + single-`--shot` exempt, `--skip-narrative-gate`
+  overrides, `--dry-run` reports `narrative_gate_blocks`. **Script
+  versioning** (re-run without losing old scripts): `takes.archive_script` +
+  `teaser-archive-script` CLI timestamp-copy `beats.md`/`teaser.json` to
+  `teaser/script-takes/` before a `--force` regenerate; the `refs/`
+  portraits + location plates are reused untouched. New
+  `Teaser.dialogue_line_count()` / `text_card_count()`. New tests:
+  `test_teaser_phase6.py` (26). Doc-sync: teaser-beats/shot-prompts/
+  teaser-critique/teaser-render/teaser command bodies, teaser-craft.md
+  (new §0), prd (spine+shot schema + gate), commands.md (rows + flags +
+  archive-script row), series-template CLAUDE.md, README, FUTURE-TODOS,
+  STATE, impl-plan. No existing-module behaviour changed (empty spine
+  omitted; no new required fields; gate exempts stub). `autonovel install`
+  re-run. Regression gate: **Tier 1+2 1706 → 1732 passed, 1 skipped,
+  0 failed.**
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1718
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1732
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
-  +12 since the 1706 mark: movie-teaser Phase 6 (story spine + dialogue
-  mining + text cards + critique spine flags + script versioning → 12
+  +26 since the 1706 mark: movie-teaser Phase 6 (all 12 best practices:
+  story spine + 4-act order + stakes ladder + genre + dialogue mining +
+  text cards + restraint/cast + render gate + script versioning → 26
   tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1706
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).

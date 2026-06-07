@@ -225,13 +225,20 @@ spine:
   opposing_force: "the Fugger bank"                                        # the force in the way (bp 4)
   emotional_arc: "unease → dread → defiant hope"                          # the cut moves along it (bp 8)
   score_direction: "a single building string ostinato"                    # one cue, whole cut (bp 8)
+  genre: "historical thriller"                                            # the hook telegraphs it ≤10s (bp 9)
 ```
 
 The block is omitted entirely when empty, so pre-Phase-6 teasers
-round-trip unchanged. `teaser-critique` raises `no-dramatic-question`,
-`no-logline`, `no-stakes`, `no-emotional-arc`, `thin-dialogue`
-(<2 spoken lines on an audio provider), and `thin-text-cards` (<2 cards)
-when the spine/payload is thin.
+round-trip unchanged. `teaser-critique` raises the **story-spine** flags
+`no-dramatic-question`, `no-logline`, `no-stakes`, `no-emotional-arc`,
+`no-genre`, `thin-dialogue` (<2 spoken lines on an audio provider), and
+`thin-text-cards` (<2 cards) — these are the **render gate (bp 12):**
+`teaser-render` refuses a real generation while any is present (`stub` +
+single-`--shot` exempt; `--skip-narrative-gate` overrides). It also raises
+the **4-act** flags (`hook-not-first`, `multiple-hooks`, `no-title`,
+`button-not-last`, `title-after-button`; bp 2), **stakes-ladder** flags
+(`no-stakes-ladder`, `stakes-not-rising`; bp 3), and `cast-sprawl`
+(>3 named faces; bp 11) as strong advisories.
 
 **Model-agnostic per-shot schema we implement** (stored in
 `teaser.json`; rendered to `shot_NN.md` and, later, to each provider's
@@ -240,7 +247,8 @@ request shape):
 ```yaml
 shot:
   id: "S07"
-  role: "escalation"            # hook | escalation | title | button
+  role: "escalation"            # hook | escalation | title | button (4-act order; bp 2)
+  stakes_level: 3               # rising rank across escalation shots (bp 3); omit on non-escalation
   duration_s: 4                 # clamp to provider native (Veo 4/6/8; Runway 5/10; Luma 5)
   aspect_ratio: "16:9"
   # visual prose (rendered in Veo/Sora order) ---

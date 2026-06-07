@@ -131,8 +131,9 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    (render just one), `--height <px>` (default 480), `--token <key>`,
    `--delay <s>` (override the polite inter-request interval),
    `--score native|bed|none` (background-music policy for video, 5.9),
-   `--no-archive` (don't keep prior takes), `--dry-run`. Confirm the book
-   exists in `project.yaml`.
+   `--no-archive` (don't keep prior takes), `--skip-narrative-gate`
+   (override the story gate, below), `--dry-run`. Confirm the book exists
+   in `project.yaml`.
 
 2. **Validate the pipeline FREE first (unless the user named a provider).**
    If no `--provider` was passed and `books/{book}/teaser/clips/` has no
@@ -158,7 +159,19 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    provider, output dir, and **whether a key is present**. If `--dry-run`
    was passed, print the plan and **stop here** — write nothing.
 
-5. **Key / manual / approval gates.**
+5. **Key / manual / approval / narrative gates.**
+   - **Narrative gate (Phase 6, bp 12 — real renders only; `stub` and
+     single-`--shot` runs are exempt).** Before spending a quota-bearing
+     backend, the render refuses a teaser with **no story** (no dramatic
+     question / logline / stakes / emotional arc / genre, or thin
+     dialogue/text-cards). The mechanical `teaser-render` returns exit 3
+     with the blocking flags listed; relay them and tell the user to fix
+     the spine for free (re-author with `/autonovel:shot-prompts`, check
+     `/autonovel:teaser-critique`, see `docs/teaser-craft.md` §0), validate
+     offline with `--provider stub`, or override with
+     `--skip-narrative-gate`. A `--dry-run` reports `narrative_gate_blocks`
+     instead of refusing. This is what stops a "set of pretty clips that
+     mean nothing" from reaching a paid/quota render.
    - **Approval gate (real renders only; `stub` is exempt).** Before
      spending a quota-bearing backend, check character references: `bash`
      `autonovel mechanical teaser-refs books/{book}/teaser/teaser.json --format json`
@@ -239,6 +252,10 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
   depend on, and nothing is assembled into a single video.
 - A fresh teaser can be validated end-to-end for **$0 and zero quota**
   via the offline `stub` provider before any real backend is spent.
+- The **narrative gate** (bp 12) refuses a real render (exit 3) when the
+  teaser has no story spine / thin dialogue/cards; `stub`, single-`--shot`,
+  and `--skip-narrative-gate` runs are exempt, and `--dry-run` reports it
+  rather than refusing.
 - `--dry-run` prints the full request plan and reports `key_present` for
   the resolved provider, and writes nothing.
 - The default *video* provider is the free `grok` (resolved via

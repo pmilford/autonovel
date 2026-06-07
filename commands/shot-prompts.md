@@ -81,8 +81,10 @@ of best-effort inputs.
 4. **Load the spine + foundation for description:**
    - `books/{book}/teaser/beats.md` `## Spine` block — the dramatic
      question, logline, want, opposing force, emotional arc, score
-     direction. Copy it verbatim into the teaser's `spine` object (below).
-     It is load-bearing: render + critique read it.
+     direction, **genre**. Copy all of it verbatim into the teaser's
+     `spine` object (below). It is load-bearing: render + critique read it,
+     and the **narrative gate** in `teaser-render` refuses a real render
+     when the spine/payload is thin (bp 12).
    - `shared/characters.md` — each character's **appearance**. Write ONE
      appearance string per character and reuse it **verbatim** in every
      shot (consistency; teaser-craft §6). Assign each a reference image
@@ -124,16 +126,28 @@ of best-effort inputs.
 
 6. **Author the shots.** Build the full `books/{book}/teaser/teaser.json`
    as `{title, length_s, provider, spine:{dramatic_question, logline,
-   want, opposing_force, emotional_arc, score_direction}, shots:[…]}` —
-   the `spine` copied from `beats.md` (step 4). For each beat, write 1+
-   shots that obey teaser-craft §4: one subject + one action + one camera
-   move; present tense; only what's in frame; concrete cinematography
-   vocabulary (teaser-craft §5); `duration_s` ≤ the provider clip cap; a
-   content-word `negative_prompt` (e.g. `blurry, distorted hands, extra
-   limbs, watermark, text, subtitles, flicker, morphing` — never "no …");
-   the beat's `role`; the human `beat_note`; and the mined `audio.dialogue`
-   / `text_card` from step 5b. Pace the cut to the **emotional arc** — the
-   hook holds, escalation cuts tighten, the button breathes.
+   want, opposing_force, emotional_arc, score_direction, genre},
+   shots:[…]}` — the `spine` copied from `beats.md` (step 4). For each
+   beat, write 1+ shots that obey teaser-craft §4: one subject + one
+   action + one camera move; present tense; only what's in frame; concrete
+   cinematography vocabulary (teaser-craft §5); `duration_s` ≤ the provider
+   clip cap; a content-word `negative_prompt` (e.g. `blurry, distorted
+   hands, extra limbs, watermark, text, subtitles, flicker, morphing` —
+   never "no …"); the beat's `role`; the human `beat_note`; and the mined
+   `audio.dialogue` / `text_card` from step 5b. Enforce the craft gates:
+   - **4-act order (bp 2):** exactly one `role: hook` as the first shot
+     (and it signals the **genre**, bp 9), one `role: title` ~2/3 in, one
+     `role: button` as the last shot, escalation shots between.
+   - **Stakes ladder (bp 3):** give every `role: escalation` shot a
+     `stakes_level` integer that **strictly rises** in shot order (1, 2,
+     3, …) — the cut must escalate, not idle.
+   - **Restraint (bp 10):** do NOT emit a shot that is merely "the
+     character standing where/when they are" — every shot turns the
+     question or implies a larger world. Cut filler.
+   - **One hero face (bp 11):** ≤3 distinct `subject.name`s; the rest are
+     silhouettes/crowd (no name, no consistency lock).
+   Pace the cut to the **emotional arc** — the hook holds, escalation cuts
+   tighten, the button breathes.
 
 7. **Validate (hard gate).** `bash`:
    `autonovel mechanical teaser-validate books/{book}/teaser/teaser.json --provider <name>`

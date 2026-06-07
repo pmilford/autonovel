@@ -11,24 +11,31 @@ to start.
 
 ## Near-term — pull into the next PR
 
-- **Teaser CREATIVE/NARRATIVE quality — the teaser doesn't tell a story.**
-  **Phase 6 (best practices 1, 4, 5, 6, 8 + script versioning) shipped
+- ~~**Teaser CREATIVE/NARRATIVE quality — the teaser doesn't tell a
+  story.**~~ **Phase 6 — ALL 12 best practices + script versioning shipped
   2026-06-06.** The teaser data model gained a `spine` (dramatic question,
-  logline, want, opposing force, emotional arc, score direction — omitted
-  when empty so old teasers round-trip unchanged); `teaser-beats` authors
-  it + ties beats to a stakes ladder; `shot-prompts` copies it into
-  `teaser.json`, mines 3–6 loaded dialogue lines, and authors 2–4 premise
-  text cards; `teaser-critique` (mechanical + LLM) gained spine flags
-  (`no-dramatic-question`/`no-logline`/`no-stakes`/`no-emotional-arc`/
-  `thin-dialogue`/`thin-text-cards`) and judges the story first;
+  logline, want, opposing force, emotional arc, score direction, genre —
+  omitted when empty so old teasers round-trip unchanged) and a per-shot
+  `stakes_level`. `teaser-beats` authors the spine + a 4-act, rising-ladder
+  beat order; `shot-prompts` copies the spine in, mines 3–6 loaded dialogue
+  lines, authors 2–4 premise text cards, sets `stakes_level`, and enforces
+  4-act order / restraint / one-hero. `teaser-critique` (mechanical + LLM)
+  gained the story-spine flags (`no-dramatic-question`/`no-logline`/
+  `no-stakes`/`no-emotional-arc`/`no-genre`/`thin-dialogue`/
+  `thin-text-cards`), 4-act flags (`hook-not-first`/`multiple-hooks`/
+  `no-title`/`button-not-last`/`title-after-button`), stakes-ladder flags
+  (`no-stakes-ladder`/`stakes-not-rising`), and `cast-sprawl`, and judges
+  the story first. **bp 12 render gate:** `teaser-render` *refuses* a real
+  generation (exit 3) while any story-spine flag is present (`stub` +
+  single-`--shot` exempt; `--skip-narrative-gate` overrides) — quota can't
+  be burned on a meaningless teaser. **Script versioning:**
   `teaser-archive-script` + the `--force` path version `beats.md`/
   `teaser.json` into `teaser/script-takes/` so a full re-run never loses a
-  prior script while reusing the `refs/` originals. Tier 1+2: 1706 → 1718.
-  **Remaining (deferred per the user's selection):** bp 2 (4-act labelled
-  roles enforcement), 3 (mechanical stakes-ladder check), 7 (button-
-  withholding gate), 9 (genre-signal check), 10/11 (restraint + one-hero
-  enforcement), and 12 (the standalone pre-render narrative gate). Original
-  entry follows for context.
+  prior script while reusing the `refs/` originals. 26 tests. Tier 1+2:
+  1706 → 1732. Maps: bp1 question, bp2 4-act order, bp3 stakes ladder, bp4
+  want/force, bp5 dialogue mining, bp6 text cards, bp7 withhold, bp8
+  emotional arc + score, bp9 genre, bp10 restraint, bp11 one hero face,
+  bp12 render gate. Original entry follows for context.
 
   Surfaced 2026-06-06 from the first real Fugger render. Diagnosis: *"it
   didn't go anywhere and didn't seem to mean anything; there wasn't enough

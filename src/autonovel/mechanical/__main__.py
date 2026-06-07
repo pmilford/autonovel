@@ -1151,6 +1151,28 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
     if getattr(args, "shot", None) and not reqs:
         print(f"teaser-render: no shot with id {args.shot!r}", file=sys.stderr)
         return 2
+    # --- Narrative gate (Phase 6, bp 12). Before spending a REAL generation,
+    # refuse a teaser with no story (no dramatic question, no stakes, thin
+    # dialogue/cards, …) so quota isn't wasted on a meaningless set of clips.
+    # The offline `stub` backend is exempt (it validates the chain for free);
+    # `--skip-narrative-gate` is the explicit override; `--shot` (single-shot
+    # iteration) skips the whole-teaser gate.
+    from ..teaser import critique as _crit, providers as _prov_g
+    gate_fail = []
+    if provider != "stub" and not getattr(args, "shot", None):
+        gate_fail = _crit.story_gate_failures(_crit.critique(teaser, _prov_g.get(provider)))
+    gate_override = getattr(args, "skip_narrative_gate", False)
+    if gate_fail and not gate_override and not getattr(args, "dry_run", False):
+        print("teaser-render: ⛔ narrative gate — this teaser has no story yet, so "
+              "a real render would waste quota. Fix these for free, then re-run:",
+              file=sys.stderr)
+        for f in gate_fail:
+            print(f"  - {f.code}: {f.message}", file=sys.stderr)
+        print("  Validate offline first with `--provider stub`, re-author with "
+              "/autonovel:shot-prompts, or override with --skip-narrative-gate.\n"
+              "  See /autonovel:teaser-critique and docs/teaser-craft.md §0.",
+              file=sys.stderr)
+        return 3
     human = getattr(args, "format", "human") == "human"
     # Surface the key/manual status of the resolved provider up front so
     # the dry-run plan honestly reports whether a live run can proceed.
@@ -1162,6 +1184,11 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
     key_ok = bool(key) or not prof.needs_key
     if getattr(args, "dry_run", False):
         if human:
+            if gate_fail and not gate_override:
+                print(f"⚠️  narrative gate would BLOCK a real render "
+                      f"({len(gate_fail)} story flag(s)): "
+                      f"{', '.join(f.code for f in gate_fail)} — fix or pass "
+                      f"--skip-narrative-gate. See teaser-critique.")
             print(f"DRY RUN — {len(reqs)} request(s) ({kind}, {provider}); "
                   f"nothing downloaded:")
             if manual:
@@ -1177,6 +1204,8 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
                        "provider": provider, "kind": kind,
                        "needs_key": prof.needs_key, "key_present": bool(key),
                        "manual": manual, "free_note": prof.free_note,
+                       "narrative_gate_blocks": bool(gate_fail) and not gate_override,
+                       "narrative_gate_flags": [f.code for f in gate_fail],
                        "requests": [r.to_dict() for r in reqs]},
                       sys.stdout, indent=2)
             sys.stdout.write("\n")
@@ -1943,6 +1972,11 @@ def main(argv: list[str] | None = None) -> int:
                           "score (diegetic sound only) so a single teaser-wide bed "
                           "carries the music (bed) or it stays scoreless (none). "
                           "Dialogue/SFX/ambience are unaffected.")
+    tre.add_argument("--skip-narrative-gate", dest="skip_narrative_gate",
+                     action="store_true",
+                     help="Override the Phase-6 narrative gate (bp 12): render even "
+                          "when the teaser has no story spine / thin dialogue. The "
+                          "gate never blocks `--provider stub` or `--shot` runs.")
     tre.add_argument("--dry-run", dest="dry_run", action="store_true",
                      help="Build + print the request plan; download nothing.")
     tre.add_argument("--format", choices=["json", "human"], default="human")

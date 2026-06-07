@@ -39,6 +39,8 @@ class Spine:
       defiant hope"`` (bp 8).
     - ``score_direction`` — the musical/tonal spine for the bed/score the
       whole cut rides (bp 8).
+    - ``genre`` — the genre/tone the hook must telegraph in the first
+      ~10 s so a viewer knows what *kind* of story this is (bp 9).
     """
 
     dramatic_question: str = ""
@@ -47,11 +49,13 @@ class Spine:
     opposing_force: str = ""
     emotional_arc: str = ""
     score_direction: str = ""
+    genre: str = ""
 
     def is_empty(self) -> bool:
         return not any(
             (self.dramatic_question, self.logline, self.want,
-             self.opposing_force, self.emotional_arc, self.score_direction)
+             self.opposing_force, self.emotional_arc, self.score_direction,
+             self.genre)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -62,6 +66,7 @@ class Spine:
             "opposing_force": self.opposing_force,
             "emotional_arc": self.emotional_arc,
             "score_direction": self.score_direction,
+            "genre": self.genre,
         }
 
     @classmethod
@@ -74,6 +79,7 @@ class Spine:
             opposing_force=str(d.get("opposing_force", "") or ""),
             emotional_arc=str(d.get("emotional_arc", "") or ""),
             score_direction=str(d.get("score_direction", "") or ""),
+            genre=str(d.get("genre", "") or ""),
         )
 
 
@@ -105,6 +111,11 @@ class Shot:
     # In-story year of this shot (Phase 5.6) — drives auto voice-aging:
     # a character's age variant is picked from this year. Optional.
     story_year: int | None = None
+    # Rising-stakes rank within the escalation (Phase 6, bp 3). The LLM
+    # assigns an increasing integer to escalation shots so the teaser is a
+    # ladder, not a montage of equals; ``critique`` checks monotonicity.
+    # Optional — None means "not ranked" (flagged for escalation shots).
+    stakes_level: int | None = None
     # Human-facing one-line beat note (the dual-render pair; PRD §18.2).
     beat_note: str = ""
 
@@ -138,6 +149,8 @@ class Shot:
             d["text_card"] = self.text_card
         if self.story_year is not None:
             d["story_year"] = self.story_year
+        if self.stakes_level is not None:
+            d["stakes_level"] = self.stakes_level
         if self.beat_note:
             d["beat_note"] = self.beat_note
         return d
@@ -169,6 +182,7 @@ class Shot:
             seed=d.get("seed"),
             text_card=d.get("text_card"),
             story_year=d.get("story_year"),
+            stakes_level=d.get("stakes_level"),
             beat_note=d.get("beat_note", ""),
         )
 

@@ -41,6 +41,30 @@ beats actually answer it. The six spine fields (Phase 6 best practices):
 - **Score direction (bp 8)** — the single building musical cue the whole
   cut rides (real trailers ride *one* score, not per-shot music; see §7 and
   `teaser-render --score`).
+- **Genre/tone (bp 9)** — what *kind* of story this is. The **hook must
+  telegraph the genre in the first ~10 s** — a viewer should know they're
+  watching a historical thriller (or a gothic romance, …) before they know
+  the plot.
+
+The arc the spine rides — enforce the **4-act order** and a **rising
+ladder**:
+
+- **4-act order (bp 2).** Exactly one **hook** (first shot, signals the
+  genre) → **escalation** (the middle) → **title** (~⅔ in) → **button**
+  (last). `teaser-critique` flags `hook-not-first`, `multiple-hooks`,
+  `no-title`, `button-not-last`, `title-after-button`.
+- **Rising stakes ladder (bp 3).** Give each escalation shot a
+  `stakes_level` that strictly increases in shot order — the cut must
+  escalate, not idle. `teaser-critique` flags `no-stakes-ladder` (unranked)
+  and `stakes-not-rising` (dips).
+- **Withhold the answer (bp 7).** The button deepens the question and never
+  shows the resolution — that's what the film/book is for.
+- **Restraint — scope without context (bp 10).** Cut any shot that is
+  merely "the character standing where/when they are." Keep only shots that
+  turn the question or imply a larger world. Do more with less.
+- **One hero face (bp 11).** Build the teaser on ONE protagonist's stakes;
+  ≤3 named faces, the rest silhouettes/crowd (no consistency lock needed).
+  `teaser-critique` flags `cast-sprawl` above three named faces.
 
 Two more best practices that turn the spine into something a viewer can
 read:
@@ -57,8 +81,13 @@ read:
   beat 6 isn't scarier than beat 3, re-order or cut.
 
 `teaser-critique` raises `no-dramatic-question`, `no-logline`, `no-stakes`,
-`no-emotional-arc`, `thin-dialogue`, and `thin-text-cards` when these are
-missing — treat them as must-fix, not advisory.
+`no-emotional-arc`, `no-genre`, `thin-dialogue`, and `thin-text-cards` when
+these are missing — treat them as must-fix, not advisory. **They are the
+render gate (bp 12):** `/autonovel:teaser-render` *refuses* to spend a real
+generation while any of them is present (the offline `stub` backend and
+single-`--shot` runs are exempt; `--skip-narrative-gate` overrides). You
+literally cannot burn quota on a teaser that has no story — fix it for free
+first, or validate the chain offline with `--provider stub`.
 
 ---
 

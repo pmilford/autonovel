@@ -161,6 +161,163 @@ def test_archive_script_noop_on_missing(tmp_path: Path) -> None:
     assert takes.archive_script(tmp_path / "nope.json") is None
 
 
+# ---------------- bp 9 genre / bp 3 stakes ladder (model) ----------------
+
+
+def test_genre_and_stakes_level_round_trip() -> None:
+    sp = _spine()
+    sp.genre = "historical thriller"
+    t = Teaser(title="T", length_s=12, provider="veo", spine=sp,
+               shots=[_shot("02", "escalation", stakes_level=3)])
+    t2 = Teaser.from_dict(json.loads(json.dumps(t.to_dict())))
+    assert t2.spine.genre == "historical thriller"
+    assert t2.shots[0].stakes_level == 3
+    # stakes_level omitted when None
+    assert "stakes_level" not in _shot("9", "hook").to_dict()
+
+
+def test_no_genre_flag() -> None:
+    t = _full_teaser()  # _spine() has no genre
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    assert "no-genre" in codes
+
+
+# ----------------------- bp 2 four-act role order ------------------------
+
+
+def _arc_teaser(roles, **spine_kw):
+    sp = _spine()
+    sp.genre = "thriller"
+    for k, v in spine_kw.items():
+        setattr(sp, k, v)
+    shots = []
+    for i, r in enumerate(roles):
+        s = _shot(f"{i:02d}", r, text_card=("card" if i < 2 else None),
+                  audio={"dialogue": [{"speaker": "JAKOB", "line": f"line {i}"}]} if i < 2 else {})
+        if r == "escalation":
+            s.stakes_level = i  # rising by construction
+        shots.append(s)
+    return Teaser(title="T", length_s=len(roles) * 4, provider="veo", spine=sp, shots=shots)
+
+
+def test_role_order_clean() -> None:
+    t = _arc_teaser(["hook", "escalation", "escalation", "title", "button"])
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    for c in ("hook-not-first", "multiple-hooks", "no-title", "button-not-last",
+              "title-after-button", "no-stakes-ladder", "stakes-not-rising"):
+        assert c not in codes, (c, codes)
+
+
+def test_hook_not_first_and_button_not_last() -> None:
+    t = _arc_teaser(["escalation", "hook", "title", "button", "escalation"])
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    assert "hook-not-first" in codes
+    assert "button-not-last" in codes
+
+
+def test_no_title_flag() -> None:
+    t = _arc_teaser(["hook", "escalation", "button"])
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    assert "no-title" in codes
+
+
+def test_multiple_hooks_flag() -> None:
+    t = _arc_teaser(["hook", "hook", "title", "button"])
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    assert "multiple-hooks" in codes
+
+
+# --------------------- bp 3 stakes ladder enforcement --------------------
+
+
+def test_no_stakes_ladder_when_unranked() -> None:
+    sp = _spine(); sp.genre = "thriller"
+    t = Teaser(title="T", length_s=12, provider="veo", spine=sp, shots=[
+        _shot("01", "hook"), _shot("02", "escalation"),  # no stakes_level
+        _shot("03", "title"), _shot("04", "button")])
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    assert "no-stakes-ladder" in codes
+
+
+def test_stakes_not_rising_when_dips() -> None:
+    sp = _spine(); sp.genre = "thriller"
+    t = Teaser(title="T", length_s=12, provider="veo", spine=sp, shots=[
+        _shot("01", "hook"),
+        _shot("02", "escalation", stakes_level=3),
+        _shot("03", "escalation", stakes_level=1),  # dip
+        _shot("04", "title"), _shot("05", "button")])
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    assert "stakes-not-rising" in codes
+    assert "no-stakes-ladder" not in codes  # all ranked → ladder check, not missing
+
+
+# ------------------------ bp 11 one hero face ----------------------------
+
+
+def test_cast_sprawl_flag() -> None:
+    t = _full_teaser()
+    t.shots[0].subject_name = "A"
+    t.shots.append(_shot("03", "escalation", subject_name="B"))
+    t.shots.append(_shot("04", "escalation", subject_name="C"))
+    t.shots.append(_shot("05", "escalation", subject_name="D"))  # 4 distinct
+    codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
+    assert "cast-sprawl" in codes
+
+
+# ----------------- bp 12 render narrative gate (story-ready) --------------
+
+
+def test_story_gate_helpers() -> None:
+    bad = crit.critique(Teaser(title="T", provider="veo",
+                               shots=[_shot("01", "hook")]), providers.get("veo"))
+    assert not crit.story_ready(bad)
+    assert {f.code for f in crit.story_gate_failures(bad)} <= set(crit.STORY_GATE_CODES)
+    good = _arc_teaser(["hook", "escalation", "escalation", "title", "button"])
+    good.spine.genre = "thriller"
+    assert crit.story_ready(crit.critique(good, providers.get("veo")))
+
+
+def _storyless(tmp_path: Path) -> Path:
+    p = tmp_path / "teaser.json"
+    p.write_text(json.dumps({
+        "title": "T", "length_s": 8, "provider": "veo", "shots": [
+            {"id": "01", "role": "hook", "duration_s": 4,
+             "subject": {"name": "J", "appearance": "x"}, "action": "a", "palette": ["amber"]},
+            {"id": "02", "role": "button", "duration_s": 4,
+             "subject": {"name": "J", "appearance": "x"}, "action": "b", "palette": ["amber"]},
+        ]}), encoding="utf-8")
+    return p
+
+
+def test_render_gate_blocks_real_provider(tmp_path: Path) -> None:
+    out = _run("teaser-render", str(_storyless(tmp_path)), "--provider", "veo",
+               "--kind", "video")
+    assert out.returncode == 3, (out.returncode, out.stderr)
+    assert "narrative gate" in out.stderr
+
+
+def test_render_gate_exempts_stub(tmp_path: Path) -> None:
+    out = _run("teaser-render", str(_storyless(tmp_path)), "--provider", "stub",
+               "--kind", "image")
+    assert out.returncode == 0, out.stderr
+    assert "narrative gate" not in out.stderr
+
+
+def test_render_gate_skip_override(tmp_path: Path) -> None:
+    out = _run("teaser-render", str(_storyless(tmp_path)), "--provider", "veo",
+               "--kind", "video", "--skip-narrative-gate")
+    assert out.returncode != 3  # gate bypassed (may fail later on missing key)
+
+
+def test_render_gate_dry_run_reports_block(tmp_path: Path) -> None:
+    out = _run("teaser-render", str(_storyless(tmp_path)), "--provider", "veo",
+               "--kind", "video", "--dry-run", "--format", "json")
+    assert out.returncode == 0, out.stderr
+    payload = json.loads(out.stdout)
+    assert payload["narrative_gate_blocks"] is True
+    assert "no-dramatic-question" in payload["narrative_gate_flags"]
+
+
 def test_archive_script_cli_round_trip(tmp_path: Path) -> None:
     t = tmp_path / "teaser.json"
     t.write_text('{"title":"T","provider":"veo","shots":[]}', encoding="utf-8")
