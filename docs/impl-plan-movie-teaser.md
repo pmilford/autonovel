@@ -106,8 +106,14 @@
   `teaser-take-pick` promotes an earlier take. `teaser-ffmpeg-cmd
   --versioned` timestamps the mp4 + `_latest` pointer. `--no-archive`
   opts out. 8 tests.
+- **Phase 5.9** — **music score policy + audio seam-fades** (+ Veo
+  fixed-duration fix): `teaser-render --score native|bed|none` (bed/none
+  suppress the model's per-clip score via the prompt so one ducked bed
+  carries the music); `teaser-assemble --audio-seam-fade` applies per-clip
+  `afade` so native per-clip music doesn't pop at cuts. `_clip_seconds`
+  snaps Veo to its fixed 4/6/8s set. 10 tests.
 
-**Baseline now:** Tier 1+2 = **1696 passed, 1 skipped, 0 failed**
+**Baseline now:** Tier 1+2 = **1706 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run
 `autonovel install` after adding commands.

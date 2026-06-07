@@ -486,8 +486,9 @@ def _veo(req: Any, *, key: str, net: Net) -> bytes:
         "parameters": {
             "aspectRatio": _aspect(req),
             # Veo's API requires a NUMBER here — a string yields HTTP 400
-            # (verified live 2026-06-06). Keep it an int.
-            "durationSeconds": _clip_seconds(req, cap=8, default=8),
+            # (verified live 2026-06-06) — and only accepts a fixed set of
+            # lengths (4/6/8s), so snap to the nearest valid one.
+            "durationSeconds": _clip_seconds(req, cap=8, default=8, allowed=(4, 6, 8)),
         },
     }
     created = net.post_json(f"{base}/models/{model}:predictLongRunning",
@@ -762,13 +763,21 @@ def _aspect(req: Any) -> str:
     return "9:16" if h > w else ("1:1" if h == w else "16:9")
 
 
-def _clip_seconds(req: Any, *, cap: int, default: int) -> int:
-    secs = getattr(req, "duration_s", None) or default
+def _clip_seconds(
+    req: Any, *, cap: int, default: int, allowed: tuple[int, ...] | None = None,
+) -> int:
+    """Resolve a clip's seconds from the shot. ``allowed`` snaps to the
+    nearest value a provider actually accepts (ties → the shorter), which
+    Veo needs — it only takes a **fixed** set (4/6/8); a 5s or 7s request
+    is rejected. Without ``allowed``, clamp to ``[1, cap]``."""
+    raw = getattr(req, "duration_s", None) or default
     try:
-        secs = int(round(float(secs)))
+        raw = float(raw)
     except (TypeError, ValueError):
-        secs = default
-    return max(1, min(int(cap), secs))
+        raw = float(default)
+    if allowed:
+        return min(allowed, key=lambda a: (abs(a - raw), a))
+    return max(1, min(int(cap), int(round(raw))))
 
 
 def is_manual(provider: str) -> bool:

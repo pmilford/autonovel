@@ -164,14 +164,23 @@ def render_dialogue_block(shot: Shot) -> str:
 
 
 def render_audio_for_prompt(
-    shot: Shot, voices: dict[str, str] | None = None,
+    shot: Shot, voices: dict[str, str] | None = None, score: str = "native",
 ) -> str:
     """Compact audio spec appended to the BACKEND prompt for video gen
     (Phase 5.5/5.6) — so the model speaks the lines (with lipsync) and
     lays the SFX/ambience. ``voices`` maps a speaker name → its locked,
     age-resolved voice descriptor, injected so the voice holds scene to
-    scene. Empty string when the shot has no audio. Plain text (not
-    markdown) — it is concatenated onto the visual prompt.
+    scene.
+
+    ``score`` (Phase 5.9) controls background MUSIC the model generates:
+      - ``native`` — say nothing; the model may score the clip.
+      - ``bed`` / ``none`` — instruct the model to add **no** background
+        score (diegetic/source sound only), so its per-clip music doesn't
+        fight a single teaser-wide music bed (``bed``) or stay silent
+        (``none``). Dialogue + SFX + ambience are unaffected either way.
+
+    Empty string when the shot has no audio AND no suppression applies.
+    Plain text (not markdown) — concatenated onto the visual prompt.
     """
     voices = voices or {}
     out: list[str] = []
@@ -194,6 +203,9 @@ def render_audio_for_prompt(
         out.append(f"Sound effects: {sfx}.")
     if amb:
         out.append(f"Ambience: {amb}.")
+    if score in ("bed", "none"):
+        out.append("No musical score or background music — diegetic/source "
+                   "sound only (dialogue, sfx, ambience).")
     return "\n".join(out)
 
 

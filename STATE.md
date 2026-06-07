@@ -1440,7 +1440,32 @@
   same latest file; archiving is an added copy). Regression gate: **Tier
   1+2 1688 → 1696 passed, 1 skipped, 0 failed.**
 
+- 2026-06-06 (movie-teaser Phase 5.9: music score policy + audio seam-
+  fades; + Veo fixed-duration fix): additive. **Music** — real trailers
+  ride one continuous score, not per-clip music. New `--score
+  native|bed|none` (`render_audio_for_prompt(..., score)` → for bed/none
+  appends "No musical score; diegetic sound only" to the video prompt so
+  the model's per-clip music doesn't fight a single teaser-wide bed);
+  threaded through build_request/plan + teaser-render. **Audio seam-fades**
+  — `CutList.audio_seam_fade` + `ffmpeg_command` applies per-clip
+  `afade` in/out on each clip's audio (concat-compatible) so native
+  per-clip music doesn't pop at cuts; `teaser-cut-list`/`teaser-assemble
+  --audio-seam-fade`. (True overlapping cross-fade still deferred = 5.7b.)
+  **Veo duration fix** — Veo only accepts a fixed set of lengths (4/6/8s);
+  `_clip_seconds(..., allowed=(4,6,8))` snaps to nearest (ties→shorter),
+  still numeric (the earlier string→400 fix). New tests:
+  `test_teaser_phase59.py` (10). Doc-sync: teaser-render.md,
+  teaser-assemble.md, teaser-render-providers.md (music/score section +
+  provider duration quirks), commands.md (render/cut-list/assemble rows),
+  STATE, impl-plan. No existing-module behaviour changed (default `score`
+  = native = no prompt change; seam-fade off by default). Regression gate:
+  **Tier 1+2 1696 → 1706 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1706
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +10 since the 1696 mark: movie-teaser Phase 5.9 (score policy + audio
+  seam-fades + Veo fixed-duration snap → 10 tests). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-06 — **1696
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +8 since the 1688 mark: movie-teaser Phase 5.8 (versioned takes:

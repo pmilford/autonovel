@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-render
 description: Render the teaser's shot prompts into actual clips. Free offline `stub` keyframes validate the whole pipeline at zero cost/quota; `grok` (free dialogue+music, no card) is the default real backend. Then a vision critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID. Stateless — clips land on disk, nothing is assembled.
-argument-hint: "--book <short-name> [--provider stub|gemini|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--refs] [--voices] [--from-keyframes] [--film-style <s>] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--dry-run]"
+argument-hint: "--book <short-name> [--provider stub|gemini|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--refs] [--voices] [--score native|bed|none] [--from-keyframes] [--film-style <s>] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--no-archive] [--dry-run]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -67,6 +67,19 @@ scene-to-scene and ages with the character. Approval-gated (only
 locked/approved speakers flow). Set the descriptors in
 `/autonovel:teaser-refs`. SFX + ambience from `audio` are appended too.
 
+**Music / score (`--score`, 5.9).** Dialogue + SFX + ambience are always
+generated natively per clip. **Music** is the loose end, because a real
+trailer wants *one continuous* score, not 15 disjoint per-clip ones:
+  - `--score native` (default) — let the model score each clip (simplest;
+    music won't flow across cuts — soften pops with `teaser-assemble
+    --audio-seam-fade`).
+  - `--score bed` — tell the model to add **no** background score
+    (diegetic sound only); supply one continuous music file at assembly
+    (`teaser-assemble --audio track.mp3`), ducked under the dialogue. The
+    pro-trailer path; `track.mp3` is just a file (royalty-free or your
+    own), not another API/key.
+  - `--score none` — no music at all.
+
 **Image-to-video (`--from-keyframes`).** The two-stage path that keeps
 identity AND adds motion: first render reference-conditioned **keyframes**
 (`--kind image --refs`), then render **video** with `--from-keyframes` —
@@ -117,6 +130,7 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    `--takes <n>` (default 1; over-generate and pick best), `--shot <id>`
    (render just one), `--height <px>` (default 480), `--token <key>`,
    `--delay <s>` (override the polite inter-request interval),
+   `--score native|bed|none` (background-music policy for video, 5.9),
    `--no-archive` (don't keep prior takes), `--dry-run`. Confirm the book
    exists in `project.yaml`.
 

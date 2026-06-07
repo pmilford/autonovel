@@ -132,8 +132,28 @@ Where each piece is **specified** and **generated**:
   (e.g. *prime* 1490–1510 vs *old* 1511+). A per-line `voice` override on a
   dialogue entry wins. Approval-gated like faces. Set it in
   `/autonovel:teaser-refs`.
-- **Music** is mixed at assembly: by default the bed **ducks under the
-  dialogue** (`teaser-assemble`, 5.4). Bring your own track for now.
+- **Music / score (5.9).** Real trailers ride **one continuous** score
+  (a single licensed/"trailerized" track, picture cut to it) — *not*
+  per-shot music. Veo *can* score each clip natively, but those 8-second
+  scores don't flow as one piece. So the score policy (`teaser-render
+  --score`):
+  - `native` (default) — model scores each clip; soften the seams at
+    assembly with `teaser-assemble --audio-seam-fade 0.2` (fades each
+    clip's audio at cuts so it doesn't pop). Quick, one-tool.
+  - `bed` (pro-trailer) — model adds **no** score (diegetic only); supply
+    **one** music file at assembly (`--audio track.mp3`), ducked under the
+    dialogue (5.4). The file is just a royalty-free/your-own track (or a
+    one-time AI export) — **not another API/key/sync service**; ffmpeg
+    lays it across the whole timeline in one pass.
+  - `none` — no music.
+  A prompt-driven **music generator** backend (so the bed scores itself)
+  is a FUTURE-TODO; not needed for flow today.
+
+### Provider duration quirks
+- **Veo** accepts only a **fixed** set of clip lengths (**4 / 6 / 8s**);
+  the backend snaps a shot's `duration_s` to the nearest (and sends it as
+  a *number* — a string 400s). 1080p/4k require 8s.
+- **grok** takes a continuous 1–15s. **kie/magichour** cap ~10s.
 
 ## The `flow` manual path (Google AI Pro)
 

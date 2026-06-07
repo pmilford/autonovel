@@ -1145,6 +1145,7 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
         shot_refs=refs_map, style_override=getattr(args, "film_style", None),
         from_keyframes=getattr(args, "from_keyframes", False),
         keyframe_dir=kf_dir, shot_voices=voices_map,
+        score=getattr(args, "score", "native"),
     )
     if getattr(args, "shot", None) and not reqs:
         print(f"teaser-render: no shot with id {args.shot!r}", file=sys.stderr)
@@ -1430,6 +1431,7 @@ def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
         audio_mode=getattr(args, "audio_mode", "auto"),
         clip_audio=getattr(args, "clip_audio", None),
         transitions=not getattr(args, "no_transitions", False),
+        audio_seam_fade=getattr(args, "audio_seam_fade", 0.0),
     )
     out = Path(args.out) if getattr(args, "out", None) else base / "cut_list.json"
     if not cut.entries:
@@ -1915,6 +1917,12 @@ def main(argv: list[str] | None = None) -> int:
     tre.add_argument("--no-archive", dest="no_archive", action="store_true",
                      help="Don't archive each render into clips/takes/ "
                           "(default: keep every take so an earlier one survives).")
+    tre.add_argument("--score", choices=["native", "bed", "none"], default="native",
+                     help="Background-MUSIC policy for video (5.9): native = let "
+                          "the model score each clip; bed/none = tell it to add NO "
+                          "score (diegetic sound only) so a single teaser-wide bed "
+                          "carries the music (bed) or it stays scoreless (none). "
+                          "Dialogue/SFX/ambience are unaffected.")
     tre.add_argument("--dry-run", dest="dry_run", action="store_true",
                      help="Build + print the request plan; download nothing.")
     tre.add_argument("--format", choices=["json", "human"], default="human")
@@ -1947,6 +1955,10 @@ def main(argv: list[str] | None = None) -> int:
     tcl.add_argument("--no-transitions", dest="no_transitions", action="store_true",
                      help="Disable the safe transition defaults (first→fade-in, "
                           "last→fade-out, title→fade); everything stays a hard cut.")
+    tcl.add_argument("--audio-seam-fade", dest="audio_seam_fade", type=float, default=0.0,
+                     help="Seconds of audio fade-in/out per clip at cut boundaries "
+                          "(5.9) — softens per-clip native music pops on the "
+                          "`--score native` path. 0 = off (default).")
     tcl.add_argument("--out", default=None, help="Output path (default: <dir>/cut_list.json).")
     tcl.add_argument("--format", choices=["json", "human"], default="human")
     tcl.set_defaults(func=_cmd_teaser_cut_list)

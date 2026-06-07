@@ -97,6 +97,11 @@ class CutList:
     # Whether the video clips carry a native audio track (grok/veo/kie do;
     # magichour/stub/image stills do not). None ⇒ infer from kind.
     clip_audio: bool | None = None
+    # Phase 5.9 — seconds of audio fade-in/out applied to EACH clip's own
+    # audio at the cut boundaries, so per-clip native music (the `native`
+    # score path) doesn't *pop* between shots. 0 ⇒ off. A true overlapping
+    # cross-fade is the deferred xfade work (5.7b).
+    audio_seam_fade: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -110,6 +115,8 @@ class CutList:
             d["audio_mode"] = self.audio_mode
         if self.clip_audio is not None:
             d["clip_audio"] = self.clip_audio
+        if self.audio_seam_fade:
+            d["audio_seam_fade"] = self.audio_seam_fade
         return d
 
     @classmethod
@@ -127,6 +134,7 @@ class CutList:
             audio_bed=d.get("audio_bed"),
             audio_mode=mode,
             clip_audio=(bool(clip_audio) if clip_audio is not None else None),
+            audio_seam_fade=float(d.get("audio_seam_fade", 0.0)),
             entries=[CutEntry.from_dict(e) for e in (d.get("entries") or [])],
         )
 
@@ -178,6 +186,7 @@ def build_cut_list(
     audio_mode: str = "auto",
     clip_audio: bool | None = None,
     transitions: bool = True,
+    audio_seam_fade: float = 0.0,
 ) -> tuple[CutList, list[str]]:
     """Build a default cut-list from the teaser + the clips on disk.
 
@@ -214,6 +223,7 @@ def build_cut_list(
         title=teaser.title, kind=kind, width=width, height=height, fps=fps,
         audio_bed=audio_bed, entries=entries,
         audio_mode=audio_mode, clip_audio=clip_audio,
+        audio_seam_fade=audio_seam_fade,
     )
     return cut, missing
 
@@ -354,7 +364,21 @@ def ffmpeg_command(cut_list: CutList, out_path: Path | str) -> list[str]:
         pre = "" if cut_list.kind == "image" else f"trim=0:{e.duration_s:g},setpts=PTS-STARTPTS,"
         chains.append(f"[{i}:v]{pre}{_scale_pad(w, h)},fps={fps}{_fade_chain(e)}[v{i}]")
     if use_clip_audio:
-        concat_inputs = "".join(f"[v{i}][{i}:a]" for i in range(n))
+        # Optional per-clip audio seam-fade (5.9): soften the music/SFX pop
+        # at each hard cut without overlapping (concat-compatible).
+        sf = max(0.0, float(cut_list.audio_seam_fade))
+        if sf > 0:
+            alabels = []
+            for i, e in enumerate(cut_list.entries):
+                d = max(0.1, float(e.duration_s))
+                fd = min(sf, d / 2.0)
+                chains.append(
+                    f"[{i}:a]afade=t=in:st=0:d={fd:g},"
+                    f"afade=t=out:st={d - fd:g}:d={fd:g}[a{i}]")
+                alabels.append(f"[a{i}]")
+            concat_inputs = "".join(f"[v{i}]{alabels[i]}" for i in range(n))
+        else:
+            concat_inputs = "".join(f"[v{i}][{i}:a]" for i in range(n))
         chains.append(f"{concat_inputs}concat=n={n}:v=1:a=1[v][aclip]")
     else:
         concat_inputs = "".join(f"[v{i}]" for i in range(n))

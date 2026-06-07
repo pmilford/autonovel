@@ -130,6 +130,7 @@ def build_request(
     style_override: str | None = None,
     init_image: str = "",
     voices: dict[str, str] | None = None,
+    score: str = "native",
 ) -> RenderRequest:
     """Build the deterministic download request for one shot/take.
 
@@ -145,7 +146,7 @@ def build_request(
     # Video gen: append the audio spec (dialogue + locked/aged voice + sfx +
     # ambience) so the model speaks the lines and lip-syncs (Phase 5.5/5.6).
     if kind == "video":
-        audio_spec = render_prompt.render_audio_for_prompt(shot, voices or {})
+        audio_spec = render_prompt.render_audio_for_prompt(shot, voices or {}, score)
         if audio_spec:
             prompt = f"{prompt}\n\n{audio_spec}"
     if width is None:
@@ -201,6 +202,7 @@ def plan(
     from_keyframes: bool = False,
     keyframe_dir: Path | None = None,
     shot_voices: dict[str, dict[str, str]] | None = None,
+    score: str = "native",
 ) -> list[RenderRequest]:
     """Build the request plan for every shot (× ``takes``). Pure — no I/O.
 
@@ -253,7 +255,7 @@ def plan(
                 s, provider=provider, kind=kind, out_dir=out_dir,
                 width=width, height=height, take=t, model=model,
                 reference_images=tuple(refs), style_override=style_override,
-                init_image=init_image, voices=voices,
+                init_image=init_image, voices=voices, score=score,
             ))
     return reqs
 

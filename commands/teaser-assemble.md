@@ -47,14 +47,24 @@ set `transition: fade|dissolve` / `fade_out: true` on the relevant
 cross-dissolve needs the xfade overlap pass — FUTURE-TODOS.)
 
 **Audio (Phase 5.4).** Video clips from grok/veo/kie carry **native
-dialogue + music**, so assembly **keeps the clip audio** — it is no
-longer dropped. With `--audio <bed>` the music bed **ducks under the
+dialogue + SFX + ambience**, so assembly **keeps the clip audio** — it is
+no longer dropped. With `--audio <bed>` the music bed **ducks under the
 dialogue** by default (sidechain compression) instead of replacing it.
 `--audio-mode` overrides: `duck` (default when clips have audio + a bed),
 `mix` (equal levels), `clip-only` (native audio, no bed), `bed-only`
 (ignore clip audio), `none` (silent), `auto`. Image slideshows have no
 clip audio, so a bed is simply the track. If your video clips are silent
 (e.g. magichour), pass `--no-clip-audio` so a bed becomes the track.
+
+**Music / score (Phase 5.9).** A trailer wants *one continuous* score.
+Two paths: (a) render with `teaser-render --score bed`, then supply one
+music file here (`--audio track.mp3`) — it's ducked under the dialogue and
+carries the whole teaser (the pro-trailer path; `track.mp3` is just a
+royalty-free/your-own file, not another API). (b) render with `--score
+native` (the model scores each clip) — the music won't flow across cuts,
+so pass `--audio-seam-fade 0.2` to fade each clip's audio in/out at the
+cuts so it doesn't *pop*. (A true overlapping cross-fade is the deferred
+xfade work, 5.7b.)
 
 Like `/autonovel:audiobook-assemble`, the heavy lifting (ffmpeg) runs in
 this command via `bash`; the Python helper only *plans* the command.
@@ -76,8 +86,10 @@ is reused when present (so your hand-edits survive); regenerate with
    auto|duck|mix|clip-only|bed-only|none` (default `auto` — duck the bed
    under native dialogue), `--no-clip-audio` (the video clips are silent,
    e.g. magichour), `--no-transitions` (keep every cut hard — disables the
-   open/close/title fade defaults), `--fps <n>` (default 30), `--take <n>`
-   (which take per shot, default 1), `--force`. Confirm the book exists in
+   open/close/title fade defaults), `--audio-seam-fade <s>` (fade each
+   clip's audio at cuts so native per-clip music doesn't pop — for the
+   `--score native` path), `--fps <n>` (default 30), `--take <n>` (which
+   take per shot, default 1), `--force`. Confirm the book exists in
    `project.yaml`.
 
 2. **ffmpeg check.** `bash`: `ffmpeg -version` (or `command -v ffmpeg`).

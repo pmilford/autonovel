@@ -148,6 +148,41 @@ to start.
   `gemini-image-key-location`. Likely folds into the "Phase 5: character
   references" plan above.
 
+- **teaser-assemble: mixed static/dynamic + burn-in title cards.**
+  Requested 2026-06-06 (Fugger book). Two gaps the Fugger movie hit, both
+  hand-scripted in a one-off ffmpeg script (not in the pipeline):
+  (1) **Mixed assembly** — a real teaser is mostly static keyframes with a
+  few *dynamic* video shots (image-to-video) woven in. `teaser-assemble`
+  should stitch a cut where each shot is its `video/shot_<id>.mp4` if present
+  (with native audio) else its `clips/shot_<id>.png` held for `duration_s`
+  (silent track), all normalized to one WxH + stereo AAC so a concat works.
+  Today it only does all-image OR all-video.
+  (2) **Burn-in text cards** — `cut_list.json` already stores each shot's
+  `text_card` (and the title), but assemble only lists them as "add in an
+  editor" notes. Add an opt-in pass (`--burn-titles`) that draws them with
+  ffmpeg `drawtext`: the title centered/large, stingers lower-third, each
+  faded in/out over its shot's *actual* segment duration, in a configurable
+  serif (the Fugger run used EB Garamond). Timecodes must come from the
+  real (mixed) segment durations, not `duration_s`, since dynamic clips run
+  longer. Keep "no model-rendered type" (the model garbles lettering — burn
+  it in post/assemble instead). Also: **Veo durations must snap to {4,6,8}s**
+  (Veo-3-fast rejects 5/7 with a misleading "between 4 and 8" 400) — the
+  render path should round `duration_s` to the nearest allowed value per
+  provider.
+
+- **Music: a `music` audio field + a cohesive trailer bed.** Requested
+  2026-06-06 (Fugger book). `render_audio_for_prompt` emits dialogue + SFX +
+  ambience but **no music** — so the Veo/grok prompt never asks for a score
+  (the Fugger run had to fold "underscored by a driving string ostinato"
+  into the `ambience` string as a workaround). Add an `audio.music` field
+  emitted as its own prompt line. BUT per-clip model music does NOT connect
+  across shots (3 adjacent courier-war clips = 3 unrelated cues) — the right
+  answer for a trailer is **one continuous bed** laid in `teaser-assemble`
+  (the `--mix duck` ducking option already exists; it needs a music source —
+  a user-supplied track or a generated one) under the whole cut, with the
+  per-clip dialogue/SFX on top. Document: prefer the assembly bed; per-shot
+  `music` cues are for one-off dramatic beats only.
+
 - **Non-destructive render — keep previous takes, never overwrite.**
   Requested 2026-06-06 (Fugger book). Today `teaser-render` writes
   `clips/shot_<id>.png` and a re-run **overwrites** it; a curated/QA'd frame
