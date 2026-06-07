@@ -1624,7 +1624,25 @@
   (row + pipeline line), STATE. `autonovel install` re-run. Regression gate:
   **Tier 1+2 1773 → 1785 passed, 1 skipped, 0 failed** (+6 contract pickups for the new command, +6 deterministic).
 
+- 2026-06-07 (teaser orchestrator runs the critique→revise loop): additive,
+  command-body + next-step. `/autonovel:teaser` gained **Stage 3** — after
+  beats + shot-prompts it spawns a subagent running `/autonovel:teaser-revise
+  --max-rounds {revise_rounds}` (default 2; `--no-revise` skips), which loops
+  critique→apply-in-place→re-critique until the render gate is READY, and the
+  combined summary now reports the **gate verdict** (READY/BLOCKED) + the
+  right next step (refs/render vs another revise). New flags `--revise-rounds`
+  / `--no-revise`; frontmatter reads/writes gained `teaser/critique.md`; the
+  orchestrator's postamble next-step flipped from teaser-critique to
+  teaser-render (it now produces a READY teaser itself). 1 new test. No
+  existing behaviour changed (loop additive; `--no-revise` reproduces the old
+  two-stage flow). Doc-sync: teaser.md, commands.md (row), STATE. `autonovel
+  install` re-run. Regression gate: **Tier 1+2 1786 passed, 1 skipped.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1786
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +1 since the 1785 mark: teaser orchestrator next-step → render (Stage 3
+  critique→revise loop). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1785
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +12 since the 1773 mark: teaser revise-loop (new teaser-revise command +

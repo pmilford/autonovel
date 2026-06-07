@@ -73,3 +73,11 @@ def test_critique_points_at_revise() -> None:
     # to ACT on findings (no forced hand edits).
     _, rationale = _TEASER_NEXT["autonovel:teaser-critique"]
     assert "teaser-revise" in rationale
+
+
+def test_orchestrator_next_step_is_render_not_critique() -> None:
+    # the /autonovel:teaser orchestrator now runs critique→revise itself, so
+    # its next step is render (validate via stub), not "go critique".
+    ns = _teaser_next_step("autonovel:teaser", "medieval-king-maker")
+    assert ns is not None and "teaser-render" in ns.command
+    assert "teaser-critique" not in ns.command

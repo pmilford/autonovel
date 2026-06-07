@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser
-description: One-command teaser pipeline — plan the beats, then turn them into provider-ready shot prompts, with a free pre-generation critique. Chains teaser-beats → shot-prompts in fresh subagents so the parent context stays clean.
-argument-hint: "--book <short-name> [--length 30|60|90|120|180] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--with-treatment] [--force]"
+description: One-command teaser pipeline — plan the beats, turn them into provider-ready shot prompts, then run the critique→revise loop to a READY render gate. Chains teaser-beats → shot-prompts → (teaser-critique ⟳ teaser-revise) in fresh subagents so the parent context stays clean. All free; stops before any render.
+argument-hint: "--book <short-name> [--length 30|60|90|120|180] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--with-treatment] [--revise-rounds <n>] [--no-revise] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -12,28 +12,38 @@ reads:
   - books/{book}/treatment.md
   - books/{book}/teaser/beats.md
   - books/{book}/teaser/teaser.json
+  - books/{book}/teaser/critique.md
 writes:
   - books/{book}/teaser/beats.md
   - books/{book}/teaser/teaser.json
   - books/{book}/teaser/shots/shot_*.md
+  - books/{book}/teaser/critique.md
 context_mode: book
 ---
 
 <purpose>
-The single entry point for making a teaser. It runs the two free planning
-commands in order —
+The single entry point for making a teaser. It runs the free planning
+pipeline end-to-end —
 
   1. `/autonovel:teaser-beats` → `books/{book}/teaser/beats.md`
-     (the hook → escalation → title → button beat-sheet), then
+     (the story spine + hook → escalation → title → button beat-sheet), then
   2. `/autonovel:shot-prompts` → `books/{book}/teaser/teaser.json` +
      `books/{book}/teaser/shots/shot_*.md`
      (the richly-described, provider-ready shot prompts, with the free
-     mechanical + LLM pre-generation critique built in).
+     mechanical + LLM pre-generation critique built in), then
+  3. the **critique → revise loop**: `/autonovel:teaser-critique` writes the
+     verdict, and `/autonovel:teaser-revise` **applies its findings in place**
+     (filling the spine, strengthening dialogue/cards, repairing the 4-act
+     order + stakes ladder) — looping until the **render gate is READY** or
+     the round budget is spent. This is what gets you a renderable teaser
+     from one command instead of leaving you to fix the critique by hand.
 
-— and prints one combined summary plus the next step. Nothing here calls
-an image/video tool; the whole pipeline is **free**. You can still run the
-two commands individually (and hand-edit `beats.md` between them); this is
-the convenience wrapper that does both with one invocation.
+— then it prints one combined summary plus the next step. Nothing here calls
+an image/video tool; the whole pipeline is **free** and **stops before any
+render** (rendering is the deliberate, quota-bearing `/autonovel:teaser-render`
+step, with its own free stub-validate + approval gate). You can still run the
+sub-commands individually (and hand-edit `beats.md` between them); this is the
+convenience wrapper that does all three with one invocation.
 
 Each stage runs in a **fresh `task` subagent conversation** so the parent
 doesn't accumulate the (heavy) shot-authoring prose + tool output — the
@@ -57,6 +67,8 @@ guard); never retry their reads.
    `--length <seconds>` (default: `project.yaml :: teaser.length_s` if
    set, else `90`; use `180` for the Future Vision X-Prize 3-minute
    trailer), `--provider <name>` (default `generic`), `--with-treatment`,
+   `--revise-rounds <n>` (default `2` — how many critique→revise passes the
+   loop may run), `--no-revise` (skip the loop; stop after shot-prompts),
    `--force`. Confirm the book exists in `project.yaml`; if not, stop with
    a one-line usage reminder. Touch no disk on a parse error.
 
@@ -98,10 +110,23 @@ guard); never retry their reads.
    `books/{book}/teaser/shots/shot_*.md`. Capture its one-line summary
    (shot count, total seconds vs target, remaining advisory flags).
 
-6. **Combined summary.** After both stages, read the final
-   `books/{book}/teaser/teaser.json` only to count shots / total seconds
-   (use `bash`: `autonovel mechanical teaser-validate
-   books/{book}/teaser/teaser.json --provider {provider} --format human`),
+6. **Stage 3 — critique → revise loop (skip if `--no-revise`).** Spawn a
+   third **fresh `task` subagent** and instruct it to run, exactly:
+   `/autonovel:teaser-revise --book {book} --provider {provider} --max-rounds {revise_rounds}`.
+   Wait for it. `teaser-revise` internally runs the mechanical critique,
+   **applies the findings to `teaser.json` in place** (it is a no-op that
+   reports "already clean" when there is nothing to fix — e.g. shot-prompts
+   already produced a READY teaser), re-critiques, and loops up to
+   `--max-rounds` until the **render gate is READY** or the budget is spent.
+   It writes `books/{book}/teaser/critique.md` along the way. Capture its
+   final one-line summary (flags before → after, gate READY/BLOCKED). Never
+   fail the pipeline over a still-BLOCKED gate — relay it so the user can run
+   another `teaser-revise` round or hand-edit.
+
+7. **Combined summary.** Read the final gate status — `bash`:
+   `autonovel mechanical teaser-critique books/{book}/teaser/teaser.json --provider {provider} --format json`
+   (a story-spine flag in `findings` ⇒ gate BLOCKED; none ⇒ READY) — and the
+   shot count via `autonovel mechanical teaser-validate … --format human`,
    then print:
 
    ```
@@ -111,15 +136,20 @@ guard); never retry their reads.
         teaser.json — {n} shots, {total}s total · {valid} · {k} advisory flags left
                       ({d} dialogue lines · {c} text cards)
         shots/    — {n} per-shot prompt files
+        Render gate: {READY ✅ | BLOCKED ⚠️ on: <codes>}  (after {r} revise round(s))
 
-   Edit any prompt in books/{book}/teaser/shots/ or the JSON directly,
-   then re-critique with /autonovel:teaser-critique --book {book}.
+   {If READY:}
+   Next: develop references, then render:
+     /autonovel:teaser-refs --book {book} --with-locations   (approve faces + places)
+     /autonovel:teaser-render --book {book} --provider stub  (validate the chain free)
+   then a real backend (see docs/teaser-render-providers.md). The render
+   gate is READY, so a real render won't be refused.
 
-   Next: generate the clips from these prompts with
-   /autonovel:teaser-render --book {book} — it validates the chain free
-   via the offline `stub` backend, then renders real video on `grok`
-   (free dialogue+music; see docs/teaser-render-providers.md).
-   Re-run /autonovel:teaser --force to rebuild the whole teaser.
+   {If still BLOCKED:}
+   The story gate is still BLOCKED on {codes}. Run one more
+   /autonovel:teaser-revise --book {book}, or hand-edit teaser.json
+   (see books/{book}/teaser/critique.md). Re-run /autonovel:teaser --force
+   to rebuild from scratch.
    ```
 </workflow>
 
@@ -128,11 +158,15 @@ guard); never retry their reads.
   `books/{book}/teaser/teaser.json`, and `books/{book}/teaser/shots/shot_*.md`
   all exist, and `teaser.json` passes `autonovel mechanical teaser-validate`
   for the chosen provider.
+- Unless `--no-revise`, Stage 3 ran the critique→revise loop and the summary
+  reports the **render-gate verdict** (READY, or BLOCKED with the codes); a
+  still-blocked gate is relayed, never a hard failure.
 - Each stage ran in its own `task` subagent (fresh conversation); the
   parent printed only the combined summary, not the per-shot prose.
 - The overwrite guard refuses to clobber an existing `beats.md`/`teaser.json`
   without `--force`.
-- No image/video provider is called; the command is free.
+- No image/video provider is called; the command is free and stops before
+  any render.
 - `--with-treatment` runs `/autonovel:treatment` first only when no
   treatment exists, and never blocks the teaser if it is absent.
 </acceptance>

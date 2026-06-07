@@ -470,9 +470,10 @@ _TEASER_NEXT: dict[str, tuple[str, str]] = {
         "/autonovel:teaser --book {book} --length 180",
         "Treatment written — build the teaser beat-sheet + shot prompts from it."),
     "autonovel:teaser": (
-        "/autonovel:teaser-critique --book {book}",
-        "Beats + shots written — free pre-render check that the story spine is "
-        "complete (the render gate needs it) before spending anything."),
+        "/autonovel:teaser-render --book {book} --provider stub",
+        "Beats + shots authored AND the critique→revise loop ran to a READY "
+        "gate — validate the chain FREE with the stub, then develop references "
+        "(/autonovel:teaser-refs) and render on a real backend."),
     "autonovel:teaser-beats": (
         "/autonovel:shot-prompts --book {book}",
         "Beat-sheet written — turn the spine + beats into provider-ready shots."),
