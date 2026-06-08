@@ -181,6 +181,27 @@
   Maps the FUTURE-TODOS 8-point plan (1 quality gate, 2 micro-arc/turn, 3
   dialogue, 4 character, 5 use-the-180s, 6 brief, 7 few-shot, 8 de-boring).
 
+- **Phase 12** — **legibility + honest grading (the gate that graded the
+  script, not the experience)**. A full Fugger run shipped a teaser that
+  self-scored 7–9 and was still terrible: 9 of 23 shots were OBJECTS (a
+  ledger, a riderless horse, seven wax seals), named figures (Maximilian,
+  Albrecht) had no identification, 12 text cards papered over it — and the
+  quality judge graded the *script's intent* (which it could see) rather than
+  a stranger's *experience*. Fixes: (1) **viewer-blind legibility gate** —
+  `quality.json` schema /2 gains a per-shot `legibility` read (`clear/who/
+  what/why`, judged by the LLM from the perceivable layer ONLY — action +
+  spoken line + card, names/spine/beat-notes hidden), `viewer_takeaway`, and
+  `would_watch`; `QualityScore.passes()` now requires every scene legible +
+  would_watch + the dims, so an illegible teaser can't self-pass. (2)
+  **drama over mechanism + identify** — `Shot.identify` lower-third (burned
+  by `teaser-assemble` always, ~2.5 s), advisory `instrument-only-shot` /
+  `unidentified-figure` flags, `cast-sprawl` counts only real people. (3)
+  **cut the card crutch** — `thin-text-cards` removed from the gate, advisory
+  `too-many-cards` added; meaning rides spoken dialogue. (4) **genre care** —
+  commands read `project.yaml :: genre` and build in that idiom (historical
+  *fiction* ≠ documentary ≠ generic montage). teaser-critique/-revise/-beats/
+  shot-prompts updated; few worked rules in teaser-craft §11.
+
 **Baseline now:** Tier 1+2 = **1762 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run

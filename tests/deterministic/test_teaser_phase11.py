@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from autonovel.teaser import beats, critique, providers, quality
+from autonovel.teaser import assemble, beats, critique, providers, quality
 from autonovel.teaser.shots import Shot, Spine, Teaser
 
 
@@ -40,12 +40,47 @@ def _full_scores(**override: int) -> dict[str, int]:
     return s
 
 
+def _passing(shot_ids=("01", "02"), **override: int) -> quality.QualityScore:
+    """A fully-passing scorecard: strong dims AND a clean viewer-blind read
+    (every scene legible + a stranger would watch) — the Phase-12 gate needs
+    both halves."""
+    return quality.QualityScore(
+        scores=_full_scores(**override),
+        legibility=[quality.SceneRead(shot_id=s, clear=True, who="the merchant",
+                                      what="a choice", why="it matters") for s in shot_ids],
+        viewer_takeaway="A stranger comes away wanting to watch the film.",
+        would_watch=True, genre="historical fiction")
+
+
 def test_quality_gate_passes_when_all_strong() -> None:
-    s = quality.QualityScore(scores=_full_scores())
+    s = _passing()
     assert s.passes()
     assert s.verdict() == "PASS"
     assert s.overall() == 8.0
     assert s.gate_reasons() == []
+
+
+def test_strong_scores_alone_do_not_pass_without_legibility() -> None:
+    # The core Phase-12 fix: a self-score with no viewer-blind read is NOT
+    # trusted — exactly the hole that passed the boring Fugger teaser.
+    s = quality.QualityScore(scores=_full_scores())
+    assert not s.passes()
+    assert any("legibility" in r for r in s.gate_reasons())
+
+
+def test_illegible_scene_blocks_even_with_strong_scores() -> None:
+    s = _passing()
+    s.legibility[1].clear = False  # one scene a stranger can't read
+    assert not s.passes()
+    assert s.illegible_shots() == ["02"]
+    assert any("illegible" in r for r in s.gate_reasons())
+
+
+def test_would_not_watch_blocks() -> None:
+    s = _passing()
+    s.would_watch = False
+    assert not s.passes()
+    assert any("would_watch" in r for r in s.gate_reasons())
 
 
 def test_quality_gate_blocks_on_one_dead_dimension() -> None:
@@ -99,7 +134,7 @@ def test_quality_cli_template_and_gate(tmp_path: Path) -> None:
     assert set(tmpl["scores"]) == set(quality.DIMENSION_KEYS)
 
     qp = tmp_path / "quality.json"
-    quality.dump(quality.QualityScore(scores=_full_scores()), qp)
+    quality.dump(_passing(), qp)
     ok = _run("teaser-quality", str(qp))
     assert ok.returncode == 0 and "PASS" in ok.stdout
 
@@ -213,8 +248,7 @@ def test_render_gate_blocks_story_complete_teaser_without_quality(tmp_path: Path
 
 def test_render_gate_clears_with_passing_quality(tmp_path: Path) -> None:
     p = _story_complete(tmp_path)
-    quality.dump(quality.QualityScore(scores=_full_scores()),
-                 quality.quality_path(p))
+    quality.dump(_passing(), quality.quality_path(p))
     out = _run("teaser-render", str(p), "--provider", "veo", "--kind", "video",
                "--dry-run", "--format", "json")
     pay = json.loads(out.stdout)
@@ -247,3 +281,91 @@ def test_render_gate_skip_override_bypasses_quality(tmp_path: Path) -> None:
                "--dry-run", "--format", "json", "--skip-narrative-gate")
     pay = json.loads(out.stdout)
     assert pay["quality_gate_blocks"] is False
+
+
+# ----------------- Phase 12: legibility / drama-over-mechanism ------------
+
+def test_quality_v2_round_trips_legibility() -> None:
+    s = _passing()
+    s.legibility[0].who = "Jakob Fugger"
+    d = s.to_dict()
+    assert d["schema"] == "teaser-quality/2"
+    s2 = quality.QualityScore.from_dict(d)
+    assert s2.legibility[0].who == "Jakob Fugger"
+    assert s2.would_watch is True and s2.passes()
+    # a tampered would_watch can't be smuggled past a real illegible scene
+    d["legibility"][0]["clear"] = False
+    assert not quality.QualityScore.from_dict(d).passes()
+
+
+def test_shot_identify_round_trips_and_is_omitted_when_empty() -> None:
+    s = Shot(id="01", role="hook", subject_name="Jakob Fugger",
+             subject_appearance="x", action="a",
+             identify="Jakob Fugger — the richest man in Europe")
+    assert "identify" in s.to_dict()
+    assert Shot.from_dict(s.to_dict()).identify.startswith("Jakob Fugger")
+    assert "identify" not in Shot(id="02", role="hook", subject_name="J",
+                                  subject_appearance="x", action="a").to_dict()
+
+
+def test_instrument_only_shot_flagged() -> None:
+    t = Teaser(title="T", length_s=12, provider="veo", spine=Spine(genre="x"), shots=[
+        Shot(id="01", role="hook", subject_name="Jakob Fugger",
+             subject_appearance="x", action="stands", identify="Jakob Fugger — banker"),
+        # an object shot with no person, no line, no identify → the horse
+        Shot(id="02", role="escalation", subject_name="a riderless courier horse",
+             subject_appearance="a horse", action="stands in the road"),
+        Shot(id="03", role="button", subject_name="Jakob Fugger",
+             subject_appearance="x", action="b"),
+    ])
+    codes = {f.code for f in critique.critique(t, providers.get("veo")).findings}
+    assert "instrument-only-shot" in codes
+    assert "instrument-only-shot" not in critique.STORY_GATE_CODES  # advisory
+
+
+def test_unidentified_figure_flagged() -> None:
+    t = Teaser(title="T", length_s=8, provider="veo", spine=Spine(genre="x"), shots=[
+        Shot(id="01", role="hook", subject_name="Albrecht of Brandenburg",
+             subject_appearance="an archbishop", action="signs"),  # never identified
+        Shot(id="02", role="button", subject_name="Albrecht of Brandenburg",
+             subject_appearance="an archbishop", action="leaves"),
+    ])
+    codes = {f.code for f in critique.critique(t, providers.get("veo")).findings}
+    assert "unidentified-figure" in codes
+    # giving the first appearance an identify clears it
+    t.shots[0].identify = "Albrecht of Brandenburg — an archbishop who bought his office"
+    codes2 = {f.code for f in critique.critique(t, providers.get("veo")).findings}
+    assert "unidentified-figure" not in codes2
+
+
+def test_identify_lower_third_burns_even_without_burn_titles(tmp_path: Path) -> None:
+    ce = assemble.CutEntry(shot_id="01", clip="a.mp4", duration_s=4.0,
+                           media="video",
+                           identify="Jakob Fugger — the richest man in Europe")
+    cl = assemble.CutList(title="T", entries=[ce], kind="video", burn_titles=False)
+    cmd = " ".join(assemble.ffmpeg_command(cl, tmp_path / "out.mp4"))
+    assert "drawtext" in cmd and "the richest man in Europe" in cmd
+    # round-trips through the cut-list JSON
+    assert assemble.CutEntry.from_dict(ce.to_dict()).identify == ce.identify
+
+
+def test_build_cut_list_carries_identify(tmp_path: Path) -> None:
+    cd = tmp_path / "clips"; cd.mkdir()
+    (cd / "shot_01.mp4").write_bytes(b"x")
+    t = Teaser(title="T", provider="veo", shots=[
+        Shot(id="01", role="hook", subject_name="Jakob Fugger",
+             subject_appearance="x", action="a",
+             identify="Jakob Fugger — banker", duration_s=4.0)])
+    result = assemble.build_cut_list(t, cd, kind="video")
+    cl = result[0] if isinstance(result, tuple) else result
+    assert cl.entries[0].identify == "Jakob Fugger — banker"
+
+
+def test_too_many_cards_flagged_not_thin() -> None:
+    shots = [Shot(id=f"{i:02d}", role="escalation", subject_name="Jakob Fugger",
+                  subject_appearance="x", action="a", text_card=f"card {i}",
+                  identify="Jakob Fugger — banker") for i in range(6)]
+    t = Teaser(title="T", length_s=24, provider="veo", spine=Spine(genre="x"), shots=shots)
+    codes = {f.code for f in critique.critique(t, providers.get("veo")).findings}
+    assert "too-many-cards" in codes
+    assert "thin-text-cards" not in codes

@@ -1736,7 +1736,45 @@
   use-the-180s · 6 brief · 7 few-shot · 8 de-boring). Regression gate:
   **Tier 1+2 1831 passed, 1 skipped, 0 failed.**
 
+- 2026-06-08 (movie-teaser Phase 12 — legibility + honest grading): a full
+  Fugger run on Phase 11 STILL shipped a terrible teaser that self-scored
+  7–9. Root cause from the real artifacts: 9 of 23 shots were OBJECTS (a
+  ledger, a riderless horse, seven wax seals), named figures had no
+  identification, 12 text cards papered over it — and `quality.json` graded
+  the *script's intent* (which the model could see) not a stranger's
+  *experience*. The self-score was circular. Fix: an **external, viewer-blind**
+  half to the gate — `quality.json` schema /2 carries a per-shot `legibility`
+  read (`clear/who/what/why`) the LLM judges from ONLY the perceivable layer
+  (visible action + spoken line + on-screen card, names/spine/beat-notes
+  hidden), plus `viewer_takeaway` + `would_watch`; `QualityScore.passes()` now
+  requires the dims AND every scene legible AND would_watch, so an illegible
+  "tour of objects" can no longer self-pass; the render gate enforces it.
+  Supporting craft: `Shot.identify` (a figure's first-appearance lower-third,
+  burned by `teaser-assemble` always, ~2.5 s), advisory `instrument-only-shot`
+  / `unidentified-figure` candidate-generators (NOT gates — per
+  feedback_avoid_brittle_python the LLM legibility read is the real judge),
+  `cast-sprawl` now counts only real people (objects can't be rationalised as
+  cast), `thin-text-cards` REMOVED from the story gate + advisory
+  `too-many-cards` added (cards were a crutch; meaning rides spoken dialogue +
+  more characters speaking, per user), and reading `project.yaml :: genre` to
+  build in the book's actual idiom (historical *fiction*, not documentary, not
+  generic montage — the user corrected a documentary over-swing). Doc-sync:
+  teaser-craft §11, all teaser command bodies, commands.md, help.md, README,
+  templates/series/CLAUDE.md, prd + impl-plan, FUTURE-TODOS, STATE;
+  `autonovel install` re-run. Regression gate: **Tier 1+2 1841 passed, 1
+  skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1841
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +10 since the 1831 mark: movie-teaser **Phase 12 — legibility + honest
+  grading**. `quality.json` schema /2 (viewer-blind legibility read +
+  viewer_takeaway + would_watch; `passes()` now requires every scene legible),
+  `Shot.identify` lower-third (burned by teaser-assemble), advisory
+  `instrument-only-shot`/`unidentified-figure`/`too-many-cards`,
+  `thin-text-cards` removed from the gate, cast-sprawl counts only people →
+  phase-11 file extended + assembly identify tests; 2 next-actions pickups
+  updated. Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1831
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +26 since the 1805 mark: movie-teaser **Phase 11 — storytelling QUALITY**
@@ -2139,7 +2177,24 @@ pre-written cuts file, a minimal brief), and invokes
   on Bells-parity.
 
 ## Resume pointer
-**Phase 11 (teaser storytelling QUALITY) SHIPPED 2026-06-08** — all 8 items
+**Phase 12 (teaser LEGIBILITY + honest grading) SHIPPED 2026-06-08.** The
+Phase-11 quality gate was self-certifying — it graded the *script* (which the
+model could see) not a stranger's *experience*, so a full Fugger run shipped
+a teaser that self-scored 7–9 and was still terrible (9/23 object shots, no
+figure IDs, 12 cards). Phase 12 adds the **viewer-blind legibility gate**
+(`quality.json` /2: per-shot who/what/why judged from on-screen info only;
+blocks illegible "tours of objects"), `Shot.identify` lower-thirds, drama-over-
+mechanism + genre-care authoring, and drops the text-card crutch. Tier 1+2
+1831 → 1841. **Next real-world step (needs the user):** the planning pipeline
+is FREE — regenerate the Fugger teaser SCRIPT (`/autonovel:teaser --book
+medieval-king-maker --fresh`) and read `teaser/quality.json`'s legibility
+read + `teaser.json` to confirm it now centers identified people, not objects,
+BEFORE any paid re-render. **Deeper open work** (FUTURE-TODOS near-term): make
+the gate judge the *rendered clips* (vision), not just the script, and make
+the assembly cut-critique adversarial (it also marked the bad cut "KEEP"). Also
+note the doubled series path `books/medieval-king-maker/books/medieval-king-maker`
+(the Phase-10 nesting issue, still unfixed in that series). Prior:
+**Phase 11 (teaser storytelling QUALITY) shipped 2026-06-08** — all 8 items
 of the "it's boring" plan landed: the interestingness rubric + HARD quality
 gate (`teaser/quality.py` + `quality.json` + second render gate), spine
 `turn`, per-shot `character_beat`, length-aware pacing (movements +

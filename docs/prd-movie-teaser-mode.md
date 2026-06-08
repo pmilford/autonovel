@@ -231,10 +231,11 @@ spine:
 The block is omitted entirely when empty, so pre-Phase-6 teasers
 round-trip unchanged. `teaser-critique` raises the **story-spine** flags
 `no-dramatic-question`, `no-logline`, `no-stakes`, `no-emotional-arc`,
-`no-genre`, `thin-dialogue` (<2 spoken lines on an audio provider), and
-`thin-text-cards` (<2 cards) — these are the **render gate (bp 12):**
+`no-genre`, and `thin-dialogue` (<2 spoken lines on an audio provider) —
+these are the **render gate (bp 12):**
 `teaser-render` refuses a real generation while any is present (`stub` +
-single-`--shot` exempt; `--skip-narrative-gate` overrides). It also raises
+single-`--shot` exempt; `--skip-narrative-gate` overrides). (Phase 12: the
+`thin-text-cards` requirement was removed — cards were a crutch; see below.) It also raises
 the **4-act** flags (`hook-not-first`, `multiple-hooks`, `no-title`,
 `button-not-last`, `title-after-button`; bp 2), **stakes-ladder** flags
 (`no-stakes-ladder`, `stakes-not-rising`; bp 3), and `cast-sprawl`
@@ -254,6 +255,20 @@ no dimension < 5** (same `stub`/`--shot`/`--skip-narrative-gate` exemptions).
 pass; the rubric + two worked beat-sheets live in `teaser-craft.md` §11.
 The *scores* are the LLM judge's (taste is never mechanical); Python only
 computes the gate rule, in one place (`teaser-quality`).
+
+**Phase 12 — the gate that graded the script, not the experience.** A
+self-score is gameable: the model that wrote the teaser can see its intent
+(spine/names/beat-notes) and grades the *script it meant*, passing an
+illegible "tour of objects" with eloquent 8s. So `quality.json` (schema /2)
+adds an **external, viewer-blind** half: a per-shot `legibility` read judged
+from ONLY what a stranger perceives (visible action + spoken line + card,
+names/spine hidden) — who/what/why — plus `viewer_takeaway` and
+`would_watch`. The gate blocks on any illegible scene. Supporting craft:
+`Shot.identify` (a figure's first-appearance lower-third, burned by
+`teaser-assemble`), advisory `instrument-only-shot`/`unidentified-figure`
+flags, `cast-sprawl` counting only real people, the removal of the
+`thin-text-cards` requirement (cards were a crutch; meaning rides spoken
+dialogue), and reading the book's real genre to build in its idiom.
 
 **Model-agnostic per-shot schema we implement** (stored in
 `teaser.json`; rendered to `shot_NN.md` and, later, to each provider's

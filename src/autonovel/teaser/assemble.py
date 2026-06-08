@@ -52,6 +52,11 @@ class CutEntry:
     # Phase 8 — how a burned-in text_card is placed: "title" (centered,
     # large) | "stinger" (lower third, smaller).
     card_kind: str = "stinger"
+    # Phase 12 — a figure-identification lower-third ("Name — epithet") burned
+    # at this clip's first ~2.5s so a first-time viewer knows WHO this is.
+    # Distinct from a text_card (which is a story line); sits at the very
+    # bottom. Set only on a figure's first appearance.
+    identify: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -68,6 +73,8 @@ class CutEntry:
             d["text_card"] = self.text_card
         if self.card_kind != "stinger":
             d["card_kind"] = self.card_kind
+        if self.identify:
+            d["identify"] = self.identify
         return d
 
     @classmethod
@@ -91,6 +98,7 @@ class CutEntry:
             transition_dur=float(d.get("transition_dur", 0.5)),
             media=media,
             card_kind=card_kind,
+            identify=d.get("identify"),
         )
 
     def media_kind(self, cut_kind: str) -> str:
@@ -276,6 +284,7 @@ def build_cut_list(
             text_card=s.text_card,
             media=(media if kind == "mixed" else ""),
             card_kind=("title" if role_by_id.get(s.id) == "title" else "stinger"),
+            identify=(s.identify or None),
         ))
     # Safe transition defaults (Phase 5.7): ease in/out of black and fade
     # title cards. Everything else stays a hard cut — the artistic
@@ -395,23 +404,38 @@ def _dt_escape(text: str) -> str:
 def _burn_chain(e: "CutEntry", w: int, h: int, font_file: str | None) -> str:
     """A per-segment ``drawtext`` filter for a burned-in text card (Phase 8),
     faded in/out over the segment, returned with a leading comma (or "").
-    Title cards sit centered + large; stingers ride the lower third. Timing
-    is segment-local because every segment is trimmed/held to duration_s."""
-    if not (e.text_card or "").strip():
-        return ""
+    Title cards sit centered + large; stingers ride the lower third; an
+    `identify` figure-label (Phase 12) rides the very bottom for the clip's
+    first ~2.5s. Timing is segment-local because every segment is trimmed/held
+    to duration_s."""
     dur = max(0.1, float(e.duration_s))
     td = max(0.1, min(float(e.transition_dur) or 0.5, dur / 2.0))
-    text = _dt_escape(e.text_card)
     ff = f"fontfile={font_file}:" if font_file else ""
-    if e.card_kind == "title":
-        size, y = max(24, w // 16), "(h-text_h)/2"
-    else:
-        size, y = max(16, w // 30), "h-text_h-(h/10)"
-    # alpha ramps 0→1 over td, holds, then 1→0 over the last td.
-    alpha = (f"alpha='if(lt(t,{td:g}),t/{td:g},"
-             f"if(gt(t,{dur - td:g}),({dur:g}-t)/{td:g},1))'")
-    return (f",drawtext={ff}text='{text}':x=(w-text_w)/2:y={y}:"
-            f"fontcolor=white:fontsize={size}:borderw=2:bordercolor=black@0.8:{alpha}")
+    chain = ""
+    if (e.text_card or "").strip():
+        text = _dt_escape(e.text_card)
+        if e.card_kind == "title":
+            size, y = max(24, w // 16), "(h-text_h)/2"
+        else:
+            size, y = max(16, w // 30), "h-text_h-(h/10)"
+        # alpha ramps 0→1 over td, holds, then 1→0 over the last td.
+        alpha = (f"alpha='if(lt(t,{td:g}),t/{td:g},"
+                 f"if(gt(t,{dur - td:g}),({dur:g}-t)/{td:g},1))'")
+        chain += (f",drawtext={ff}text='{text}':x=(w-text_w)/2:y={y}:"
+                  f"fontcolor=white:fontsize={size}:borderw=2:bordercolor=black@0.8:{alpha}")
+    if (e.identify or "").strip():
+        # Figure ID: small, very bottom, shown for the first ~2.5s (or clip
+        # length if shorter), faded out — "who is this?" answered for a viewer.
+        idt = _dt_escape(e.identify)
+        hold = min(2.5, dur)
+        fade = min(0.4, hold / 2.0)
+        isize = max(14, w // 38)
+        ialpha = (f"alpha='if(lt(t,{fade:g}),t/{fade:g},"
+                  f"if(gt(t,{hold - fade:g}),max(0,({hold:g}-t)/{fade:g}),1))'")
+        chain += (f",drawtext={ff}text='{idt}':x=(w-text_w)/2:y=h-text_h-(h/24):"
+                  f"fontcolor=white:fontsize={isize}:borderw=2:bordercolor=black@0.85:"
+                  f"enable='lt(t,{hold:g})':{ialpha}")
+    return chain
 
 
 def _scale_pad(width: int, height: int) -> str:
@@ -483,7 +507,18 @@ def ffmpeg_command(cut_list: CutList, out_path: Path | str) -> list[str]:
     chains: list[str] = []
     for i, e in enumerate(cut_list.entries):
         pre = f"trim=0:{e.duration_s:g},setpts=PTS-STARTPTS," if seg_video[i] else ""
-        burn_f = _burn_chain(e, w, h, ff) if burn else ""
+        # Burn text cards only when burn_titles is on; ALWAYS burn the
+        # figure-identify lower-third (Phase 12 — it's load-bearing
+        # legibility, not an optional card).
+        if burn:
+            burn_f = _burn_chain(e, w, h, ff)
+        elif (e.identify or "").strip():
+            id_only = CutEntry(shot_id=e.shot_id, clip=e.clip,
+                               duration_s=e.duration_s, identify=e.identify,
+                               transition_dur=e.transition_dur)
+            burn_f = _burn_chain(id_only, w, h, ff)
+        else:
+            burn_f = ""
         chains.append(
             f"[{i}:v]{pre}{_scale_pad(w, h)},fps={fps}{_fade_chain(e)}{burn_f}[v{i}]")
     if is_mixed and use_clip_audio:

@@ -11,6 +11,30 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Phase 12 — teaser LEGIBILITY + honest grading (shipped 2026-06-08).** A
+  full Fugger run on Phase 11 *still* produced a terrible teaser that
+  self-scored 7–9: 9 of 23 shots were OBJECTS (a ledger, a riderless horse,
+  seven wax seals), named figures had no identification, 12 text cards
+  papered over it — and the quality judge graded the *script's intent* (which
+  it could see) not a stranger's *experience*. Fixes: (1) **viewer-blind
+  legibility gate** — `quality.json` schema /2 gains a per-shot `legibility`
+  read (`clear/who/what/why`, judged from the perceivable layer ONLY — action
+  + spoken line + card, names/spine/beat-notes hidden) + `viewer_takeaway` +
+  `would_watch`; `passes()` now needs every scene legible + would_watch, so a
+  boring/illegible teaser can't self-pass. (2) **drama over mechanism +
+  identify** — `Shot.identify` lower-third (always burned by `teaser-assemble`),
+  advisory `instrument-only-shot`/`unidentified-figure`, `cast-sprawl` counts
+  only real people. (3) **cut the card crutch** — `thin-text-cards` removed
+  from the gate, advisory `too-many-cards` added; meaning rides spoken
+  dialogue + more characters. (4) **genre care** — read `project.yaml ::
+  genre` and build in that idiom (historical *fiction*, not documentary, not
+  generic montage). teaser-craft §11 + all command bodies updated. Tier 1+2:
+  1831 → 1841. **Open follow-up:** the planning pipeline is free — regenerate
+  the Fugger teaser script by hand against these rules and confirm it's
+  legible before any (paid) re-render. Deeper: have the gate judge the
+  *rendered clips* (vision), not just the script, and make the assembly cut
+  critique adversarial too (it also marked the bad cut "KEEP").
+
 - ~~**★ TOP PRIORITY — Teaser CONTENT QUALITY: "it's boring, nothing
   happens."**~~ **Phase 11 — ALL 8 items shipped 2026-06-08.** Added
   `teaser/quality.py` — an eight-dimension interestingness rubric

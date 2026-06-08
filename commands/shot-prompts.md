@@ -98,7 +98,13 @@ of best-effort inputs.
      shot (consistency; teaser-craft §6). Assign each a reference image
      path `refs/<name>.png` (the plan; generated later).
    - `shared/world.md` — settings/locations.
-   - `project.yaml :: period` / `region` — wardrobe, props, era look.
+   - `project.yaml :: genre` / `period` / `region` — wardrobe, props, era
+     look, AND the teaser's **idiom**. Read the genre carefully and build in
+     *that* genre's convention (e.g. historical **fiction** = a cinematic
+     character-and-stakes drama trailer; a thriller = withheld menace; a
+     biography/history = fact-forward). Never fall back to a generic moody
+     montage — that genre-blind default is what makes a teaser feel like
+     nothing (Phase 12).
    - `books/{book}/art/visual_style.json` — palette anchors (3-5),
      grade, lens look. Hold the palette identical across shots.
    - `books/{book}/voice.md` Part 4 — per-character beat density / how a
@@ -129,11 +135,13 @@ of best-effort inputs.
      spoken `dialogue` when the provider has native audio (check
      `teaser-plan`); if it does not, carry those lines as **text cards**
      instead (below) so the meaning still lands.
-   - **Text cards (bp 6).** Author **2-4 short `text_card`s** that carry
-     the premise/logline cheaply (they dodge AI lipsync): typically a
-     premise card near the open, an escalation stinger, and the
-     logline/title beat (`role: title`) card. Keep them short and
-     declarative — they do the narrative work the images can't.
+   - **Text cards — sparing (Phase 12, revised).** Real shorts don't
+     slideshow cards; they let **characters talk.** So carry the story in
+     spoken dialogue first, and use `text_card`s only where a card genuinely
+     beats a line: the **title** beat (carries the logline) and at most ONE
+     button line. Do NOT put a card on every other shot — a card stack is the
+     crutch that papers over illegible visuals. Prefer more characters
+     speaking + a sparing narrator VO line over more cards.
 
 6. **Author the shots.** Build the full `books/{book}/teaser/teaser.json`
    as `{title, length_s, provider, spine:{dramatic_question, logline,
@@ -168,6 +176,20 @@ of best-effort inputs.
      (the protagonist visibly pursuing what they want) and ≥1
      `character_beat: "cost"` (the price/change it exacts), and write those
      shots to *show* it — a choice, a loss — not just a recurring face.
+   - **Drama over mechanism (Phase 12 — the #1 legibility fix):** every
+     hook/escalation shot must put a **person making a visible choice** on
+     screen, not an OBJECT. A ledger, a wax seal, a contract, a riderless
+     horse, a map, a stack of dispatches mean nothing to a stranger — they
+     read as "a horse," not "the courier was intercepted." Show the *man
+     deciding to buy the emperor*, not the wax being pressed. If a beat is
+     inherently about an instrument, frame a named person *using* it and let
+     a line carry the meaning. Do NOT emit object-only subjects.
+   - **Identify the players (Phase 12):** the first appearance of each key
+     real figure gets an `identify` ("Name — epithet" — e.g. `"Jakob Fugger
+     — the richest man in Europe"`, `"Albrecht of Brandenburg — an archbishop
+     who bought his office"`), which the assembler burns as a subtle
+     lower-third. A teaser of unnamed strangers in period dress is illegible;
+     this is how a viewer knows who matters.
    - **Restraint (bp 10):** do NOT emit a shot that is merely "the
      character standing where/when they are" — every shot turns the
      question or implies a larger world. Cut filler.
@@ -184,9 +206,10 @@ of best-effort inputs.
    a. `bash`: `autonovel mechanical teaser-critique books/{book}/teaser/teaser.json --provider <name>`
       — read the advisory flags. **Story-spine flags are must-fix**
       (`no-dramatic-question`, `no-logline`, `no-stakes`,
-      `no-emotional-arc`, `thin-dialogue`, `thin-text-cards`): clear them
-      by filling the spine / mining more lines / adding cards, not by
-      ignoring them. Plus the prompt flags (appearance-drift, thin-prompt,
+      `no-emotional-arc`, `thin-dialogue`): clear them by filling the spine /
+      mining more lines, not by ignoring them. Heed the Phase-12 legibility
+      advisories too (`instrument-only-shot`, `unidentified-figure`,
+      `too-many-cards`). Plus the prompt flags (appearance-drift, thin-prompt,
       no-palette, no-reference, multi-action, audio-unsupported,
       missing hook/button, length-mismatch).
    b. **LLM critic pass:** for each shot, judge the prompt against
@@ -249,9 +272,15 @@ of best-effort inputs.
 - ≥1 shot is tagged `character_beat: "want"` and ≥1 `character_beat: "cost"`,
   and an `escalation` shot near the midpoint stages the `spine.turn` reversal
   (`teaser-critique` reports no `no-character-arc`).
-- The teaser carries **≥2 spoken dialogue lines** (audio providers) or the
-  equivalent as text cards, and **2-4 text cards** carrying the premise —
-  no `thin-dialogue` / `thin-text-cards` flag remains for the provider.
+- Every hook/escalation shot centers a **person** (not an object); each key
+  figure's first appearance carries an `identify` lower-third
+  (`teaser-critique` reports no `instrument-only-shot` / `unidentified-figure`).
+  Text cards are sparing (title + at most one button line) — meaning rides
+  spoken dialogue, not a card stack (no `too-many-cards`).
+- The teaser carries the **length-scaled spoken dialogue lines** (audio
+  providers; carried as a sparing VO/cards otherwise) — no `thin-dialogue`
+  flag remains — and keeps text cards minimal (title + at most one button
+  line; no `too-many-cards`).
 - The teaser has exactly one `hook` and at least one `button`, and the
   button does not reveal the resolution.
 - No image/video provider is called; the command is free.

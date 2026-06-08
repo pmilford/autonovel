@@ -17,10 +17,27 @@ quality); this module only:
   - defines the eight scored dimensions (one rubric, one place),
   - round-trips ``teaser/quality.json`` (the persisted scorecard),
   - **computes the gate verdict** from the scores (overall ≥ 7 AND no
-    single dimension < 5), so the render gate and the commands share one
-    rule, and
+    single dimension < 5) AND the **viewer-blind legibility read** (every
+    scene must be legible to a first-time viewer; the teaser must read as
+    something a stranger would want to watch), so the render gate and the
+    commands share one rule, and
   - reports the *weakest* dimensions so the de-boring revise pass knows
     what to lift.
+
+**Why the legibility read exists (Phase 12).** A self-scored rubric is
+gameable: the *same model* that wrote the teaser scores it, and it can see
+its own intent (the spine, the beat notes, the character names) — so it
+grades the *script* it meant, not the *experience* a stranger gets, and
+passes itself with eloquent 8s while the rendered teaser is an illegible
+tour of objects (a ledger, a riderless horse, seven wax seals). The fix is
+an **external, viewer-blind** judgement: the ``teaser-critique`` command
+builds, per shot, only what a stranger actually perceives (the visible
+action + the spoken line + any on-screen text — the names/spine/beat-notes
+*hidden*), asks a skeptic first-time viewer "who / what / why?", and records
+whether each scene is ``clear``. The gate blocks on any illegible scene and
+on a teaser a stranger wouldn't want to watch. This module only validates
+that read and applies the rule — the judging is the LLM's (taste and a
+viewer's eye are never mechanical).
 
 No LLM, no network — pure data + arithmetic.
 """
@@ -65,7 +82,7 @@ DIMENSIONS: tuple[tuple[str, str], ...] = (
 
 DIMENSION_KEYS: tuple[str, ...] = tuple(k for k, _ in DIMENSIONS)
 
-SCHEMA = "teaser-quality/1"
+SCHEMA = "teaser-quality/2"
 
 # Gate thresholds (Phase 11). A teaser is "interesting enough to spend a
 # real render on" only when the overall score clears OVERALL_MIN *and* no
@@ -73,6 +90,39 @@ SCHEMA = "teaser-quality/1"
 # a brilliant hook can't rescue dialogue nobody can stand).
 OVERALL_MIN = 7.0
 DIM_MIN = 5
+
+
+@dataclass
+class SceneRead:
+    """One scene's *viewer-blind* legibility read (Phase 12). Authored by the
+    skeptic first-time-viewer judge from ONLY what a stranger perceives
+    (visible action + spoken line + on-screen text — names/spine/beat-notes
+    hidden). ``clear`` is the gate-bearing field: can a first-timer tell what
+    this scene is and why it matters? ``who``/``what``/``why`` record the
+    judge's actual read (empty/"can't tell" when ``clear`` is False)."""
+
+    shot_id: str
+    clear: bool = False
+    who: str = ""
+    what: str = ""
+    why: str = ""
+    note: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"shot_id": self.shot_id, "clear": bool(self.clear),
+                "who": self.who, "what": self.what, "why": self.why,
+                "note": self.note}
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "SceneRead":
+        return cls(
+            shot_id=str(d.get("shot_id", "")),
+            clear=bool(d.get("clear", False)),
+            who=str(d.get("who", "") or ""),
+            what=str(d.get("what", "") or ""),
+            why=str(d.get("why", "") or ""),
+            note=str(d.get("note", "") or ""),
+        )
 
 
 @dataclass
@@ -88,8 +138,16 @@ class QualityScore:
 
     scores: dict[str, int] = field(default_factory=dict)
     notes: dict[str, str] = field(default_factory=dict)
+    # Phase 12 — the viewer-blind layer (the un-gameable part of the gate):
+    legibility: list[SceneRead] = field(default_factory=list)
+    viewer_takeaway: str = ""      # "a stranger comes away thinking: ___"
+    would_watch: bool | None = None  # would that stranger want the film?
+    genre: str = ""                # the genre the teaser was judged in (audit)
 
     # --- arithmetic (computed, never persisted as source of truth) ---
+    def illegible_shots(self) -> list[str]:
+        """Shot ids the first-time-viewer judge could NOT read (gate-blocking)."""
+        return [r.shot_id for r in self.legibility if not r.clear]
     def known_scores(self) -> dict[str, int]:
         """Only the recognised dimensions with an integer score."""
         out: dict[str, int] = {}
@@ -130,10 +188,25 @@ class QualityScore:
     def passes(self, *, overall_min: float = OVERALL_MIN,
                dim_min: int = DIM_MIN) -> bool:
         """True when the teaser clears the quality gate: fully scored, in
-        range, overall ≥ ``overall_min``, no dimension < ``dim_min``."""
+        range, overall ≥ ``overall_min``, no dimension < ``dim_min``, AND the
+        viewer-blind read is present, every scene legible, and a stranger
+        would want to watch (Phase 12 — the un-gameable half)."""
         if self.missing_dimensions() or self.out_of_range():
             return False
-        return self.overall() >= overall_min and not self.low_dimensions(dim_min)
+        if self.overall() < overall_min or self.low_dimensions(dim_min):
+            return False
+        # Viewer-blind legibility (the un-gameable half): a self-score alone
+        # is not enough — require an external first-time-viewer read where
+        # every scene is legible and the takeaway makes a stranger want it.
+        if not self.legibility:
+            return False
+        if self.illegible_shots():
+            return False
+        if self.would_watch is not True:
+            return False
+        if not self.viewer_takeaway.strip():
+            return False
+        return True
 
     def gate_reasons(self, *, overall_min: float = OVERALL_MIN,
                      dim_min: int = DIM_MIN) -> list[str]:
@@ -154,6 +227,22 @@ class QualityScore:
                 ks = self.known_scores()
                 pretty = ", ".join(f"{k}={ks[k]}" for k in low)
                 reasons.append(f"dead dimension(s) below {dim_min}: {pretty}")
+        # Viewer-blind layer (Phase 12).
+        if not self.legibility:
+            reasons.append("no viewer-blind legibility read — re-score with "
+                           "teaser-critique (a self-score alone is not trusted)")
+        else:
+            bad_scenes = self.illegible_shots()
+            if bad_scenes:
+                reasons.append(f"illegible to a first-time viewer: shot(s) "
+                               f"{', '.join(bad_scenes)} (a stranger can't tell "
+                               f"who/what/why — show people + identify them, not objects)")
+            if self.would_watch is not True:
+                reasons.append("would_watch is not true — a stranger would not "
+                               "want the film from this teaser")
+            if not self.viewer_takeaway.strip():
+                reasons.append("no viewer_takeaway — state what a stranger comes "
+                               "away believing")
         return reasons
 
     def verdict(self, **kw: Any) -> str:
@@ -162,13 +251,19 @@ class QualityScore:
     # --- I/O ---
     def to_dict(self) -> dict[str, Any]:
         # Persist the computed fields too (for human reading / the summary),
-        # but ``from_dict`` recomputes them — ``scores`` is the only truth.
+        # but ``from_dict`` recomputes them — ``scores`` + ``legibility`` are
+        # the only truth.
         return {
             "schema": SCHEMA,
+            "genre": self.genre,
             "overall": self.overall(),
             "verdict": self.verdict(),
             "scores": {k: self.scores[k] for k in self.scores},
             "notes": {k: self.notes[k] for k in self.notes},
+            "legibility": [r.to_dict() for r in self.legibility],
+            "illegible_shots": self.illegible_shots(),
+            "viewer_takeaway": self.viewer_takeaway,
+            "would_watch": self.would_watch,
             "weakest": [k for k, _ in self.weakest()],
         }
 
@@ -187,7 +282,14 @@ class QualityScore:
                     scores[str(k)] = int(v)
         notes_raw = d.get("notes") or {}
         notes = {str(k): str(v) for k, v in notes_raw.items()} if isinstance(notes_raw, dict) else {}
-        return cls(scores=scores, notes=notes)
+        leg_raw = d.get("legibility") or []
+        legibility = [SceneRead.from_dict(r) for r in leg_raw
+                      if isinstance(r, dict)] if isinstance(leg_raw, list) else []
+        ww = d.get("would_watch")
+        would_watch = ww if isinstance(ww, bool) else None
+        return cls(scores=scores, notes=notes, legibility=legibility,
+                   viewer_takeaway=str(d.get("viewer_takeaway", "") or ""),
+                   would_watch=would_watch, genre=str(d.get("genre", "") or ""))
 
 
 def load(path: Path) -> QualityScore:
@@ -207,9 +309,18 @@ def quality_path(teaser_json: Path) -> Path:
 
 
 def blank_template() -> dict[str, Any]:
-    """A scaffold the LLM judge fills in (all dimensions, 0 = un-scored)."""
+    """A scaffold the LLM judge fills in (all dimensions, 0 = un-scored, plus
+    the viewer-blind legibility read the gate requires)."""
     return {
         "schema": SCHEMA,
+        "genre": "",
         "scores": {k: 0 for k in DIMENSION_KEYS},
         "notes": {k: "" for k in DIMENSION_KEYS},
+        "legibility": [
+            {"shot_id": "<id>", "clear": False, "who": "", "what": "",
+             "why": "", "note": "judged from on-screen action + spoken line + "
+             "card ONLY; names/spine/beat-notes hidden"},
+        ],
+        "viewer_takeaway": "",
+        "would_watch": False,
     }

@@ -29,14 +29,17 @@ It does **three** passes and writes a report plus a quality scorecard:
 
   1. **Mechanical linter** (`autonovel mechanical teaser-critique`) —
      deterministic flags: **story-spine** (no-dramatic-question, no-logline,
-     no-stakes, no-emotional-arc, no-genre, thin-dialogue, thin-text-cards),
+     no-stakes, no-emotional-arc, no-genre, thin-dialogue),
      **4-act order** (hook-not-first, multiple-hooks, no-title,
      button-not-last, title-after-button), **stakes ladder**
-     (no-stakes-ladder, stakes-not-rising), **cast** (cast-sprawl),
-     appearance-drift, thin-prompt, no-palette, no-reference, multi-action,
-     audio/negative unsupported for the provider, length-mismatch. The
-     story-spine subset is the **render gate** (`teaser-render` refuses a
-     real generation while any is present; `stub` is exempt) — bp 12.
+     (no-stakes-ladder, stakes-not-rising), **cast/legibility** (cast-sprawl,
+     instrument-only-shot, unidentified-figure, too-many-cards — Phase 12
+     advisories), appearance-drift, thin-prompt, no-palette, no-reference,
+     multi-action, audio/negative unsupported for the provider,
+     length-mismatch. The story-spine subset is the **render gate**
+     (`teaser-render` refuses a real generation while any is present; `stub`
+     is exempt) — bp 12. (Phase 12: `thin-text-cards` was dropped — cards are
+     a crutch; legibility is enforced by the viewer-blind quality gate below.)
   2. **LLM critic** — taste the mechanics can't judge. **Story (Phase 6,
      judge first):** does the teaser pose ONE dramatic question and never
      answer it (bp 1, 7)? Does each beat advance or complicate that
@@ -144,15 +147,46 @@ gaps and proceed without retrying.
    - `coherence` — does it add up to ONE legible story?
    - `button` — does it withhold the resolution AND deepen the question?
    For each dimension add a one-line `note` saying *why* the score and
-   *what would lift it* (these drive `/autonovel:teaser-revise`). `file_write`
-   the filled scorecard to `books/{book}/teaser/quality.json` (keep the
-   `schema` field). Then `bash`:
+   *what would lift it* (these drive `/autonovel:teaser-revise`).
+
+4c. **The viewer-blind legibility read — the un-gameable half of the gate
+   (Phase 12).** The scores in 4b are not trusted on their own: you wrote
+   the teaser, so you can see its *intent* (the spine, the names, the
+   beat-notes) and will grade the script you meant, not the experience a
+   stranger gets. (That is exactly how a boring teaser passed with eloquent
+   8s.) So now judge it **as a first-time viewer who knows nothing about the
+   book.** For each shot, build the **perceivable layer ONLY** — the visible
+   `action`, the spoken `audio.dialogue` line, and any on-screen `text_card`
+   — and **deliberately ignore** `subject.name`, `identify`, `spine`,
+   `beat_note`, and `stakes_level` (a viewer can't see those). Then answer,
+   honestly and skeptically (default to "I can't tell"):
+   - **who** is on screen? (If the figure isn't named in dialogue or carried
+     by an `identify` lower-third, the viewer does NOT know — that's a
+     stranger in costume.)
+   - **what** is happening? (An object shot — a ledger, a wax seal, a
+     riderless horse — usually fails: a stranger sees a horse, not "the
+     courier was intercepted.")
+   - **why** does it matter to the story?
+   Mark each shot `clear: true` only if a stranger could answer all three
+   from the perceivable layer alone. Record the read as the `legibility`
+   array (`[{shot_id, clear, who, what, why, note}]`). Then write the
+   **`viewer_takeaway`** ("a stranger comes away believing: ___") and
+   **`would_watch`** (would that stranger want the film?). Be ruthless: if
+   the teaser is a tour of objects with no identified people, most scenes are
+   `clear: false`, `would_watch: false` — say so.
+
+4d. **Write + check the scorecard.** `file_write` the full
+   `books/{book}/teaser/quality.json` (schema `teaser-quality/2`: `genre`,
+   `scores`, `notes`, `legibility`, `viewer_takeaway`, `would_watch`). Then
+   `bash`:
    `autonovel mechanical teaser-quality books/{book}/teaser/quality.json --format json`
-   to compute the verdict — **exit 3 = BLOCK** (overall < 7 or a dimension
-   < 5), exit 0 = PASS. Be a tough judge: the whole point of this gate is
-   that a structurally-complete-but-boring teaser must FAIL it. If you are
-   tempted to give everything a 7, look harder for the flat beat, the
-   on-the-nose line, the missing turn — and score it low so revise fixes it.
+   — **exit 3 = BLOCK**, exit 0 = PASS. The gate now blocks on a low score
+   *or* any illegible scene *or* a teaser a stranger wouldn't watch. Be a
+   tough judge: the whole point is that a structurally-complete-but-boring or
+   illegible teaser must FAIL. If you are tempted to give everything a 7 and
+   mark every scene clear, you are repeating the bug — look harder for the
+   object shot a stranger can't read, the unnamed figure, the on-the-nose
+   line.
 
 5. **Write `books/{book}/teaser/critique.md`** — an advisory report:
 
@@ -189,8 +223,14 @@ gaps and proceed without retrying.
    | coherence | {n}/10 | … |
    | button | {n}/10 | … |
    *Weakest (the de-boring targets):* {the 3 lowest dimensions}
-   {2-3 sentences: is this actually interesting, or just structurally
-   complete? what is the single most boring thing about it?}
+
+   ### Viewer-blind legibility (what a stranger actually sees)
+   *Scenes clear:* {k}/{n} · *Would a stranger watch the film?* {yes|NO}
+   *Stranger's takeaway:* {viewer_takeaway}
+   {table of any ILLEGIBLE shots: id · what the viewer sees · why it fails
+   (object with no person / unnamed figure / on-the-nose). These block the gate.}
+   {2-3 sentences: is this actually interesting AND legible, or just
+   structurally complete? what is the single most boring or confusing thing?}
 
    ## Mechanical flags ({k})
    {table or list of the linter findings, grouped by code; "none" if clean.}
@@ -245,9 +285,12 @@ gaps and proceed without retrying.
   `## Quality score` section (the eight dimensions 1-10 + overall + verdict +
   weakest), a `## Mechanical flags` section reflecting the linter output, and
   per-shot notes that mark each shot KEEP or REWRITE.
-- `books/{book}/teaser/quality.json` is written with all eight dimensions
-  scored 1-10 and passes `autonovel mechanical teaser-quality` structurally
-  (the *verdict* may be BLOCK — that is the gate doing its job).
+- `books/{book}/teaser/quality.json` (schema `teaser-quality/2`) is written
+  with all eight dimensions scored 1-10 AND a viewer-blind `legibility` read
+  (one `{shot_id, clear, who, what, why}` per shot, judged from the
+  perceivable layer only), a `viewer_takeaway`, and `would_watch`. The
+  *verdict* may be BLOCK — that is the gate doing its job; an illegible or
+  boring teaser MUST fail it.
 - The report states whether `teaser.json` is structurally valid (from
   `teaser-validate`) and never mutates `teaser.json`.
 - Every mechanical flag from `autonovel mechanical teaser-critique` appears

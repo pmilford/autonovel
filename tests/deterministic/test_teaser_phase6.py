@@ -133,11 +133,14 @@ def test_thin_dialogue_not_raised_for_silent_provider() -> None:
     assert "thin-dialogue" not in codes
 
 
-def test_thin_text_cards() -> None:
+def test_thin_text_cards_no_longer_gates() -> None:
+    # Phase 12: a teaser is NOT required to carry ≥2 text cards (that pushed
+    # toward a card slideshow). thin-text-cards is gone; few/no cards is fine.
     t = _full_teaser()
     t.shots[1].text_card = None  # only one card left
     codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}
-    assert "thin-text-cards" in codes
+    assert "thin-text-cards" not in codes
+    assert "thin-text-cards" not in crit.STORY_GATE_CODES
 
 
 # ----------------------- script versioning (re-run) ----------------------

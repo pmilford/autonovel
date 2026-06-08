@@ -106,8 +106,6 @@ so the gate reflects the improvement.
      `treatment.md` / `chapters/*.md` (a threat, a vow, a cost named
      aloud) and add them to the most fitting shots' `audio.dialogue`;
      don't pad with filler.
-   - `thin-text-cards` → add/strengthen `text_card`s that carry the
-     premise (≥2 total; the `title` beat carries the logline).
    - `hook-not-first` / `multiple-hooks` / `no-title` / `button-not-last`
      / `title-after-button` → fix the `role`s / reorder so the 4-act
      shape holds (one `hook` first, one `title` ~2/3, one `button` last).
@@ -127,11 +125,29 @@ so the gate reflects the improvement.
    - `no-character-arc` → tag ≥1 shot `character_beat: "want"` and ≥1
      `character_beat: "cost"`, and make those shots *show* it (a choice, a
      loss) — not just a face.
+   - `too-many-cards` → cut the card slideshow: convert most `text_card`s
+     into spoken `audio.dialogue` (more characters talking) or a sparing VO
+     line; keep cards only for the title and maybe one button line (Phase 12).
+   - `instrument-only-shot` → the named culprit shots are OBJECT shots a
+     stranger can't read (a ledger, a wax seal, a riderless horse). Rewrite
+     each to **center a named person making a visible choice**, with a line
+     that carries the meaning — or cut it. Show the man buying the emperor,
+     not the wax (Phase 12).
+   - `unidentified-figure` → give the figure's FIRST appearance an `identify`
+     ("Name — epithet", e.g. "Albrecht of Brandenburg — an archbishop who
+     bought his office") so a first-time viewer knows who they are (Phase 12).
    - `no-reference` → leave as-is here (references are developed in
      `/autonovel:teaser-refs`); note it in the summary.
 
-4b. **Lift the weak quality dimensions + the de-boring pass (Phase 11 — fix
-   BORING).** This is what turns "structurally complete" into "interesting."
+4b. **Lift the weak quality dimensions, fix illegible scenes, + the de-boring
+   pass (Phase 11/12 — fix BORING *and* CONFUSING).** Read
+   `books/{book}/teaser/quality.json` — both the weak `scores` AND the
+   `legibility` read. **Every shot the viewer-blind judge marked
+   `clear: false` is a hard fix** (it blocks the render gate): a stranger
+   could not tell who/what/why. Rewrite those shots to put an **identified
+   person making a visible choice** on screen and let **spoken dialogue**
+   (or a sparing VO) carry the idea — never rely on the viewer already
+   knowing the history. Then lift the weak dimensions: This is what turns "structurally complete" into "interesting."
    Take the `quality.json` weakest dimensions (and the per-dimension `note`s
    the critic left) and act on each — pull the raw material from `brief.md`
    (the distilled through-line + must-have moments + killer lines),
@@ -165,17 +181,19 @@ so the gate reflects the improvement.
    `autonovel mechanical teaser-critique books/{book}/teaser/teaser.json --provider <name> --format json`
    If must-fix story-spine flags remain (`no-dramatic-question`,
    `no-logline`, `no-stakes`, `no-emotional-arc`, `no-genre`,
-   `thin-dialogue`, `thin-text-cards`) and you have rounds left
-   (`--max-rounds`), go back to step 4 for another targeted pass. Stop when
-   the spine flags are clear or the round budget is spent (report any that
-   remain and why).
+   `thin-dialogue`) and you have rounds left (`--max-rounds`), go back to
+   step 4 for another targeted pass. Stop when the spine flags are clear or
+   the round budget is spent (report any that remain and why).
 
-6b. **Re-score the quality gate.** Now that the teaser has changed, re-judge
-   the eight interestingness dimensions honestly (same rubric as
-   `/autonovel:teaser-critique` step 4b — `autonovel mechanical
-   teaser-quality --template` for the dimension prompts), reflecting the
-   lifts you just made (don't inflate — score what is actually on the page).
-   `file_write` the updated `books/{book}/teaser/quality.json`, then `bash`:
+6b. **Re-score the quality gate (scores AND the viewer-blind read).** Now
+   that the teaser has changed, re-judge the eight interestingness dimensions
+   AND re-run the **viewer-blind legibility read** (teaser-critique steps
+   4b–4c): for each shot, from the perceivable layer only (action + spoken
+   line + card, names/spine hidden), can a stranger tell who/what/why? Update
+   `legibility`, `viewer_takeaway`, `would_watch`. Don't inflate — score what
+   is actually on the page; a scene you just rewrote is only `clear` if the
+   rewrite truly shows it. `file_write` the updated
+   `books/{book}/teaser/quality.json`, then `bash`:
    `autonovel mechanical teaser-quality books/{book}/teaser/quality.json --format json`
    (exit 3 = still BLOCK). If the quality gate is still BLOCKED and you have
    rounds left, go back to step 4b and lift the weakest dimensions again.

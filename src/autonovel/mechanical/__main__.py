@@ -997,6 +997,19 @@ def _cmd_teaser_quality(args: argparse.Namespace) -> int:
             if k in ks:
                 note = score.notes.get(k, "")
                 print(f"    {k}: {ks[k]}/10{(' — ' + note) if note else ''}")
+        if score.legibility:
+            bad = score.illegible_shots()
+            print(f"  viewer-blind legibility: {len(score.legibility) - len(bad)}/"
+                  f"{len(score.legibility)} scenes clear"
+                  f"{(' — illegible: ' + ', '.join(bad)) if bad else ''}")
+            if score.would_watch is not None:
+                print(f"  would a stranger watch the film? "
+                      f"{'yes' if score.would_watch else 'NO'}")
+            if score.viewer_takeaway.strip():
+                print(f"  stranger's takeaway: {score.viewer_takeaway.strip()}")
+        else:
+            print("  ⚠️  no viewer-blind legibility read (the gate's un-gameable "
+                  "half) — re-score with /autonovel:teaser-critique")
     else:
         out = score.to_dict()
         out.update({"present": True, "passes": passes, "reasons": reasons})
@@ -1319,7 +1332,7 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
                                "/autonovel:teaser-critique (it writes the scorecard)"]
     if quality_block and not getattr(args, "dry_run", False):
         print("teaser-render: ⛔ quality gate — the teaser is structurally complete "
-              "but not interesting enough to spend a real render on:", file=sys.stderr)
+              "but not interesting/legible enough to spend a real render on:", file=sys.stderr)
         for r in quality_reasons:
             print(f"  - {r}", file=sys.stderr)
         print("  Fix it for free: /autonovel:teaser-critique re-scores it, then "

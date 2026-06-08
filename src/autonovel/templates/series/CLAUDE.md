@@ -269,11 +269,14 @@ Adapting a book to the screen, in order:
    portraits/location plates.
 3. `/autonovel:teaser-critique --book <name>` — re-check a hand-edited
    `teaser.json` (mechanical linter + LLM critic) AND score the
-   interestingness rubric to `teaser/quality.json`; writes an advisory
-   `teaser/critique.md` and the render-gate verdict (story + quality).
-   Read-only on the teaser; free. `/autonovel:teaser-revise` then APPLIES the
-   findings in place (fills the spine, lifts weak quality dimensions,
-   de-borings the flattest beats) — no hand edits.
+   interestingness rubric **plus a viewer-blind legibility read** (each shot
+   judged as a first-time viewer from on-screen action + spoken line only —
+   so an illegible "tour of objects" can't self-pass) to `teaser/quality.json`;
+   writes an advisory `teaser/critique.md` and the render-gate verdict (story
+   + quality + legibility). Read-only on the teaser; free.
+   `/autonovel:teaser-revise` then APPLIES the findings in place (fills the
+   spine, lifts weak quality dimensions, centers **people not objects**, adds
+   **identify** lower-thirds, de-borings the flattest beats) — no hand edits.
 3b. `/autonovel:teaser-refs --book <name> [--init]` — develop + **approve**
    a reference image per recurring character before spending a real
    render (public-domain art via wikimedia, a local image, or generate;

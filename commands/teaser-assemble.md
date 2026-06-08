@@ -43,6 +43,14 @@ card centered + large, others lower-third, each faded over its segment;
 `--font <path>` picks a serif (e.g. EB Garamond). Use it for a quick
 self-contained cut; prefer an editor for final polish.
 
+**Figure-identify lower-thirds (Phase 12 — legibility).** Any shot with an
+`identify` field (a key figure's first appearance, e.g. *"Jakob Fugger — the
+richest man in Europe"*) gets a small name label burned at the very bottom
+for its first ~2.5 s — so a first-time viewer knows WHO they're watching.
+This is **always burned** (independent of `--burn-titles`): it is load-bearing
+legibility, not an optional story card. It carries through `cut_list.json` as
+the entry's `identify`.
+
 **Transitions (Phase 5.7).** The build applies safe defaults: the teaser
 **fades in** from black on the first shot, **fades out** on the last, and
 **fades** title cards; everything else is a hard cut (`--no-transitions`

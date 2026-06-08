@@ -132,6 +132,13 @@ class Shot:
     # a flicker of character development, not just a recurring face. Empty =
     # not a character beat. ``critique`` flags a teaser with no want/cost beat.
     character_beat: str = ""
+    # Identification for a key figure's FIRST appearance (Phase 12): a short
+    # "Name — epithet" the assembler can burn as a subtle lower-third so a
+    # first-time viewer knows WHO this is and why they matter (e.g.
+    # "Jakob Fugger — the richest man in Europe"). A teaser of strangers in
+    # period dress is illegible; this is how historical drama trailers fix it.
+    # Empty = not an identifying beat (crowds/objects never carry one).
+    identify: str = ""
     # Human-facing one-line beat note (the dual-render pair; PRD §18.2).
     beat_note: str = ""
 
@@ -169,6 +176,8 @@ class Shot:
             d["stakes_level"] = self.stakes_level
         if self.character_beat:
             d["character_beat"] = self.character_beat
+        if self.identify:
+            d["identify"] = self.identify
         if self.beat_note:
             d["beat_note"] = self.beat_note
         return d
@@ -202,6 +211,7 @@ class Shot:
             story_year=d.get("story_year"),
             stakes_level=d.get("stakes_level"),
             character_beat=d.get("character_beat", ""),
+            identify=d.get("identify", ""),
             beat_note=d.get("beat_note", ""),
         )
 

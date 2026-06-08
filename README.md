@@ -570,17 +570,22 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   cards**, and tagging want/cost character beats so the teaser actually
   tells a story); `teaser-critique` re-checks a hand-edited teaser with the
   mechanical linter + an LLM critic that judges the story spine first **and
-  scores an eight-dimension interestingness rubric** (`quality.json`), and
-  `teaser-revise` applies the findings in place — filling the spine, lifting
-  the weak quality dimensions, and running an adversarial **de-boring pass**
-  (swap the flattest beats/lines for the most dramatic moments) — all with a
-  free pre-generation critique, no generation cost. `teaser-render` then turns
+  scores an eight-dimension interestingness rubric plus a viewer-blind
+  legibility read** (`quality.json`) — re-watching each shot **as a
+  first-time viewer** (action + spoken line only, names hidden) so an
+  illegible "tour of objects" can't self-pass — and `teaser-revise` applies
+  the findings in place: filling the spine, lifting the weak dimensions,
+  centering **people not objects**, giving each figure an **identify
+  lower-third**, and running an adversarial **de-boring pass** (swap the
+  flattest beats/lines for the most dramatic moments) — all with a free
+  pre-generation critique, no generation cost. `teaser-render` then turns
   the prompts into **actual clips** — it validates the whole chain for **$0
   and zero quota** with an offline `stub` backend first, then renders for real
   via `grok` (free dialogue+music, no credit card) or any of `kie` / `veo` /
   `magichour` / `fal` / manual `flow` — behind **two render gates** (the
   story must be complete AND the quality rubric must clear overall ≥ 7 with no
-  dimension < 5, so a structurally-complete-but-*boring* teaser is refused) —
+  dimension < 5 AND every scene must be legible to a first-time viewer, so a
+  structurally-complete-but-*boring-or-confusing* teaser is refused) —
   and runs a vision critique (KEEP / REGENERATE / UPGRADE-TO-PAID);
   `teaser-assemble` stitches the clips into one video with ffmpeg and runs a
   viewer-panel cut critique — the whole pipeline from a finished book to a

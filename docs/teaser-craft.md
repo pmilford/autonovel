@@ -90,8 +90,10 @@ read:
   beat 6 isn't scarier than beat 3, re-order or cut.
 
 `teaser-critique` raises `no-dramatic-question`, `no-logline`, `no-stakes`,
-`no-emotional-arc`, `no-genre`, `thin-dialogue`, and `thin-text-cards` when
-these are missing — treat them as must-fix, not advisory. **They are the
+`no-emotional-arc`, `no-genre`, and `thin-dialogue` when these are missing —
+treat them as must-fix, not advisory. (Phase 12: a text-card requirement was
+*removed* — cards are a crutch; legibility is enforced by the viewer-blind
+quality gate in §11, not by counting cards.) **They are the
 render gate (bp 12):** `/autonovel:teaser-render` *refuses* to spend a real
 generation while any of them is present (the offline `stub` backend and
 single-`--shot` runs are exempt; `--skip-narrative-gate` overrides). You
@@ -445,6 +447,45 @@ The weakest dimensions are the **de-boring targets** for
 `/autonovel:teaser-revise`: it lifts each low dimension and replaces the 3
 flattest beats + the flattest line with the most dramatic moments and the
 sharpest quotes the story has.
+
+### 11.1b The viewer-blind legibility read — the un-gameable half
+
+A self-score is gameable: the *same model* that wrote the teaser scores it,
+and it can see its own intent (the spine, the names, the beat-notes) — so it
+grades the *script it meant*, not the *experience a stranger gets*, and
+passes itself with eloquent 8s while the rendered teaser is an illegible
+tour of objects. (This is exactly what happened: a teaser of a ledger, a
+riderless horse, and seven wax seals — no identified people — self-scored 7–9
+and shipped.) So the gate has a second, **external** half. The judge re-watches
+**as a first-time viewer who knows nothing about the book**: for each shot it
+sees ONLY the perceivable layer — the visible action + the spoken line + any
+on-screen text, with the names/spine/beat-notes **hidden** — and must answer
+**who / what / why**. A scene is `clear` only if a stranger could. Then it
+writes the **viewer takeaway** ("a stranger comes away believing: ___") and
+**would_watch**. The render gate blocks on *any* illegible scene and on a
+teaser a stranger wouldn't watch — not just a low score.
+
+**Drama over mechanism (the #1 legibility fix).** Every hook/escalation
+shot must put a **person making a visible choice** on screen, not an OBJECT.
+A ledger, a wax seal, a contract, a riderless horse, a map, a stack of
+dispatches mean nothing to a stranger — they read as "a horse," not "the
+courier was intercepted." Show the *man deciding to buy the emperor*, not the
+wax being pressed. If a beat is about an instrument, frame a named person
+*using* it and let a line carry the meaning.
+
+**Identify the players.** The first appearance of each real figure gets a
+subtle lower-third — `identify: "Jakob Fugger — the richest man in Europe"`,
+`"Albrecht of Brandenburg — an archbishop who bought his office"` — which
+`teaser-assemble` burns at the bottom for ~2.5 s. A teaser of unnamed
+strangers in period dress is illegible; this is how historical-drama trailers
+tell you who matters. (`identify` is *not* a text card — it's a name label;
+keep story cards sparing, per §7.)
+
+**Build in the right genre, carefully.** Read the book's actual genre and
+build in *that* idiom — historical **fiction** is a cinematic
+character-and-stakes drama, not a documentary and not a generic moody
+montage. A genre-blind default (atmosphere with no people, no stakes) is the
+root cause of a teaser that feels like nothing.
 
 ### 11.2 Worked example A — historical thriller (180 s)
 

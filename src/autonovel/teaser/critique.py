@@ -46,6 +46,33 @@ class Report:
         }
 
 
+# Cheap candidate-generator for "this subject is an object, not a person"
+# (Phase 12). NOT a quality gate — it only nudges; the LLM viewer-blind
+# legibility read is the real judge (feedback_avoid_brittle_python).
+_OBJECT_ARTICLES = ("a ", "an ", "the ")
+
+
+def _looks_object_subject(name: str) -> bool:
+    """Heuristic: a subject phrase that reads as a thing, not a person
+    ("a ledger loss entry", "the electoral map", "seven wax seals"). A
+    person named with a leading article is rare; a crowd is its own case."""
+    n = name.strip().lower()
+    if not n:
+        return False
+    if n.endswith(" crowd") or n.startswith("crowd"):
+        return False
+    return n.startswith(_OBJECT_ARTICLES) or n[:1].isdigit() or n.startswith("seven ")
+
+
+def _base_person(name: str) -> str:
+    """Strip an age/parenthetical qualifier so 'Jakob Fugger (boy)' and
+    'Jakob Fugger (elder)' collapse to one figure for the identify check."""
+    n = name.split("(")[0].strip()
+    # drop a trailing "and a ..." companion clause
+    n = n.split(" and ")[0].strip()
+    return n
+
+
 def _looks_multi_action(action: str) -> bool:
     """Soft heuristic for >1 action in a clip (advisory only)."""
     a = action.strip()
@@ -146,10 +173,17 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
                 f"learn nothing about the story; mine 3-6 loaded lines from the "
                 f"manuscript and assign them to shots (bp 5)")
     cards = teaser.text_card_count()
-    if cards < 2:
-        rep.add("", "thin-text-cards",
-                f"only {cards} text card(s) — carry the premise/logline in 2-4 short "
-                f"cards (cheap narrative, dodges AI lipsync) (bp 6)")
+    # Phase 12: text cards are no longer required (a card slideshow is the
+    # crutch that papers over illegible visuals — real shorts carry meaning
+    # in spoken dialogue, not stacked cards). Flag the *crutch* instead: too
+    # many cards. The title + at most ~1-2 (a button line) is plenty.
+    n_shots = max(1, len(teaser.shots))
+    if cards > 3 and cards > n_shots // 3:
+        rep.add("", "too-many-cards",
+                f"{cards} text cards across {n_shots} shots — that's a slideshow. "
+                f"Carry the story in spoken dialogue + sparing VO and more "
+                f"characters talking; reserve cards for the title and maybe one "
+                f"button line (Phase 12)")
 
     # --- teaser-level arc + 4-act role order (bp 2). ---
     roles = [s.role for s in teaser.shots]
@@ -195,8 +229,40 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
                         f"escalation stakes_level dips ({levels}) — order the "
                         f"escalation so the stakes only rise (bp 3)")
 
-    # --- cast discipline: one hero face (bp 11). ---
-    names = {s.subject_name.strip() for s in teaser.shots if s.subject_name.strip()}
+    # --- drama over mechanism + legibility (Phase 12, advisory candidate
+    # generators — the real enforcement is the LLM viewer-blind legibility
+    # gate; these just surface the usual illegibility culprits cheaply). ---
+    obj_shots = [s for s in teaser.shots
+                 if s.role in ("hook", "escalation")
+                 and _looks_object_subject(s.subject_name)
+                 and not s.dialogue() and not s.identify.strip()]
+    if obj_shots:
+        ids = ", ".join(s.id for s in obj_shots)
+        rep.add("", "instrument-only-shot",
+                f"{len(obj_shots)} shot(s) ({ids}) look like OBJECT/instrument shots "
+                f"(a ledger, a seal, a riderless horse) with no person acting and no "
+                f"line — a stranger can't tell what they mean. Center a NAMED person "
+                f"making a visible choice, or cut. Show the man buying the emperor, "
+                f"not the wax (Phase 12)")
+    # A named figure who never gets identified reads as a stranger in costume.
+    person_names = {s.subject_name.strip() for s in teaser.shots
+                    if s.subject_name.strip() and not _looks_object_subject(s.subject_name)}
+    identified = {s.identify.split("—")[0].strip().lower()
+                  for s in teaser.shots if s.identify.strip()}
+    for name in sorted(person_names):
+        base = _base_person(name)
+        if base and not any(base.lower() in idf or idf in base.lower()
+                            for idf in identified):
+            rep.add("", "unidentified-figure",
+                    f"{name!r} never gets an `identify` lower-third — a first-time "
+                    f"viewer won't know who they are or why they matter. Give the "
+                    f"first appearance a short 'Name — epithet' (e.g. 'Jakob Fugger "
+                    f"— the richest man in Europe') (Phase 12)")
+
+    # --- cast discipline: one hero face (bp 11) — count only real PEOPLE, so
+    # object "subjects" (a ledger, seven seals) can't be rationalised as cast. ---
+    names = {s.subject_name.strip() for s in teaser.shots
+             if s.subject_name.strip() and not _looks_object_subject(s.subject_name)}
     if len(names) > 3:
         rep.add("", "cast-sprawl",
                 f"{len(names)} named faces ({', '.join(sorted(names))}) — a teaser "
@@ -215,9 +281,14 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
 # generation would be wasted. Ordering/ladder/cast flags stay advisory (a
 # deliberate artistic choice shouldn't hard-block a render); the offline
 # `stub` backend is exempt from the gate entirely.
+# NOTE (Phase 12): `thin-text-cards` was removed from the gate — requiring
+# ≥2 cards pushed teasers toward a card slideshow (the crutch that papers
+# over illegible visuals). Meaning now rides spoken dialogue; legibility is
+# enforced by the LLM viewer-blind QUALITY gate (teaser/quality.py), not by
+# counting cards.
 STORY_GATE_CODES = (
     "no-dramatic-question", "no-logline", "no-stakes", "no-emotional-arc",
-    "no-genre", "thin-dialogue", "thin-text-cards", "no-hook", "no-button",
+    "no-genre", "thin-dialogue", "no-hook", "no-button",
 )
 
 

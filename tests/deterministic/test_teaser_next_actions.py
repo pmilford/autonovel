@@ -18,9 +18,14 @@ from autonovel.teaser.shots import Shot, Spine, Teaser
 
 def _pass_quality(root: Path) -> None:
     """Write a passing quality.json so a story-complete teaser clears the
-    Phase-11 quality gate too (reaches render/assemble steps)."""
+    quality gate too (reaches render/assemble steps) — needs the Phase-12
+    viewer-blind read, not just strong scores."""
     quality_mod.dump(
-        quality_mod.QualityScore(scores={k: 8 for k in quality_mod.DIMENSION_KEYS}),
+        quality_mod.QualityScore(
+            scores={k: 8 for k in quality_mod.DIMENSION_KEYS},
+            legibility=[quality_mod.SceneRead(shot_id=s, clear=True, who="x",
+                                              what="y", why="z") for s in ("01", "02")],
+            viewer_takeaway="A stranger wants the film.", would_watch=True),
         root / "teaser" / "quality.json")
 
 

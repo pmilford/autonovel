@@ -60,14 +60,16 @@ workflow. Topics:
                  2-page brief) → teaser-brief (distil the through-line +
                  turn + killer lines) → teaser (teaser-beats →
                  shot-prompts → teaser-critique scores the interestingness
-                 rubric ⟳ teaser-revise lifts weak dims + de-borings) →
-                 teaser-refs (develop + approve character references
-                 before spend) → teaser-render (offline `stub` to validate
-                 free, then `grok` real clips w/ dialogue+music + vision
-                 critique) → teaser-assemble (ffmpeg stitch + cut critique).
-                 Two render gates: story-complete AND quality ≥ 7 (no
-                 dimension < 5) — "boring" is blocked. X-Prize-shaped. See
-                 docs/teaser-craft.md + docs/teaser-render-providers.md.
+                 rubric + a viewer-blind legibility read ⟳ teaser-revise
+                 lifts weak dims + de-borings) → teaser-refs (approve
+                 character refs before spend) → teaser-render (offline
+                 `stub` to validate free, then `grok` real clips + vision
+                 critique) → teaser-assemble (ffmpeg stitch + figure-ID
+                 lower-thirds + cut critique). Two render gates:
+                 story-complete AND quality (≥7, every scene legible to a
+                 stranger) — "boring" AND "who is this?" are blocked. Built
+                 in the book's genre, people not objects. X-Prize-shaped.
+                 See docs/teaser-craft.md + docs/teaser-render-providers.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   sweeps       — multi-chapter operations: draft-pass,

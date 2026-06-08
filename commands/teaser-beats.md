@@ -57,7 +57,11 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
    `--length <seconds>` (default: `project.yaml :: teaser.length_s` if
    set, else `90`; use `180` for the Future Vision X-Prize 3-minute
-   trailer), `--provider <name>` (default `generic`), `--force`.
+   trailer), `--provider <name>` (default `generic`), `--force`. **Read
+   `project.yaml :: genre` carefully** and build the beat-sheet in *that*
+   genre's idiom (historical **fiction** = a character-and-stakes drama, not
+   a documentary, not a generic moody montage) — genre-blind selection is a
+   root cause of a flat teaser (Phase 12).
 
 2. **Refusal-on-overwrite, then archive.** If `books/{book}/teaser/beats.md`
    already exists with author edits and `--force` was not passed, stop with:
@@ -145,6 +149,15 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    larger world or turn the question. **One hero face** (bp 11): build the
    teaser around ONE protagonist's stakes; ≤3 named faces total, the rest
    silhouettes/crowd (cast discipline, teaser-craft §7.2).
+   **Drama over mechanism** (Phase 12): every beat must be a **named person
+   making a visible choice**, not an instrument of the plot. "Jakob decides
+   to buy the next emperor" is a beat; "a wax seal is pressed," "a riderless
+   horse," "a ledger entry," "seven seals on a map" are NOT — a stranger
+   can't read them. If the real history is about an instrument (a ledger, a
+   courier network), find the human moment that dramatizes it. Build from the
+   astonishing TRUE turns (he bought an emperor; he broke his debtors; his
+   almshouse still stands), each shown through a person, not narrated by an
+   object.
 
 7. **Write `books/{book}/teaser/beats.md`** in this shape (hand-editable;
    shot-prompts reads back the spine AND the beats):
