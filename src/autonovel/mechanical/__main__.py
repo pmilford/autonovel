@@ -34,6 +34,7 @@ Subcommands:
   teaser-transitions <teaser.json> Suggest scene-transition points (advisory; structured signals).
   teaser-takes <teaser.json>       List archived render takes per shot (versioned takes).
   teaser-take-pick <teaser.json>   Promote an archived take back to the latest pointer.
+  teaser-reset <teaser-dir>        Archive all teaser artifacts except refs/ for a --fresh run.
   teaser-music <teaser.json>       Generate a cohesive music bed from a prompt (Phase 9).
   teaser-archive-script <file>     Timestamp-archive a script before a --force re-run (Phase 6).
   teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
@@ -1426,6 +1427,38 @@ def _cmd_teaser_music(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_reset(args: argparse.Namespace) -> int:
+    """Archive every teaser artifact EXCEPT the reference images, for a clean
+    --fresh run (Phase: fresh). Non-destructive: moves to teaser/reset-archive/.
+    Accepts a teaser dir OR a teaser.json path."""
+    from ..teaser import takes as _takes
+    p = Path(args.path)
+    teaser_dir = p.parent if p.suffix == ".json" else p
+    if getattr(args, "dry_run", False):
+        keep = set(_takes.RESET_KEEP)
+        would = [e.name for e in sorted(teaser_dir.iterdir())
+                 if e.name not in keep] if teaser_dir.is_dir() else []
+        json.dump({"dry_run": True, "teaser_dir": str(teaser_dir),
+                   "would_archive": would, "keep": list(_takes.RESET_KEEP)},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    report = _takes.reset_teaser(teaser_dir)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"teaser_dir": str(teaser_dir), **report}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        if report["archived"]:
+            print(f"🧹 Fresh teaser reset — archived {len(report['archived'])} "
+                  f"item(s) to {teaser_dir}/reset-archive/ "
+                  f"({', '.join(report['archived'])}).")
+        else:
+            print(f"(nothing to archive in {teaser_dir})")
+        print(f"   Kept: {', '.join(report['kept']) or '(none)'} — references "
+              f"survive a fresh run.")
+    return 0
+
+
 def _cmd_teaser_refs_plan(args: argparse.Namespace) -> int:
     from ..teaser import shots as _shots, refs as _refs
     try:
@@ -2183,6 +2216,16 @@ def main(argv: list[str] | None = None) -> int:
                      help="Clips dir (default: <teaser.json dir>/clips).")
     tkp.add_argument("--format", choices=["json", "human"], default="human")
     tkp.set_defaults(func=_cmd_teaser_take_pick)
+
+    trs = sub.add_parser("teaser-reset",
+                         help="Archive every teaser artifact EXCEPT the reference "
+                              "images (refs/, refs.yaml) for a clean --fresh run; "
+                              "non-destructive (moves to teaser/reset-archive/).")
+    trs.add_argument("path", help="Teaser dir or teaser.json path.")
+    trs.add_argument("--dry-run", dest="dry_run", action="store_true",
+                     help="Show what would be archived; move nothing.")
+    trs.add_argument("--format", choices=["json", "human"], default="human")
+    trs.set_defaults(func=_cmd_teaser_reset)
 
     tmu = sub.add_parser("teaser-music",
                          help="Generate one cohesive music bed from a prompt "

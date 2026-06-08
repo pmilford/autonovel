@@ -1691,7 +1691,27 @@
   Python change. `autonovel install` re-run. Gate unchanged: **1800 passed,
   1 skipped.**
 
+- 2026-06-07 (fresh-run reset, keep refs): additive. New
+  `takes.reset_teaser` + `teaser-reset` CLI + `/autonovel:teaser --fresh`:
+  archive every teaser artifact (beats/teaser.json/shots/clips/critique/
+  cut_list/music/reports) to `teaser/reset-archive/<UTC>/` EXCEPT the
+  approved `refs/` + `refs.yaml`, then rebuild from the top (treatment via
+  `--with-treatment`/separate, beats→shots→critique→revise→READY).
+  Non-destructive (moves, never deletes); a second reset doesn't nest the
+  prior archive. `--fresh` implies `--force`. Lets a clean run keep only the
+  expensive hand-approved references. ALSO (paired with the prior commit):
+  `shot-prompts` now authors the spine when `beats.md` lacks a `## Spine`
+  block — so the "ran shot-prompts but the teaser stayed boring against an
+  old beat-sheet" failure can't recur. New tests: `test_teaser_reset.py`
+  (5). Doc-sync: teaser.md, commands.md (orchestrator + new mechanical row),
+  shot-prompts.md, STATE. `autonovel install` re-run. Regression gate:
+  **Tier 1+2 1805 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1805
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +5 since the 1800 mark: fresh-run teaser reset (takes.reset_teaser +
+  teaser-reset CLI + --fresh) → 5 tests. Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1800
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +8 since the 1792 mark: diegetic-text narrowing + render --revise +

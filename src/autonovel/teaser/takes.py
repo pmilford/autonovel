@@ -100,6 +100,40 @@ def archive_script(src: Path, archive_dir: Path | None = None,
     return dest
 
 
+# What a `--fresh` teaser reset KEEPS — the expensive, hand-approved work.
+# Everything else under teaser/ is archived (not deleted) so a clean run can
+# start from the top while the references survive.
+RESET_KEEP = ("refs", "refs.yaml", "reset-archive")
+
+
+def reset_teaser(teaser_dir: Path, *, keep: tuple[str, ...] = RESET_KEEP,
+                 when: datetime | None = None) -> dict[str, list[str]]:
+    """Archive every top-level entry under ``teaser_dir`` EXCEPT ``keep``
+    (the reference images + manifest) into ``teaser/reset-archive/<UTC>/``,
+    leaving a clean teaser dir that still has the approved refs (Phase: fresh
+    run). Non-destructive — nothing is deleted, just moved aside. Returns
+    ``{"kept": [...], "archived": [...]}``. No-op-safe on a missing dir.
+    """
+    teaser_dir = Path(teaser_dir)
+    out: dict[str, list[str]] = {"kept": [], "archived": []}
+    if not teaser_dir.is_dir():
+        return out
+    keep_set = set(keep)
+    stamp = (when or datetime.now()).strftime("%Y%m%d_%H%M%S")
+    archive = teaser_dir / "reset-archive" / stamp
+    movable = [p for p in sorted(teaser_dir.iterdir()) if p.name not in keep_set]
+    if movable:
+        archive.mkdir(parents=True, exist_ok=True)
+    for p in movable:
+        shutil.move(str(p), str(archive / p.name))
+        out["archived"].append(p.name)
+    # Report the meaningful keepers (the references) — not the archive dir,
+    # which is an internal keeper that exists only to hold what we moved.
+    out["kept"] = [n for n in sorted(keep_set)
+                   if n != "reset-archive" and (teaser_dir / n).exists()]
+    return out
+
+
 @dataclass
 class TakeInfo:
     shot_id: str

@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser
 description: One-command teaser pipeline — plan the beats, turn them into provider-ready shot prompts, then run the critique→revise loop to a READY render gate. Chains teaser-beats → shot-prompts → (teaser-critique ⟳ teaser-revise) in fresh subagents so the parent context stays clean. All free; stops before any render.
-argument-hint: "--book <short-name> [--length 30|60|90|120|180] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--with-treatment] [--revise-rounds <n>] [--no-revise] [--force]"
+argument-hint: "--book <short-name> [--length 30|60|90|120|180] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--with-treatment] [--fresh] [--revise-rounds <n>] [--no-revise] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -69,10 +69,23 @@ guard); never retry their reads.
    trailer), `--provider <name>` (default `generic`), `--with-treatment`,
    `--revise-rounds <n>` (default `2` — how many critique→revise passes the
    loop may run), `--no-revise` (skip the loop; stop after shot-prompts),
+   `--fresh` (start over from scratch — archive every teaser artifact EXCEPT
+   the approved reference images, then rebuild; implies `--force`),
    `--force`. Confirm the book exists in `project.yaml`; if not, stop with
    a one-line usage reminder. Touch no disk on a parse error.
 
-2. **Overwrite guard.** Unless `--force`, check
+1b. **(--fresh) Clean slate, keep the references.** If `--fresh` was passed,
+   `bash`: `autonovel mechanical teaser-reset books/{book}/teaser` — this
+   **archives every teaser artifact** (beats.md, teaser.json, shots/, clips/,
+   critique.md, cut_list.json, music/, render reports) to
+   `books/{book}/teaser/reset-archive/<UTC>/` **EXCEPT** the approved
+   `refs/` + `refs.yaml`, which stay in place. Report what was archived vs
+   kept. Then treat `--fresh` as implying `--force` for the rest of this run.
+   (`--fresh` does NOT touch `books/{book}/treatment.md` — that's a
+   book-level artifact; pass `--with-treatment` to also regenerate it, or run
+   `/autonovel:treatment --force` first.)
+
+2. **Overwrite guard.** Unless `--force` (or `--fresh`), check
    `books/{book}/teaser/beats.md` and `books/{book}/teaser/teaser.json`.
    If either already exists with author content, stop with:
    "books/{book}/teaser/* already exists; pass `--force` to regenerate the
