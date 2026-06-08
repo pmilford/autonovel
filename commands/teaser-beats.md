@@ -10,6 +10,7 @@ allowed-tools:
 reads:
   - project.yaml
   - books/{book}/treatment.md
+  - books/{book}/teaser/brief.md
   - books/{book}/outline.md
   - books/{book}/eval_logs/*.json
   - books/{book}/chapters/*.md
@@ -73,11 +74,17 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    `autonovel mechanical teaser-plan --length <seconds> --provider <name> --format human`
    This prints the recommended beat count, shot count, and per-role
    timing (hook 4-6s, escalation 1.5-2.5s cuts, title ~2/3 in, button
-   3-5s). Aim for the printed `beat_target`.
+   3-5s) plus the Phase-11 storytelling targets: **`movements`** (how many
+   escalation mini-builds to group beats into) and **`dialogue_target`**
+   (how many loaded lines this length should carry). Aim for the printed
+   `beat_target`, `movements`, and `dialogue_target`.
 
-4. **Read the story.** Prefer `books/{book}/treatment.md` when it exists
-   (it is already a film-shaped narrative — the best beat source); else
-   read `books/{book}/outline.md` for the spine. Use
+4. **Read the story.** Prefer `books/{book}/teaser/brief.md` when it exists
+   — it is the *distilled* through-line (the single most filmable spine, the
+   3 must-have dramatic moments, the killer lines) written by
+   `/autonovel:teaser-brief`, and it is the sharpest beat source. Else use
+   `books/{book}/treatment.md` (already a film-shaped narrative); else read
+   `books/{book}/outline.md` for the spine. Use
    `books/{book}/eval_logs/*.json` to find the load-bearing /
    highest-tension scenes (the `pacing` and `irreversible_change`
    signals) — those earn teaser beats. Skim `books/{book}/chapters/*.md`
@@ -102,6 +109,12 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    - **Genre/tone** (bp 9): name what *kind* of story this is (historical
      thriller, gothic romance, …) so the **hook telegraphs it in the first
      ~10 s** — the viewer should know the genre before they know the plot.
+   - **Turn / reversal** (Phase 11): name the ONE midpoint reversal that
+     flips the story — the moment the viewer's read of the situation turns
+     over (the ally is the enemy; the rescue is a trap; the win costs
+     everything). A teaser **without** a turn is a flat montage; this single
+     beat is what makes it a micro-story. Pull the real reversal from the
+     brief/treatment, not a generic "twist."
 
 6. **Select the beats** on the teaser arc so they *serve the spine*, in the
    strict **4-act order** (bp 2), applying `docs/teaser-craft.md` craft:
@@ -111,7 +124,16 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    - **escalation** (most beats): a **rising stakes ladder** (bp 3) — each
      beat's cost/danger/irreversibility exceeds the one before (not a
      montage of equals); each a visible turn, not exposition. Order them so
-     the stakes only rise.
+     the stakes only rise. **Group them into the `movements` the plan prints
+     (Phase 11)** — for a longer teaser (120-180 s) do NOT write 30+ equal
+     micro-beats; build 3-4 *movements* that each rise to a small peak, with
+     the overall stakes climbing across them, and let the key beats (hook,
+     **the turn**, button) hold longer. Place the **turn** at roughly the
+     midpoint — the escalation before it sets up the situation the turn
+     overturns.
+   - **character** (Phase 11): make sure ≥1 beat shows the protagonist's
+     **want** and ≥1 shows its **cost/change** — a flicker of who they are,
+     not just a recurring face. Mark these in the beat note.
    - **title** (1 beat): where the title card lands (~2/3 in, after the
      escalation, before the button).
    - **button** (1 beat, LAST): a final beat AFTER the title that deepens
@@ -142,6 +164,7 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    - **Logline:** {one-sentence premise}
    - **Want:** {what the protagonist wants}
    - **Opposing force:** {what stands in the way}
+   - **Turn:** {the midpoint reversal that flips the story}
    - **Emotional arc:** {start tone → … → end tone}
    - **Score direction:** {the one building musical cue}
    - **Genre:** {what kind of story — the hook must telegraph it}
@@ -151,9 +174,16 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    *Advances:* {how this beat touches the dramatic question}
    {One-line beat note: the visible moment + why it hooks + the genre it signals.}
 
-   ## B02 — escalation
+   ## B02 — escalation (movement 1)
    *Stakes:* {what's now at risk — strictly higher than B01}
+   *Character:* {want | cost — if this beat shows the protagonist's want or its cost}
    ...
+
+   ## B{m} — escalation (THE TURN, ~midpoint)
+   *Reverses:* {what the viewer believed → what is now true}
+   {The midpoint reversal from the spine `Turn`, made visible. Hold it. This
+   is still an `escalation`-role beat — the reversal is marked here and named
+   in the spine, not a new role.}
 
    ## B{n} — button
    {The final after-title beat. Withhold the resolution.}
@@ -175,13 +205,16 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
 <acceptance>
 - `books/{book}/teaser/beats.md` exists, opens with a
   `# ... Teaser beat-sheet` heading, carries a `## Spine` block (dramatic
-  question, logline, want, opposing force, emotional arc, score direction,
-  **genre** — all non-empty), and lists beats with `## B<NN> — <role>`
-  headings where role ∈ {hook, escalation, title, button}.
+  question, logline, want, opposing force, **turn**, emotional arc, score
+  direction, **genre** — all non-empty), and lists beats with
+  `## B<NN> — <role>` headings where role ∈ {hook, escalation, title, button}.
+- The spine names a **turn** (midpoint reversal) and ≥1 escalation beat
+  stages it; ≥1 beat is marked as the protagonist's **want** and ≥1 as the
+  **cost/change** (Phase 11 character + reversal).
 - Beat count is within the range printed by `teaser-plan` (≥6, ≤20), in
   **4-act order**: exactly one `hook` (first), ≥1 `escalation` with a
-  rising stakes ladder, one `title` (~2/3 in), one `button` (last). ≤3
-  named faces.
+  rising stakes ladder grouped into the printed `movements`, one `title`
+  (~2/3 in), one `button` (last). ≤3 named faces.
 - The button beat does not reveal the story's resolution (withholding).
 - Refusal on overwrite without `--force`; with `--force`, the prior
   `beats.md` is archived to `teaser/script-takes/` before regenerating.

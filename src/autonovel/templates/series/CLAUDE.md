@@ -242,23 +242,38 @@ Adapting a book to the screen, in order:
    (reveals the ending; `--audience xprize` default frames it for the
    Future Vision X-Prize: optimistic future, real problem solved, stakes
    + arc, visual ambition).
+1b. `/autonovel:teaser-brief --book <name>` — **distil** the treatment into
+   a one-page teaser brief: the single filmable through-line, the midpoint
+   **turn/reversal**, the 3 must-have dramatic moments, and the killer
+   lines — so the beats are chosen from a sharp brief, not the sprawling
+   story. Writes `teaser/brief.md` (the `/autonovel:teaser` orchestrator
+   runs this for you when a treatment exists).
 2. `/autonovel:teaser --book <name> [--length 180] [--provider <p>]` —
-   the one-command trailer pipeline: it runs `teaser-beats` (fix the
-   **story spine** — the dramatic question, logline, want vs. opposing
-   force, emotional arc — then pick the hook → escalation → title → button
-   beats that serve it and escalate) then `shot-prompts` (turn them into
-   provider-ready shot prompts, **mine 3–6 loaded dialogue lines** from the
-   manuscript + author premise **text cards**, with a free pre-generation
-   critique), each in a fresh subagent. Writes `teaser/beats.md` +
-   `teaser/teaser.json` + `teaser/shots/shot_*.md` (free). Run the two
-   sub-commands individually if you want to hand-edit `beats.md` between
-   them. Re-running with `--force` archives the prior scripts to
+   the one-command trailer pipeline: it runs `teaser-brief` (distil), then
+   `teaser-beats` (fix the **story spine** — the dramatic question, logline,
+   want vs. opposing force, **the turn**, emotional arc — then pick the hook
+   → escalation → title → button beats that serve it and escalate) then
+   `shot-prompts` (turn them into provider-ready shot prompts, **mine the
+   length-scaled loaded dialogue lines** from the manuscript + author premise
+   **text cards** + tag want/cost character beats), then the **critique →
+   revise loop** (`teaser-critique` scores the **interestingness rubric** →
+   `teaser-revise` lifts the weak dimensions + de-borings the flattest beats),
+   each in a fresh subagent, looping until **both render gates are READY**
+   (story complete AND quality ≥ 7). Writes `teaser/brief.md` +
+   `teaser/beats.md` + `teaser/teaser.json` + `teaser/shots/shot_*.md` +
+   `teaser/critique.md` + `teaser/quality.json` (all free). Run the
+   sub-commands individually if you want to hand-edit between them.
+   Re-running with `--force` archives the prior scripts to
    `teaser/script-takes/` and reuses the approved `teaser/refs/` originals,
    so a full re-run changes the scripts without losing them or the
    portraits/location plates.
 3. `/autonovel:teaser-critique --book <name>` — re-check a hand-edited
-   `teaser.json` (mechanical linter + LLM critic); writes an advisory
-   `teaser/critique.md`. Read-only on the teaser; free.
+   `teaser.json` (mechanical linter + LLM critic) AND score the
+   interestingness rubric to `teaser/quality.json`; writes an advisory
+   `teaser/critique.md` and the render-gate verdict (story + quality).
+   Read-only on the teaser; free. `/autonovel:teaser-revise` then APPLIES the
+   findings in place (fills the spine, lifts weak quality dimensions,
+   de-borings the flattest beats) — no hand edits.
 3b. `/autonovel:teaser-refs --book <name> [--init]` — develop + **approve**
    a reference image per recurring character before spending a real
    render (public-domain art via wikimedia, a local image, or generate;
@@ -273,7 +288,11 @@ Adapting a book to the screen, in order:
    `kie` / `veo` / `magichour` / `fal` / manual `flow` are alternatives.
    A vision critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID.
    Clips land in `teaser/clips/`; stateless, nothing assembled.
-   `--dry-run` prints the plan + key status for $0.
+   `--dry-run` prints the plan + key status for $0. **Two render gates** must
+   be green first (real backends only; `stub` is exempt): the story gate (a
+   complete spine + dialogue/cards) AND the **quality gate** (the
+   `teaser/quality.json` rubric clears overall ≥ 7, no dimension < 5) — a
+   structurally-complete-but-boring teaser is refused until you revise it.
 5. `/autonovel:teaser-assemble --book <name> [--audio <path>]` — stitch
    the clips into one teaser video with ffmpeg (builds an editable
    `teaser/cut_list.json`), then a viewer-panel cut critique (hook lands?

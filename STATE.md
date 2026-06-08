@@ -1706,8 +1706,49 @@
   (5). Doc-sync: teaser.md, commands.md (orchestrator + new mechanical row),
   shot-prompts.md, STATE. `autonovel install` re-run. Regression gate:
   **Tier 1+2 1805 passed, 1 skipped, 0 failed.**
+- 2026-06-08 (movie-teaser Phase 11 — storytelling QUALITY, the "it's
+  boring" fix): structure was a floor, not quality — a teaser passed every
+  Phase-6 gate and was still flat. Added a **second render gate** that makes
+  "boring" a measurable, blocking failure. New `teaser/quality.py`: an
+  eight-dimension interestingness rubric (hook_grip, question_sharpness,
+  stakes_escalation, character, dialogue_quality, surprise_turn, coherence,
+  button) **scored 1-10 by the LLM judge** in `teaser-critique` →
+  `teaser/quality.json`; Python only validates the structure and computes
+  the gate (overall ≥ 7 AND no dimension < 5) in one place (`teaser-quality`
+  CLI), shared with the render gate (per `feedback_avoid_brittle_python`:
+  taste stays with the LLM). `teaser-render` refuses a real generation when
+  the scorecard is missing/below-bar (real backends only; `stub`/`--shot`/
+  `--skip-narrative-gate` exempt; `--dry-run` reports `quality_gate_blocks`/
+  `quality_overall`). Data model (additive, omitted-when-empty): spine
+  `turn` (midpoint reversal) + per-shot `character_beat` (want/cost);
+  advisory `no-turn`/`no-character-arc`. Pacing reworked for long runtimes
+  (`movements` + length-scaled `dialogue_target` + gentler avg-shot curve).
+  New `/autonovel:teaser-brief` distils treatment → `teaser/brief.md` before
+  beats; `teaser-beats`/`shot-prompts` author the turn + character beats +
+  scaled dialogue; `teaser-revise` lifts the weak dimensions + runs the
+  adversarial de-boring pass (`--deboring`) and re-scores; the `teaser`
+  orchestrator + `/autonovel:next` + lifecycle next-step are quality-gate
+  aware. Few-shot worked beat-sheets + the rubric in teaser-craft §11.
+  Doc-sync: all command bodies, teaser-craft.md, commands.md, help.md,
+  README.md, templates/series/CLAUDE.md, prd + impl-plan, FUTURE-TODOS,
+  STATE; `autonovel install` re-run. Maps the FUTURE-TODOS 8-point plan
+  (1 quality gate · 2 micro-arc/turn · 3 dialogue · 4 character · 5
+  use-the-180s · 6 brief · 7 few-shot · 8 de-boring). Regression gate:
+  **Tier 1+2 1831 passed, 1 skipped, 0 failed.**
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1831
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +26 since the 1805 mark: movie-teaser **Phase 11 — storytelling QUALITY**
+  (the "it's boring" fix). New `teaser/quality.py` (8-dimension
+  interestingness rubric + HARD quality gate: overall ≥ 7, no dim < 5),
+  `teaser-quality` CLI, quality gate as a second render gate in
+  `teaser-render`, spine `turn` + per-shot `character_beat`, advisory
+  `no-turn`/`no-character-arc`, length-aware pacing (movements +
+  dialogue_target), new `/autonovel:teaser-brief`, quality-aware
+  `/autonovel:next` → 17 phase-11 tests + 4 next-actions pickups + 1
+  teaser-brief contract pickup (and 2 next-actions tests updated for the
+  new gate). Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1805
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +5 since the 1800 mark: fresh-run teaser reset (takes.reset_teaser +
@@ -2098,15 +2139,20 @@ pre-written cuts file, a minimal brief), and invokes
   on Bells-parity.
 
 ## Resume pointer
-**NEXT FOCUS (2026-06-08): Teaser CONTENT QUALITY — "it's boring."** The
-Phase-6 machinery enforces story *structure* (spine/dialogue/cards/roles
-present) but not *quality*, so a teaser passes every gate and is still flat.
-The plan — a real LLM interestingness rubric + HARD quality gate, a
-micro-arc with a turn, best-line dialogue selection, character beats,
-few-shot exemplars, a treatment→teaser-brief step, an adversarial de-boring
-revise — is the **★ TOP PRIORITY** entry at the top of `FUTURE-TODOS.md`
-near-term ("Phase 11: teaser storytelling quality"). Also re-verify the
-user's runtime install is current (a stale critic masks the problem).
+**Phase 11 (teaser storytelling QUALITY) SHIPPED 2026-06-08** — all 8 items
+of the "it's boring" plan landed: the interestingness rubric + HARD quality
+gate (`teaser/quality.py` + `quality.json` + second render gate), spine
+`turn`, per-shot `character_beat`, length-aware pacing (movements +
+dialogue_target), `/autonovel:teaser-brief` distillation, the de-boring
+revise pass, and few-shot exemplars in teaser-craft §11. Tier 1+2 1805 →
+1831. **Next real-world step (needs the user):** run the full pipeline on
+the Fugger book against the now-current install (`/autonovel:teaser --book
+medieval-king-maker --fresh --length 180`) and judge whether the output is
+actually *interesting* — the quality gate should now block a flat teaser and
+the de-boring revise should lift it. **Do NOT run a non-dry render on a keyed
+provider during dev** (`.env` resolves real keys; use `--provider stub` /
+`--dry-run`). Then: the longer-term TODO to bring the same research→encode→
+ENFORCE rigor to the novel *prose* pipeline (FUTURE-TODOS near-term).
 
 See `ROADMAP.md` at project root — forward-looking todos and the PR-7
 resume pointer live there. STATE.md keeps the append-only decisions

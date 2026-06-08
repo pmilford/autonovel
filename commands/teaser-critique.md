@@ -14,6 +14,7 @@ reads:
   - books/{book}/art/visual_style.json
 writes:
   - books/{book}/teaser/critique.md
+  - books/{book}/teaser/quality.json
 context_mode: book
 ---
 
@@ -24,7 +25,7 @@ inline, while authoring; this is the **standalone, re-runnable** version you
 point at a hand-edited `books/{book}/teaser/teaser.json` to re-check it
 after you've reordered shots, rewritten prompts, or changed provider.
 
-It does two passes and writes one report:
+It does **three** passes and writes a report plus a quality scorecard:
 
   1. **Mechanical linter** (`autonovel mechanical teaser-critique`) —
      deterministic flags: **story-spine** (no-dramatic-question, no-logline,
@@ -53,10 +54,25 @@ It does two passes and writes one report:
      verbatim? Does the shot serve its beat and the arc (hook that
      intrigues, escalation that accelerates, a button that withholds the
      ending)? For X-Prize teasers: stakes, a real character, visual ambition.
+  3. **Interestingness scorecard — the HARD quality gate (Phase 11).** The
+     mechanical + structural passes only prove the teaser *has a story
+     shape*; they cannot tell a *boring* teaser from a gripping one
+     (presence ≠ interesting — the exact failure the user hit). This pass is
+     the LLM judge scoring the teaser **1-10 on eight interestingness
+     dimensions** and writing them to `books/{book}/teaser/quality.json`:
+     `hook_grip`, `question_sharpness`, `stakes_escalation`, `character`,
+     `dialogue_quality`, `surprise_turn`, `coherence`, `button` (the rubric
+     prompts live in `autonovel mechanical teaser-quality --template` and
+     `docs/teaser-craft.md §11`). The scorecard is the **render gate**:
+     `/autonovel:teaser-render` refuses a real generation unless the teaser
+     clears **overall ≥ 7 AND no single dimension < 5** — so "boring" is now
+     a measurable, blocking failure, not a silent pass. Score honestly and
+     harshly; a generous 7 spends real money on a dull teaser.
 
 This command is **read-only on `teaser.json`** — it never mutates the shot
 data (that is `/autonovel:shot-prompts`' job, or your own hand-edit). It
-writes an advisory report with concrete, copy-pasteable rewrite suggestions
+writes an advisory report (`critique.md`) plus the machine-readable
+`quality.json` scorecard, with concrete, copy-pasteable rewrite suggestions
 so you can apply the ones you agree with. No image/video tool is called; it
 is free.
 </purpose>
@@ -112,6 +128,32 @@ gaps and proceed without retrying.
    Rank shots worst-first; for each weak shot, write a one-line diagnosis
    and a concrete rewritten prompt suggestion.
 
+4b. **Score the interestingness rubric → `quality.json` (Phase 11, the HARD
+   gate).** Structure is not enough — judge whether the teaser is actually
+   *interesting*. `bash`: `autonovel mechanical teaser-quality --template`
+   to get the scaffold (the eight dimension keys + the exact question each
+   asks). Score **each dimension 1-10**, judging honestly and harshly
+   against the *story*, not the prompt mechanics:
+   - `hook_grip` — would a stranger keep watching past ~10 s?
+   - `question_sharpness` — is the dramatic question sharp and specific to
+     THIS story, not a generic "will they survive?"
+   - `stakes_escalation` — do the stakes rise, specific + felt + irreversible?
+   - `character` — do we learn who someone IS / wants / what it costs?
+   - `dialogue_quality` — subtext, voice, ≥1 quotable line — not filler?
+   - `surprise_turn` — is there a real turn/reversal (the spine `turn`)?
+   - `coherence` — does it add up to ONE legible story?
+   - `button` — does it withhold the resolution AND deepen the question?
+   For each dimension add a one-line `note` saying *why* the score and
+   *what would lift it* (these drive `/autonovel:teaser-revise`). `file_write`
+   the filled scorecard to `books/{book}/teaser/quality.json` (keep the
+   `schema` field). Then `bash`:
+   `autonovel mechanical teaser-quality books/{book}/teaser/quality.json --format json`
+   to compute the verdict — **exit 3 = BLOCK** (overall < 7 or a dimension
+   < 5), exit 0 = PASS. Be a tough judge: the whole point of this gate is
+   that a structurally-complete-but-boring teaser must FAIL it. If you are
+   tempted to give everything a 7, look harder for the flat beat, the
+   on-the-nose line, the missing turn — and score it low so revise fixes it.
+
 5. **Write `books/{book}/teaser/critique.md`** — an advisory report:
 
    ```markdown
@@ -134,6 +176,22 @@ gaps and proceed without retrying.
    hook signal the genre? do the beats escalate? does a viewer learn the
    story from the dialogue/cards? one hero face? any filler shots to cut?}
 
+   ## Quality score (interestingness — Phase 11)
+   *Overall:* {overall}/10 · *Verdict:* {PASS | BLOCK}
+   | dimension | score | note |
+   |---|---|---|
+   | hook_grip | {n}/10 | {why / what would lift it} |
+   | question_sharpness | {n}/10 | … |
+   | stakes_escalation | {n}/10 | … |
+   | character | {n}/10 | … |
+   | dialogue_quality | {n}/10 | … |
+   | surprise_turn | {n}/10 | … |
+   | coherence | {n}/10 | … |
+   | button | {n}/10 | … |
+   *Weakest (the de-boring targets):* {the 3 lowest dimensions}
+   {2-3 sentences: is this actually interesting, or just structurally
+   complete? what is the single most boring thing about it?}
+
    ## Mechanical flags ({k})
    {table or list of the linter findings, grouped by code; "none" if clean.}
 
@@ -149,25 +207,30 @@ gaps and proceed without retrying.
 
 6. Print a one-screen summary that **leads with the render-gate verdict and
    the exact next command** (this is the line the user acts on — make it
-   unambiguous). Branch on whether the must-fix story-spine flags are
-   present:
+   unambiguous). The render gate is now **two gates** — the structural
+   story-spine gate AND the Phase-11 quality gate — and a real render needs
+   BOTH green. Branch on the combined verdict:
 
-   **If the gate is READY** (no story-spine must-fix flags):
+   **If BOTH gates pass** (no story-spine must-fix flags AND quality PASS):
    ```
-   ✅ Render gate: READY — books/{book}/teaser/critique.md written.
+   ✅ Render gate: READY — story complete + quality {overall}/10.
+        books/{book}/teaser/critique.md + quality.json written.
         {k} advisory flag(s) left ({r}/{n} shots could be sharpened).
    Next: /autonovel:teaser-render --book {book} --provider stub   (validate free)
          then a real backend.
    ```
 
-   **If the gate is BLOCKED** (must-fix flags remain):
+   **If EITHER gate blocks** (story flags remain OR quality < bar):
    ```
-   ⚠️ Render gate: BLOCKED — {m} must-fix flag(s): {codes}.
-        Full report: books/{book}/teaser/critique.md.
+   ⚠️ Render gate: BLOCKED.
+        Story: {READY | {m} must-fix flag(s): codes}.
+        Quality: {PASS overall/10 | BLOCK overall/10 — weakest: dim=n, dim=n}.
+        Full report: books/{book}/teaser/critique.md (+ quality.json).
    Next: /autonovel:teaser-revise --book {book}
-         — APPLIES these fixes to teaser.json in place (no hand edits, no
-         regenerate). Then this command re-confirms. (For a clean re-author
-         instead, /autonovel:shot-prompts --book {book} --force.)
+         — APPLIES these fixes to teaser.json in place (fills the spine,
+         lifts the weak quality dimensions, runs the de-boring pass) — no
+         hand edits, no regenerate. Then this command re-scores. (For a clean
+         re-author instead, /autonovel:shot-prompts --book {book} --force.)
    ```
 
    Always name `/autonovel:teaser-revise` as the way to ACT on the findings
@@ -179,8 +242,12 @@ gaps and proceed without retrying.
   `## Story spine` section (dramatic question / want vs. force / genre /
   emotional arc / dialogue + text-card counts / 4-act order / stakes ladder
   / named faces / **render-gate READY-or-BLOCKED**, flagging any missing), a
-  `## Mechanical flags` section reflecting the linter output, and per-shot
-  notes that mark each shot KEEP or REWRITE.
+  `## Quality score` section (the eight dimensions 1-10 + overall + verdict +
+  weakest), a `## Mechanical flags` section reflecting the linter output, and
+  per-shot notes that mark each shot KEEP or REWRITE.
+- `books/{book}/teaser/quality.json` is written with all eight dimensions
+  scored 1-10 and passes `autonovel mechanical teaser-quality` structurally
+  (the *verdict* may be BLOCK — that is the gate doing its job).
 - The report states whether `teaser.json` is structurally valid (from
   `teaser-validate`) and never mutates `teaser.json`.
 - Every mechanical flag from `autonovel mechanical teaser-critique` appears

@@ -10,6 +10,7 @@ allowed-tools:
 reads:
   - project.yaml
   - books/{book}/teaser/teaser.json
+  - books/{book}/teaser/quality.json
   - books/{book}/teaser/clips/render-report.json
 writes:
   - books/{book}/teaser/clips/render-report.md
@@ -202,6 +203,19 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
      `--skip-narrative-gate`. A `--dry-run` reports `narrative_gate_blocks`
      instead of refusing. This is what stops a "set of pretty clips that
      mean nothing" from reaching a paid/quota render.
+   - **Quality gate (Phase 11 — real renders only; `stub` and single-`--shot`
+     runs are exempt; `--skip-narrative-gate` also overrides it).** Structure
+     is not enough: a story-complete teaser can still be *boring*. Once the
+     narrative gate is clear, the render also requires an interestingness
+     scorecard at `books/{book}/teaser/quality.json` (written by
+     `/autonovel:teaser-critique`) that clears **overall ≥ 7 AND no
+     dimension < 5**. If the scorecard is missing or below the bar,
+     `teaser-render` returns exit 3 with the reasons (and the weakest
+     dimensions); relay them and tell the user to fix it for free —
+     `/autonovel:teaser-critique` re-scores, `/autonovel:teaser-revise` lifts
+     the weak dimensions and de-borings the flattest beats. A `--dry-run`
+     reports `quality_gate_blocks` + `quality_overall` instead of refusing.
+     This is what stops a dull-but-complete teaser from reaching a paid render.
    - **Approval gate (real renders only; `stub` is exempt).** Before
      spending a quota-bearing backend, check character references: `bash`
      `autonovel mechanical teaser-refs books/{book}/teaser/teaser.json --format json`
@@ -325,6 +339,11 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
   teaser has no story spine / thin dialogue/cards; `stub`, single-`--shot`,
   and `--skip-narrative-gate` runs are exempt, and `--dry-run` reports it
   rather than refusing.
+- The **quality gate** (Phase 11) refuses a real render (exit 3) when the
+  teaser is story-complete but `books/{book}/teaser/quality.json` is missing
+  or below the bar (overall ≥ 7, no dimension < 5); same exemptions as the
+  narrative gate, and `--dry-run` reports `quality_gate_blocks` /
+  `quality_overall` rather than refusing.
 - REGENERATE clips are auto-re-rendered for free on `stub`, and on a paid
   backend only with `--auto-regenerate` (bounded by `--max-regen`, default
   3); UPGRADE-TO-PAID is never auto-acted. `role: title` / text-card shots

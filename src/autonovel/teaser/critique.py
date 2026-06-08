@@ -121,6 +121,22 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
         rep.add("", "no-genre",
                 "no genre/tone — name what KIND of story this is so the hook can "
                 "telegraph it in the first ~10s (bp 9)")
+    # Phase 11 — a teaser is a micro-story, not a montage: it needs ONE turn.
+    if not sp.turn.strip():
+        rep.add("", "no-turn",
+                "no midpoint turn/reversal in the spine — name the ONE beat that "
+                "flips the story (the moment the viewer's read of it turns over); "
+                "without a turn the cut goes in a flat, predictable line (Phase 11)")
+
+    # --- character development: show want AND cost, not just a face (Phase 11). ---
+    cb = teaser.character_beat_kinds()
+    if "want" not in cb or "cost" not in cb:
+        miss = [k for k in ("want", "cost") if k not in cb]
+        rep.add("", "no-character-arc",
+                f"no shot tagged character_beat={'/'.join(miss)} — mark ≥1 beat "
+                f"showing the protagonist's WANT and ≥1 showing the COST/change, so "
+                f"the teaser earns a flicker of character, not just a recurring face "
+                f"(Phase 11)")
 
     # --- dialogue + text cards carry the meaning (bp 5, bp 6). ---
     dlg = teaser.dialogue_line_count()

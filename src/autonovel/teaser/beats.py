@@ -43,14 +43,38 @@ class BeatSheet:
         }
 
 
-# Teaser pacing model (teaser-craft.md §7): hook holds longer, the
-# escalation cuts fast, the final image holds. Average ~3 s/shot.
-_AVG_SHOT_S = 3.0
+# Teaser pacing model (teaser-craft.md §7-8). Phase 11 reworks it for
+# *longer* runtimes: a 180 s piece is NOT 60×3 s of montage — it is a
+# compressed story whose key beats (hook, turn, button) hold longer and
+# whose escalation is grouped into a few **movements** that each build. The
+# average shot therefore lengthens gently with the runtime instead of
+# staying a flat ~3 s, so the cut breathes instead of strobing.
 _HOOK_S = (4.0, 6.0)
 _ESCALATION_CUT_S = (1.5, 2.5)
+_TURN_HOLD_S = (3.0, 5.0)   # the midpoint reversal lands; let it land
 _FINAL_HOLD_S = (3.0, 5.0)
 _MIN_BEATS = 6
 _MAX_BEATS = 20
+
+
+def _avg_shot_s(length: int, cap: float) -> float:
+    """Average shot length — ~3 s up to a minute, lengthening gently for
+    longer teasers so the cut breathes (capped by the provider clip cap)."""
+    base = 3.0 + max(0, length - 60) / 120.0   # 60s→3.0, 180s→4.0, 300s→5.0
+    return round(min(base, cap), 2)
+
+
+def _movements(length: int) -> int:
+    """How many escalation *movements* (mini-builds) to group beats into —
+    a longer teaser earns more movements, not just more clips (Phase 11)."""
+    return max(2, min(4, 1 + round(length / 60)))
+
+
+def _dialogue_target(length: int) -> int:
+    """How many *loaded* dialogue lines a teaser of this length should mine
+    (bp 5, Phase 11). ~1 per 20 s, floored at 2, capped at 10 — thin
+    dialogue is the #1 felt failure, so longer teasers must say more."""
+    return max(2, min(10, round(length / 20)))
 
 
 def plan(length_s: int, provider: str = "generic") -> dict[str, Any]:
@@ -64,7 +88,7 @@ def plan(length_s: int, provider: str = "generic") -> dict[str, Any]:
     length = max(10, int(length_s))
     # Shot budget from average teaser pacing, but no clip longer than the
     # provider's native cap.
-    avg = min(_AVG_SHOT_S, prof.max_clip_s)
+    avg = _avg_shot_s(length, prof.max_clip_s)
     shot_target = max(4, round(length / avg))
     # Beats: roughly one per shot, but capped to a hand-authorable range;
     # a single beat can expand to several shots in shot-prompts.
@@ -79,12 +103,20 @@ def plan(length_s: int, provider: str = "generic") -> dict[str, Any]:
         "beat_target": beat_target,
         "beat_range": [_MIN_BEATS, min(_MAX_BEATS, max(_MIN_BEATS, beat_target + 4))],
         "shot_target": shot_target,
-        "avg_shot_s": round(avg, 2),
+        "avg_shot_s": avg,
+        # Phase 11 storytelling targets (consumed by teaser-beats/shot-prompts):
+        "movements": _movements(length),
+        "dialogue_target": _dialogue_target(length),
         "structure": {
             "hook": {"shots": 1, "seconds_each": list(_clamp_range(_HOOK_S, prof.max_clip_s)),
                      "note": "one arresting opening image; intrigue, don't explain"},
             "escalation": {"seconds_each": list(_clamp_range(_ESCALATION_CUT_S, prof.max_clip_s)),
-                           "note": "accelerating cuts, rising stakes, intercut text cards"},
+                           "movements": _movements(length),
+                           "note": "group beats into movements; each movement builds "
+                                   "to its own small peak, stakes rising across all of them"},
+            "turn": {"seconds": list(_clamp_range(_TURN_HOLD_S, prof.max_clip_s)),
+                     "placement": "~midpoint", "note": "the reversal — hold it; this is "
+                     "what makes the cut a story, not a montage"},
             "title": {"placement": "~2/3 in", "note": "brand beat before the button"},
             "button": {"seconds": list(_clamp_range(_FINAL_HOLD_S, prof.max_clip_s)),
                        "note": "final hook AFTER the title; deepen the question, don't resolve it"},

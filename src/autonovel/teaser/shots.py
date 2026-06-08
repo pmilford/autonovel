@@ -41,6 +41,10 @@ class Spine:
       whole cut rides (bp 8).
     - ``genre`` — the genre/tone the hook must telegraph in the first
       ~10 s so a viewer knows what *kind* of story this is (bp 9).
+    - ``turn`` — the ONE midpoint reversal that flips the story (Phase 11):
+      the moment a viewer thought they understood the situation and it turns
+      over. A teaser without a turn is a flat montage; this names the beat
+      that makes it a micro-story. Optional (older spines have none).
     """
 
     dramatic_question: str = ""
@@ -50,16 +54,17 @@ class Spine:
     emotional_arc: str = ""
     score_direction: str = ""
     genre: str = ""
+    turn: str = ""
 
     def is_empty(self) -> bool:
         return not any(
             (self.dramatic_question, self.logline, self.want,
              self.opposing_force, self.emotional_arc, self.score_direction,
-             self.genre)
+             self.genre, self.turn)
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d = {
             "dramatic_question": self.dramatic_question,
             "logline": self.logline,
             "want": self.want,
@@ -68,6 +73,11 @@ class Spine:
             "score_direction": self.score_direction,
             "genre": self.genre,
         }
+        # Omit ``turn`` when empty so pre-Phase-11 teasers round-trip
+        # byte-identical (additive).
+        if self.turn:
+            d["turn"] = self.turn
+        return d
 
     @classmethod
     def from_dict(cls, d: dict[str, Any] | None) -> "Spine":
@@ -80,6 +90,7 @@ class Spine:
             emotional_arc=str(d.get("emotional_arc", "") or ""),
             score_direction=str(d.get("score_direction", "") or ""),
             genre=str(d.get("genre", "") or ""),
+            turn=str(d.get("turn", "") or ""),
         )
 
 
@@ -116,6 +127,11 @@ class Shot:
     # ladder, not a montage of equals; ``critique`` checks monotonicity.
     # Optional — None means "not ranked" (flagged for escalation shots).
     stakes_level: int | None = None
+    # Character beat (Phase 11): mark a shot that shows the protagonist's
+    # ``"want"`` or the ``"cost"``/change of pursuing it, so the teaser earns
+    # a flicker of character development, not just a recurring face. Empty =
+    # not a character beat. ``critique`` flags a teaser with no want/cost beat.
+    character_beat: str = ""
     # Human-facing one-line beat note (the dual-render pair; PRD §18.2).
     beat_note: str = ""
 
@@ -151,6 +167,8 @@ class Shot:
             d["story_year"] = self.story_year
         if self.stakes_level is not None:
             d["stakes_level"] = self.stakes_level
+        if self.character_beat:
+            d["character_beat"] = self.character_beat
         if self.beat_note:
             d["beat_note"] = self.beat_note
         return d
@@ -183,6 +201,7 @@ class Shot:
             text_card=d.get("text_card"),
             story_year=d.get("story_year"),
             stakes_level=d.get("stakes_level"),
+            character_beat=d.get("character_beat", ""),
             beat_note=d.get("beat_note", ""),
         )
 
@@ -232,6 +251,12 @@ class Teaser:
     def text_card_count(self) -> int:
         """Number of shots that carry a text card (bp 6)."""
         return sum(1 for s in self.shots if (s.text_card or "").strip())
+
+    def character_beat_kinds(self) -> set[str]:
+        """The set of character-beat kinds present (e.g. {"want","cost"})
+        — Phase 11 character development check."""
+        return {s.character_beat.strip().lower()
+                for s in self.shots if s.character_beat.strip()}
 
 
 def load(path: Path) -> Teaser:

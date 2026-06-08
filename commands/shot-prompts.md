@@ -80,9 +80,9 @@ of best-effort inputs.
 
 4. **Load the spine + foundation for description:**
    - `books/{book}/teaser/beats.md` `## Spine` block — the dramatic
-     question, logline, want, opposing force, emotional arc, score
-     direction, **genre**. Copy all of it verbatim into the teaser's
-     `spine` object (below). **If `beats.md` has NO `## Spine` block (an
+     question, logline, want, opposing force, **turn** (the midpoint
+     reversal), emotional arc, score direction, **genre**. Copy all of it
+     verbatim into the teaser's `spine` object (below). **If `beats.md` has NO `## Spine` block (an
      older beat-sheet generated before the story-spine pass), do NOT leave
      the spine empty — AUTHOR it now yourself** from `treatment.md` /
      `outline.md` / `shared/canon.md` (the same way `teaser-beats` would),
@@ -115,14 +115,17 @@ of best-effort inputs.
 5b. **Mine the dialogue + write the text cards** (Phase 6 — the fix for
    "not enough dialogue to know anything"). A teaser must let the viewer
    *hear* the story and read its premise:
-   - **Dialogue (bp 5).** Read `books/{book}/treatment.md` +
-     `books/{book}/chapters/*.md` and pull **3-6 of the highest-voltage
-     lines** — the ones that reveal a stake, a relationship, or the genre
-     in one breath (a threat, a vow, a cost named aloud). Adapt each to a
-     short trailer line and assign it to the shot it belongs to as
-     `audio.dialogue: [{speaker, line}]`. These are *loaded* lines, not
-     ambient chatter; spread them across the arc (one near the hook, the
-     sharpest just before the title/button). **Provider gate:** only emit
+   - **Dialogue (bp 5, Phase 11).** Read `books/{book}/treatment.md` +
+     `books/{book}/chapters/*.md` and pull the **`dialogue_target` highest-
+     voltage lines** the plan printed (≈1 per 20 s — so ~8-10 for a 180 s
+     teaser, not 3) — the ones that reveal a stake, a relationship, or the
+     genre in one breath (a threat, a vow, a cost named aloud), each with
+     **subtext and a distinct voice** (thin/on-the-nose dialogue is the #1
+     felt failure). Adapt each to a short trailer line and assign it to the
+     shot it belongs to as `audio.dialogue: [{speaker, line}]`. These are
+     *loaded* lines, not ambient chatter; spread them across the arc (one
+     near the hook, the sharpest at the turn and just before the
+     title/button). **Provider gate:** only emit
      spoken `dialogue` when the provider has native audio (check
      `teaser-plan`); if it does not, carry those lines as **text cards**
      instead (below) so the meaning still lands.
@@ -134,7 +137,7 @@ of best-effort inputs.
 
 6. **Author the shots.** Build the full `books/{book}/teaser/teaser.json`
    as `{title, length_s, provider, spine:{dramatic_question, logline,
-   want, opposing_force, emotional_arc, score_direction, genre},
+   want, opposing_force, turn, emotional_arc, score_direction, genre},
    shots:[…]}` — the `spine` copied from `beats.md` (step 4). For each
    beat, write 1+ shots that obey teaser-craft §4: one subject + one
    action + one camera move; present tense; only what's in frame; concrete
@@ -157,6 +160,14 @@ of best-effort inputs.
    - **Stakes ladder (bp 3):** give every `role: escalation` shot a
      `stakes_level` integer that **strictly rises** in shot order (1, 2,
      3, …) — the cut must escalate, not idle.
+   - **The turn (Phase 11):** stage `spine.turn` as a visible reversal in an
+     `escalation` shot at roughly the midpoint — show the flip, don't narrate
+     it. (The reversal text stays in `spine.turn`; the shot makes it
+     visible.)
+   - **Character beats (Phase 11):** tag ≥1 shot `character_beat: "want"`
+     (the protagonist visibly pursuing what they want) and ≥1
+     `character_beat: "cost"` (the price/change it exacts), and write those
+     shots to *show* it — a choice, a loss — not just a recurring face.
    - **Restraint (bp 10):** do NOT emit a shot that is merely "the
      character standing where/when they are" — every shot turns the
      question or implies a larger world. Cut filler.
@@ -229,11 +240,15 @@ of best-effort inputs.
 - Each character uses ONE appearance string across all shots
   (`teaser-critique` reports no `appearance-drift`).
 - `teaser.json` ALWAYS carries a `spine` object with a non-empty dramatic
-  question, logline, want, opposing force, genre, and emotional arc — copied
-  from `beats.md` when it has a `## Spine` block, else **authored here** from
-  treatment/outline/canon (a spineless older `beats.md` must NOT yield a
-  spineless teaser). `teaser-critique` reports no `no-dramatic-question` /
-  `no-logline` / `no-stakes` / `no-emotional-arc` / `no-genre`.
+  question, logline, want, opposing force, **turn**, genre, and emotional
+  arc — copied from `beats.md` when it has a `## Spine` block, else
+  **authored here** from treatment/outline/canon (a spineless older
+  `beats.md` must NOT yield a spineless teaser). `teaser-critique` reports no
+  `no-dramatic-question` / `no-logline` / `no-stakes` / `no-emotional-arc` /
+  `no-genre` / `no-turn`.
+- ≥1 shot is tagged `character_beat: "want"` and ≥1 `character_beat: "cost"`,
+  and an `escalation` shot near the midpoint stages the `spine.turn` reversal
+  (`teaser-critique` reports no `no-character-arc`).
 - The teaser carries **≥2 spoken dialogue lines** (audio providers) or the
   equivalent as text cards, and **2-4 text cards** carrying the premise —
   no `thin-dialogue` / `thin-text-cards` flag remains for the provider.

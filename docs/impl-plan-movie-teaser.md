@@ -160,6 +160,27 @@
   Added the per-shot `audio.music` prompt line (native-score path only).
   9 tests. Remaining: auto-duration the bed to the cut length.
 
+- **Phase 11** — **storytelling QUALITY (the "it's boring" fix)**: structure
+  was a floor, not quality. Added `teaser/quality.py` — an eight-dimension
+  interestingness rubric (hook_grip, question_sharpness, stakes_escalation,
+  character, dialogue_quality, surprise_turn, coherence, button) authored by
+  the LLM judge in `teaser-critique` → `teaser/quality.json`, with a **HARD
+  quality gate** (overall ≥ 7 AND no dimension < 5) computed in one place
+  (`teaser-quality` CLI) and enforced as a **second render gate** in
+  `teaser-render` (real backends only; `stub`/`--shot`/`--skip-narrative-gate`
+  exempt; `--dry-run` reports `quality_gate_blocks`/`quality_overall`).
+  Data model: spine `turn` (midpoint reversal, omitted when empty) + per-shot
+  `character_beat` (want/cost); advisory `no-turn`/`no-character-arc` flags.
+  Pacing model reworked for long runtimes (`movements` + length-scaled
+  `dialogue_target` + gentler avg-shot curve). New `teaser-brief` command
+  distils the treatment → `teaser/brief.md` before beats. `teaser-beats`/
+  `shot-prompts` author the turn + character beats + scaled dialogue;
+  `teaser-revise` lifts the weak quality dimensions + runs the adversarial
+  de-boring pass (`--deboring`) and re-scores; `/autonovel:next` is
+  quality-gate aware. Few-shot worked beat-sheets added to teaser-craft §11.
+  Maps the FUTURE-TODOS 8-point plan (1 quality gate, 2 micro-arc/turn, 3
+  dialogue, 4 character, 5 use-the-180s, 6 brief, 7 few-shot, 8 de-boring).
+
 **Baseline now:** Tier 1+2 = **1762 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run

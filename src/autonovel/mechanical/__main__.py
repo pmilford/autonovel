@@ -25,6 +25,7 @@ Subcommands:
   teaser-plan --length S [...]     Recommend a teaser beat/shot budget + per-role timing.
   teaser-validate <teaser.json>    Validate the shot schema (hard errors; provider clip-cap).
   teaser-critique <teaser.json>    Mechanical pre-generation critique (advisory flags).
+  teaser-quality <quality.json>    Validate the interestingness scorecard + HARD quality gate.
   teaser-render-prompt <t.json>    Render shot prompt markdown in the provider's dialect.
   teaser-refs-plan <teaser.json>   Plan the canonical reference image per recurring subject.
   teaser-refs <teaser.json>        Character-reference manifest + approval status (Phase 5).
@@ -883,8 +884,11 @@ def _cmd_teaser_plan(args: argparse.Namespace) -> int:
               f"native audio: {data['provider_native_audio']})")
         print(f"  beats: ~{data['beat_target']} (range {data['beat_range'][0]}-{data['beat_range'][1]})")
         print(f"  shots: ~{data['shot_target']} (avg {data['avg_shot_s']:g}s each)")
+        print(f"  movements: {data['movements']} · dialogue lines to mine: ~{data['dialogue_target']}")
         print(f"  hook:       {st['hook']['seconds_each'][0]:g}-{st['hook']['seconds_each'][1]:g}s — {st['hook']['note']}")
-        print(f"  escalation: {st['escalation']['seconds_each'][0]:g}-{st['escalation']['seconds_each'][1]:g}s — {st['escalation']['note']}")
+        print(f"  escalation: {st['escalation']['seconds_each'][0]:g}-{st['escalation']['seconds_each'][1]:g}s "
+              f"in {st['escalation']['movements']} movements — {st['escalation']['note']}")
+        print(f"  turn:       {st['turn']['seconds'][0]:g}-{st['turn']['seconds'][1]:g}s @ {st['turn']['placement']} — {st['turn']['note']}")
         print(f"  title:      {st['title']['placement']} — {st['title']['note']}")
         print(f"  button:     {st['button']['seconds'][0]:g}-{st['button']['seconds'][1]:g}s — {st['button']['note']}")
     else:
@@ -938,6 +942,67 @@ def _cmd_teaser_critique(args: argparse.Namespace) -> int:
                 where = f.shot_id or "teaser"
                 print(f"  - [{where}] {f.code}: {f.message}")
     return 0
+
+
+def _cmd_teaser_quality(args: argparse.Namespace) -> int:
+    """Validate a teaser quality scorecard and compute the HARD quality gate
+    (Phase 11). The *scores* are authored by the LLM judge (taste is not
+    mechanical); this command only checks the structure and applies the gate
+    rule (overall ≥ 7 AND no dimension < 5) in one place, so the render gate
+    and the commands agree. Exit 0 = PASS, 3 = BLOCK (or missing/invalid)."""
+    from ..teaser import quality as _q
+    if getattr(args, "template", False):
+        json.dump(_q.blank_template(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    if not getattr(args, "path", None):
+        print("teaser-quality: a path is required (or pass --template)", file=sys.stderr)
+        return 2
+    # Accept either quality.json directly or a teaser.json (derive sibling).
+    p = Path(args.path)
+    if p.name != "quality.json":
+        p = _q.quality_path(p)
+    human = getattr(args, "format", "human") == "human"
+    if not p.is_file():
+        if human:
+            print(f"⛔ quality gate: no scorecard at {p} — score the teaser first "
+                  f"with /autonovel:teaser-critique (it writes quality.json).",
+                  file=sys.stderr)
+        else:
+            json.dump({"present": False, "passes": False, "verdict": "BLOCK",
+                       "reasons": ["no quality.json — score with teaser-critique"]},
+                      sys.stdout, indent=2)
+            sys.stdout.write("\n")
+        return 3
+    try:
+        score = _q.load(p)
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-quality: cannot read {p}: {exc}", file=sys.stderr)
+        return 2
+    passes = score.passes()
+    reasons = score.gate_reasons()
+    if human:
+        ks = score.known_scores()
+        if passes:
+            print(f"✅ quality gate: PASS — overall {score.overall():g}/10 "
+                  f"(no dimension below {_q.DIM_MIN}).")
+        else:
+            print(f"⛔ quality gate: BLOCK — overall {score.overall():g}/10. "
+                  f"It's not interesting enough yet:")
+            for r in reasons:
+                print(f"  - {r}")
+            wk = ", ".join(f"{k}={v}" for k, v in score.weakest())
+            print(f"  Lift the weakest first: {wk}. Run /autonovel:teaser-revise.")
+        for k, _q_prompt in _q.DIMENSIONS:
+            if k in ks:
+                note = score.notes.get(k, "")
+                print(f"    {k}: {ks[k]}/10{(' — ' + note) if note else ''}")
+    else:
+        out = score.to_dict()
+        out.update({"present": True, "passes": passes, "reasons": reasons})
+        json.dump(out, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    return 0 if passes else 3
 
 
 def _cmd_teaser_render_prompt(args: argparse.Namespace) -> int:
@@ -1223,6 +1288,46 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
               "--skip-narrative-gate. See /autonovel:teaser-critique + "
               "docs/teaser-craft.md §0.", file=sys.stderr)
         return 3
+    # --- Quality gate (Phase 11). Structure isn't enough — a story-complete
+    # teaser can still be boring (the user's exact complaint). Before a REAL
+    # render, require an LLM interestingness scorecard (teaser/quality.json,
+    # authored by teaser-critique) to clear the bar (overall ≥ 7 AND no
+    # dimension < 5). Same exemptions as the narrative gate (stub / --shot /
+    # --skip-narrative-gate), and only once the story gate itself is clear —
+    # there's no point scoring interestingness on a teaser with no story.
+    from ..teaser import quality as _q
+    quality_block = False
+    quality_reasons: list[str] = []
+    quality_overall = None
+    check_quality = (provider != "stub" and not getattr(args, "shot", None)
+                     and not gate_fail and not gate_override)
+    if check_quality:
+        qpath = _q.quality_path(Path(args.path))
+        if qpath.is_file():
+            try:
+                qscore = _q.load(qpath)
+                quality_overall = qscore.overall()
+                if not qscore.passes():
+                    quality_block = True
+                    quality_reasons = qscore.gate_reasons()
+            except Exception:  # noqa: BLE001
+                quality_block = True
+                quality_reasons = [f"unreadable quality.json at {qpath}"]
+        else:
+            quality_block = True
+            quality_reasons = ["no quality.json — score the teaser first with "
+                               "/autonovel:teaser-critique (it writes the scorecard)"]
+    if quality_block and not getattr(args, "dry_run", False):
+        print("teaser-render: ⛔ quality gate — the teaser is structurally complete "
+              "but not interesting enough to spend a real render on:", file=sys.stderr)
+        for r in quality_reasons:
+            print(f"  - {r}", file=sys.stderr)
+        print("  Fix it for free: /autonovel:teaser-critique re-scores it, then "
+              "/autonovel:teaser-revise lifts the weakest dimensions (a turn, sharper "
+              "dialogue, real escalation). Validate offline with `--provider stub`; "
+              "override with --skip-narrative-gate. See docs/teaser-craft.md §0/§11.",
+              file=sys.stderr)
+        return 3
     human = getattr(args, "format", "human") == "human"
     # Surface the key/manual status of the resolved provider up front so
     # the dry-run plan honestly reports whether a live run can proceed.
@@ -1238,6 +1343,11 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
                 print(f"⚠️  narrative gate would BLOCK a real render "
                       f"({len(gate_fail)} story flag(s)): "
                       f"{', '.join(f.code for f in gate_fail)} — fix or pass "
+                      f"--skip-narrative-gate. See teaser-critique.")
+            if quality_block:
+                print(f"⚠️  quality gate would BLOCK a real render "
+                      f"(overall {quality_overall if quality_overall is not None else '—'}): "
+                      f"{'; '.join(quality_reasons)} — score/revise it or pass "
                       f"--skip-narrative-gate. See teaser-critique.")
             print(f"DRY RUN — {len(reqs)} request(s) ({kind}, {provider}); "
                   f"nothing downloaded:")
@@ -1256,6 +1366,9 @@ def _cmd_teaser_render(args: argparse.Namespace) -> int:
                        "manual": manual, "free_note": prof.free_note,
                        "narrative_gate_blocks": bool(gate_fail) and not gate_override,
                        "narrative_gate_flags": [f.code for f in gate_fail],
+                       "quality_gate_blocks": quality_block,
+                       "quality_gate_reasons": quality_reasons,
+                       "quality_overall": quality_overall,
                        "requests": [r.to_dict() for r in reqs]},
                       sys.stdout, indent=2)
             sys.stdout.write("\n")
@@ -2022,6 +2135,16 @@ def main(argv: list[str] | None = None) -> int:
     tcr.add_argument("--provider", default=None)
     tcr.add_argument("--format", choices=["json", "human"], default="human")
     tcr.set_defaults(func=_cmd_teaser_critique)
+
+    tql = sub.add_parser("teaser-quality",
+                         help="Validate a teaser quality scorecard + compute the HARD "
+                              "quality gate (Phase 11; exit 3 = BLOCK/missing).")
+    tql.add_argument("path", nargs="?", default=None,
+                     help="Path to quality.json (or teaser.json — derives the sibling).")
+    tql.add_argument("--template", action="store_true",
+                     help="Print a blank scorecard scaffold (all dimensions, 0=un-scored).")
+    tql.add_argument("--format", choices=["json", "human"], default="human")
+    tql.set_defaults(func=_cmd_teaser_quality)
 
     trp = sub.add_parser("teaser-render-prompt",
                          help="Render a shot's provider-ready prompt markdown from teaser.json.")

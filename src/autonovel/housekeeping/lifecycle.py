@@ -469,6 +469,10 @@ _TEASER_NEXT: dict[str, tuple[str, str]] = {
     "autonovel:treatment": (
         "/autonovel:teaser --book {book} --length 180",
         "Treatment written — build the teaser beat-sheet + shot prompts from it."),
+    "autonovel:teaser-brief": (
+        "/autonovel:teaser-beats --book {book}",
+        "Teaser brief distilled (through-line + turn + killer lines) — select "
+        "the beats from it."),
     "autonovel:teaser": (
         "/autonovel:teaser-render --book {book} --provider stub",
         "Beats + shots authored AND the critique→revise loop ran to a READY "

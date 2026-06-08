@@ -558,23 +558,33 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 - **Movie / teaser:** `treatment` turns a book's
   foundation into a film **treatment + 2-page brief** (the prose
   deliverables a screen story — and the Future Vision X-Prize — needs
-  alongside a trailer); `teaser` is the one-command trailer pipeline
-  (`teaser-beats` fixes the **story spine** — the dramatic question,
-  logline, want vs. opposing force, emotional arc — then selects the
-  hook → escalation → title → button beats that serve it and escalate;
-  `shot-prompts` turns them into provider-ready, heavily-described **shot
-  prompts**, **mining loaded dialogue lines** from the manuscript and
-  authoring premise **text cards** so the teaser actually tells a story);
-  `teaser-critique` re-checks a hand-edited teaser with the mechanical
-  linter + an LLM critic that judges the story spine first — all with a
-  free pre-generation critique, no generation cost. `teaser-render` then turns the prompts
-  into **actual clips** — it validates the whole chain for **$0 and zero
-  quota** with an offline `stub` backend first, then renders for real via
-  `grok` (free dialogue+music, no credit card) or any of `kie` / `veo` /
-  `magichour` / `fal` / manual `flow` — and runs a vision critique (KEEP /
-  REGENERATE / UPGRADE-TO-PAID); `teaser-assemble` stitches the clips into
-  one video with ffmpeg and runs a viewer-panel cut critique — the whole
-  pipeline from a finished book to a teaser. See
+  alongside a trailer); `teaser-brief` then **distils** that treatment into
+  a one-page teaser brief (the single filmable through-line, the midpoint
+  **turn**, the 3 must-have moments, the killer lines); `teaser` is the
+  one-command trailer pipeline (`teaser-beats` fixes the **story spine** —
+  the dramatic question, logline, want vs. opposing force, **the turn**,
+  emotional arc — then selects the hook → escalation → title → button beats
+  that serve it and escalate, grouped into movements; `shot-prompts` turns
+  them into provider-ready, heavily-described **shot prompts**, **mining
+  loaded dialogue lines** from the manuscript, authoring premise **text
+  cards**, and tagging want/cost character beats so the teaser actually
+  tells a story); `teaser-critique` re-checks a hand-edited teaser with the
+  mechanical linter + an LLM critic that judges the story spine first **and
+  scores an eight-dimension interestingness rubric** (`quality.json`), and
+  `teaser-revise` applies the findings in place — filling the spine, lifting
+  the weak quality dimensions, and running an adversarial **de-boring pass**
+  (swap the flattest beats/lines for the most dramatic moments) — all with a
+  free pre-generation critique, no generation cost. `teaser-render` then turns
+  the prompts into **actual clips** — it validates the whole chain for **$0
+  and zero quota** with an offline `stub` backend first, then renders for real
+  via `grok` (free dialogue+music, no credit card) or any of `kie` / `veo` /
+  `magichour` / `fal` / manual `flow` — behind **two render gates** (the
+  story must be complete AND the quality rubric must clear overall ≥ 7 with no
+  dimension < 5, so a structurally-complete-but-*boring* teaser is refused) —
+  and runs a vision critique (KEEP / REGENERATE / UPGRADE-TO-PAID);
+  `teaser-assemble` stitches the clips into one video with ffmpeg and runs a
+  viewer-panel cut critique — the whole pipeline from a finished book to a
+  teaser. See
   [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md), the
   creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md), and the
   backend/key map [`docs/teaser-render-providers.md`](docs/teaser-render-providers.md).

@@ -113,7 +113,19 @@ def _teaser_actions(book_root: Path, book: str) -> list[NextAction]:
     # An assembled cut already exists → the teaser is done; say nothing.
     if any(tdir.glob("*_teaser*.mp4")):
         return []
+    brief = tdir / "brief.md"
     if not beats.exists() and not teaser_json.exists():
+        # Only a distilled brief so far → select the beats from it.
+        if brief.exists():
+            return [NextAction(
+                priority="MEDIUM",
+                title=f"Teaser brief distilled for {book} — select the beats",
+                command=f"/autonovel:teaser-beats --book {book}",
+                rationale=(
+                    f"books/{book}/teaser/brief.md exists (through-line + turn + "
+                    f"killer lines) but no beat-sheet yet. Pick the beats from "
+                    f"the brief — free, no generation."),
+                book=book)]
         return []  # teaser dir but nothing started — don't guess
 
     if beats.exists() and not teaser_json.exists():
@@ -154,6 +166,45 @@ def _teaser_actions(book_root: Path, book: str) -> list[NextAction]:
                 f"hand edits); or shot-prompts --force for a clean re-author."),
             book=book)]
 
+    # Story gate is clear — now the Phase-11 QUALITY gate. A real render is
+    # also refused if the teaser is structurally complete but boring
+    # (quality.json missing or below overall ≥ 7 / no dimension < 5).
+    quality_json = tdir / "quality.json"
+    quality_blocked = False
+    quality_overall = None
+    if not quality_json.exists():
+        quality_blocked = True
+    else:
+        try:
+            from ..teaser import quality as _q  # local import: optional dep
+            qscore = _q.load(quality_json)
+            quality_overall = qscore.overall()
+            quality_blocked = not qscore.passes()
+        except Exception:  # noqa: BLE001
+            quality_blocked = True
+    if quality_blocked:
+        if not quality_json.exists():
+            return [NextAction(
+                priority="MEDIUM",
+                title=f"Teaser for {book} — story complete, score it for interest",
+                command=f"/autonovel:teaser-critique --book {book}",
+                rationale=(
+                    f"books/{book}/teaser/teaser.json passes the story gate but "
+                    f"has no quality.json scorecard yet — a real render is refused "
+                    f"until the interestingness rubric clears (overall ≥ 7, no "
+                    f"dimension < 5). teaser-critique scores it for free."),
+                book=book)]
+        return [NextAction(
+            priority="MEDIUM",
+            title=f"Teaser for {book} — quality gate BLOCKED, de-boring revise",
+            command=f"/autonovel:teaser-revise --book {book}",
+            rationale=(
+                f"books/{book}/teaser/quality.json is below the bar "
+                f"(overall {quality_overall}/10) — a real render is refused until "
+                f"it clears. teaser-revise lifts the weak dimensions and de-borings "
+                f"the flattest beats in place (no hand edits)."),
+            book=book)]
+
     rendered = clips.is_dir() and any(
         clips.glob("shot_*.png")) or (clips.is_dir() and any(clips.glob("shot_*.mp4")))
     if not rendered:
@@ -162,8 +213,9 @@ def _teaser_actions(book_root: Path, book: str) -> list[NextAction]:
             title=f"Teaser for {book} is READY to render",
             command=f"/autonovel:teaser-render --book {book} --provider stub",
             rationale=(
-                f"The story gate is READY. Validate the render→assemble chain "
-                f"FREE with the offline stub, then develop references "
+                f"Both gates are READY (story complete + quality "
+                f"{quality_overall}/10). Validate the render→assemble chain FREE "
+                f"with the offline stub, then develop references "
                 f"(/autonovel:teaser-refs) and render on a real backend."),
             book=book)]
 

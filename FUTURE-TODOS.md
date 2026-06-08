@@ -11,7 +11,30 @@ to start.
 
 ## Near-term — pull into the next PR
 
-- **★ TOP PRIORITY — Teaser CONTENT QUALITY: "it's boring, nothing
+- ~~**★ TOP PRIORITY — Teaser CONTENT QUALITY: "it's boring, nothing
+  happens."**~~ **Phase 11 — ALL 8 items shipped 2026-06-08.** Added
+  `teaser/quality.py` — an eight-dimension interestingness rubric
+  (hook_grip, question_sharpness, stakes_escalation, character,
+  dialogue_quality, surprise_turn, coherence, button) scored 1-10 by the LLM
+  judge in `teaser-critique` → `teaser/quality.json`, with a **HARD quality
+  gate** (overall ≥ 7 AND no dimension < 5) computed in one place
+  (`teaser-quality` CLI) and enforced as a **second render gate** in
+  `teaser-render` (real backends only; `stub`/`--shot`/`--skip-narrative-gate`
+  exempt; `--dry-run` reports it). Spine gained `turn` (midpoint reversal),
+  shots gained `character_beat` (want/cost); advisory `no-turn`/
+  `no-character-arc` flags. Pacing model reworked for long runtimes
+  (`movements` + length-scaled `dialogue_target` + gentler avg-shot curve).
+  New `/autonovel:teaser-brief` distils treatment → `teaser/brief.md` before
+  beats. `teaser-beats`/`shot-prompts` author the turn + character beats +
+  scaled dialogue; `teaser-revise` lifts the weak quality dimensions + runs
+  the adversarial de-boring pass (`--deboring`) and re-scores; `teaser`
+  orchestrator + `/autonovel:next` are quality-gate aware. Few-shot worked
+  beat-sheets + the rubric in teaser-craft §11. Maps the 8-point plan: 1
+  quality gate, 2 micro-arc/turn, 3 dialogue, 4 character, 5 use-the-180s, 6
+  brief, 7 few-shot, 8 de-boring. Tier 1+2: 1805 → 1831. Original plan
+  follows for context.
+
+- **★ (shipped — see above) Teaser CONTENT QUALITY: "it's boring, nothing
   happens."** Raised 2026-06-08 after a full Fugger run on the new pipeline.
   Even at 180s the teaser is *flat*: no felt plot, almost no dialogue, no
   character development, no surprise — "just a sequence of clips, that are

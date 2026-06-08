@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-revise
 description: Apply the teaser critique's findings to teaser.json IN PLACE — fix the flagged shots, fill the story spine, strengthen dialogue/cards, repair the 4-act order and stakes ladder — WITHOUT regenerating from scratch. The "revise" half of the teaser loop (mirrors how the book pipeline acts on evaluate). Preserves everything that already works.
-argument-hint: "--book <short-name> [--provider generic|veo|sora|runway|kling|luma|pollinations] [--max-rounds <n>]"
+argument-hint: "--book <short-name> [--provider generic|veo|sora|runway|kling|luma|pollinations] [--max-rounds <n>] [--deboring]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -11,11 +11,14 @@ reads:
   - project.yaml
   - books/{book}/teaser/teaser.json
   - books/{book}/teaser/critique.md
+  - books/{book}/teaser/quality.json
   - books/{book}/teaser/beats.md
+  - books/{book}/teaser/brief.md
   - books/{book}/treatment.md
   - books/{book}/chapters/*.md
 writes:
   - books/{book}/teaser/teaser.json
+  - books/{book}/teaser/quality.json
   - books/{book}/teaser/shots/shot_*.md
 context_mode: book
 ---
@@ -42,6 +45,18 @@ It reads the critique's machine-readable flags *and* the prose suggestions
 in `critique.md`, applies them, re-validates, and re-critiques until the
 must-fix flags clear (or it reports what's left). No image/video tool is
 called — it is free.
+
+**Phase 11 — fix BORING, not just broken.** Clearing the structural flags
+only gets the teaser to "has a story shape"; it can still be dull. This
+command also reads the `quality.json` scorecard and **lifts the weakest
+interestingness dimensions** until the quality gate passes (overall ≥ 7, no
+dimension < 5). The most aggressive form is the **de-boring pass** (`bp`
+item 8, on by default when the quality gate is BLOCKED, forceable with
+`--deboring`): find the 3 flattest beats and the flattest dialogue line and
+**replace them with the most dramatic moments and sharpest quotes** the
+story has — a real reversal at the `turn`, a line with subtext, a beat that
+shows the protagonist's want and its cost. Then it re-scores `quality.json`
+so the gate reflects the improvement.
 </purpose>
 
 <workflow>
@@ -54,14 +69,23 @@ called — it is free.
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
    `--provider <name>` (default: the `provider` in `teaser.json`),
    `--max-rounds <n>` (default 3 — how many revise→re-critique passes
-   before stopping). Confirm the book exists in `project.yaml`.
+   before stopping), `--deboring` (force the aggressive de-boring pass even
+   when the quality gate already passes — push an already-fine teaser to
+   *great*). Confirm the book exists in `project.yaml`.
 
-2. **Get the current findings.** `bash`:
+2. **Get the current findings + quality score.** `bash`:
    `autonovel mechanical teaser-critique books/{book}/teaser/teaser.json --provider <name> --format json`
-   Parse the `findings` (each `{shot_id, code, message}`). Also `file_read`
+   Parse the `findings` (each `{shot_id, code, message}`). Then read the
+   quality scorecard: `file_read` `books/{book}/teaser/quality.json` (and
+   `bash`: `autonovel mechanical teaser-quality books/{book}/teaser/quality.json --format json`
+   for the computed verdict + weakest dimensions). If `quality.json` is
+   missing, treat the quality gate as BLOCKED — `/autonovel:teaser-critique`
+   has not scored it yet; you will score it in step 6b. Also `file_read`
    `books/{book}/teaser/critique.md` when it exists for the LLM critic's
-   per-shot prose suggestions. If there are **no findings and the file is
-   structurally valid**, report "already clean" and stop (nothing to do).
+   per-shot prose suggestions and the `brief.md` distilled through-line when
+   present. If there are **no findings, the quality gate PASSES, and
+   `--deboring` was not passed**, report "already clean + interesting" and
+   stop (nothing to do).
 
 3. **Archive the current script** before editing it (so this revision is
    reversible): `bash`:
@@ -97,14 +121,47 @@ called — it is free.
      suggestions in `critique.md` → rewrite **only that shot's** prompt
      fields per teaser-craft §4/§5 (one action, palette anchors, concrete
      cinematography). Apply the critic's concrete suggestion when given.
+   - `no-turn` → add the midpoint `turn`/reversal to `spine.turn` (pull the
+     real story reversal from `brief.md` / `treatment.md`) AND make the beat
+     visible: ensure a shot near the midpoint actually *shows* the flip.
+   - `no-character-arc` → tag ≥1 shot `character_beat: "want"` and ≥1
+     `character_beat: "cost"`, and make those shots *show* it (a choice, a
+     loss) — not just a face.
    - `no-reference` → leave as-is here (references are developed in
      `/autonovel:teaser-refs`); note it in the summary.
+
+4b. **Lift the weak quality dimensions + the de-boring pass (Phase 11 — fix
+   BORING).** This is what turns "structurally complete" into "interesting."
+   Take the `quality.json` weakest dimensions (and the per-dimension `note`s
+   the critic left) and act on each — pull the raw material from `brief.md`
+   (the distilled through-line + must-have moments + killer lines),
+   `treatment.md`, and `chapters/*.md`:
+   - low `hook_grip` → replace the opener with the single most arresting
+     image/line the story has; intrigue, don't establish.
+   - low `question_sharpness` → sharpen `spine.dramatic_question` to
+     something specific to THIS story; re-point beats that don't touch it.
+   - low `stakes_escalation` → re-order/replace escalation beats so each
+     names a NEW, higher cost; fix the `stakes_level` ladder.
+   - low `character` → add the want + cost `character_beat`s (above).
+   - low `dialogue_quality` → swap filler/on-the-nose lines for the
+     sharpest, most loaded quotes in the manuscript; subtext over statement.
+   - low `surprise_turn` → install a real reversal at `spine.turn` and stage
+     it in a shot.
+   - low `coherence` → cut shots that don't serve the question; make the
+     through-line legible.
+   - low `button` → rewrite the closing beat to withhold the resolution AND
+     deepen the question (no tidy, round-edged close — the Stability Trap).
+   **De-boring pass** (run when the quality gate is BLOCKED, or always with
+   `--deboring`): hunt the **3 flattest beats** and the **flattest dialogue
+   line** and *replace* them outright with the most dramatic moments and the
+   sharpest quotes the story offers. Boring is a defect to be cut, not
+   softened.
 
 5. **Validate (hard gate).** `bash`:
    `autonovel mechanical teaser-validate books/{book}/teaser/teaser.json --provider <name>`
    Fix any structural errors and re-run until valid.
 
-6. **Re-critique and loop.** `bash`:
+6. **Re-critique the structure and loop.** `bash`:
    `autonovel mechanical teaser-critique books/{book}/teaser/teaser.json --provider <name> --format json`
    If must-fix story-spine flags remain (`no-dramatic-question`,
    `no-logline`, `no-stakes`, `no-emotional-arc`, `no-genre`,
@@ -113,16 +170,29 @@ called — it is free.
    the spine flags are clear or the round budget is spent (report any that
    remain and why).
 
+6b. **Re-score the quality gate.** Now that the teaser has changed, re-judge
+   the eight interestingness dimensions honestly (same rubric as
+   `/autonovel:teaser-critique` step 4b — `autonovel mechanical
+   teaser-quality --template` for the dimension prompts), reflecting the
+   lifts you just made (don't inflate — score what is actually on the page).
+   `file_write` the updated `books/{book}/teaser/quality.json`, then `bash`:
+   `autonovel mechanical teaser-quality books/{book}/teaser/quality.json --format json`
+   (exit 3 = still BLOCK). If the quality gate is still BLOCKED and you have
+   rounds left, go back to step 4b and lift the weakest dimensions again.
+
 7. **Re-render the per-shot files** so they match the revised JSON. `bash`:
    `autonovel mechanical teaser-render-prompt books/{book}/teaser/teaser.json --provider <name> --out-dir books/{book}/teaser/shots`
 
-8. Print a one-screen summary — flags **before → after**, what changed
-   (per shot / spine field), and the next step:
+8. Print a one-screen summary — flags **before → after**, quality
+   **before → after**, what changed (per shot / spine field), and the next step:
 
    ```
-   🔧 Revised books/{book}/teaser/teaser.json — {before} flag(s) → {after}.
-        Changed: {spine fields filled; shots rewritten; dialogue/cards added}.
-        Render gate: {READY | still BLOCKED on: <codes>}.
+   🔧 Revised books/{book}/teaser/teaser.json — {before} flag(s) → {after};
+        quality {old_overall}/10 → {new_overall}/10.
+        Changed: {spine fields filled; turn added; dialogue/cards sharpened;
+        de-boring swaps; character beats}.
+        Render gate: {READY (story ✓ + quality {n}/10) | still BLOCKED —
+        story: <codes>; quality: <weakest dims>}.
 
    {If READY:}  Next: /autonovel:teaser-render --book {book} --provider stub
                 (validate free), then a real backend.
@@ -141,6 +211,10 @@ called — it is free.
   unless reported as un-fixable with a reason).
 - `teaser.json` passes `autonovel mechanical teaser-validate`; the per-shot
   files in `books/{book}/teaser/shots/` are regenerated to match.
+- `books/{book}/teaser/quality.json` is re-scored after the edits and its
+  `overall` does not drop; when the round budget allows, the quality gate
+  ends PASS (overall ≥ 7, no dimension < 5) or the remaining weak dimensions
+  are reported with why they could not be lifted.
 - No image/video provider is called; the command is free.
 - It never regenerates the whole teaser from scratch (that is
   `/autonovel:shot-prompts --force`) — it is the surgical, critique-driven

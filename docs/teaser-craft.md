@@ -35,6 +35,12 @@ beats actually answer it. The six spine fields (Phase 6 best practices):
 - **Want + opposing force (bp 4)** — what the protagonist wants and the
   concrete force in the way. Conflict is the intrigue; without a stated
   opposition the teaser has nothing to escalate.
+- **Turn / reversal (Phase 11)** — the ONE midpoint reversal that flips the
+  story: the moment the viewer's read of the situation turns over (the ally
+  is the enemy; the rescue is a trap; the victory costs everything). A teaser
+  *without* a turn is a flat montage; this single beat is what makes it a
+  micro-story. Name the real reversal from the story, stage it visibly at
+  roughly the midpoint, and let it hold.
 - **Emotional arc (bp 8)** — the tonal journey ("quiet unease → mounting
   dread → defiant hope"). The cut should *move* along it: hook holds,
   escalation tightens, button breathes.
@@ -91,6 +97,17 @@ generation while any of them is present (the offline `stub` backend and
 single-`--shot` runs are exempt; `--skip-narrative-gate` overrides). You
 literally cannot burn quota on a teaser that has no story — fix it for free
 first, or validate the chain offline with `--provider stub`.
+
+**Structure is the floor, not the ceiling (Phase 11).** Everything above
+proves a teaser *has a story shape*. It cannot tell a **boring** teaser from
+a gripping one — presence ≠ interesting. So there is a **second** render
+gate: the *interestingness* rubric (§11). `/autonovel:teaser-critique` scores
+the teaser 1-10 on eight dimensions (hook grip, question sharpness, stakes
+escalation, character, dialogue quality, surprise/turn, coherence, button)
+and writes `teaser/quality.json`; `/autonovel:teaser-render` refuses a real
+generation unless it clears **overall ≥ 7 AND no dimension < 5**.
+`/autonovel:teaser-revise` lifts the weakest dimensions and runs a de-boring
+pass. "Boring" is now a measurable, blocking failure — see §11.
 
 ---
 
@@ -337,6 +354,11 @@ The craft above is applied by these commands:
 
 1. `/autonovel:treatment --book <name>` — film treatment + 2-page brief
    (reveals the ending; X-Prize-shaped by default).
+1b. `/autonovel:teaser-brief --book <name>` — **distil** the treatment into a
+   one-page teaser brief: the single filmable through-line, the turn, the 3
+   must-have moments, the killer lines. Run before beats so the beats are
+   chosen from a sharp brief, not the whole story (the `/autonovel:teaser`
+   orchestrator runs this for you). Writes `teaser/brief.md`.
 2. `/autonovel:teaser --book <name> [--length 180] [--provider <p>]` —
    **the one-command pipeline.** Runs steps 2a→2b for you, each in a
    fresh subagent, and prints one summary. `--with-treatment` runs step 1
@@ -350,13 +372,18 @@ The craft above is applied by these commands:
      critique, and writes `teaser/teaser.json` + `teaser/shots/shot_*.md`.
 3. `/autonovel:teaser-critique --book <name>` — re-run the free critique
    (mechanical linter + LLM critic) on a hand-edited `teaser.json`; writes
-   an advisory `teaser/critique.md` and prints the **render-gate verdict**
-   (READY, or BLOCKED on listed flags). Read-only on the teaser.
-3b. `/autonovel:teaser-revise --book <name>` — **the fix loop.** Applies the
-   critique's findings to `teaser.json` *in place* (fills the spine,
-   strengthens dialogue/cards, repairs the 4-act order + stakes ladder,
-   rewrites weak shots) **without regenerating from scratch** — so you never
-   hand-edit and never lose good work. Re-critiques until the gate is READY.
+   an advisory `teaser/critique.md`, **scores the interestingness rubric to
+   `teaser/quality.json`** (§11), and prints the **render-gate verdict** —
+   READY only when the story is complete AND quality ≥ 7 (no dimension < 5).
+   Read-only on the teaser.
+3b. `/autonovel:teaser-revise --book <name> [--deboring]` — **the fix loop.**
+   Applies the critique's findings to `teaser.json` *in place* (fills the
+   spine incl. the turn, strengthens dialogue/cards, repairs the 4-act order
+   + stakes ladder, rewrites weak shots) AND **lifts the weak quality
+   dimensions + runs the de-boring pass** (swap the flattest beats/lines for
+   the most dramatic moments/sharpest quotes), re-scoring `quality.json` —
+   all **without regenerating from scratch** so you never hand-edit and never
+   lose good work. Re-critiques until both gates are READY.
    This is the teaser analogue of the book's *evaluate → revise*; use
    `shot-prompts --force` only when you want a clean re-author from the beats.
 4. `/autonovel:teaser-render --book <name> [--provider <p>] [--kind auto|image|video] [--dry-run]`
@@ -388,6 +415,117 @@ preferred (re-promote one by copying it back). The character/location
 **reference originals in `teaser/refs/` are untouched**: a full re-run
 changes the scripts while reusing the approved portraits and location
 plates. Rendered clips are likewise versioned (`teaser-takes`, Phase 5.8).
+
+## 11. Make it INTERESTING — the quality rubric + worked examples (Phase 11)
+
+A teaser can pass every structural gate in §0 and still be dull: a tour of
+pretty clips, no felt plot, almost no dialogue, no character, no surprise.
+That is the failure this section exists to kill. **Structure is the floor;
+this is the bar.**
+
+### 11.1 The eight interestingness dimensions
+
+`/autonovel:teaser-critique` scores each 1-10 and writes `teaser/quality.json`;
+`/autonovel:teaser-render` blocks a real render unless **overall ≥ 7 AND no
+dimension < 5**. Score honestly and harshly — a generous 7 spends real money
+on a boring teaser.
+
+| Dimension | The question (score 1-10) |
+|---|---|
+| `hook_grip` | Would a stranger keep watching past ~10 s? Does the opener *arrest*, not merely establish? |
+| `question_sharpness` | Is the dramatic question sharp and specific to THIS story — not a generic "will they survive?" |
+| `stakes_escalation` | Do the stakes rise beat to beat — specific, felt, irreversible — or a montage of equals? |
+| `character` | Do we learn who someone IS — what they want, what it costs — or just see a face? |
+| `dialogue_quality` | Subtext, voice, ≥1 quotable line — or filler / on-the-nose? |
+| `surprise_turn` | Is there a real turn/reversal that re-frames the story — or a straight line? |
+| `coherence` | Does it add up to ONE legible story a first-timer could follow? |
+| `button` | Does the ending withhold the resolution AND deepen the question — no tidy close? |
+
+The weakest dimensions are the **de-boring targets** for
+`/autonovel:teaser-revise`: it lifts each low dimension and replaces the 3
+flattest beats + the flattest line with the most dramatic moments and the
+sharpest quotes the story has.
+
+### 11.2 Worked example A — historical thriller (180 s)
+
+A *target to imitate*, not a template to copy. Note the spine has a **turn**,
+the escalation is grouped into **movements** that each build, the **dialogue
+is loaded** (subtext, not chatter), and there are explicit **want/cost**
+character beats.
+
+```
+SPINE
+  Dramatic question: Can one clerk prove the bank that owns his country
+    forged its own ledgers — before it erases him with a stroke of ink?
+  Logline: A guild bookkeeper discovers the empire's richest bank has
+    falsified the accounts that fund a war, and becomes the only witness.
+  Want: to make the forged ledger public and survive.
+  Opposing force: the Fugger bank — limitless money, the Emperor's ear.
+  Turn (midpoint): the magistrate he risked everything to reach is already
+    the bank's man — the law itself is bought. (The viewer thought "expose
+    it to the authorities"; now there ARE no clean authorities.)
+  Emotional arc: quiet diligence → dawning dread → cornered defiance.
+  Score: a single cello ostinato that tightens, then drops out on the button.
+  Genre: historical conspiracy thriller.
+
+HOOK (4-6 s) — a quill stops mid-figure; a bead of ink swells and falls onto
+  a number that doesn't belong. CARD: "Every empire keeps two ledgers."
+MOVEMENT 1 (escalation, rising) —
+  • He recompiles the column by candlelight; the totals won't reconcile.
+    [character_beat: want — he NEEDS the truth to balance] stakes_level 1
+  • A bank courier watches him through the counting-house window. lvl 2
+  • DIALOGUE (factor, low): "Numbers don't lie, Tomaso. Men do." lvl 3
+THE TURN (~90 s, hold 4-5 s) — he lays the ledger before the magistrate, who
+  slides it back unopened and signs the bank's writ. spine.turn made visible.
+MOVEMENT 2 (escalation, higher) —
+  • His name is struck from the guild rolls — pen through ink. [cost] lvl 4
+  • DIALOGUE (Tomaso, breaking): "Then I'll print it where you can't reach."
+    lvl 5
+  • Presses roll in a cellar; ink like blood. lvl 6
+TITLE (~2/3) — THE SECOND LEDGER
+BUTTON (final 4 s) — a single printed sheet pinned to a cathedral door at
+  dawn; a gloved hand reaches for it. Cut to black. CARD: "Some debts are
+  paid in truth." (Withholds: does he live? does it land? — that's the film.)
+```
+
+Why it works: one sharp question; a real reversal (the law is bought) that
+re-frames everything after it; dialogue that names a stake in one breath;
+want *and* cost shown, not told; a button that deepens the question instead
+of resolving it.
+
+### 11.3 Worked example B — optimistic sci-fi (180 s, X-Prize shape)
+
+```
+SPINE
+  Dramatic question: When the machine that could heal the dying coast needs
+    a human to risk everything to start it, will anyone step forward?
+  Logline: In a drowning delta, an engineer must trust an unfinished
+    carbon-capture leviathan — and a stranger's hands — to save her city.
+  Want: to prove the machine works before the next storm.
+  Opposing force: a town that has stopped believing rescue is possible.
+  Turn (midpoint): the machine doesn't fail — the PEOPLE do; it works only
+    when the whole town crews it together. (Hope was never about the tech.)
+  Emotional arc: weary resolve → collective doubt → earned, communal hope.
+  Score: a lone piano that gathers instruments until it's a crowd.
+  Genre: grounded optimistic sci-fi.
+
+HOOK (5 s) — a child presses a palm to a fogged turbine; it hums awake.
+  CARD: "They said the coast was already lost."
+MOVEMENT 1 — the engineer alone, fighting dead systems [want] · a flooded
+  street · DIALOGUE: "I don't need faith. I need forty pairs of hands."
+THE TURN (~90 s) — she throws the master switch and NOTHING happens; then,
+  one by one, neighbours take the manual cranks. The machine breathes.
+MOVEMENT 2 — green floods the readouts · the storm wall holds · [cost: she
+  gives up leaving on the last boat] · DIALOGUE: "We don't get saved. We
+  save."
+TITLE — THE TIDEMAKERS
+BUTTON — dawn; the coast is still there; she hands the child the wrench.
+  (Reveals the *vision* — a future worth building — withholds the *journey*.)
+```
+
+Same engine: a specific question, a genuine reversal (the limiting factor is
+people, not tech), loaded lines, a paid cost, and a button that shows the
+hopeful destination while hiding the road — exactly the X-Prize ask (§7).
 
 ---
 

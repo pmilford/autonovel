@@ -240,6 +240,21 @@ the **4-act** flags (`hook-not-first`, `multiple-hooks`, `no-title`,
 (`no-stakes-ladder`, `stakes-not-rising`; bp 3), and `cast-sprawl`
 (>3 named faces; bp 11) as strong advisories.
 
+**Phase 11 — the quality gate (structure is the floor, not the ceiling).**
+The spine/flags above only prove a teaser *has a story shape*; they cannot
+tell a *boring* teaser from a gripping one. So the spine also carries a
+`turn` (the midpoint reversal) and shots carry a `character_beat`
+(`want`/`cost`), and `teaser-critique` scores an **eight-dimension
+interestingness rubric** (hook_grip, question_sharpness, stakes_escalation,
+character, dialogue_quality, surprise_turn, coherence, button) into a
+sibling `quality.json`. That scorecard is a **second render gate**:
+`teaser-render` refuses a real generation unless it clears **overall ≥ 7 AND
+no dimension < 5** (same `stub`/`--shot`/`--skip-narrative-gate` exemptions).
+`teaser-revise` lifts the weak dimensions and runs an adversarial de-boring
+pass; the rubric + two worked beat-sheets live in `teaser-craft.md` §11.
+The *scores* are the LLM judge's (taste is never mechanical); Python only
+computes the gate rule, in one place (`teaser-quality`).
+
 **Model-agnostic per-shot schema we implement** (stored in
 `teaser.json`; rendered to `shot_NN.md` and, later, to each provider's
 request shape):

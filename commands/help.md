@@ -57,14 +57,17 @@ workflow. Topics:
   front-matter — title / introduction / glossary / appendix /
                  cover-composite / cover-print.
   movie        — full teaser pipeline: treatment (film treatment +
-                 2-page brief) → teaser (teaser-beats → shot-prompts) →
-                 teaser-critique (free pre-gen critique) → teaser-refs
-                 (develop + approve character references before spend) →
-                 teaser-render (offline `stub` to validate free, then
-                 `grok` real clips w/ dialogue+music + vision critique) →
-                 teaser-assemble (ffmpeg stitch + cut critique).
-                 X-Prize-shaped. See docs/teaser-craft.md +
-                 docs/teaser-render-providers.md.
+                 2-page brief) → teaser-brief (distil the through-line +
+                 turn + killer lines) → teaser (teaser-beats →
+                 shot-prompts → teaser-critique scores the interestingness
+                 rubric ⟳ teaser-revise lifts weak dims + de-borings) →
+                 teaser-refs (develop + approve character references
+                 before spend) → teaser-render (offline `stub` to validate
+                 free, then `grok` real clips w/ dialogue+music + vision
+                 critique) → teaser-assemble (ffmpeg stitch + cut critique).
+                 Two render gates: story-complete AND quality ≥ 7 (no
+                 dimension < 5) — "boring" is blocked. X-Prize-shaped. See
+                 docs/teaser-craft.md + docs/teaser-render-providers.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   sweeps       — multi-chapter operations: draft-pass,
