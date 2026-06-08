@@ -11,6 +11,62 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **★ TOP PRIORITY — Teaser CONTENT QUALITY: "it's boring, nothing
+  happens."** Raised 2026-06-08 after a full Fugger run on the new pipeline.
+  Even at 180s the teaser is *flat*: no felt plot, almost no dialogue, no
+  character development, no surprise — "just a sequence of clips, that are
+  also boring." **Diagnosis:** Phase 6 enforces story *structure* (a spine
+  block exists, ≥N dialogue lines exist, cards exist, 4-act roles, monotonic
+  `stakes_level`) — a **floor, not quality**. A teaser passes every
+  mechanical gate and is still dull because nothing checks whether the
+  dramatic question is *sharp*, the dialogue carries *subtext/voice*, the
+  beats *actually escalate in felt stakes*, there's a *turn/reversal*, the
+  hook *grips*, or the button *teases*. **Presence ≠ interesting.** The leap
+  from "has a story shape" to "is a good story":
+  1. **Quality rubric + a HARD quality gate (not presence).** Add an LLM
+     "interestingness" judge to `teaser-critique` scoring 1–10 each on: hook
+     grip (would you keep watching?), dramatic-question sharpness, stakes
+     escalation (specific + felt + rising), character (do we learn who
+     someone IS / wants?), dialogue quality (subtext, voice, a quotable
+     line), surprise/turn (a reversal?), coherence (does it add up?), button
+     (withholds + teases?). **Block the render gate on a minimum** (e.g.
+     overall ≥7 AND no dimension <5), persist the scored rubric, and make
+     `teaser-revise` lift the low dimensions. This makes "boring" a
+     measurable, blocking failure instead of a pass.
+  2. **Beat selection = a micro-arc with a TURN, not a montage.** Strengthen
+     `teaser-beats`: a 180s piece is a compressed story (setup → inciting
+     image → escalation with a **midpoint reversal** → crisis → button).
+     Require a named turn/reversal beat; require each escalation beat to name
+     the NEW thing now at stake (not "more tension"); pull the spine from the
+     treatment's central conflict, not a generic question.
+  3. **Dialogue that carries the story.** Select the manuscript's *best*
+     lines (quotable, character-revealing, subtext-loaded), not the first
+     few; budget more for 180s (≈6–10), placed at hook / turn / button; have
+     the LLM pick the strongest and sharpen to trailer cadence. Thin/generic
+     dialogue is the #1 felt failure.
+  4. **Character in the teaser.** ≥1 beat showing the protagonist's *want*
+     and ≥1 showing *cost/change* — a flicker of development, not just a
+     recurring face. Add craft rule + critique check.
+  5. **Use the 180s.** 35×4s clips = a montage. Fewer, longer, meaningful
+     beats grouped into 3–4 movements with their own build; let key moments
+     breathe. Rework the pacing model for longer runtimes.
+  6. **A `treatment → teaser-brief` distillation step** (mirrors the book's
+     brief): distill the sprawling treatment into the single most filmable
+     through-line + the 3 must-have dramatic moments + the killer lines,
+     BEFORE beats — so beats are chosen from a sharp brief, not the whole
+     story.
+  7. **Few-shot worked examples.** Put 1–2 *great* 3-min teaser beat-sheets
+     in `teaser-craft.md` as targets to imitate — few-shot lifts LLM output
+     quality more than rules alone.
+  8. **Adversarial "de-boring" revise pass.** A mode that hunts the 3
+     flattest beats and the flattest line and replaces them with the most
+     dramatic moments / sharpest quotes from the story.
+  **Biggest levers:** #1 (quality gate so boring = blocked), #7 (few-shot
+  exemplars), #3 (real dialogue selection). Likely "Phase 11: teaser
+  storytelling quality." NOTE: also re-verify the runtime install is current
+  — a stale critic that "sees no problem" masks all of this (the user hit
+  exactly that).
+
 - ~~**Teaser CREATIVE/NARRATIVE quality — the teaser doesn't tell a
   story.**~~ **Phase 6 — ALL 12 best practices + script versioning shipped
   2026-06-06.** The teaser data model gained a `spine` (dramatic question,

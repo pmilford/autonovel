@@ -2098,6 +2098,16 @@ pre-written cuts file, a minimal brief), and invokes
   on Bells-parity.
 
 ## Resume pointer
+**NEXT FOCUS (2026-06-08): Teaser CONTENT QUALITY — "it's boring."** The
+Phase-6 machinery enforces story *structure* (spine/dialogue/cards/roles
+present) but not *quality*, so a teaser passes every gate and is still flat.
+The plan — a real LLM interestingness rubric + HARD quality gate, a
+micro-arc with a turn, best-line dialogue selection, character beats,
+few-shot exemplars, a treatment→teaser-brief step, an adversarial de-boring
+revise — is the **★ TOP PRIORITY** entry at the top of `FUTURE-TODOS.md`
+near-term ("Phase 11: teaser storytelling quality"). Also re-verify the
+user's runtime install is current (a stale critic masks the problem).
+
 See `ROADMAP.md` at project root — forward-looking todos and the PR-7
 resume pointer live there. STATE.md keeps the append-only decisions
 log and the "Tests last known green" line. Keeping them separate means
