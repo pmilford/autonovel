@@ -82,8 +82,16 @@ of best-effort inputs.
    - `books/{book}/teaser/beats.md` `## Spine` block — the dramatic
      question, logline, want, opposing force, emotional arc, score
      direction, **genre**. Copy all of it verbatim into the teaser's
-     `spine` object (below). It is load-bearing: render + critique read it,
-     and the **narrative gate** in `teaser-render` refuses a real render
+     `spine` object (below). **If `beats.md` has NO `## Spine` block (an
+     older beat-sheet generated before the story-spine pass), do NOT leave
+     the spine empty — AUTHOR it now yourself** from `treatment.md` /
+     `outline.md` / `shared/canon.md` (the same way `teaser-beats` would),
+     so a re-run of `shot-prompts` alone still yields a complete spine and a
+     READY render gate. (Best practice: also re-run `/autonovel:teaser-beats
+     --force` to write the spine back into `beats.md`, or just use the
+     `/autonovel:teaser` orchestrator which does both.) It is load-bearing:
+     render + critique read it, and the **narrative gate** in
+     `teaser-render` refuses a real render
      when the spine/payload is thin (bp 12).
    - `shared/characters.md` — each character's **appearance**. Write ONE
      appearance string per character and reuse it **verbatim** in every
@@ -220,10 +228,12 @@ of best-effort inputs.
   separate negative/dialogue/reference sections.
 - Each character uses ONE appearance string across all shots
   (`teaser-critique` reports no `appearance-drift`).
-- `teaser.json` carries a `spine` object with a non-empty dramatic
-  question, logline, want, opposing force, and emotional arc (copied from
-  `beats.md`) — `teaser-critique` reports no `no-dramatic-question` /
-  `no-logline` / `no-stakes` / `no-emotional-arc`.
+- `teaser.json` ALWAYS carries a `spine` object with a non-empty dramatic
+  question, logline, want, opposing force, genre, and emotional arc — copied
+  from `beats.md` when it has a `## Spine` block, else **authored here** from
+  treatment/outline/canon (a spineless older `beats.md` must NOT yield a
+  spineless teaser). `teaser-critique` reports no `no-dramatic-question` /
+  `no-logline` / `no-stakes` / `no-emotional-arc` / `no-genre`.
 - The teaser carries **≥2 spoken dialogue lines** (audio providers) or the
   equivalent as text cards, and **2-4 text cards** carrying the premise —
   no `thin-dialogue` / `thin-text-cards` flag remains for the provider.

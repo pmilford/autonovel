@@ -1679,6 +1679,18 @@
   rows), STATE. `autonovel install` re-run. Regression gate: **Tier 1+2
   1800 passed, 1 skipped, 0 failed.**
 
+- 2026-06-07 (shot-prompts authors the spine when beats.md lacks one):
+  command-body fix. Root cause of "I ran shot-prompts but the spine was
+  still missing / teaser stayed boring": `shot-prompts` only *copied* the
+  spine from `beats.md`'s `## Spine` block — so an OLD beats.md (pre-Phase-6,
+  no spine) silently yielded a spineless teaser.json and a BLOCKED gate.
+  Fixed: step 4 now instructs shot-prompts to **author the spine itself**
+  from treatment/outline/canon when beats.md has no `## Spine` block, so a
+  re-run of shot-prompts alone produces a complete spine + READY gate.
+  Acceptance updated ("ALWAYS carries a spine"). Doc-only/command-body; no
+  Python change. `autonovel install` re-run. Gate unchanged: **1800 passed,
+  1 skipped.**
+
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1800
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
