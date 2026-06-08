@@ -1765,9 +1765,12 @@
   skipped, 0 failed.**
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1841
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1842
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
-  +10 since the 1831 mark: movie-teaser **Phase 12 — legibility + honest
+  +1 since the 1841 mark: cast-sprawl now collapses a hero's age-ladder
+  (boy/man/elder = ONE face) + ignores object "subjects" — found while
+  hand-running the Phase-12 pipeline on the real Fugger book as a proof.
+  Prior mark 1841 = movie-teaser **Phase 12 — legibility + honest
   grading**. `quality.json` schema /2 (viewer-blind legibility read +
   viewer_takeaway + would_watch; `passes()` now requires every scene legible),
   `Shot.identify` lower-third (burned by teaser-assemble), advisory

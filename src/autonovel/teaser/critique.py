@@ -259,10 +259,13 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
                     f"first appearance a short 'Name — epithet' (e.g. 'Jakob Fugger "
                     f"— the richest man in Europe') (Phase 12)")
 
-    # --- cast discipline: one hero face (bp 11) — count only real PEOPLE, so
-    # object "subjects" (a ledger, seven seals) can't be rationalised as cast. ---
-    names = {s.subject_name.strip() for s in teaser.shots
+    # --- cast discipline: one hero face (bp 11) — count only real PEOPLE
+    # (object "subjects" don't count) and collapse a character's age-ladder
+    # (boy/youth/man/elder) to ONE face, so a hero shown across a life isn't
+    # mistaken for a crowd. ---
+    names = {_base_person(s.subject_name) for s in teaser.shots
              if s.subject_name.strip() and not _looks_object_subject(s.subject_name)}
+    names.discard("")
     if len(names) > 3:
         rep.add("", "cast-sprawl",
                 f"{len(names)} named faces ({', '.join(sorted(names))}) — a teaser "

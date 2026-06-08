@@ -361,6 +361,25 @@ def test_build_cut_list_carries_identify(tmp_path: Path) -> None:
     assert cl.entries[0].identify == "Jakob Fugger — banker"
 
 
+def test_cast_sprawl_collapses_age_ladder_and_ignores_objects() -> None:
+    # A hero shown across a life (boy/man/elder) is ONE face, not three; and
+    # object "subjects" never count as cast.
+    t = Teaser(title="T", length_s=20, provider="veo", spine=Spine(genre="x"), shots=[
+        Shot(id="01", role="hook", subject_name="Jakob Fugger (boy)",
+             subject_appearance="x", action="a", identify="Jakob Fugger — banker"),
+        Shot(id="02", role="escalation", subject_name="Jakob Fugger (man)",
+             subject_appearance="y", action="b"),
+        Shot(id="03", role="escalation", subject_name="Jakob Fugger (elder)",
+             subject_appearance="z", action="c"),
+        Shot(id="04", role="escalation", subject_name="the electoral map",
+             subject_appearance="a map", action="unrolls"),
+        Shot(id="05", role="button", subject_name="Jakob Fugger (elder)",
+             subject_appearance="z", action="d"),
+    ])
+    codes = {f.code for f in critique.critique(t, providers.get("veo")).findings}
+    assert "cast-sprawl" not in codes  # one hero (Jakob), the map doesn't count
+
+
 def test_too_many_cards_flagged_not_thin() -> None:
     shots = [Shot(id=f"{i:02d}", role="escalation", subject_name="Jakob Fugger",
                   subject_appearance="x", action="a", text_card=f"card {i}",
