@@ -93,7 +93,90 @@ def _actions_for_book(series: SeriesLayout, cfg: project_mod.ProjectConfig,
     out.extend(_missing_front_matter_actions(book_root, book))
     out.extend(_missing_glossary_actions(cfg, book_root, book))
     out.extend(_missing_chapter_titles_actions(book_root, book))
+    out.extend(_teaser_actions(book_root, book))
     return out
+
+
+def _teaser_actions(book_root: Path, book: str) -> list[NextAction]:
+    """Teaser/movie-mode next steps (Phase 6+). Fires ONLY when a teaser is
+    in progress (a `teaser/` artifact exists) so it never nags a book that
+    isn't making one. Walks the same flow the orchestrator does — beats →
+    shots → critique→revise (render gate) → render → assemble — and surfaces
+    the single next teaser step. LOW/MEDIUM priority (never outranks
+    data-integrity HIGH items)."""
+    tdir = book_root / "teaser"
+    if not tdir.is_dir():
+        return []
+    beats = tdir / "beats.md"
+    teaser_json = tdir / "teaser.json"
+    clips = tdir / "clips"
+    # An assembled cut already exists → the teaser is done; say nothing.
+    if any(tdir.glob("*_teaser*.mp4")):
+        return []
+    if not beats.exists() and not teaser_json.exists():
+        return []  # teaser dir but nothing started — don't guess
+
+    if beats.exists() and not teaser_json.exists():
+        return [NextAction(
+            priority="MEDIUM",
+            title=f"Teaser beats written for {book} — author the shot prompts",
+            command=f"/autonovel:shot-prompts --book {book}",
+            rationale=(
+                f"books/{book}/teaser/beats.md exists but there's no teaser.json "
+                f"yet. Turn the spine + beats into provider-ready shot prompts "
+                f"(dialogue mined, text cards) — free, no generation."),
+            book=book)]
+
+    # teaser.json exists — check the render gate (story-spine flags) cheaply.
+    gate_blocked: list[str] = []
+    try:
+        out = subprocess.run(
+            ["autonovel", "mechanical", "teaser-critique", str(teaser_json),
+             "--format", "json"],
+            capture_output=True, text=True, timeout=20)
+        if out.returncode == 0:
+            from ..teaser import critique as _crit  # local import: optional dep
+            data = json.loads(out.stdout)
+            codes = {f.get("code") for f in data.get("findings", [])}
+            gate_blocked = sorted(codes & set(_crit.STORY_GATE_CODES))
+    except Exception:  # noqa: BLE001 — never let next crash on teaser checks
+        gate_blocked = []
+
+    if gate_blocked:
+        return [NextAction(
+            priority="MEDIUM",
+            title=f"Teaser for {book} — render gate BLOCKED, apply the critique",
+            command=f"/autonovel:teaser-revise --book {book}",
+            rationale=(
+                f"books/{book}/teaser/teaser.json has must-fix story flags "
+                f"({', '.join(gate_blocked)}) — a real render is refused until "
+                f"they clear. teaser-revise applies the critique in place (no "
+                f"hand edits); or shot-prompts --force for a clean re-author."),
+            book=book)]
+
+    rendered = clips.is_dir() and any(
+        clips.glob("shot_*.png")) or (clips.is_dir() and any(clips.glob("shot_*.mp4")))
+    if not rendered:
+        return [NextAction(
+            priority="LOW",
+            title=f"Teaser for {book} is READY to render",
+            command=f"/autonovel:teaser-render --book {book} --provider stub",
+            rationale=(
+                f"The story gate is READY. Validate the render→assemble chain "
+                f"FREE with the offline stub, then develop references "
+                f"(/autonovel:teaser-refs) and render on a real backend."),
+            book=book)]
+
+    # Clips on disk, no assembled cut yet → stitch it.
+    return [NextAction(
+        priority="LOW",
+        title=f"Teaser clips rendered for {book} — assemble the cut",
+        command=f"/autonovel:teaser-assemble --book {book}",
+        rationale=(
+            f"books/{book}/teaser/clips/ has rendered shots but no assembled "
+            f"video yet. Stitch them into one teaser (mixed video+stills, "
+            f"ducked bed, burned titles) and run the viewer-panel cut critique."),
+        book=book)]
 
 
 def _series_wide_actions(series: SeriesLayout,

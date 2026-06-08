@@ -93,8 +93,12 @@ gaps and proceed without retrying.
    against `docs/teaser-craft.md` §4 (AI-legibility) and §6 (consistency),
    and against the beat it serves:
    - **Legibility:** one subject, one action, one camera move, present
-     tense, concrete, only-what's-in-frame, no un-filmable abstraction, no
-     legible on-screen text, content-word negatives (never "no …").
+     tense, concrete, only-what's-in-frame, no un-filmable abstraction,
+     content-word negatives (never "no …"). **Diegetic-text conflict:** flag
+     any shot whose subject is written material (ledger/letter/map/sign) but
+     whose `negative_prompt` includes `text`/`letters`/`words`/`numbers` —
+     that suppresses the subject; the fix is to drop those terms (overlay
+     title type is handled separately on `role: title`). REWRITE it.
    - **Consistency:** the subject's appearance string is identical to every
      other shot with that subject; palette holds the 3-5 anchors.
    - **Service:** the shot earns its place — the hook intrigues without

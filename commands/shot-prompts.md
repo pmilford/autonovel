@@ -132,9 +132,17 @@ of best-effort inputs.
    action + one camera move; present tense; only what's in frame; concrete
    cinematography vocabulary (teaser-craft §5); `duration_s` ≤ the provider
    clip cap; a content-word `negative_prompt` (e.g. `blurry, distorted
-   hands, extra limbs, watermark, text, subtitles, flicker, morphing` —
-   never "no …"); the beat's `role`; the human `beat_note`; and the mined
-   `audio.dialogue` / `text_card` from step 5b. Enforce the craft gates:
+   hands, extra limbs, watermark, flicker, morphing` — never "no …"); the
+   beat's `role`; the human `beat_note`; and the mined `audio.dialogue` /
+   `text_card` from step 5b. **Diegetic text is the subject in many shots —
+   protect it (teaser-craft §4):** if a shot's subject is written material
+   (a ledger of accounts, a letter, a map, a signboard), do **NOT** put
+   `text`/`letters`/`words`/`numbers` in its `negative_prompt` — that blanks
+   the very thing the shot is about; describe the writing instead ("columns
+   of ink figures, a tally that won't balance"). Reserve "no text" for shots
+   where stray UI/watermark text would be a *defect*. (`teaser-render`
+   auto-suppresses only the overlay *title* on `role: title` shots; the title
+   is burned in at assembly.) Enforce the craft gates:
    - **4-act order (bp 2):** exactly one `role: hook` as the first shot
      (and it signals the **genre**, bp 9), one `role: title` ~2/3 in, one
      `role: button` as the last shot, escalation shots between.

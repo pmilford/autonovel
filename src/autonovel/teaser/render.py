@@ -39,12 +39,15 @@ USER_AGENT = "autonovel/0.2 (https://github.com/pmilford/autonovel; teaser rende
 _EXT = {"image": "png", "video": "mp4"}
 _DEFAULT_HEIGHT = 480  # 480p dev default — watermarks + low res are fine for dev passes.
 
-# Terms appended to the negative prompt of a title / text-card shot so the
-# model renders a clean, TEXT-FREE plate (the title/card is burned in post —
-# models garble type; teaser-craft §4). Stops the hallucinated-title failure.
-_NO_TEXT_TERMS = (
-    "text", "letters", "words", "typography", "lettering",
-    "captions", "subtitles", "title card", "watermark", "signature",
+# Terms appended ONLY to a `role: title` shot's negative so the model doesn't
+# stamp a (wrong, garbled) OVERLAY title across the frame — the title is
+# burned in post (teaser-craft §4). Deliberately NARROW: it targets
+# poster/caption/overlay type, NOT all writing — a teaser whose SUBJECT is
+# written material (ledgers, letters, maps, signage) must keep its diegetic
+# text, so broad terms like "text/letters/words" are intentionally excluded.
+_NO_TITLE_TEXT_TERMS = (
+    "title text", "movie title", "poster text", "caption", "subtitle",
+    "watermark", "logo", "large modern lettering overlay",
 )
 
 
@@ -171,14 +174,16 @@ def build_request(
             and shot.subject_appearance in prompt):
         prompt = prompt.replace(shot.subject_appearance, appearance_override)
     # Negative prompt — fold it into the prompt as a trailing labelled line so
-    # every backend honours it (it was never sent before). A title shot, or
-    # any shot carrying a text_card, ALSO gets strong no-legible-type terms:
-    # the card text is burned in post (--burn-titles / an editor), never set
-    # by the model — this stops the "model hallucinates a wrong title" failure.
+    # every backend honours it (it was never sent before). ONLY a `role: title`
+    # shot also gets the narrow no-overlay-title terms: its title is burned in
+    # post, never set by the model. We do NOT force this on text-card shots or
+    # any content shot — a teaser about ledgers/letters needs its diegetic
+    # writing, so suppressing all text would blank the very subject. (Whether
+    # a *content* shot should keep "text" in its authored negative is an
+    # authoring call — see teaser-craft §4 / shot-prompts.)
     negative = (shot.negative_prompt or "").strip()
-    wants_text_free = shot.role == "title" or bool((shot.text_card or "").strip())
-    if wants_text_free:
-        for term in _NO_TEXT_TERMS:
+    if shot.role == "title":
+        for term in _NO_TITLE_TEXT_TERMS:
             if term not in negative.lower():
                 negative = f"{negative}, {term}" if negative else term
     if negative:

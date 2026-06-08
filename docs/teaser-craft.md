@@ -154,8 +154,17 @@ run forward: interiority → action.)
   visible image that *means* that.
 - **Name the subject identically every time** — reusing the exact
   appearance words keeps the character consistent across clips.
-- **No legible on-screen text** — make title/subtitle cards in the
-  editor, not the model (models garble text).
+- **No legible *overlay* text** — title/subtitle/caption cards are burned in
+  at the editor / `teaser-assemble --burn-titles`, not set by the model
+  (models garble type). **But diegetic writing that IS the subject — a
+  ledger of accounts, a letter, a map, a signboard — is legitimate scene
+  content; keep it.** So for a shot whose subject is written material, do
+  **not** put `text` / `letters` / `words` / `numbers` in its
+  `negative_prompt` (that would blank the very thing the shot is about) —
+  describe the writing ("columns of ink figures, a tally that doesn't
+  balance") and only negative-prompt the failure modes (`blurry, distorted
+  hands, watermark, modern typography`). The render only auto-suppresses
+  overlay *title* type on `role: title` shots, never diegetic writing.
 - **No real people or trademarked characters** (also a competition-rules
   issue).
 
@@ -308,15 +317,19 @@ content words, so inline negation backfires; the negative belongs in its
 own labelled section, which `teaser-render` now appends automatically (it
 was previously authored but dropped).
 
-**Title cards never set type in the model.** A `role: title` (or any
-text-card) shot renders **text-free**: `teaser-render` auto-injects a
-no-legible-type negative (`text, letters, typography, title card, …`) so the
-model makes a clean plate, and the title is **burned in at assembly**
-(`teaser-assemble --burn-titles`) — this is the fix for the classic
-"model hallucinates a wrong/garbled title" failure. The vision critique's
+**Title plates never set type in the model.** A `role: title` shot renders
+**without an overlay title**: `teaser-render` auto-injects a *narrow*
+overlay-title negative (`title text, movie title, caption, watermark, …` —
+NOT broad `text`/`letters`, so a vellum/ledger title plate keeps its ruling
+and diegetic marks) and the title is **burned in at assembly**
+(`teaser-assemble --burn-titles`). This is the fix for the classic "model
+stamps a wrong/garbled title" failure, and it is title-only — content shots
+of ledgers/letters keep their writing (see §4). The vision critique's
 REGENERATE verdicts are re-rendered automatically on the free `stub`, and on
-a paid backend only with `teaser-render --auto-regenerate` (capped by
-`--max-regen`) so a re-render loop can't quietly run up a bill.
+a paid backend only with `teaser-render --auto-regenerate` (inline, capped
+by `--max-regen`) or `teaser-render --revise` (a separate re-run that reads
+the persisted `clips/render-report.md` so you can review the suggestions
+first) — so a re-render loop never quietly runs up a bill.
 
 ## 10. The commands
 

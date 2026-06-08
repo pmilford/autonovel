@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-render
 description: Render the teaser's shot prompts into actual clips. Free offline `stub` keyframes validate the whole pipeline at zero cost/quota; `grok` (free dialogue+music, no card) is the default real backend. Then a vision critique marks each clip KEEP / REGENERATE / UPGRADE-TO-PAID. Stateless — clips land on disk, nothing is assembled.
-argument-hint: "--book <short-name> [--provider stub|gemini|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--refs] [--voices] [--score native|bed|none] [--from-keyframes] [--film-style <s>] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--no-archive] [--auto-regenerate] [--max-regen <n>] [--dry-run]"
+argument-hint: "--book <short-name> [--provider stub|gemini|grok|kie|veo|magichour|fal|flow|pollinations] [--kind auto|image|video] [--refs] [--voices] [--score native|bed|none] [--from-keyframes] [--film-style <s>] [--takes <n>] [--shot <id>] [--height <px>] [--token <key>] [--delay <s>] [--no-archive] [--auto-regenerate] [--max-regen <n>] [--revise] [--dry-run]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -10,8 +10,10 @@ allowed-tools:
 reads:
   - project.yaml
   - books/{book}/teaser/teaser.json
+  - books/{book}/teaser/clips/render-report.json
 writes:
   - books/{book}/teaser/clips/render-report.md
+  - books/{book}/teaser/clips/render-report.json
 context_mode: book
 ---
 
@@ -143,8 +145,25 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    backend, automatically re-render the clips the vision critique marks
    REGENERATE — bounded by `--max-regen`; `stub` auto-regenerates for free
    regardless), `--max-regen <n>` (cap on auto-regenerations, default 3),
-   `--skip-narrative-gate` (override the story gate, below), `--dry-run`.
-   Confirm the book exists in `project.yaml`.
+   `--revise` (don't render the whole teaser — read the persisted
+   `clips/render-report.json` and re-render only its REGENERATE shots, so you
+   can review the critique between runs), `--skip-narrative-gate` (override
+   the story gate, below), `--dry-run`. Confirm the book exists in
+   `project.yaml`.
+
+   **`--revise` mode (act on the persisted critique).** When `--revise` is
+   passed, skip the full render. `file_read`
+   `books/{book}/teaser/clips/render-report.json` (the machine-readable
+   verdicts the previous run wrote; if missing, tell the user to run a normal
+   render first). Re-render **only** the shots whose verdict is `REGENERATE`,
+   one at a time (`autonovel mechanical teaser-render … --shot <id> …` → a
+   fresh take), bounded by `--max-regen`; re-critique each (step 7); then
+   re-write BOTH report files (step 8), merging the new verdicts over the
+   old. `stub` does this for free; a paid backend spends (you opted in by
+   passing `--revise`) — report the added cost. **UPGRADE-TO-PAID shots are
+   listed, never auto-switched.** This is the render-side mirror of
+   `/autonovel:teaser-revise`: the critic writes a reviewable report, you
+   re-run to act on it.
 
 2. **Validate the pipeline FREE first (unless the user named a provider).**
    If no `--provider` was passed and `books/{book}/teaser/clips/` has no
@@ -266,6 +285,18 @@ load-bearing — stop if it is missing (run `/autonovel:shot-prompts` or
    ## Next
    {which shots to re-run (free) and which to escalate to a paid provider.}
    ```
+
+   **Also write `books/{book}/teaser/clips/render-report.json`** — the
+   machine-readable companion that `--revise` reads back:
+   ```json
+   {"provider": "gemini", "kind": "image",
+    "verdicts": [
+      {"shot_id": "01", "take": 1, "verdict": "KEEP", "reason": "on-prompt"},
+      {"shot_id": "23", "take": 1, "verdict": "REGENERATE",
+       "reason": "hallucinated overlay title — should be a text-free plate"}
+    ]}
+   ```
+   Keep the two reports in sync; `--revise` merges new verdicts over the old.
 
 9. Print a one-screen summary: clips rendered/failed, verdict counts
    (KEEP / REGENERATE / UPGRADE-TO-PAID), and the next step:

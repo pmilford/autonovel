@@ -1655,7 +1655,36 @@
   (row), STATE. `autonovel install` re-run. Regression gate: **Tier 1+2
   1792 passed, 1 skipped, 0 failed.**
 
+- 2026-06-07 (diegetic-text fix + render --revise + /next teaser-awareness):
+  additive, three threads. (1) **Diegetic text protected** (user caught that
+  a ledgers/accounts teaser would be blanked): the title no-text augmentation
+  is **narrowed to `role: title` only** and to *overlay-title* terms
+  (`title text`/`movie title`/`caption`/`watermark`/`logo`, NOT broad
+  `text`/`letters`/`words`) so content shots of ledgers/letters keep their
+  writing; shot-prompts + teaser-craft §4 + the teaser-critique checklist now
+  tell authors NOT to negative-prompt `text` on a shot whose subject IS
+  written material. (Supersedes the broad `_NO_TEXT_TERMS` from the prior
+  entry → `_NO_TITLE_TEXT_TERMS`.) (2) **`teaser-render --revise`** — the
+  render-side mirror of teaser-revise: the vision critique persists a
+  machine-readable `clips/render-report.json` alongside the .md; `--revise`
+  reads it and re-renders ONLY the REGENERATE shots (review-between-runs,
+  spend-gated, UPGRADE-TO-PAID never auto-acted). (3) **`/autonovel:next` is
+  teaser-aware** — new `next_actions._teaser_actions` surfaces the teaser
+  flow's next step (beats→shot-prompts, BLOCKED gate→teaser-revise,
+  READY→teaser-render, clips→teaser-assemble; silent when no teaser or the
+  cut is assembled), so `next` no longer ignores teaser work. New tests:
+  `test_teaser_negative.py` (7), `test_teaser_next_actions.py` (7). No
+  existing behaviour changed. Doc-sync: teaser-render.md, shot-prompts.md,
+  teaser-critique.md, teaser-craft.md (§4/§9), commands.md (render + next
+  rows), STATE. `autonovel install` re-run. Regression gate: **Tier 1+2
+  1800 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1800
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +8 since the 1792 mark: diegetic-text narrowing + render --revise +
+  /next teaser-awareness (next_actions._teaser_actions) → +1 negative, +7
+  next-actions tests. Prior marks below.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-07 — **1792
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +6 since the 1786 mark: render-side text-free titles + sent negatives +
