@@ -1787,6 +1787,28 @@
   prd + impl-plan, FUTURE-TODOS, STATE; `autonovel install` re-run.
   Regression gate: **Tier 1+2 1852 passed, 1 skipped, 0 failed.**
 
+- 2026-06-09 (free teaser VO + book concreteness review): two follow-ups the
+  user asked for after the Phase-13 short. (1) **Free VO/TTS** — new
+  `teaser/vo.py` (mirrors music.py) + `teaser-vo` CLI synthesizes the
+  voiceover spine from the shots' `voiceover` lines: `stub` (offline silent
+  $0) / `edge` (free Microsoft Edge TTS, **no API key** — the easy default,
+  injectable synth seam for tests) / `elevenlabs` (paid, reuses the audiobook
+  account; injectable httpx client). Wired into assembly: `CutList.
+  narration_track` + `teaser-cut-list --narration` + `teaser-assemble
+  --narration`; the narration is laid over the cut as the PRIMARY voice and a
+  music bed ducks UNDER it (sidechain). The audiobook pipeline's ElevenLabs
+  is paid; edge is the free path the user wanted. (2) **Concreteness review
+  on the BOOK pipeline** — new `mechanical/vagueness.py` candidate-generator
+  scanner (filler nouns / empty intensifiers / empty evaluatives / hedges;
+  advisory, NOT a gate, per feedback_avoid_brittle_python) + `/autonovel:
+  vagueness` command + a **`concreteness` dimension in `/autonovel:evaluate`**
+  (LLM classifies each candidate vague-vs-earned and names the concrete
+  specific) + ANTI-SLOP.md "vagueness is slop" section. Additive — no book
+  tool changed behaviour. New tests: test_teaser_vo.py (11), test_vagueness.py
+  (6). Doc-sync: commands.md, help.md, ANTI-SLOP.md, evaluate/teaser-assemble
+  bodies, FUTURE-TODOS, STATE; `autonovel install` re-run. Tier 1+2: 1852 →
+  1875. Open: VO timing must be budgeted to the cut (the Fugger VO ran ~119s
+  vs a 58s cut).
 - 2026-06-09 (teaser VO craft — "concrete, not cryptic"): hand-running the
   Phase-13 short on the Fugger book surfaced a writing flaw the user caught —
   VO lines like "I bought speed" / "the page no one read" / "money moves
@@ -1800,6 +1822,13 @@
   fix). No test/green-count change. `autonovel install` re-run.
 
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-09 — **1875
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +23 since the 1852 mark: free teaser VO (`teaser/vo.py` + `teaser-vo` CLI +
+  assembly `--narration` mixing → test_teaser_vo.py 11) + book concreteness
+  review (`mechanical/vagueness.py` + `/autonovel:vagueness` + evaluate
+  `concreteness` lens → test_vagueness.py 6) + 2 new commands' contract
+  pickups.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1852
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +10 since the 1842 mark: movie-teaser **Phase 13 — the AI-video SHORT**.

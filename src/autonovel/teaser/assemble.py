@@ -145,6 +145,11 @@ class CutList:
     # ffmpeg's default font is used (needs fontconfig).
     burn_titles: bool = False
     font_file: str | None = None
+    # Phase 13 — the VOICEOVER narration track (from `teaser-vo`) laid over
+    # the whole cut as the PRIMARY voice. When both a narration and a music
+    # `audio_bed` are present, the bed ducks UNDER the narration (sidechain),
+    # so the spine that carries the story is always intelligible.
+    narration_track: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -152,6 +157,8 @@ class CutList:
             "width": self.width, "height": self.height, "fps": self.fps,
             "entries": [e.to_dict() for e in self.entries],
         }
+        if self.narration_track:
+            d["narration_track"] = self.narration_track
         if self.audio_bed:
             d["audio_bed"] = self.audio_bed
         if self.audio_mode and self.audio_mode != "auto":
@@ -184,6 +191,7 @@ class CutList:
             audio_seam_fade=float(d.get("audio_seam_fade", 0.0)),
             burn_titles=bool(d.get("burn_titles", False)),
             font_file=d.get("font_file"),
+            narration_track=d.get("narration_track"),
             entries=[CutEntry.from_dict(e) for e in (d.get("entries") or [])],
         )
 
@@ -241,6 +249,7 @@ def build_cut_list(
     audio_seam_fade: float = 0.0,
     burn_titles: bool = False,
     font_file: str | None = None,
+    narration_track: str | None = None,
 ) -> tuple[CutList, list[str]]:
     """Build a default cut-list from the teaser + the clips on disk.
 
@@ -303,6 +312,7 @@ def build_cut_list(
         audio_mode=audio_mode, clip_audio=clip_audio,
         audio_seam_fade=audio_seam_fade,
         burn_titles=burn_titles, font_file=font_file,
+        narration_track=narration_track,
     )
     return cut, missing
 
@@ -489,13 +499,17 @@ def ffmpeg_command(cut_list: CutList, out_path: Path | str) -> list[str]:
     if has_bed:
         argv += ["-i", cut_list.audio_bed]
     bed_idx = n if has_bed else None
+    has_narr = bool(cut_list.narration_track)
+    if has_narr:
+        argv += ["-i", cut_list.narration_track]
+    narr_idx = (n + (1 if has_bed else 0)) if has_narr else None
 
     # Mixed cuts need a silent audio source per *image* segment so the
     # concat (a=1) has an audio pad for every segment alongside the video
     # segments' native audio. One finite lavfi anullsrc per still.
     sil_idx: dict[int, int] = {}
     if is_mixed and use_clip_audio:
-        nxt = n + (1 if has_bed else 0)
+        nxt = n + (1 if has_bed else 0) + (1 if has_narr else 0)
         for i, e in enumerate(cut_list.entries):
             if not seg_video[i]:
                 argv += ["-f", "lavfi", "-t", f"{e.duration_s:g}",
@@ -577,6 +591,21 @@ def ffmpeg_command(cut_list: CutList, out_path: Path | str) -> list[str]:
         audio_label = f"{bed_idx}:a"
     elif use_clip_audio:
         audio_label = "[aclip]"
+
+    # Phase 13 — lay the VOICEOVER narration on top as the primary voice. If
+    # there is already an audio layer (clip audio and/or a music bed), it
+    # ducks UNDER the narration so the story-carrying spine stays clear.
+    if has_narr:
+        if audio_label is None:
+            audio_label = f"{narr_idx}:a"
+        else:
+            existing = audio_label if audio_label.startswith("[") else f"[{audio_label}]"
+            chains.append(f"[{narr_idx}:a]asplit=2[nk][nm]")
+            chains.append(f"{existing}[nk]sidechaincompress="
+                          f"threshold=0.05:ratio=8:attack=20:release=400[under]")
+            chains.append("[nm][under]amix=inputs=2:duration=longest:"
+                          "dropout_transition=0[a]")
+            audio_label = "[a]"
 
     argv += ["-filter_complex", ";".join(chains), "-map", "[v]"]
     if audio_label is not None:

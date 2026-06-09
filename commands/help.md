@@ -67,12 +67,14 @@ workflow. Topics:
                  lifts weak dims + de-borings) → teaser-refs (approve
                  character refs before spend) → teaser-render (offline
                  `stub` to validate free, then `grok` real clips + vision
-                 critique) → teaser-assemble (ffmpeg stitch + figure-ID
-                 lower-thirds + cut critique). Two render gates:
-                 story-complete AND quality (≥7, every scene legible to a
-                 stranger) — "boring" AND "who is this?" are blocked. Built
-                 in the book's genre, people not objects. X-Prize-shaped.
-                 See docs/teaser-craft.md + docs/teaser-render-providers.md.
+                 critique) → teaser-vo (free Edge-TTS narration spine) →
+                 teaser-assemble (ffmpeg stitch + narration over a ducked
+                 bed + figure-ID lower-thirds + cut critique). Default mode
+                 SHORT (45-60s, <=12 shots, first-person VO spine). Two
+                 render gates: story-complete AND quality (≥7, every scene
+                 legible) — "boring" AND "who is this?" are blocked. Built in
+                 the book's genre, people not objects. X-Prize-shaped. See
+                 docs/teaser-craft.md + docs/teaser-render-providers.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   sweeps       — multi-chapter operations: draft-pass,

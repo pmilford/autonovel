@@ -11,6 +11,22 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Teaser VO synthesis + book concreteness review (shipped 2026-06-09).**
+  Two follow-ups from the Phase-13 short. (1) **Free VO/TTS** — new
+  `teaser/vo.py` + `teaser-vo` CLI synthesizes the voiceover spine: `stub`
+  (offline silent $0) / **`edge`** (free Microsoft Edge TTS, **no key** — the
+  easy default) / `elevenlabs` (paid, reuses the audiobook account); wired
+  into `teaser-assemble --narration` (laid over the cut as the primary voice;
+  a music bed ducks under it via sidechain). (2) **"Concrete, not cryptic"
+  carried to the BOOK pipeline** — new `vagueness` mechanical scanner (a
+  candidate generator like show-dont-tell: filler nouns, empty intensifiers/
+  evaluatives, hedges) + `/autonovel:vagueness` + a **`concreteness` lens in
+  `/autonovel:evaluate`** (classifies each vague candidate vague-vs-earned)
+  + ANTI-SLOP.md "vagueness is slop" section. Tier 1+2: 1852 → 1875.
+  **Still open:** the VO *quality*/timing (my Fugger lines ran ~119s vs a
+  58s cut — narration must be budgeted to the cut); judging the *rendered*
+  cut (vision) not the script; making the assembly cut-critique adversarial.
+
 - **Phase 13 — the AI-video SHORT (shipped 2026-06-08).** Even with Phases
   11+12 a full Fugger run was STILL incoherent — the *shape* was wrong, not
   the script. AI video has no continuity between clips, so a 180s/30-shot

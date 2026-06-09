@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-assemble
 description: Stitch the rendered teaser clips into one video via ffmpeg, then run a viewer-panel cut critique (does the hook land, does it accelerate, does the button withhold?). Builds an editable cut_list.json first.
-argument-hint: "--book <short-name> [--kind image|video|mixed] [--audio <path>] [--audio-mode auto|duck|mix|clip-only|bed-only|none] [--no-clip-audio] [--no-transitions] [--burn-titles] [--font <path>] [--fps <n>] [--take <n>] [--force]"
+argument-hint: "--book <short-name> [--kind image|video|mixed] [--narration <path>] [--audio <path>] [--audio-mode auto|duck|mix|clip-only|bed-only|none] [--no-clip-audio] [--no-transitions] [--burn-titles] [--font <path>] [--fps <n>] [--take <n>] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -54,12 +54,18 @@ the entry's `identify`.
 **The voiceover spine (Phase 13 — short mode).** In a `short`, the shots'
 `voiceover` lines (the protagonist's first-person narration) are the spine
 that makes the cut cohere — they run as ONE continuous track laid over the
-whole teaser (like the music bed, ducked the same way). Record/synthesize the
-narration from the in-order `voiceover` lines and lay it over the cut; the
-in-scene `audio.dialogue` stays as accents. **The viewer-panel cut critique
-must watch the assembled cut COLD** (as a stranger) and judge whether the VO
-+ pictures tell ONE legible story — not rubber-stamp it. (Actual VO-audio
-synthesis is the open follow-up; the lines + the cohesion judgement land now.)
+whole teaser (like the music bed, ducked the same way). Synthesize the narration **for free** with `bash`:
+`autonovel mechanical teaser-vo books/{book}/teaser/teaser.json --provider edge`
+(`edge` = Microsoft Edge TTS, no API key; `stub` = offline silent placeholder
+to rehearse the chain for $0; `elevenlabs` = paid, reuses the audiobook voices).
+It joins the shots' `voiceover` lines into one track under `teaser/vo/`. Then
+pass it with **`--narration <path>`**: it is laid over the whole cut as the
+**primary** voice, and any music `--audio` bed **ducks under it** (sidechain)
+so the story-carrying spine stays intelligible; in-scene `audio.dialogue`
+stays as accents. (`teaser-vo --dry-run` warns if the narration runs longer
+than the cut — trim VO lines or lengthen the cut.) **The viewer-panel cut
+critique must watch the assembled cut COLD** (as a stranger) and judge whether
+the VO + pictures tell ONE legible story — not rubber-stamp it.
 
 **Transitions (Phase 5.7).** The build applies safe defaults: the teaser
 **fades in** from black on the first shot, **fades out** on the last, and
@@ -131,7 +137,7 @@ is reused when present (so your hand-edits survive); regenerate with
 
 3. **Build / reuse the cut-list.** If `books/{book}/teaser/cut_list.json`
    exists and `--force` was not passed, reuse it. Otherwise `bash`:
-   `autonovel mechanical teaser-cut-list books/{book}/teaser/teaser.json --kind <kind> [--audio <path>] [--audio-mode <mode>] [--no-clip-audio] [--burn-titles] [--font <path>] --fps <n> --take <n> --format json`
+   `autonovel mechanical teaser-cut-list books/{book}/teaser/teaser.json --kind <kind> [--narration <path>] [--audio <path>] [--audio-mode <mode>] [--no-clip-audio] [--burn-titles] [--font <path>] --fps <n> --take <n> --format json`
    — this writes `books/{book}/teaser/cut_list.json` (ordered clips +
    per-entry `media` for a `mixed` cut + per-shot `duration_s` + any
    `text_card` notes + `burn_titles`/`font_file` + the audio policy) and

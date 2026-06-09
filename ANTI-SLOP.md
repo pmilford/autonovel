@@ -290,6 +290,36 @@ It flags phrases that are statistically more common in AI output and tells you *
 
 ---
 
+## VAGUENESS IS SLOP — be concrete
+
+The most pervasive AI-tell is **abstraction standing in for a specific
+image**: filler nouns (*something, things, a lot, some kind of*), empty
+intensifiers (*very, really, quite, extremely*), and unearned evaluative
+adjectives (*beautiful, interesting, good, special, strange*) that name a
+reaction the reader should have had instead of rendering the specific that
+earns it. *"It was a beautiful, very moving thing"* tells you nothing; *"the
+candle guttered and her hand stopped over the unfinished name"* shows it.
+
+The rule: **say the actual thing — concrete, specific, nameable, sensory.**
+Name the object, the number, the gesture, the smell. If a sentence could be
+swapped onto a different topic and still "work," it's vague. This is the same
+discipline the teaser voiceover needs (a 21st-century viewer hearing "I
+bought speed" doesn't know what it means) — concrete beats evocative
+everywhere.
+
+- **Pre-flight (free, mechanical):** `/autonovel:vagueness` scans every
+  chapter and lists candidate vague lines (filler nouns, empty
+  intensifiers/evaluatives, hedges) as a *review queue* — not a gate.
+- **The judge:** `/autonovel:evaluate` scores a **`concreteness`** dimension,
+  classifying each flagged line *vague* vs *earned* and naming the concrete
+  specific it should become.
+
+Empty evaluatives are the worst offenders — when you catch yourself writing
+*"beautiful" / "amazing" / "interesting,"* delete the adjective and render
+the thing that would make the reader think it.
+
+---
+
 ## THE ANTI-SLOP CHECKLIST
 
 Run through this after writing or editing any text.

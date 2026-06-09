@@ -26,6 +26,7 @@ Subcommands:
   teaser-validate <teaser.json>    Validate the shot schema (hard errors; provider clip-cap).
   teaser-critique <teaser.json>    Mechanical pre-generation critique (advisory flags).
   teaser-quality <quality.json>    Validate the interestingness scorecard + HARD quality gate.
+  teaser-vo <teaser.json>          Synthesize the voiceover spine (edge = free TTS; stub = offline).
   teaser-render-prompt <t.json>    Render shot prompt markdown in the provider's dialect.
   teaser-refs-plan <teaser.json>   Plan the canonical reference image per recurring subject.
   teaser-refs <teaser.json>        Character-reference manifest + approval status (Phase 5).
@@ -313,6 +314,20 @@ def _cmd_show_dont_tell(args: argparse.Namespace) -> int:
             report, book=book_root.name,
             show_hits=not args.summary_only,
         ))
+    return 0
+
+
+def _cmd_vagueness(args: argparse.Namespace) -> int:
+    from .vagueness import build_report as _bvr, render_markdown as _rvm
+    book_root = Path(args.book_root)
+    report = _bvr(book_root)
+    if args.format == "json":
+        json.dump({"book_root": str(book_root), **report.to_dict()},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(_rvm(report, book=book_root.name,
+                              show_hits=not args.summary_only))
     return 0
 
 
@@ -1562,6 +1577,72 @@ def _cmd_teaser_music(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_teaser_vo(args: argparse.Namespace) -> int:
+    """Synthesize the teaser's VOICEOVER spine into a narration track (P13).
+
+    Joins the shots' `voiceover` lines (in cut order) into one script and
+    renders it: `stub` = silent WAV ($0, offline); `edge` = free Microsoft
+    Edge TTS (no key); `elevenlabs` = paid. Writes a versioned file under
+    `teaser/vo/`; feed it to `teaser-assemble --narration <path>`."""
+    from ..teaser import shots as _shots, vo as _vo
+    from ..teaser.backends import RenderError as _RErr
+    try:
+        teaser = _shots.load(Path(args.path))
+    except Exception as exc:  # noqa: BLE001
+        print(f"teaser-vo: cannot read {args.path}: {exc}", file=sys.stderr)
+        return 2
+    base = Path(args.path).resolve().parent
+    provider = getattr(args, "provider", "stub") or "stub"
+    script = _vo.narration_script(teaser)
+    if not script.strip():
+        print("teaser-vo: no voiceover lines in teaser.json — author the VO spine "
+              "first (short mode; see /autonovel:shot-prompts).", file=sys.stderr)
+        return 2
+    vo_dir = (Path(args.out_dir) if getattr(args, "out_dir", None) else base / "vo")
+    from .typeset import output_filename, latest_filename
+    ext = _vo.output_ext(provider)
+    slug = f"{_slugify_title(teaser.title)}_vo"
+    out = vo_dir / output_filename(slug, ext)
+    latest = vo_dir / latest_filename(slug, ext)
+    est = _vo.estimate_duration_s(script)
+    voice = getattr(args, "voice", None)
+    if getattr(args, "dry_run", False):
+        need = _vo.needs_key(provider)
+        key = _vo.vo_key(provider, token=getattr(args, "token", None)) if need else None
+        json.dump({"dry_run": True, "provider": provider, "needs_key": need,
+                   "key_present": bool(key), "out": str(out),
+                   "lines": teaser.voiceover_line_count(),
+                   "estimated_narration_s": est, "cut_length_s": teaser.length_s,
+                   "script": script}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    try:
+        path = _vo.generate_vo(script, out, provider=provider, voice=voice,
+                               token=getattr(args, "token", None),
+                               model=getattr(args, "model", None))
+    except _RErr as exc:
+        print(f"teaser-vo: {exc}", file=sys.stderr)
+        return 2
+    import shutil as _sh
+    _sh.copy2(path, latest)
+    if getattr(args, "format", "human") == "json":
+        json.dump({"out": str(path), "latest": str(latest), "provider": provider,
+                   "lines": teaser.voiceover_line_count(),
+                   "estimated_narration_s": est, "cut_length_s": teaser.length_s},
+                  sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        warn = ""
+        if teaser.length_s and est > teaser.length_s * 1.1:
+            warn = (f"\n   ⚠️  narration ~{est:g}s vs cut {teaser.length_s}s — "
+                    f"trim VO lines or lengthen the cut.")
+        print(f"🎙️  Wrote {path} (+ {latest.name}) — {teaser.voiceover_line_count()} "
+              f"lines, ~{est:g}s on {provider}.{warn}\n"
+              f"   Lay it under the cut: /autonovel:teaser-assemble --book <b> "
+              f"--narration {path}")
+    return 0
+
+
 def _cmd_teaser_reset(args: argparse.Namespace) -> int:
     """Archive every teaser artifact EXCEPT the reference images, for a clean
     --fresh run (Phase: fresh). Non-destructive: moves to teaser/reset-archive/.
@@ -1776,6 +1857,7 @@ def _cmd_teaser_cut_list(args: argparse.Namespace) -> int:
         audio_seam_fade=getattr(args, "audio_seam_fade", 0.0),
         burn_titles=getattr(args, "burn_titles", False),
         font_file=getattr(args, "font", None),
+        narration_track=getattr(args, "narration", None),
     )
     out = Path(args.out) if getattr(args, "out", None) else base / "cut_list.json"
     if not cut.entries:
@@ -1949,6 +2031,15 @@ def main(argv: list[str] | None = None) -> int:
     sdt.add_argument("--summary-only", action="store_true",
                       help="Skip the per-line block; emit only the per-chapter table.")
     sdt.set_defaults(func=_cmd_show_dont_tell)
+
+    vg = sub.add_parser("vagueness",
+                        help="Per-chapter pre-flight scanner for vague/abstract lines "
+                             "(filler nouns, empty intensifiers/evaluatives, hedges).")
+    vg.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    vg.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    vg.add_argument("--summary-only", action="store_true",
+                    help="Skip the per-line block; emit only the per-chapter table.")
+    vg.set_defaults(func=_cmd_vagueness)
 
     sa = sub.add_parser("series-arc",
                          help="Series-arc score across ≥2 books — completion, cross-book cast, story-time discipline, unresolved threads.")
@@ -2313,6 +2404,9 @@ def main(argv: list[str] | None = None) -> int:
                           "mixed (Phase 8) = per shot, the video clip if present "
                           "(native audio) else the still keyframe (silent).")
     tcl.add_argument("--audio", default=None, help="Optional audio-bed file to mix in.")
+    tcl.add_argument("--narration", default=None,
+                     help="Optional VOICEOVER narration track (from teaser-vo) laid on "
+                          "top as the primary voice; a music bed ducks under it (Phase 13).")
     tcl.add_argument("--audio-mode", dest="audio_mode",
                      choices=list(_teaser_audio_modes()), default="auto",
                      help="How clip audio + the bed combine (default auto): "
@@ -2393,6 +2487,24 @@ def main(argv: list[str] | None = None) -> int:
                      help="Show the plan + key status; generate nothing.")
     tmu.add_argument("--format", choices=["json", "human"], default="human")
     tmu.set_defaults(func=_cmd_teaser_music)
+
+    tvo = sub.add_parser("teaser-vo",
+                         help="Synthesize the VOICEOVER spine (the shots' voiceover "
+                              "lines) into a narration track; edge = free no-key TTS, "
+                              "stub = offline silent WAV (Phase 13).")
+    tvo.add_argument("path", help="Path to teaser.json.")
+    tvo.add_argument("--provider", choices=["stub", "edge", "elevenlabs"],
+                     default="edge", help="VO backend (default edge = free, no key).")
+    tvo.add_argument("--voice", default=None,
+                     help="Voice id/name (edge: e.g. en-US-GuyNeural; elevenlabs: a voice id).")
+    tvo.add_argument("--out-dir", dest="out_dir", default=None,
+                     help="Output dir (default: <teaser dir>/vo).")
+    tvo.add_argument("--model", default=None, help="Optional backend model hint.")
+    tvo.add_argument("--token", default=None, help="Explicit API key (wins over env/.env).")
+    tvo.add_argument("--dry-run", dest="dry_run", action="store_true",
+                     help="Show the script + key status + estimated length; render nothing.")
+    tvo.add_argument("--format", choices=["json", "human"], default="human")
+    tvo.set_defaults(func=_cmd_teaser_vo)
 
     tas = sub.add_parser("teaser-archive-script",
                          help="Timestamp-archive a teaser script (beats.md / "

@@ -186,7 +186,7 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
    zero-padded). Score the dimensions: `voice_adherence`, `beat_coverage`,
    `character_voice`, `plants_seeded`, `prose_quality`, `continuity`,
    `canon_compliance`, `lore_integration`, `engagement`,
-   `irreversible_change`, `show_dont_tell_ratio`. Each emits
+   `irreversible_change`, `show_dont_tell_ratio`, `concreteness`. Each emits
    `{score, weakest_moment, fix, note}`. Include
    `three_weakest_sentences`, `three_strongest_sentences`,
    `ai_patterns_detected`, `overall_score`, `weakest_dimension`,
@@ -249,6 +249,41 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
    or no tell patterns at all), score `tell_score = 9.0` and
    note `"no tell candidates flagged"` rather than emitting a
    misleading 10/10.
+
+   **`concreteness` (the LLM-judge upgrade to the vagueness
+   scanner).** Run the mechanical scanner first via the `Bash`
+   tool:
+
+   ```
+   autonovel mechanical vagueness books/{book} --format json
+   ```
+
+   Filter the JSON's `chapters` array for the chapter under
+   evaluation. Each `candidates` entry is one vague line (kind ∈
+   {filler-noun, empty-intensifier, empty-evaluative, hedge},
+   with a snippet). The scanner over-flags on purpose — judge
+   each candidate as one of:
+
+     - **vague**: an abstract stand-in that dodges a concrete,
+       specific image — *"it was a beautiful thing"*, *"he felt
+       something"*, *"the place was very nice"*. The prose tells
+       you a judgement instead of showing the specific that earns
+       it. (Same failure as the cryptic teaser VO line "I bought
+       speed".)
+     - **earned**: legitimate — vague word in dialogue/voice, a
+       deliberate withholding, an abstraction the close-third POV
+       would actually use, or a word doing real grammatical work
+       (*"a couple of days"*).
+
+   Score `concreteness` 0–10: high when nearly every flagged line
+   is earned and the prose renders specific, sensory, nameable
+   detail; low when abstract filler and empty evaluatives stand
+   in for images. Penalise empty-evaluative density most (a
+   "beautiful"/"interesting" that names a reaction the reader
+   should have had). `weakest_moment` = the most vague line; `fix`
+   = the concrete specific it should become (name the thing, the
+   number, the sensory detail). When the scanner returned no
+   candidates, score 9.0 and note `"no vague candidates flagged"`.
 
    **`irreversible_change` (Stability Trap antidote).** This is
    the named ceiling failure from the Bells production: AI
