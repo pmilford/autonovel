@@ -141,6 +141,12 @@ so the gate reflects the improvement.
    - `thin-narration` → write a first-person `voiceover` line on most shots
      so the narration runs as ONE continuous story across the cut (read them
      back in order — they must cohere alone). This is the short's spine.
+   - **cryptic VO (a shot the legibility read marked unclear because its
+     `voiceover` is evocative-but-fuzzy)** → rewrite the line concretely:
+     plain cause-and-effect, concrete nouns, the actual thing that happened
+     (*"I bought speed"* → *"I paid for couriers faster than any king's; I
+     heard the news first and traded before my rivals knew"*). Concrete beats
+     evocative.
    - `too-many-shots` → a short is ≤12 longer shots, not a montage; merge or
      cut the weakest beats until ≤12 and lengthen the keepers (Phase 13).
    - `no-reference` → leave as-is here (references are developed in

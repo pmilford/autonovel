@@ -171,12 +171,16 @@ gaps and proceed without retrying.
      courier was intercepted.")
    - **why** does it matter to the story?
    Mark each shot `clear: true` only if a stranger could answer all three
-   from the perceivable layer alone. Record the read as the `legibility`
-   array (`[{shot_id, clear, who, what, why, note}]`). **In short mode, also
-   read the `voiceover` lines end-to-end with the pictures ignored** — they
-   must, alone, tell ONE coherent micro-story (setup → escalation → turn →
-   payoff/cost); if the VO spine is missing, thin, or doesn't cohere, that is
-   the cohesion failure (score `coherence` low and say so). Then write the
+   from the perceivable layer alone. **A shot whose `voiceover` is cryptic —
+   evocative but fuzzy, where a modern viewer can't tell what it literally
+   means (*"I bought speed"*, *"the page no one read"*) — is NOT clear, even
+   if it sounds good. The VO must be concrete cause-and-effect.** Record the
+   read as the `legibility` array (`[{shot_id, clear, who, what, why, note}]`).
+   **In short mode, also read the `voiceover` lines end-to-end with the
+   pictures ignored** — they must, alone, tell ONE coherent micro-story (setup
+   → escalation → turn → payoff/cost), and each must be self-explaining to a
+   stranger; if the VO spine is missing, thin, cryptic, or doesn't cohere,
+   that is the cohesion failure (score `coherence` low and say so). Then write the
    **`viewer_takeaway`** ("a stranger comes away believing: ___") and
    **`would_watch`** (would that stranger want the film?). Be ruthless: if
    the teaser is a tour of objects with no identified people, most scenes are

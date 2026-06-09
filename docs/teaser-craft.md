@@ -594,6 +594,19 @@ is a different artifact, and it's now the **default `mode: short`**:
   `voiceover` line; read in order they must tell a coherent micro-story on
   their own. In-scene lip-synced dialogue stays to ≤2–3 accents (lip-sync is
   unreliable; VO is added in post and always lands).
+- **Concrete, not cryptic — every VO line must be self-explaining to a
+  modern stranger on FIRST hearing.** This is the most common VO failure:
+  trailer-poetry that has a ring but a fuzzy meaning. A 21st-century viewer
+  hearing a 15th-century man say *"I bought speed"* or *"the page no one
+  read"* or *"money moves faster than men"* does **not** know what that
+  literally means. Say the actual thing in plain cause-and-effect with
+  concrete nouns: not *"I bought speed"* → *"I paid for couriers faster than
+  any king's; I heard the news first and traded on it before my rivals
+  knew."* Not *"I took their crowns as surety"* → *"I lent against their
+  silver mines; when they couldn't repay, the mines were mine."* Test each
+  line: *would a viewer who knows nothing of this history understand exactly
+  what happened and why it mattered?* If it only sounds good, rewrite it.
+  Concrete beats evocative every time.
 - **One protagonist; minimize everyone else.** Drift compounds with each
   added face — keep ≤3, and let the VO carry relationships.
 - **Judge the assembled CUT, cold** — not the script. The script can read

@@ -165,6 +165,16 @@ of best-effort inputs.
    - Keep in-scene `audio.dialogue` to ≤2–3 of the very sharpest lines (AI
      lip-sync is unreliable; the VO is added in post and always lands). The
      VO carries meaning the images can't; the few spoken lines are accents.
+   - **Concrete, NOT cryptic (the #1 VO failure).** Every VO line must be
+     self-explaining to a modern stranger on first hearing — plain
+     cause-and-effect, concrete nouns, the *actual thing* that happened.
+     Trailer-poetry that "has a ring" but a fuzzy meaning is a defect: a
+     viewer hearing *"I bought speed"* / *"the page no one read"* / *"money
+     moves faster than men"* does not know what it means. Write *"I paid for
+     couriers faster than any king's; I heard the news first and traded on it
+     before my rivals knew"* instead. Test each line: would someone who knows
+     nothing of this history understand exactly what happened and why it
+     mattered? If it only sounds good, rewrite it.
    - The VO is NOT narration-of-history (documentary) — it is the
      protagonist living his own story in his own voice (genre-appropriate for
      historical fiction).

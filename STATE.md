@@ -1787,6 +1787,18 @@
   prd + impl-plan, FUTURE-TODOS, STATE; `autonovel install` re-run.
   Regression gate: **Tier 1+2 1852 passed, 1 skipped, 0 failed.**
 
+- 2026-06-09 (teaser VO craft — "concrete, not cryptic"): hand-running the
+  Phase-13 short on the Fugger book surfaced a writing flaw the user caught —
+  VO lines like "I bought speed" / "the page no one read" / "money moves
+  faster than men" have a ring but a fuzzy meaning a modern viewer can't
+  decode. Encoded the rule (prompt material, not Python — it's a taste/clarity
+  judgement for the LLM, per feedback_avoid_brittle_python): every VO line
+  must be self-explaining to a modern stranger on first hearing — plain
+  cause-and-effect, concrete nouns, the actual thing that happened. Added to
+  teaser-craft §12, shot-prompts (VO authoring), teaser-critique (the
+  viewer-blind read marks cryptic VO as NOT clear), teaser-revise (cryptic-VO
+  fix). No test/green-count change. `autonovel install` re-run.
+
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1852
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
