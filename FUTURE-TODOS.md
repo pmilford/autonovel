@@ -11,6 +11,26 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Phase 13 — the AI-video SHORT (shipped 2026-06-08).** Even with Phases
+  11+12 a full Fugger run was STILL incoherent — the *shape* was wrong, not
+  the script. AI video has no continuity between clips, so a 180s/30-shot
+  montage can't cohere. Research → 45–60s, 6–12 shots, carried by one
+  first-person **voiceover spine** (Goodfellas/Shawshank; fiction). Added a
+  **`mode` knob** (`short` default | `trailer`) on ONE pipeline: `Teaser.mode`,
+  `Spine.narrator`, per-shot `Shot.voiceover`; mode-aware planner (short =
+  ≤12 longer shots + `voiceover_target`, warn >90s) and critique (short drops
+  the `thin-dialogue` gate, adds advisory `no-narrator`/`thin-narration`/
+  `too-many-shots`; the viewer-blind read counts the VO + judges spine
+  cohesion). Defaults moved to 60s. teaser-craft §12; all command bodies
+  thread `--mode`. Tier 1+2: 1842 → 1852. **Open follow-ups (the user
+  deprioritized render quality, but these remain):** (1) **VO-audio
+  synthesis** — actually generate/lay the narration track over the cut (TTS),
+  like the music bed; right now the VO lines + cohesion judgement land but the
+  audio isn't synthesized. (2) **Judge the rendered cut, not the script** —
+  a vision pass over the assembled animatic; make the assembly cut-critique
+  adversarial (it rubber-stamped the bad cut "KEEP"). (3) identity-lock /
+  reference-chaining for cross-clip face consistency (render quality).
+
 - **Phase 12 — teaser LEGIBILITY + honest grading (shipped 2026-06-08).** A
   full Fugger run on Phase 11 *still* produced a terrible teaser that
   self-scored 7–9: 9 of 23 shots were OBJECTS (a ledger, a riderless horse,

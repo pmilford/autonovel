@@ -116,6 +116,7 @@ def test_partial_stakes_flags_no_stakes() -> None:
 
 def test_thin_dialogue_on_audio_provider() -> None:
     t = _full_teaser()
+    t.mode = "trailer"  # Phase 13: thin-dialogue gates only in trailer mode
     # strip dialogue down to a single line across the teaser
     t.shots[1].audio = {}
     codes = {f.code for f in crit.critique(t, providers.get("veo")).findings}

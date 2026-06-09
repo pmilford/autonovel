@@ -202,6 +202,26 @@
   *fiction* ≠ documentary ≠ generic montage). teaser-critique/-revise/-beats/
   shot-prompts updated; few worked rules in teaser-craft §11.
 
+- **Phase 13** — **the AI-video SHORT (the shape was wrong).** With all of
+  Phases 11+12 in force a full Fugger run was *still* incoherent — because a
+  180s/30-shot montage fights the medium: AI video has continuity inside a
+  clip and none between clips, so a recurring character drifts by shot four
+  and 30 clips never cohere. Research (No Film School, 2026 AI-short
+  workflows, character-consistency writeups) → narrative shorts live at
+  45–60s / 6–12 shots, carried by **one first-person voiceover spine**
+  (Goodfellas/Shawshank — fiction). Added a **`mode` knob** (`short` default
+  | `trailer`) on ONE pipeline (no duplication): `Teaser.mode` (omitted when
+  default), `Spine.narrator`, per-shot `Shot.voiceover`. `beats.plan(mode)` →
+  short = 6–12 shots (hard cap 12), longer avg, `voiceover_target`, sparse
+  dialogue, warn >90s; trailer = the old montage budget. Mode-aware critique:
+  short does NOT gate on `thin-dialogue` (the VO carries it) and instead
+  raises advisory `no-narrator`/`thin-narration`/`too-many-shots`; trailer
+  keeps `thin-dialogue`. The viewer-blind legibility read now counts the
+  `voiceover` (perceivable) and reads the VO spine end-to-end for cohesion.
+  Defaults moved to 60s. All command bodies thread `--mode`; teaser-craft
+  §12. Render/identity-drift deliberately out of scope (the user flagged
+  video quality as the lesser problem). Tier 1+2: 1842 → 1852.
+
 **Baseline now:** Tier 1+2 = **1762 passed, 1 skipped, 0 failed**
 (`pytest tests/deterministic tests/contracts`). Rollback tag
 `pre-movies`. `autonovel` is editable-installed from this repo; re-run

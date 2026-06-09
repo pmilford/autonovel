@@ -558,7 +558,11 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
 - **Movie / teaser:** `treatment` turns a book's
   foundation into a film **treatment + 2-page brief** (the prose
   deliverables a screen story — and the Future Vision X-Prize — needs
-  alongside a trailer); `teaser-brief` then **distils** that treatment into
+  alongside a trailer); the teaser pipeline defaults to **`mode: short`** —
+  a 45–60s, ≤12-shot self-contained micro-story carried by a single
+  first-person **voiceover spine** (the one thing that makes independently-
+  generated AI-video clips cohere into a story; `--mode trailer` keeps the
+  older longer montage shape). `teaser-brief` then **distils** that treatment into
   a one-page teaser brief (the single filmable through-line, the midpoint
   **turn**, the 3 must-have moments, the killer lines); `teaser` is the
   one-command trailer pipeline (`teaser-beats` fixes the **story spine** —

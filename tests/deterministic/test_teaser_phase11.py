@@ -192,16 +192,19 @@ def test_character_beat_round_trips_and_critique_flags_missing() -> None:
 # ------------------------------ pacing model -----------------------------
 
 def test_plan_adds_movements_and_dialogue_target() -> None:
-    short = beats.plan(30)
+    short = beats.plan(30)            # default mode = short
     long = beats.plan(180)
     assert short["movements"] <= long["movements"]
     assert long["movements"] >= 3
-    assert short["dialogue_target"] == 2          # floor
-    assert long["dialogue_target"] >= 6           # 180s says more
     assert short["shot_target"] < long["shot_target"]
     # longer teasers use longer average shots (breathe, not strobe)
     assert long["avg_shot_s"] > short["avg_shot_s"]
     assert "turn" in long["structure"]
+    # Phase 13: in SHORT mode dialogue is sparse (the VO spine carries it);
+    # the in-scene-dialogue scaling now belongs to TRAILER mode.
+    assert short["dialogue_target"] <= 3
+    assert short["voiceover_target"] >= 4
+    assert beats.plan(180, mode="trailer")["dialogue_target"] >= 6
 
 
 def test_plan_human_output_mentions_movements_and_turn() -> None:

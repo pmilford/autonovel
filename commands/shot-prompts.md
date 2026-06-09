@@ -1,7 +1,7 @@
 ---
 name: autonovel:shot-prompts
 description: Turn a teaser beat-sheet into provider-ready, heavily-described shot prompts (the core deliverable). Fills the structured shot schema, runs a free pre-generation critique, and writes teaser.json + per-shot markdown.
-argument-hint: "--book <short-name> [--provider generic|veo|sora|runway|kling|luma|pollinations] [--length <seconds>] [--force]"
+argument-hint: "--book <short-name> [--mode short|trailer] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--length <seconds>] [--force]"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -60,9 +60,13 @@ best-effort enrichment; note gaps and proceed. Do not retry failed reads
 of best-effort inputs.
 
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
-   `--provider <name>` (default `generic`), `--length <seconds>`
-   (default: `project.yaml :: teaser.length_s` if set, else `90`),
-   `--force`.
+   **`--mode short|trailer`** (default `short` — Phase 13), `--provider
+   <name>` (default `generic`), `--length <seconds>` (default:
+   `project.yaml :: teaser.length_s` if set, else `60` for short / `90` for
+   trailer), `--force`. Write the chosen `mode` into `teaser.json`. In
+   **short** mode you are building a 45–60s, ≤12-shot micro-story carried by
+   a first-person **voiceover spine** (see step 5c + `docs/teaser-craft.md`
+   §12); in **trailer** mode, the older longer montage shape.
 
 2. **Refusal-on-overwrite, then archive.** If
    `books/{book}/teaser/teaser.json` exists and `--force` was not passed,
@@ -74,9 +78,11 @@ of best-effort inputs.
    keeps every prior script and reuses the approved portraits/plates.
 
 3. **Budget.** `bash`:
-   `autonovel mechanical teaser-plan --length <seconds> --provider <name> --format human`
+   `autonovel mechanical teaser-plan --length <seconds> --provider <name> --mode <mode> --format human`
    — note the shot target and the provider's clip cap + native-audio flag
-   (only emit `audio`/`dialogue` when the provider supports audio).
+   (only emit `audio`/`dialogue` when the provider supports audio). In
+   **short** mode honour the **shot cap (≤12)** and the **voiceover_target**
+   (most shots carry a VO line); FEW longer shots, not a montage.
 
 4. **Load the spine + foundation for description:**
    - `books/{book}/teaser/beats.md` `## Spine` block — the dramatic
@@ -143,10 +149,33 @@ of best-effort inputs.
      crutch that papers over illegible visuals. Prefer more characters
      speaking + a sparing narrator VO line over more cards.
 
+5c. **The voiceover spine (Phase 13 — short mode; THE coherence device).**
+   Independently-generated AI clips do NOT stitch into a story; **one
+   first-person voiceover does** (think *Goodfellas*/*Shawshank* — and that's
+   fiction, not documentary). So in **short** mode:
+   - Set `spine.narrator` — WHO speaks and from when (e.g. *"Jakob Fugger in
+     old age, looking back at the ledger that made him"*). First person, past
+     tense, one consistent voice.
+   - Write a **`voiceover` line on most shots** (`voiceover_target` from the
+     plan) so the narration runs as ONE continuous thread across the cut —
+     each line picks up where the last left off and advances the single
+     story. Read the VO lines back in order with the pictures ignored: they
+     must, alone, tell a coherent micro-story (setup → escalation → the turn →
+     payoff/cost). This is what the viewer actually follows.
+   - Keep in-scene `audio.dialogue` to ≤2–3 of the very sharpest lines (AI
+     lip-sync is unreliable; the VO is added in post and always lands). The
+     VO carries meaning the images can't; the few spoken lines are accents.
+   - The VO is NOT narration-of-history (documentary) — it is the
+     protagonist living his own story in his own voice (genre-appropriate for
+     historical fiction).
+   (In **trailer** mode skip the VO spine and lean on mined dialogue + cards
+   as before.)
+
 6. **Author the shots.** Build the full `books/{book}/teaser/teaser.json`
-   as `{title, length_s, provider, spine:{dramatic_question, logline,
-   want, opposing_force, turn, emotional_arc, score_direction, genre},
-   shots:[…]}` — the `spine` copied from `beats.md` (step 4). For each
+   as `{title, length_s, mode, provider, spine:{dramatic_question, logline,
+   want, opposing_force, turn, emotional_arc, score_direction, genre,
+   narrator}, shots:[… each with a `voiceover` line in short mode …]}` — the
+   `spine` copied from `beats.md` (step 4); set `mode` to the chosen mode. For each
    beat, write 1+ shots that obey teaser-craft §4: one subject + one
    action + one camera move; present tense; only what's in frame; concrete
    cinematography vocabulary (teaser-craft §5); `duration_s` ≤ the provider
@@ -277,6 +306,10 @@ of best-effort inputs.
   (`teaser-critique` reports no `instrument-only-shot` / `unidentified-figure`).
   Text cards are sparing (title + at most one button line) — meaning rides
   spoken dialogue, not a card stack (no `too-many-cards`).
+- In **short** mode: `mode:"short"`, ≤12 shots, a non-empty `spine.narrator`,
+  and a first-person `voiceover` line on most shots that reads as ONE
+  continuous story (`teaser-critique` reports no `no-narrator` /
+  `thin-narration` / `too-many-shots`).
 - The teaser carries the **length-scaled spoken dialogue lines** (audio
   providers; carried as a sparing VO/cards otherwise) — no `thin-dialogue`
   flag remains — and keeps text cards minimal (title + at most one button

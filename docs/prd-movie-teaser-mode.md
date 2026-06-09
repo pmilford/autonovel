@@ -270,6 +270,18 @@ flags, `cast-sprawl` counting only real people, the removal of the
 `thin-text-cards` requirement (cards were a crutch; meaning rides spoken
 dialogue), and reading the book's real genre to build in its idiom.
 
+**Phase 13 — the AI-video SHORT (the default shape).** Structure + legibility
+weren't enough: a 180s, 30-shot montage fights the medium, because AI video
+has continuity inside a clip and none between clips. The pipeline now defaults
+to `mode: short` — a 45–60s, ≤12-shot self-contained micro-story carried by a
+single first-person **voiceover spine** (`spine.narrator` + per-shot
+`voiceover`), the device that ties disjoint clips into one story. `mode:
+trailer` keeps the older longer montage shape. The planner caps short mode at
+12 shots with longer holds; critique drops the in-scene `thin-dialogue` gate
+in short mode (the VO carries it) and raises `no-narrator`/`thin-narration`/
+`too-many-shots` advisories; the viewer-blind quality read counts the VO and
+judges the spine's cohesion. See `teaser-craft.md` §12.
+
 **Model-agnostic per-shot schema we implement** (stored in
 `teaser.json`; rendered to `shot_NN.md` and, later, to each provider's
 request shape):

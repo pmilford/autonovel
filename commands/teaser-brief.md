@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-brief
 description: Distill a sprawling treatment into a one-page TEASER brief — the single most filmable through-line, the 3 must-have dramatic moments, and the killer lines — so the beats are chosen from a sharp brief instead of the whole story. The teaser analogue of the book's brief.
-argument-hint: "--book <short-name> [--length 30|60|90|120|180] [--audience xprize|general] [--force]"
+argument-hint: "--book <short-name> [--mode short|trailer] [--length 30|45|60|90] [--audience xprize|general] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -46,10 +46,11 @@ no story to distill). Treat `chapters/*.md` as best-effort enrichment for
 the concrete image / the exact killer line; note gaps and proceed.
 
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
-   `--length <seconds>` (default: `project.yaml :: teaser.length_s` if set,
-   else `90`), `--audience <xprize|general>` (default `xprize` — shapes the
-   through-line toward the competition's "future worth building" when set),
-   `--force`. Confirm the book exists in `project.yaml`.
+   **`--mode short|trailer`** (default `short`), `--length <seconds>`
+   (default: `project.yaml :: teaser.length_s` if set, else `60` for short /
+   `90` for trailer), `--audience <xprize|general>` (default `xprize` —
+   shapes the through-line toward the competition's "future worth building"
+   when set), `--force`. Confirm the book exists in `project.yaml`.
 
 2. **Refusal-on-overwrite.** If `books/{book}/teaser/brief.md` already
    exists with author content and `--force` was not passed, stop with:
@@ -76,6 +77,9 @@ the concrete image / the exact killer line; note gaps and proceed.
      close to verbatim so `teaser-beats`/`shot-prompts` can place them;
    - the **want + cost** — what the protagonist wants and what pursuing it
      costs them (the character spine);
+   - (short mode) the **narrator** — whose first-person voice could carry the
+     whole short in voiceover (usually the protagonist, looking back); name
+     the POV so `teaser-beats`/`shot-prompts` can write the VO spine;
    - the **withheld ending** — name the resolution you must NOT show, so the
      button can withhold it deliberately.
 

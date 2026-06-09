@@ -237,7 +237,13 @@ this to the user verbatim and stop, do not retry:
 
 ## Movie / teaser mode
 
-Adapting a book to the screen, in order:
+Adapting a book to the screen, in order. **The pipeline defaults to
+`--mode short` (Phase 13):** a 45–60s, ≤12-shot self-contained micro-story
+carried by a single first-person **voiceover spine** — the shape that
+actually coheres as AI video (independently-generated clips don't stitch into
+a 30-shot montage; one narrator's voice does). `--mode trailer` keeps the
+older longer montage shape for live/stock footage or an X-Prize-length cut.
+
 1. `/autonovel:treatment --book <name>` — film treatment + 2-page brief
    (reveals the ending; `--audience xprize` default frames it for the
    Future Vision X-Prize: optimistic future, real problem solved, stakes

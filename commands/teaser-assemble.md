@@ -51,6 +51,16 @@ This is **always burned** (independent of `--burn-titles`): it is load-bearing
 legibility, not an optional story card. It carries through `cut_list.json` as
 the entry's `identify`.
 
+**The voiceover spine (Phase 13 — short mode).** In a `short`, the shots'
+`voiceover` lines (the protagonist's first-person narration) are the spine
+that makes the cut cohere — they run as ONE continuous track laid over the
+whole teaser (like the music bed, ducked the same way). Record/synthesize the
+narration from the in-order `voiceover` lines and lay it over the cut; the
+in-scene `audio.dialogue` stays as accents. **The viewer-panel cut critique
+must watch the assembled cut COLD** (as a stranger) and judge whether the VO
++ pictures tell ONE legible story — not rubber-stamp it. (Actual VO-audio
+synthesis is the open follow-up; the lines + the cohesion judgement land now.)
+
 **Transitions (Phase 5.7).** The build applies safe defaults: the teaser
 **fades in** from black on the first shot, **fades out** on the last, and
 **fades** title cards; everything else is a hard cut (`--no-transitions`

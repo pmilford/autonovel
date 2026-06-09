@@ -19,6 +19,16 @@ from . import providers
 
 ROLES = ("hook", "escalation", "title", "button")
 
+# Phase 13 — the two shapes the one pipeline can make:
+#   short   — a 45-60s self-contained micro-story carried by a single
+#             first-person VOICEOVER spine, 6-12 longer shots. This is what
+#             actually coheres as AI video (independently-generated clips
+#             don't stitch into a 30-shot montage; one narrator's voice does).
+#   trailer — the older, longer, montage-shaped sell (withholds; can run to
+#             180s). Kept for live/stock footage or an X-Prize-length cut.
+MODES = ("short", "trailer")
+DEFAULT_MODE = "short"
+
 
 @dataclass
 class Spine:
@@ -55,12 +65,17 @@ class Spine:
     score_direction: str = ""
     genre: str = ""
     turn: str = ""
+    # Phase 13 — WHO narrates the first-person voiceover spine that carries a
+    # `short` and ties its independently-generated shots into one story (e.g.
+    # "Jakob Fugger in old age, looking back at the ledger that made him").
+    # The single most important coherence device for an AI-video short.
+    narrator: str = ""
 
     def is_empty(self) -> bool:
         return not any(
             (self.dramatic_question, self.logline, self.want,
              self.opposing_force, self.emotional_arc, self.score_direction,
-             self.genre, self.turn)
+             self.genre, self.turn, self.narrator)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -77,6 +92,8 @@ class Spine:
         # byte-identical (additive).
         if self.turn:
             d["turn"] = self.turn
+        if self.narrator:
+            d["narrator"] = self.narrator
         return d
 
     @classmethod
@@ -91,6 +108,7 @@ class Spine:
             score_direction=str(d.get("score_direction", "") or ""),
             genre=str(d.get("genre", "") or ""),
             turn=str(d.get("turn", "") or ""),
+            narrator=str(d.get("narrator", "") or ""),
         )
 
 
@@ -139,6 +157,12 @@ class Shot:
     # period dress is illegible; this is how historical drama trailers fix it.
     # Empty = not an identifying beat (crowds/objects never carry one).
     identify: str = ""
+    # Phase 13 — the first-person VOICEOVER line laid over this shot (the
+    # narrator from spine.narrator). Distinct from audio.dialogue (in-scene
+    # lip-synced speech, which AI video delivers unreliably): VO is added in
+    # post over the cut, always lands, and threads the shots into one story.
+    # In a `short`, most shots carry a VO line — it is the spine.
+    voiceover: str = ""
     # Human-facing one-line beat note (the dual-render pair; PRD §18.2).
     beat_note: str = ""
 
@@ -178,6 +202,8 @@ class Shot:
             d["character_beat"] = self.character_beat
         if self.identify:
             d["identify"] = self.identify
+        if self.voiceover:
+            d["voiceover"] = self.voiceover
         if self.beat_note:
             d["beat_note"] = self.beat_note
         return d
@@ -212,6 +238,7 @@ class Shot:
             stakes_level=d.get("stakes_level"),
             character_beat=d.get("character_beat", ""),
             identify=d.get("identify", ""),
+            voiceover=d.get("voiceover", ""),
             beat_note=d.get("beat_note", ""),
         )
 
@@ -225,6 +252,10 @@ class Teaser:
     title: str
     length_s: int = 90
     provider: str = "generic"
+    # Phase 13 — "short" (45-60s VO-spine micro-story; the coherent default)
+    # or "trailer" (the older longer montage shape). Omitted from JSON when
+    # the default so pre-Phase-13 teasers round-trip byte-identical.
+    mode: str = DEFAULT_MODE
     spine: Spine = field(default_factory=Spine)
     shots: list[Shot] = field(default_factory=list)
 
@@ -234,6 +265,8 @@ class Teaser:
             "length_s": self.length_s,
             "provider": self.provider,
         }
+        if self.mode != DEFAULT_MODE:
+            d["mode"] = self.mode
         # Omit the spine block entirely when empty so existing teasers
         # round-trip byte-identical (additive; nothing breaks).
         if not self.spine.is_empty():
@@ -243,10 +276,14 @@ class Teaser:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "Teaser":
+        mode = str(d.get("mode", DEFAULT_MODE) or DEFAULT_MODE)
+        if mode not in MODES:
+            mode = DEFAULT_MODE
         return cls(
             title=str(d.get("title", "")),
             length_s=int(d.get("length_s", 90)),
             provider=d.get("provider", "generic"),
+            mode=mode,
             spine=Spine.from_dict(d.get("spine")),
             shots=[Shot.from_dict(s) for s in (d.get("shots") or [])],
         )
@@ -257,6 +294,10 @@ class Teaser:
     def dialogue_line_count(self) -> int:
         """Total spoken dialogue lines across all shots (bp 5)."""
         return sum(len(s.dialogue()) for s in self.shots)
+
+    def voiceover_line_count(self) -> int:
+        """Shots carrying a first-person VO line — the spine of a short (P13)."""
+        return sum(1 for s in self.shots if s.voiceover.strip())
 
     def text_card_count(self) -> int:
         """Number of shots that carry a text card (bp 6)."""

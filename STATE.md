@@ -1764,7 +1764,39 @@
   `autonovel install` re-run. Regression gate: **Tier 1+2 1841 passed, 1
   skipped, 0 failed.**
 
+- 2026-06-08 (movie-teaser Phase 13 — the AI-video SHORT): even with Phases
+  11+12, a full Fugger run was STILL incoherent (no plot/character/cohesion).
+  Diagnosis: the *shape* fought the medium. AI video has continuity inside a
+  clip and NONE between clips (a character drifts by shot four), so a 180s,
+  30-shot montage is 30 unrelated images — nothing to cohere. Research (No
+  Film School, 2026 AI-short workflows, character-consistency writeups):
+  narrative shorts live at 45–60s / 6–12 shots, carried by ONE first-person
+  voiceover spine (Goodfellas/Shawshank — fiction, not documentary). User
+  picked: one pipeline + a `mode` knob (default short), 60s default. Added
+  `Teaser.mode` (short|trailer, omitted when default), `Spine.narrator`,
+  per-shot `Shot.voiceover`; `beats.plan(mode)` → short = 6–12 shots (hard
+  cap 12) + longer avg + `voiceover_target` + warn >90s, trailer = the old
+  montage budget; mode-aware `critique` (short does NOT gate on thin-dialogue
+  since the VO carries it — adds advisory no-narrator/thin-narration/
+  too-many-shots; trailer keeps thin-dialogue); the viewer-blind legibility
+  read now counts the `voiceover` as perceivable and reads the VO spine
+  end-to-end for cohesion. Defaults moved 90→60. All command bodies thread
+  `--mode`; teaser-craft §12. Render/identity-drift deliberately OUT of scope
+  (user: video quality is the lesser problem). Doc-sync: all teaser command
+  bodies, teaser-craft, commands.md, help.md, README, templates/series,
+  prd + impl-plan, FUTURE-TODOS, STATE; `autonovel install` re-run.
+  Regression gate: **Tier 1+2 1852 passed, 1 skipped, 0 failed.**
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1852
+  passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
+  +10 since the 1842 mark: movie-teaser **Phase 13 — the AI-video SHORT**.
+  `mode` knob (short|trailer, default short) on one pipeline; `Teaser.mode`,
+  `Spine.narrator`, `Shot.voiceover`; mode-aware planner (short = ≤12 longer
+  shots + voiceover_target, warn >90s) + critique (short drops thin-dialogue
+  gate, adds no-narrator/thin-narration/too-many-shots; VO counts toward
+  legibility) → new test_teaser_phase13.py (16) + 2 updated. Prior mark
+  1842 = cast-sprawl age-ladder collapse.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-06-08 — **1842
   passing, 1 skipped** (`pytest tests/deterministic tests/contracts`).
   +1 since the 1841 mark: cast-sprawl now collapses a hero's age-ladder
@@ -2180,7 +2212,24 @@ pre-written cuts file, a minimal brief), and invokes
   on Bells-parity.
 
 ## Resume pointer
-**Phase 12 (teaser LEGIBILITY + honest grading) SHIPPED 2026-06-08.** The
+**Phase 13 (the AI-video SHORT) SHIPPED 2026-06-08.** After Phases 11+12 the
+teaser was still incoherent because the *shape* was wrong: 180s/30 clips can't
+cohere as AI video. Phase 13 makes the default a **45–60s, ≤12-shot,
+first-person-voiceover-spine short** (one pipeline + `mode: short|trailer`
+knob). Tier 1+2 1842 → 1852. **Next real-world step (needs the user):**
+re-run `/autonovel:teaser --book medieval-king-maker --fresh` (now defaults to
+short mode, 60s) — free, stops before render — and read the new `teaser.json`:
+≤12 shots, a `spine.narrator`, a `voiceover` line on most shots that reads as
+ONE story. **Open follow-ups (FUTURE-TODOS near-term, all still pending):**
+(1) **VO-audio synthesis** — actually lay the narration track over the cut
+(TTS), like the music bed; today the VO lines + cohesion judgement land but
+the audio isn't generated. (2) **judge the rendered cut, not the script** — a
+vision pass over the assembled animatic + make the assembly cut-critique
+adversarial (it rubber-stamped the bad cut "KEEP"). (3) identity-lock /
+reference-chaining (render quality, user-deprioritized). Also: the doubled
+series path `books/medieval-king-maker/books/medieval-king-maker` (Phase-10
+nesting) is still unfixed in that series. Prior:
+**Phase 12 (teaser LEGIBILITY + honest grading) shipped 2026-06-08.** The
 Phase-11 quality gate was self-certifying — it graded the *script* (which the
 model could see) not a stranger's *experience*, so a full Fugger run shipped
 a teaser that self-scored 7–9 and was still terrible (9/23 object shots, no

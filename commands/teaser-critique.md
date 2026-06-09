@@ -156,9 +156,12 @@ gaps and proceed without retrying.
    stranger gets. (That is exactly how a boring teaser passed with eloquent
    8s.) So now judge it **as a first-time viewer who knows nothing about the
    book.** For each shot, build the **perceivable layer ONLY** — the visible
-   `action`, the spoken `audio.dialogue` line, and any on-screen `text_card`
-   — and **deliberately ignore** `subject.name`, `identify`, `spine`,
-   `beat_note`, and `stakes_level` (a viewer can't see those). Then answer,
+   `action`, the spoken `audio.dialogue` line, **the `voiceover` line the
+   viewer HEARS** (Phase 13 — perceivable, and in a short it carries most of
+   the meaning), the **burned `identify` lower-third** (perceivable), and any
+   on-screen `text_card` — and **deliberately ignore** `subject.name`,
+   `spine`, `beat_note`, and `stakes_level` (a viewer can't see those). Then
+   answer,
    honestly and skeptically (default to "I can't tell"):
    - **who** is on screen? (If the figure isn't named in dialogue or carried
      by an `identify` lower-third, the viewer does NOT know — that's a
@@ -169,7 +172,11 @@ gaps and proceed without retrying.
    - **why** does it matter to the story?
    Mark each shot `clear: true` only if a stranger could answer all three
    from the perceivable layer alone. Record the read as the `legibility`
-   array (`[{shot_id, clear, who, what, why, note}]`). Then write the
+   array (`[{shot_id, clear, who, what, why, note}]`). **In short mode, also
+   read the `voiceover` lines end-to-end with the pictures ignored** — they
+   must, alone, tell ONE coherent micro-story (setup → escalation → turn →
+   payoff/cost); if the VO spine is missing, thin, or doesn't cohere, that is
+   the cohesion failure (score `coherence` low and say so). Then write the
    **`viewer_takeaway`** ("a stranger comes away believing: ___") and
    **`would_watch`** (would that stranger want the film?). Be ruthless: if
    the teaser is a tour of objects with no identified people, most scenes are

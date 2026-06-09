@@ -568,6 +568,45 @@ Same engine: a specific question, a genuine reversal (the limiting factor is
 people, not tech), loaded lines, a paid cost, and a button that shows the
 hopeful destination while hiding the road — exactly the X-Prize ask (§7).
 
+## 12. The AI-video SHORT — the default shape (Phase 13)
+
+A full Fugger run with all of §0–§11 in force was *still* incoherent: no
+plot, no character, nothing held together. The problem wasn't the script —
+it was the **shape**, and it was fighting the medium. AI video has continuity
+*inside* a clip and **none between clips** (every generation is a blank slate;
+a character introduced in shot one drifts by shot four). So a 180-second,
+30-shot montage is 30 unrelated images — there is nothing to cohere. The fix
+is a different artifact, and it's now the **default `mode: short`**:
+
+- **45–60 seconds, not 180.** AI narrative shorts cohere at 15–60s; 90s is
+  already a stretch. Pass `--length 60` (the default) and `--mode short`.
+  `--mode trailer` keeps the older long montage shape for live/stock footage
+  or an X-Prize-length cut.
+- **6–12 shots, not 30+.** One beat ≈ one shot. The planner caps short mode
+  at 12 and `teaser-critique` flags `too-many-shots`.
+- **Fewer, LONGER shots.** AI only has continuity within a clip, so hold the
+  key beats 5–8 s (the cap). Fewer long continuous shots beat a strobe of
+  2-second cuts. (Modern ASL is 3–5 s; for AI video, lean longer.)
+- **One first-person VOICEOVER spine — the single most important device.**
+  A narrator (the protagonist, looking back — *Goodfellas*, *Shawshank*; this
+  is fiction, not documentary) speaking over the cut is what ties disjoint
+  clips into ONE story. `spine.narrator` names the voice; most shots carry a
+  `voiceover` line; read in order they must tell a coherent micro-story on
+  their own. In-scene lip-synced dialogue stays to ≤2–3 accents (lip-sync is
+  unreliable; VO is added in post and always lands).
+- **One protagonist; minimize everyone else.** Drift compounds with each
+  added face — keep ≤3, and let the VO carry relationships.
+- **Judge the assembled CUT, cold** — not the script. The script can read
+  beautifully and the film still be garbage; watch it as a stranger.
+
+The 60-second story shape (open as late as possible, on the conflict):
+setup 0–15 s → escalation 15–35 s → the turn + payoff 35–60 s. Establish
+genre by 10 s; end on an irreversible cost, not a tidy resolution.
+
+> *Why this section supersedes the montage instinct:* §8's "35–60 shots for
+> 3 minutes" is the **trailer** shape, and it only works with real footage
+> you can cut freely. For AI-generated video, default to the short.
+
 ---
 
 *See [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md) for the

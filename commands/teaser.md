@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser
 description: One-command teaser pipeline — plan the beats, turn them into provider-ready shot prompts, then run the critique→revise loop to a READY render gate. Chains teaser-beats → shot-prompts → (teaser-critique ⟳ teaser-revise) in fresh subagents so the parent context stays clean. All free; stops before any render.
-argument-hint: "--book <short-name> [--length 30|60|90|120|180] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--with-treatment] [--fresh] [--revise-rounds <n>] [--no-revise] [--force]"
+argument-hint: "--book <short-name> [--mode short|trailer] [--length 30|45|60|90] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--with-treatment] [--fresh] [--revise-rounds <n>] [--no-revise] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -76,9 +76,16 @@ missing or `--book` names no known book. `books/{book}/treatment.md`,
 guard); never retry their reads.
 
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
-   `--length <seconds>` (default: `project.yaml :: teaser.length_s` if
-   set, else `90`; use `180` for the Future Vision X-Prize 3-minute
-   trailer), `--provider <name>` (default `generic`), `--with-treatment`,
+   **`--mode short|trailer`** (default **`short`** — Phase 13). A **short**
+   is a 45–60s, ≤12-shot, self-contained micro-story carried by a single
+   first-person **voiceover spine** (the only thing that makes
+   independently-generated AI clips cohere into a story — see
+   `docs/teaser-craft.md` §12). A **trailer** is the older, longer,
+   montage-shaped sell (use it for live/stock footage or an X-Prize-length
+   cut). `--length <seconds>` (default: `project.yaml :: teaser.length_s` if
+   set, else **`60`** for short / `90` for trailer; >90s in short mode is
+   warned, not blocked — coherence degrades), `--provider <name>` (default
+   `generic`), `--with-treatment`,
    `--revise-rounds <n>` (default `2` — how many critique→revise passes the
    loop may run), `--no-revise` (skip the loop; stop after shot-prompts),
    `--fresh` (start over from scratch — archive every teaser artifact EXCEPT
@@ -121,7 +128,7 @@ guard); never retry their reads.
    `books/{book}/treatment.md` exists and (`books/{book}/teaser/brief.md`
    does not yet exist OR `--force`/`--fresh`), spawn a **fresh `task`
    subagent** to run, exactly:
-   `/autonovel:teaser-brief --book {book} --length {seconds}{force}`. Wait
+   `/autonovel:teaser-brief --book {book} --mode {mode} --length {seconds}{force}`. Wait
    for it. It distils the treatment into `books/{book}/teaser/brief.md` (the
    through-line, the turn, the 3 must-have moments, the killer lines) so the
    beats are selected from a sharp brief. Skip silently if there is no
@@ -129,7 +136,7 @@ guard); never retry their reads.
 
 4. **Stage 1 — beats.** Use the `task` tool to spawn a **fresh subagent
    conversation** and instruct it to run, exactly:
-   `/autonovel:teaser-beats --book {book} --length {seconds} --provider {provider}{force}`
+   `/autonovel:teaser-beats --book {book} --mode {mode} --length {seconds} --provider {provider}{force}`
    (append ` --force` when `--force` was passed). Wait for it to finish.
    The subagent writes `books/{book}/teaser/beats.md`; capture only its
    one-line summary (beat counts by role, target length). If it reports a
@@ -138,7 +145,7 @@ guard); never retry their reads.
 
 5. **Stage 2 — shot prompts.** Spawn a second **fresh `task` subagent**
    and instruct it to run, exactly:
-   `/autonovel:shot-prompts --book {book} --length {seconds} --provider {provider}{force}`.
+   `/autonovel:shot-prompts --book {book} --mode {mode} --length {seconds} --provider {provider}{force}`.
    Wait for it. This is the heavy stage: it authors the shots, runs the
    hard `teaser-validate` gate and the free `teaser-critique` + LLM critic
    pass, and writes `books/{book}/teaser/teaser.json` plus

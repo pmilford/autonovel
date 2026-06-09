@@ -56,7 +56,10 @@ workflow. Topics:
                  Output (PDF, ePub, audiobook).
   front-matter — title / introduction / glossary / appendix /
                  cover-composite / cover-print.
-  movie        — full teaser pipeline: treatment (film treatment +
+  movie        — full teaser pipeline (default mode: SHORT — a 45-60s,
+                 <=12-shot micro-story carried by one first-person voiceover
+                 spine; the coherent AI-video shape. --mode trailer = older
+                 longer montage). treatment (film treatment +
                  2-page brief) → teaser-brief (distil the through-line +
                  turn + killer lines) → teaser (teaser-beats →
                  shot-prompts → teaser-critique scores the interestingness

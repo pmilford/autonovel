@@ -876,15 +876,24 @@ def _cmd_resolve_image_provider(args: argparse.Namespace) -> int:
 
 def _cmd_teaser_plan(args: argparse.Namespace) -> int:
     from ..teaser import beats as _beats
-    data = _beats.plan(int(args.length), provider=getattr(args, "provider", "generic"))
+    data = _beats.plan(int(args.length), provider=getattr(args, "provider", "generic"),
+                       mode=getattr(args, "mode", "short"))
     if getattr(args, "format", "json") == "human":
         st = data["structure"]
-        print(f"Teaser plan — {data['length_s']}s on {data['provider']} "
+        print(f"Teaser plan — {data['mode']} · {data['length_s']}s on {data['provider']} "
               f"(clip cap {data['provider_clip_cap_s']:g}s, "
               f"native audio: {data['provider_native_audio']})")
+        if data.get("warn_long_for_ai_video"):
+            print("  ⚠️  >90s is long for an AI-video short — coherence degrades; "
+                  "consider 45-60s or `--mode trailer`.")
+        cap = f" (cap {data['shot_cap']})" if data.get("shot_cap") else ""
         print(f"  beats: ~{data['beat_target']} (range {data['beat_range'][0]}-{data['beat_range'][1]})")
-        print(f"  shots: ~{data['shot_target']} (avg {data['avg_shot_s']:g}s each)")
-        print(f"  movements: {data['movements']} · dialogue lines to mine: ~{data['dialogue_target']}")
+        print(f"  shots: ~{data['shot_target']}{cap} (avg {data['avg_shot_s']:g}s each)")
+        if data['mode'] == "short":
+            print(f"  movements: {data['movements']} · VOICEOVER lines (the spine): "
+                  f"~{data['voiceover_target']} · in-scene dialogue: ~{data['dialogue_target']}")
+        else:
+            print(f"  movements: {data['movements']} · dialogue lines to mine: ~{data['dialogue_target']}")
         print(f"  hook:       {st['hook']['seconds_each'][0]:g}-{st['hook']['seconds_each'][1]:g}s — {st['hook']['note']}")
         print(f"  escalation: {st['escalation']['seconds_each'][0]:g}-{st['escalation']['seconds_each'][1]:g}s "
               f"in {st['escalation']['movements']} movements — {st['escalation']['note']}")
@@ -2132,6 +2141,8 @@ def main(argv: list[str] | None = None) -> int:
                          help="Recommend a beat/shot budget + per-role timing for a teaser length.")
     tpl.add_argument("--length", type=int, required=True, help="Teaser length in seconds.")
     tpl.add_argument("--provider", default="generic", help="Target video provider (clip cap shapes the budget).")
+    tpl.add_argument("--mode", choices=["short", "trailer"], default="short",
+                     help="short (45-60s VO-spine micro-story; default) | trailer (longer montage).")
     tpl.add_argument("--format", choices=["json", "human"], default="json")
     tpl.set_defaults(func=_cmd_teaser_plan)
 

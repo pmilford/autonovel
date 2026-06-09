@@ -165,13 +165,39 @@ def critique(teaser: Teaser, provider: providers.ProviderProfile | None = None) 
                 f"the teaser earns a flicker of character, not just a recurring face "
                 f"(Phase 11)")
 
-    # --- dialogue + text cards carry the meaning (bp 5, bp 6). ---
-    dlg = teaser.dialogue_line_count()
-    if prof.audio and dlg < 2:
-        rep.add("", "thin-dialogue",
-                f"only {dlg} spoken line(s) on {prof.name} (native audio) — viewers "
-                f"learn nothing about the story; mine 3-6 loaded lines from the "
-                f"manuscript and assign them to shots (bp 5)")
+    # --- what carries the meaning depends on the MODE (Phase 13). ---
+    is_short = teaser.mode == "short"
+    if is_short:
+        # In a short, a single first-person VOICEOVER spine carries the story
+        # over the (necessarily disjoint) shots — it is THE coherence device.
+        # In-scene lip-synced dialogue is intentionally sparse, so thin-dialogue
+        # does NOT gate here; a thin VO spine does (advisory candidate-gen).
+        n_shots_v = max(1, len(teaser.shots))
+        vo = teaser.voiceover_line_count()
+        if not teaser.spine.narrator.strip():
+            rep.add("", "no-narrator",
+                    "short mode but spine.narrator is empty — name WHO narrates the "
+                    "first-person voiceover that ties the shots into one story (e.g. "
+                    "'Jakob in old age, looking back') (Phase 13)")
+        if vo < max(3, (n_shots_v + 1) // 2):
+            rep.add("", "thin-narration",
+                    f"only {vo}/{n_shots_v} shots carry a voiceover line — a short "
+                    f"coheres on its VO spine, not on stitched clips; give most shots "
+                    f"a first-person VO line that advances one story (Phase 13)")
+    else:
+        # Trailer mode keeps the older in-scene-dialogue requirement (bp 5).
+        dlg = teaser.dialogue_line_count()
+        if prof.audio and dlg < 2:
+            rep.add("", "thin-dialogue",
+                    f"only {dlg} spoken line(s) on {prof.name} (native audio) — viewers "
+                    f"learn nothing about the story; mine 3-6 loaded lines from the "
+                    f"manuscript and assign them to shots (bp 5)")
+    # --- shot economy: a short is FEW longer shots, not a montage (Phase 13). ---
+    if is_short and len(teaser.shots) > 12:
+        rep.add("", "too-many-shots",
+                f"{len(teaser.shots)} shots in a short — AI video doesn't stitch a "
+                f"montage into a story; cut to ≤12 longer shots and let the VO spine "
+                f"carry it (Phase 13)")
     cards = teaser.text_card_count()
     # Phase 12: text cards are no longer required (a card slideshow is the
     # crutch that papers over illegible visuals — real shorts carry meaning

@@ -136,6 +136,13 @@ so the gate reflects the improvement.
    - `unidentified-figure` → give the figure's FIRST appearance an `identify`
      ("Name — epithet", e.g. "Albrecht of Brandenburg — an archbishop who
      bought his office") so a first-time viewer knows who they are (Phase 12).
+   - `no-narrator` → set `spine.narrator` (who speaks the first-person VO,
+     e.g. "Jakob in old age, looking back") — short mode (Phase 13).
+   - `thin-narration` → write a first-person `voiceover` line on most shots
+     so the narration runs as ONE continuous story across the cut (read them
+     back in order — they must cohere alone). This is the short's spine.
+   - `too-many-shots` → a short is ≤12 longer shots, not a montage; merge or
+     cut the weakest beats until ≤12 and lengthen the keepers (Phase 13).
    - `no-reference` → leave as-is here (references are developed in
      `/autonovel:teaser-refs`); note it in the summary.
 

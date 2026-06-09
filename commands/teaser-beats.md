@@ -1,7 +1,7 @@
 ---
 name: autonovel:teaser-beats
 description: Select the 8-20 teaser-worthy beats (hook → escalation → title → button) from a book's story, honouring trailer craft. Writes the hand-editable beat-sheet that shot-prompts turns into shot prompts.
-argument-hint: "--book <short-name> [--length 30|60|90|120|180] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--force]"
+argument-hint: "--book <short-name> [--mode short|trailer] [--length 30|45|60|90] [--provider generic|veo|sora|runway|kling|luma|pollinations] [--force]"
 model_tier: standard
 allowed-tools:
   - file_read
@@ -55,13 +55,15 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
 `file_read` errors for the best-effort inputs.
 
 1. Parse `$ARGUMENTS`. Required: `--book <short-name>`. Optional:
-   `--length <seconds>` (default: `project.yaml :: teaser.length_s` if
-   set, else `90`; use `180` for the Future Vision X-Prize 3-minute
-   trailer), `--provider <name>` (default `generic`), `--force`. **Read
-   `project.yaml :: genre` carefully** and build the beat-sheet in *that*
-   genre's idiom (historical **fiction** = a character-and-stakes drama, not
-   a documentary, not a generic moody montage) — genre-blind selection is a
-   root cause of a flat teaser (Phase 12).
+   **`--mode short|trailer`** (default `short` — Phase 13: a 45–60s, ≤12-beat
+   micro-story carried by a first-person voiceover spine; `trailer` = the
+   older longer montage). `--length <seconds>` (default: `project.yaml ::
+   teaser.length_s` if set, else `60` for short / `90` for trailer),
+   `--provider <name>` (default `generic`), `--force`. **Read `project.yaml ::
+   genre` carefully** and build the beat-sheet in *that* genre's idiom
+   (historical **fiction** = a character-and-stakes drama, not a documentary,
+   not a generic moody montage) — genre-blind selection is a root cause of a
+   flat teaser (Phase 12).
 
 2. **Refusal-on-overwrite, then archive.** If `books/{book}/teaser/beats.md`
    already exists with author edits and `--force` was not passed, stop with:
@@ -75,7 +77,7 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    reuses the approved portraits/plates.
 
 3. **Get the budget.** Use the `bash` tool:
-   `autonovel mechanical teaser-plan --length <seconds> --provider <name> --format human`
+   `autonovel mechanical teaser-plan --length <seconds> --provider <name> --mode <mode> --format human`
    This prints the recommended beat count, shot count, and per-role
    timing (hook 4-6s, escalation 1.5-2.5s cuts, title ~2/3 in, button
    3-5s) plus the Phase-11 storytelling targets: **`movements`** (how many
@@ -119,6 +121,11 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
      everything). A teaser **without** a turn is a flat montage; this single
      beat is what makes it a micro-story. Pull the real reversal from the
      brief/treatment, not a generic "twist."
+   - **Narrator (Phase 13 — short mode)**: name WHO speaks the first-person
+     **voiceover spine** that carries the short over its disjoint shots (e.g.
+     *"Jakob in old age, looking back"*). First person, one voice — this is
+     the single biggest coherence device for an AI-video short. Each beat
+     should imply a VO line; `shot-prompts` writes the actual lines.
 
 6. **Select the beats** on the teaser arc so they *serve the spine*, in the
    strict **4-act order** (bp 2), applying `docs/teaser-craft.md` craft:
@@ -178,6 +185,7 @@ enrichment; if a read fails, note the gap and proceed. Do not retry on
    - **Want:** {what the protagonist wants}
    - **Opposing force:** {what stands in the way}
    - **Turn:** {the midpoint reversal that flips the story}
+   - **Narrator:** {short mode — who speaks the first-person VO spine}
    - **Emotional arc:** {start tone → … → end tone}
    - **Score direction:** {the one building musical cue}
    - **Genre:** {what kind of story — the hook must telegraph it}
