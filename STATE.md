@@ -1787,6 +1787,14 @@
   prd + impl-plan, FUTURE-TODOS, STATE; `autonovel install` re-run.
   Regression gate: **Tier 1+2 1852 passed, 1 skipped, 0 failed.**
 
+- 2026-06-09 (edge-tts dependency + first real VO audio): added `edge-tts>=6`
+  to the `[video]` optional extra in pyproject.toml (lazy-imported by
+  teaser/vo.py; base install unaffected). Installed it and generated the first
+  REAL narration MP3 for the Fugger short via `teaser-vo --provider edge`
+  (free, no key, en-GB-RyanNeural, 54.9s — fits the 60s cut). Confirmed the
+  pre-existing voice system is the ElevenLabs audiobook pipeline (paid); edge
+  is the free path. (The Fugger short was also rebuilt fresh to 60s with a
+  concrete VO budgeted to the cut.)
 - 2026-06-09 (free teaser VO + book concreteness review): two follow-ups the
   user asked for after the Phase-13 short. (1) **Free VO/TTS** — new
   `teaser/vo.py` (mirrors music.py) + `teaser-vo` CLI synthesizes the

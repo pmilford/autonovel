@@ -67,10 +67,19 @@ tui = [
 # Reserved opt-in extras for later phases. Phase 0 + the `treatment`
 # command need NO extra deps (pure prose + stdlib), so these stay empty
 # for now — they exist so the install surface is named and stable.
-# `[video]` will pull whatever the thin render adapter needs (e.g. an
-# HTTP client / provider SDK); `[scripts]` will pull screenplay-format
-# exporters. Base install and existing extras are unaffected.
-video = []
+# `[video]` pulls the optional teaser deps; `[scripts]` will pull
+# screenplay-format exporters. Base install and existing extras are
+# unaffected (the teaser render/VO backends all import their SDK lazily and
+# fall back to the offline `stub`, so the base CLI never needs these).
+#   edge-tts — FREE, no-API-key voiceover for `teaser-vo --provider edge`
+#              (the narration spine of a `short`). Microsoft Edge's online
+#              neural TTS; the paid alternative is ElevenLabs (same account
+#              as the audiobook pipeline), and `stub` makes a silent WAV
+#              offline for $0. ffmpeg (already listed) lays the track under
+#              the cut at `teaser-assemble --narration`.
+video = [
+    "edge-tts>=6",
+]
 scripts = []
 
 [project.scripts]
