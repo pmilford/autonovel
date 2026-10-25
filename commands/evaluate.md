@@ -31,6 +31,7 @@ reads:
   - books/{book}/edit_logs/first_read_ch{chapter}.md
   - books/{book}/edit_logs/first_read_ch{chapter}_2.md
   - books/{book}/edit_logs/said_once_ledger.md
+  - books/{book}/threads.md
   - shared/craft/genres/*.md
   - shared/genres/*.md
 writes:
@@ -651,31 +652,62 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
    act).
 
    **Dimensions and weights** (each `{score, weakest_moment, fix,
-   note}`, 0–10; record the weights as `dimension_weights`):
+   note}`, 0–10; record the weights as `dimension_weights`). The areas
+   a whole-book judge measures, with their questions, the evidence to
+   count or quote, the usual failures and the score anchors, are in
+   `shared/craft/EDITING.md` §22 ("The whole-book scorecard"); read it
+   with `file_read` before scoring, and score each dimension below that
+   names a §22 section to that section's anchors. Score strictly, as in
+   `--chapter` mode: a whole book's scores bunched near 8 tell the author
+   nothing, and the evidence, not a comfortable default, sets each one.
 
    | Group (weight) | Dimension | Weight | What it measures |
    |---|---|---|---|
-   | Structure (50%) | `causal_chain` | 15 | Share of chapter N → N+1 links where N+1 happens *because of* an earlier chapter (an event, not a motif, callback, carried clock or promise line). Score ≈ 10 × because-share; −1 if an act boundary is only "happens after". |
-   | | `through_line` | 10 | One question about the protagonist, posed in the first quarter, answered by the climax's decision. 9-10 posed ≤15% and answered by a decision; 7-8 posed ≤25%; 5-6 posed late or answered only thematically; 3-4 several questions, none dominant; 1-2 none. |
-   | | `escalation` | 10 | Per act, the stake is strictly higher than the previous act's *on the same bet*. 9-10 every act raises it; 7-8 one plateau; 5-6 grows in size but resets in kind (new counterparty, new bet); 3-4 flat; 1-2 falls. |
-   | | `removability` | 10 | For each chapter, does a later chapter's action fail if it is cut? 10 minus 2 per removable chapter minus 0.5 per weak one, floor 1. List them as `removable_chapters`. |
-   | | `climax_convergence` | 5 | Do the last ~20% force the open threads into one decision (9-10: three or more; 7-8: two) or close them one by one (5-6), or drop some (≤4)? |
-   | Arc & payoff (20%) | `arc_completion` | 7 | The protagonist ends truly different, at a cost. |
-   | | `irreversible_change_arc` | 5 | The chapter-pair state test below. |
-   | | `foreshadowing_resolution` | 4 | Plants paid, payoffs planted. |
-   | | `clocks_paid` | 4 | The clock ledger below. |
-   | Reader pull (15%) | `pacing_curve` | 8 | Tension rises into the climax; no three-chapter decline. |
-   | | `overall_engagement` | 7 | Would a reader keep turning pages, and because of what. |
-   | Prose & consistency (15%) | `voice_consistency` | 4 | |
-   | | `show_dont_tell_arc` | 4 | The whole-book show-vs-tell pass below. |
-   | | `theme_coherence` | 4 | |
-   | | `world_consistency` | 3 | |
+   | Structure (40%) | `causal_chain` | 12 | Share of chapter N → N+1 links where N+1 happens *because of* an earlier chapter (an event, not a motif, callback, carried clock or promise line). Score ≈ 10 × because-share; −1 if an act boundary is only "happens after". |
+   | | `through_line` | 8 | One question about the protagonist, posed in the first quarter, answered by the climax's decision. 9-10 posed ≤15% and answered by a decision; 7-8 posed ≤25%; 5-6 posed late or answered only thematically; 3-4 several questions, none dominant; 1-2 none. |
+   | | `escalation` | 8 | Per act, the stake is strictly higher than the previous act's *on the same bet*. 9-10 every act raises it; 7-8 one plateau; 5-6 grows in size but resets in kind (new counterparty, new bet); 3-4 flat; 1-2 falls. |
+   | | `removability` | 8 | For each chapter, does a later chapter's action fail if it is cut? 10 minus 2 per removable chapter minus 0.5 per weak one, floor 1. List them as `removable_chapters`. |
+   | | `climax_convergence` | 4 | Do the last ~20% force the open threads into one decision (9-10: three or more; 7-8: two) or close them one by one (5-6), or drop some (≤4)? |
+   | Plot turns & surprise (12%) | `turning_points` | 6 | EDITING §22.1: the turns near their slots (catalyst ~10%, midpoint ~50%, all-is-lost ~75%, pinch points ~37% and ~62%) or visibly placed; the midpoint a reversal and a self-look; each act turn larger and less reversible; every early promise paid in a scene. Record `turns: [{beat, chapter, pct}]` and `promises: [{set_in, promise, paid_in, paid_as}]`. |
+   | | `surprise` | 6 | EDITING §22.7: a designed sequence of revelations landing on the protagonist, each planted (quote the clue), escalating; at least one reversal per act; the climax surprising yet inevitable. Record `revelations: [{chapter, learned, clue_chapters}]`. |
+   | Subplots & cast (12%) | `subplots` | 6 | EDITING §22.2: each subplot labelled C/R/S/X (contradicts, resonates, sets up, complicates); one to three major; longest gap; resolved on the page. Record `subplot_grid: [{thread, label, chapters, longest_gap_pct, changes_main_plot_in, resolved_as}]` from `books/{book}/threads.md` when it exists and from your read. |
+   | | `secondary_arcs` | 6 | EDITING §22.4: each prominent secondary has a minor arc of the right kind (mirror, flat, changed), each principal relationship turns in scenes, each point-of-view character has an arc, no idle or doubled character. Record `secondary_arcs: [{who, kind, goal, resolution}]` and `relationships: [{pair, start, middle, end, turned_on_page}]`. |
+   | Arc & payoff (12%) | `arc_completion` | 5 | The protagonist ends truly different, at a cost: belief, relationships and place in the system at the first and last chapter, one quoted line each. |
+   | | `irreversible_change_arc` | 3 | The chapter-pair state test below. |
+   | | `foreshadowing_resolution` | 2 | Plants paid, payoffs planted. |
+   | | `clocks_paid` | 2 | The clock ledger below. |
+   | Reader pull (10%) | `pacing_curve` | 3 | Tension rises into the climax; no three-chapter decline. |
+   | | `pace_distribution` | 4 | EDITING §22.3: words per act against 25/50/25; strong scenes in all three parts (`strong_scenes: [chapter]`); who is in control chapter by chapter and the longest same-side run; the longest stretch without a strong scene; runs of reflective or expository chapters; two-person-scene runs; exit hooks. |
+   | | `overall_engagement` | 3 | Would a reader keep turning pages, and because of what. |
+   | World & setting (8%) | `setting_development` | 4 | EDITING §22.5: each major place with a job and a signature, places that return changed, the world and the protagonist's place in it changed by the story, time marked by season and ritual. Record `places: [{place, chapters, job, changed}]`. |
+   | | `world_consistency` | 4 | The world's rules held, and the timeline, travel times, ages and seasons consistent (§22.8's continuity check; the said-once ledger's `## Noticed in passing`). |
+   | Prose & consistency (6%) | `voice_consistency` | 2 | |
+   | | `show_dont_tell_arc` | 2 | The whole-book show-vs-tell pass below. |
+   | | `theme_coherence` | 2 | |
+
+   **The genre's whole-book dimensions.** When the genre guide's
+   `## Judging` section lists whole-book dimensions (historical fiction:
+   `history_accuracy` and `history_development`, from EDITING §22.6),
+   score each to the guide's anchors with the weight the guide gives it
+   and add it to `dimension_weights`; the weighted mean below is over
+   every dimension scored.
+
+   **The smaller checks.** Record `book_checks` as EDITING §22.8 lists
+   them (cast load and naming, point-of-view allocation, continuity and
+   timeline, stakes stated plainly, dialogue at book scale, the content
+   genre's obligatory moments, appeal profile, originality, length
+   against the market), each `{finding, evidence, verdict: ok|flag}`.
+   They are not scored; every `flag` goes in the report. Count from
+   the tools before judging: the structure dossier (positions, words,
+   story-time gaps), `autonovel mechanical entity-track books/{book}`
+   (new names per chapter), `/autonovel:dashboard`'s data (dialogue
+   share, cast size) and the said-once ledger.
 
    **Aggregate.** `structure_subscore` = the weighted mean of the five
-   structure dimensions. `weighted_mean` = the weighted mean of all
-   fifteen. `raw_novel_score = min(weighted_mean, structure_subscore +
-   1.0)` — the cap is the point: no amount of prose lifts a book more
-   than one point above its structure. `novel_score` is
+   structure dimensions. `weighted_mean` = Σ(weight × score) / Σ weight
+   over every dimension scored. `raw_novel_score = min(weighted_mean,
+   structure_subscore + 1.0)` — the cap is the point: no amount of prose
+   lifts a book more than one point above its structure. `novel_score` is
    `raw_novel_score` minus the slop penalty (step 9). Include
    `structure_subscore`, `weighted_mean`, `structure_cap_applied`
    (true when the cap bound), `weakest_dimension`, `weakest_chapter`,
@@ -922,11 +954,13 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
 
     For `--phase foundation` and `--full` use the same table shape
     with the dimensions appropriate to the mode (lore /
-    character / structure / craft for foundation; for full, the
-    fifteen dimensions in their four groups with a Weight column,
-    structure group first, then a line
-    `**Novel:** N (structure X.X; weighted mean Y.Y; cap applied:
-    yes/no; − slop Z)`).
+    character / structure / craft for foundation; for full, every
+    dimension in its group with a Weight column, structure group first,
+    then a line `**Novel:** N (structure X.X; weighted mean Y.Y; cap
+    applied: yes/no; − slop Z)`). For full mode, put above the table a
+    `**Worst first:**` list of every dimension under the floor and every
+    `book_checks` flag, lowest score first, each with its weakest moment
+    quoted by chapter and its fix.
 
     Lead the `**Lowest:**` line with the dimension's name and score
     whatever the mean, and say "under the <floor> floor: revise for it"
@@ -1032,7 +1066,8 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
 - For chapter and full modes the log contains a `slop` block with
   numeric `slop_penalty`, and `overall_score` equals
   `raw_judge_score - slop_penalty` rounded to 2dp.
-- For full mode the log contains the fifteen dimensions of step 7,
+- For full mode the log contains every dimension of step 7's table
+  (and the genre guide's whole-book dimensions), `book_checks`,
   `dimension_weights`, `structure_subscore`, `weighted_mean` and
   `structure_cap_applied`, and `raw_novel_score` is at most
   `structure_subscore + 1.0`.

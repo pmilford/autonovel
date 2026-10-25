@@ -291,3 +291,36 @@ whose problems are design-level should route to a revised `design.md`
 and outline, and to a redraft, rather than to in-chapter briefs.
 
 ---
+
+## §25 The whole-book scorecard (added 2026-10-25)
+
+An author asked where the whole-book reviews were and what they checked,
+naming main plot, subplots, action and pace, character development,
+location development, historical development and accuracy, and
+unexpected plot points. Before this, `evaluate --full` had fifteen
+dimensions: none for subplots, pace across the whole book (as against
+tension chapter by chapter), secondary and relationship arcs, setting
+that develops, accuracy, or surprise. Research across about sixty
+sources (Story Grid, McKee, Truby, Weiland, Maass, Brody, Pattison,
+Alderson, Gilbo, the WILLA historical-fiction rubric, prize judges,
+historical novelists' stated rules) is now `EDITING.md` Part VII, §22
+(that file's numbering, not this document's): seven areas, each with its
+questions, the evidence to count or quote, the usual failures and 0–10
+anchors, and a list of smaller checks. Where each area is measured:
+
+| Area | Measured by |
+|---|---|
+| Main plot: turns, midpoint, promises (§22.1) | `evaluate --full` `turning_points`; structure-review's causal chain and ladder |
+| Subplots (§22.2) | `evaluate --full` `subplots`; story-map's thread grid |
+| Pace across the book (§22.3) | `evaluate --full` `pace_distribution` and `pacing_curve` |
+| Secondary and relationship arcs (§22.4) | `evaluate --full` `secondary_arcs`; CHARACTER.md's tests |
+| Setting that develops (§22.5) | `evaluate --full` `setting_development` |
+| History: accuracy and the age turning (§22.6) | `evaluate --full` `history_accuracy`, `history_development` (from the historical guide) |
+| Surprise and revelation (§22.7) | `evaluate --full` `surprise` |
+| Cast load, POV, continuity, stakes, dialogue, content genre, appeal, originality, length (§22.8) | `evaluate --full` `book_checks` (flags, unscored) |
+
+`developmental-edit` counts the same evidence in its measurement pass,
+and `/autonovel:review-cycle` runs `evaluate --full` before a version goes
+to the author.
+
+---

@@ -536,9 +536,34 @@ Score how well the chapter delivers the period, 0–10, with
 
 ### Whole-book judges
 
-- **`/autonovel:evaluate --full`** notes, under `theme_coherence` or
-  `world_consistency`, whether the design's ledger was delivered across
-  the book and whether the period thins in the last act.
+- **`/autonovel:evaluate --full`** scores two whole-book dimensions of
+  this genre, each `{score, weakest_moment, fix, note}`, to the questions
+  and evidence of `EDITING.md` §22.6:
+  - **`history_accuracy`** (weight 4). Does anything jar for a reader who
+    knows the period? Keep a claims ledger of the book's checkable claims
+    (dates, sums, travel times, offices and titles, places as named then,
+    coins and weights, who was where on which day, the order of events),
+    each documented, disputed (the version chosen) or invented in a gap;
+    every anachronism flagged carries its evidence. 9–10: nothing jars;
+    every departure lies in a documented gap or is declared in the
+    author's note; the characters choose by the beliefs of their time; the
+    timeline holds. 7–8: one slip of fact or date, or a liberty the note
+    doesn't declare. 5–6: the facts are clean but people reason like
+    moderns in places, or several small slips. Under 5: something jars
+    (modern reasoning, a wrong office or date, an impossible journey) or
+    the book contradicts the record. The `fix` corrects the fact or names
+    the gap the invention may sit in; it never cuts the period.
+  - **`history_development`** (weight 3). Does the age itself turn across
+    the span, felt by people, and is the design's `## What the reader
+    comes to learn` ledger delivered across the book, without thinning in
+    the last act? 9–10: the world at the end is visibly different in its
+    politics, tools or beliefs, the change felt through people, and the
+    ledger delivered; 7–8: the age turns but mostly in the narrator's
+    report, or one ledger item missing; 5–6: the age stands still behind
+    the plot, or the period thins in the last act; under 5: the period is
+    backdrop.
+  Both are 0–10 like every dimension and join the weighted mean with
+  these weights.
 - **`/autonovel:reader-panel`'s genre reader** is this genre's reader as
   the first-reader section describes, and answers: what did I learn, what
   did I enjoy learning, where did the history stop the story, and did any

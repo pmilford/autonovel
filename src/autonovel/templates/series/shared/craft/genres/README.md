@@ -37,7 +37,7 @@ sections named for it, plus `## The promise` and the `###` entries under
 | Design | The ledger the design writes (`## What the reader comes to learn` for historical fiction) and the genre contract | design, gen-outline, cast |
 | Drafting | How the payload reaches the page | draft, revise, brief |
 | The first reader | Who this genre's cold reader is; sections it adds to the report | first-read, draft's cold reader |
-| Judging | The extra evaluate dimension(s) and their rubric; what other dimensions must not mark down | evaluate, review, reader-panel |
+| Judging | The extra evaluate dimension(s) and their rubric, per chapter and for the whole book (`evaluate --full` adds them to its weighted mean); what other dimensions must not mark down | evaluate, review, reader-panel |
 | Cutting | What never counts as over-explaining; the `MISPLACED` type | adversarial-edit, apply-cuts |
 | Editing | Questions for the developmental editor; typical failures | developmental-edit, structure-review, review |
 | Back matter | Notes and appendices this reader expects | appendix |

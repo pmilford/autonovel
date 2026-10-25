@@ -2641,6 +2641,24 @@ one, and know when a text is already tight.
 - TH6 The midpoint mirror.
 - TH7 Two endings.
 
+**The whole-book scorecard** (§22; counted, scored worst first)
+- 22.1 Turns near their slots; the midpoint a self-look; promises paid in
+  scenes. (Brody; Weiland; McKee; Maass)
+- 22.2 Each subplot contradicts, resonates, sets up or complicates; one
+  to three; steady; resolved on the page. (McKee; Truby; Weiland; Maass)
+- 22.3 Strong scenes in all three parts; control alternates; no dead
+  stretch. (Story Grid; Pattison; Alderson)
+- 22.4 Secondary and relationship arcs, turned in scenes; no idle or
+  doubled character. (Weiland; Gilbo; Gold; Bates)
+- 22.5 Places with jobs, returning changed; the world changed by the
+  protagonist. (Truby; Maass; Fictionary)
+- 22.6 Nothing jars; a claims ledger; period minds; the age turns. (Grant;
+  Rutherfurd; Atwood; Harris; Tod)
+- 22.7 Revelations planted, escalating, landing on the hero. (Truby;
+  Aristotle)
+- 22.8 Cast load, POV, timeline, stakes, dialogue, content genre, appeal,
+  originality, length.
+
 ---
 
 ## §21 Sources
@@ -2818,3 +2836,486 @@ AI writing and judging:
 - Panickssery, Bowman and Feng, NeurIPS 2024,
   https://arxiv.org/abs/2404.13076
 - Zheng et al., NeurIPS 2023, https://arxiv.org/abs/2306.05685
+
+---
+
+# Part VII — The whole-book scorecard
+
+## §22 Measuring the whole book, area by area
+
+Parts II–IV ask what a book must do; this part says how a whole-book
+judge measures it, area by area, in the places those parts are thin:
+subplots, pace across the whole book, the arcs of secondary characters
+and relationships, setting that develops, how accuracy is judged in
+historical fiction, and surprise. `/autonovel:evaluate --full` scores
+each area as a dimension (its name in backticks below) and records the
+smaller checks in §22.8; `/autonovel:developmental-edit` counts the same
+evidence where its letter discusses an area. Each area gives the
+questions, the evidence a reader can count or quote, the usual failures,
+and score anchors on the pipeline's 0–10 scale. Report the scorecard
+worst first, each score with its weakest moment quoted by chapter and
+line.
+
+Sources are marked as in the research behind this part: **[V]** read in
+the primary text or the author's own page; **[S]** through a second
+source, the substance probably right, the exact words possibly not.
+Nothing marked [U] is used. Percentages and counts that no source states
+are marked as the pipeline's own heuristics.
+
+### 22.1 Main plot: the turns, the midpoint, promises (`turning_points`)
+
+Covered already: S1–S5 (causality, removability, the same bet, one
+desire line, the midpoint), DESIGN §8–§11.
+
+- **M1. Do the turns land where a reader feels them?** Brody's *Save the
+  Cat! Writes a Novel* places the catalyst at about 10%, the break into
+  the second act at 20%, the midpoint at 50% ("either a false victory …
+  or a false defeat", where "something should happen here to raise the
+  stakes"), all-is-lost at 75% and the break into the third act at 80%
+  [V]. Weiland puts pinch points, "a reminder of the antagonistic force's
+  power", at 37% and 62% [V]. A departure is fine when it is visibly
+  chosen.
+- **M2. Is the midpoint a turn in self-knowledge as well as in plot?**
+  James Scott Bell's "mirror moment": the character looks at who he is or
+  how dire things are, and decides [S].
+- **M3. Is each turn bigger and less reversible than the last?** McKee:
+  the effects of a turning point are "surprise, increased curiosity,
+  insight, and new direction" [S]; the story climax is "absolute and
+  irreversible" [S]. Score each act turn on the four.
+- **M4. Has the book used the worst plausible complications?** Maass's
+  stakes exercise: "What would make this problem worse?", then worse
+  than that, then "the circumstances under which my protagonist(s) would
+  actually fail" [V]. List the complications used; ask whether worse
+  ones were left on the table.
+- **M5. Is every early promise kept on the page?** Story Grid: the ending
+  is "the big PAYOFF, when the promises you've made from your HOOK get
+  satisfied" [S].
+
+**Evidence.** The chapter and % of words where each turn lands
+(`autonovel mechanical structure-dossier` gives positions); the sentence
+where the midpoint changes the protagonist's understanding; the value at
+stake before and after each act turn; a promise ledger of every question,
+threat or promise in the first quarter, with the chapter of its payoff and
+whether it is paid in a scene or in summary.
+
+**Failures.** A midpoint that is a date or a recap; no pinch in the
+50–75% stretch (the opponent off the page); escalation by volume, not
+kind; payoffs in summary; new promises opened in the last fifth.
+
+**Anchors.** 9–10: each turn near its slot or visibly placed; the
+midpoint reverses direction and forces a self-look; each act turn larger
+and less reversible than the last; every early promise paid in a scene.
+5–6: the turns exist but sit 10% or more off their slots without reason,
+or the midpoint only informs; one or two promises paid in summary. 1–3:
+the turns bunch at the start and end, nothing near the middle changes
+direction, the opponent is absent from the middle half, promises left
+open.
+
+### 22.2 Subplots (`subplots`)
+
+Covered already: E2 (threads converge); `/autonovel:story-map`'s thread
+grid. No judging criteria existed before this section.
+
+- **SP1. What job does each subplot do?** McKee: "If a subplot doesn't
+  thematically contradict or resonate the Controlling Idea of the main
+  plot, if it doesn't set up the introduction of the main plot's
+  Inciting Incident, or complicate the action on the main plot, if it
+  merely runs alongside, it will split the story down the middle and
+  destroy its effect" [S]. Label each subplot C (contradicts), R
+  (resonates), S (sets up) or X (complicates); a subplot with no label
+  is the failure.
+- **SP2. Is it about the same problem?** Truby's subplot character is
+  "someone facing the same problem as the hero" [V]. Bates: "Subplots
+  exist to tell us something about your protagonist and his quest" [V].
+- **SP3. Does it have its own arc?** Weiland: "minor arcs require nothing
+  more than the basic framework of any good story", a goal, obstacles and
+  a resolution [V].
+- **SP4. Does it touch the main plot by cause, not only by theme?** Maass:
+  "Subplots need to tie-in with and affect the main plot" [S].
+  DeFreitas names the failure as story lines that "aren't clearly
+  connected by cause and effect" [V].
+- **SP5. How many?** Maass: "Two or three major subplots are about all
+  that even the longest quest fantasies can contain" [S]. Beth Hill warns
+  against "sub-plots that dilute the main plot" [V].
+- **SP6. Is the cadence steady, or does a thread vanish?** No source
+  gives a number. The pipeline's heuristic: flag a major thread untouched
+  for more than about a fifth to a quarter of the book's words. WILLA's
+  low band: "Subplots (if used) sporadic" [V].
+- **SP7. Is any subplot overactive?** Bates: one "trying to take over the
+  main plot and tell its own story"; absorb it into another or cut it
+  [V]. Weiland: "No arc can overshadow the protagonist's primary arc"
+  [V].
+- **SP8. Do the subplots resolve on the page?** WILLA's high band:
+  "Subplots (if used) well integrated & resolved" [V].
+- **In historical fiction** many subplots are documented strands of a
+  life. Apply SP1 to each; a strand with no job is tied to the main
+  contest or given to a person, never cut (`genres/historical.md`).
+
+**Evidence.** A thread-by-chapter grid (`books/<book>/threads.md`, the
+story map): each thread's first and last chapter, the chapters it
+appears in, its longest gap in chapters and % of words, its C/R/S/X
+label, and the sentence where it changes a main-plot outcome; the count
+of major subplots; the threads alive in the climax chapters; the threads
+closed after the climax, each in a scene or a sentence.
+
+**Failures.** The parallel track (runs and resolves without altering
+the main plot); the disappearing thread (absent a third of the book,
+closed in an epilogue line); the early solo resolution; the echo (repeats
+the main plot's beat instead of contrasting); the takeover.
+
+**Anchors.** 9–10: one to three major subplots, each with a goal,
+obstacles and resolution, each labelled, touched at a steady cadence,
+feeding the climax, closed in scenes. 5–6: each has a job, but one is
+sporadic, or resolves apart from the climax and off the page, or there
+are more than three. 1–3: a major subplot does none of McKee's jobs, or
+is dropped or left unresolved; gaps run past a third of the book.
+
+### 22.3 Pace across the book (`pace_distribution`)
+
+Covered already: S6–S8, SC5, R1, DESIGN §10. What was missing is how to
+measure pace across the whole book.
+
+- **PA1. Are the proportions sane?** Story Grid: "a well told story is
+  about 25% beginning, 50% middle, and 25% end" [V]; a contemporary novel
+  has roughly 40–65 scenes of 1,000–2,000 words [V].
+- **PA2. Where do the strongest scenes fall?** Pattison's "shrunken
+  manuscript": mark the strongest scenes on the whole text at a glance;
+  "zero scenes highlighted at the beginning will show a very slow start",
+  none in the middle a sagging middle [V]. She suggests five to eight for
+  books to about 75k words; about one per 10k words beyond that is the
+  pipeline's extrapolation.
+- **PA3. Who is in control, scene by scene?** Alderson's plot planner
+  plots each scene above the line when the antagonist is in control,
+  below when the protagonist is, to show "where the energy is building
+  and falling" [V].
+- **PA4. Action, reaction, exposition.** Swain's scene (goal, conflict,
+  disaster) and sequel (reaction, dilemma, decision): their proportion
+  sets the tempo [S]. Beth Hill: "Make sure setting doesn't overwhelm
+  action and plot"; "Does pace vary" [V].
+- **PA5. Does every chapter turn, and do the turns vary?** Story Grid
+  records each scene's value shift and polarity [V]; count runs of
+  chapters with no turn, and runs with the same polarity.
+- **PA6. Is the social texture varied?** Story Grid: "You don't want to
+  have 36 scenes that only have two people in them. It gets really
+  boring and repetitive" [V].
+- **PA7. Does the middle hold its weight?** Cheryl Klein's book map
+  exposed "Middle Fatigue": "too-short, underdeveloped chapters in the
+  middle of the book" [S].
+- **PA8. Do chapters open and close on hooks?** Fictionary scores entry
+  and exit hooks [V]. Lee Child: "The reader learns to chase, and the
+  momentum becomes unstoppable" [S].
+- **PA9. Is a quiet chapter still moving?** Maass: forward motion "arises
+  not from what characters are going through, but from what readers are
+  going through" [V]. A reflective chapter passes if it carries a moment
+  of recognition.
+
+**Evidence.** Words per act against 25/50/25; the scene count; chapter
+length as a curve; the strongest-scene map and the longest stretch (in %
+of words) without one; who is in control per chapter and the longest
+same-side run; runs of three or more mainly reflective or expository
+chapters; people on stage per scene and the count of two-person scenes;
+each chapter's exit hook, quoted, or "none".
+
+**Failures.** No strong scene in the first 10–15%; a long stretch with
+the opponent off the page; every chapter the same shape; an exposition
+block opening each chapter; set pieces summarised; a beginning that takes
+35–40% of the book.
+
+**Anchors.** 9–10: strong scenes in all three parts; the control line
+alternates and tightens toward the end; pace varies by design; every
+chapter turns; exit hooks pull. 5–6: proportions roughly right but one
+dead stretch, or the same rhythm and length throughout. 1–3: strong
+scenes cluster at one end; a quarter of the book with no turn or no
+opponent in control.
+
+### 22.4 Secondary arcs, relationships and the cast across the book (`secondary_arcs`)
+
+Covered already: C1–C6, CHARACTER.md C1–C12, DESIGN §5 and §7.
+
+- **CH1. How far has the protagonist moved, first page to last?** Save
+  the Cat: the final image is "A mirror to the Opening Image" [V]. (Scored
+  under `arc_completion`; record the three axes below.)
+- **CH2. Do the secondary characters have arcs, of the right kind?**
+  Weiland: "every prominent minor character should have an arc. Just not
+  a full arc"; "the antagonist's arc will often be the opposite of the
+  protagonist's"; the impact character's arc "will be flat"; "No arc can
+  overshadow the protagonist's primary arc" [V].
+- **CH3. Does every point-of-view character earn the slot?** Gilbo: "Each
+  POV character also needs their own complete character arc"; "use as few
+  POV characters as possible"; readers "should be able to tell whose
+  perspective they're reading from the writing alone" [V].
+- **CH4. Do the principal relationships have arcs of their own?** Jami
+  Gold tracks the relationship's arc as a separate line from each
+  person's [V]; the method serves any principal relationship (mentor and
+  heir, rivals, master and servant, husband and wife).
+- **CH5. Is the protagonist an agent across the whole book?** Maass:
+  "Passive protagonists aren't stuck in suffering. They move forward,
+  seeking" [V]. Count the act-level turns caused by the protagonist's
+  decisions against those caused by others or the calendar.
+- **CH6. Are there idle or doubled characters?** Bates: minor characters
+  "sitting on your couch, eating your food, not really contributing"; the
+  fix is "streamlining several supporting characters into just one" [V].
+- **CH7. Is each surprise in a character planted?** Every surprising act
+  needs an earlier moment that makes it convincing (Forster's round
+  character, CHARACTER C10).
+
+**Evidence.** The protagonist's state in the first and last chapter on
+belief, relationships and place in the system, one quoted line each; for
+each prominent secondary, the chapters of goal, obstacles and resolution
+(or "none"), marked mirror, flat or changed; for each principal
+relationship, its state at the start, the midpoint and the end, and the
+scene of each change (on the page, or reported); the share of act turns
+the protagonist causes.
+
+**Failures.** Minor characters who stop when their scene ends; an
+opponent with no arc and no plan; a relationship that changes off the
+page ("by spring they were allies"); a point-of-view character with no
+arc; two characters doing one job.
+
+**Anchors.** 9–10: each prominent secondary has a minor arc of the right
+kind; each principal relationship turns in scenes; every surprise is
+planted; no idle or doubled character. 5–6: few secondaries have a
+goal-obstacle-resolution line, or a point-of-view character lacks an arc,
+or a relationship changes off the page. 1–3: the secondaries are static
+functions; relationships change by announcement; characters are
+interchangeable.
+
+### 22.5 Setting that develops (`setting_development`)
+
+Covered already: DESIGN §12 (place chosen for pressure, the sensory
+signature, orientation, returning to a place changed).
+
+- **SE1. Does the world change because of the story?** Truby's world
+  elements include "Hero's change/World's change … The story world may
+  also change, due to the actions of the hero", "Technology change" and
+  "Systems: the rules and hierarchy of power, along with your hero's
+  place in that hierarchy" [V]. Does the protagonist's visible place in
+  the system change?
+- **SE2. Do the places vary, and does each have a job?** Truby's
+  checklist: an overall arena, value and visual oppositions, "Miniatures"
+  (a society shrunk to be seen whole), "Passageways" between sub-worlds,
+  seasons, and "Ritual/holiday" to "add meaning, pace the story, and show
+  its development" [V].
+- **SE3. Do the characters grapple with the setting?** Maass: "make them
+  grapple with it as surely as they grapple with the main problem";
+  describing how things look and smell "is not, by itself, going to bring
+  a location to life" [S].
+- **SE4. Does each location earn its place?** Fictionary: is it
+  important to plot, character or theme; does it raise or lower tension;
+  is the weather consistent between scenes [V]. Beth Hill: "a clear sense
+  of place and time for each scene" [V].
+- WILLA's bands [V]: high, "A strong sense of place is inherent in book";
+  middle, "Setting described in conventional terms"; low, "Setting not
+  important to the book".
+
+**Evidence.** A location register: each major place, the chapters it
+appears in, its job (pressure, opposition, passageway, miniature), its
+sensory signature, its state at first and last appearance; the count of
+places that return changed; whether each scene fixes place and time in
+its first lines; time markers per chapter (season, feast, fair, session);
+system or technology changes visible on the page.
+
+**Failures.** Interchangeable rooms; description that presses on no one;
+places shown once and never returned to; a world unchanged by the
+protagonist's acts; weather or season that contradicts itself; a city
+introduced by survey instead of arrival.
+
+**Anchors.** 9–10: each major place does a job and has a signature;
+the world, and the protagonist's place in it, visibly changes; seasons
+and rituals mark time; orientation is instant. 5–6: places vivid but
+static, few return and none changes. 1–3: setting is backdrop; the
+reader is unsure where or when; research described for its own sake.
+
+### 22.6 Historical development and accuracy (historical fiction: `history_accuracy`, `history_development`)
+
+Covered already: §17 (Mantel, Lukács, Stone, the reader contract,
+H1–H8) and `genres/historical.md` (the payload rule; never contradict
+the record). This section adds how judges weigh accuracy, the novelists'
+working rules, a fact-checking practice, anachronism of thought, and
+whether the age changes across the span. The genre guide's `## Judging`
+gives the two dimensions their anchors and weights.
+
+- **How judges weigh it.** Katharine Grant, Walter Scott Prize: "Our
+  deciding factor is quality of writing"; "historical accuracy is only a
+  factor when it jars"; she prefers "imaginative accuracy" [V]. An HWA
+  Gold Crown judge notes anachronisms because they "jerk me out of the
+  story" and wants to "believe in the world the author has created" [V].
+  Historical Novel Society reviewers who flag an anachronism must back it
+  up [V].
+- **The novelists' rules.** Rutherfurd: "Don't invent history (you can
+  add characters and incidents as long as they fit in with known
+  historical events)"; "Keep the chronology as accurate as possible";
+  "You can leave things out"; and show the manuscript to a historian of
+  the period [S]. Atwood: "When there was a known fact, I felt that I had
+  to use it … when there were gaps … I felt I was free to invent" [V].
+  Robert Harris: "never directly to contradict the historical record";
+  no reordering of events [V].
+- **A fact-checking practice.** (1) A claims ledger: every checkable
+  claim (dates, sums, travel times, offices and titles, places as named
+  then, coin and weights, who was where on which day, the order of
+  events), each marked documented, disputed (version chosen) or invented
+  in a gap. (2) A style sheet and timeline (Louise Harnby: names,
+  histories, "timeline information", "key geographical locations" [V];
+  Beth Hill: time passing "clear and possible" [V]). (3) An expert reader
+  (McElhearn: "get a real historian, who is familiar with your setting"
+  [V]). (4) Every anachronism flag carries its evidence: a first-attested
+  date, or the source that contradicts the text.
+- **Anachronism of thought.** Readers rank "behaviour that is realistic
+  to the time period" among the top things that make historical
+  characters live (Tod's 2015 survey [V]). Lukács faulted novels whose
+  psychology was "entirely those of the writer's own day" [S]. Emma
+  Darwin: "what matters is believability and consistency" [V]. Ask what
+  each principal believes about God, money and interest, rank, honour,
+  oaths, women, death and luck, and whether their choices follow from it;
+  find where modern reasoning creeps in (a cost-benefit with no fear of
+  damnation, rights language, hindsight about what the age would become).
+- **Does the age itself turn?** De Groot: the historical novel's sense
+  "of history as process" [V]; readers of the genre rank the "dramatic
+  arc of historical events" highly (Tod 2013 [V]). Is the world at the
+  end different in its politics, its tools or its beliefs, and does the
+  book show the change happening through people?
+- **Research worn lightly.** Grant praises novelists who keep some
+  research and leave the rest out [V]; under this pipeline's payload rule
+  a detail that serves no one is moved or given to a person, never cut.
+- **The author's note** says what is record and what is invented:
+  invented people, composites, moved or compressed dates, invented scenes
+  inside documented events, disputed facts and the version chosen,
+  sources (§17.8, H8).
+
+**Evidence.** Claims-ledger counts; anachronism flags each with evidence;
+each principal's period-belief profile and the acts that test it; markers
+of period change by chapter; the note's coverage of its six items.
+
+**Anchors** (`history_accuracy`). 9–10: nothing jars for an informed
+reader; every departure lies in a documented gap or is declared; the
+characters' choices follow period beliefs; the timeline is consistent.
+5–6: the facts are clean but people think like moderns in places, or the
+note is vague about its liberties. 1–3: something jars (modern
+reasoning, a wrong office or date, an impossible journey); the timeline
+contradicts itself. (`history_development`) 9–10: the age visibly turns
+across the span, felt by people, and the period is delivered through
+them; 5–6: the age stands still behind the plot; 1–3: the period is
+backdrop, or its turns are announced by the narrator and felt by no one.
+
+### 22.7 Surprise and revelation (`surprise`)
+
+Covered already: R2 (suspense, curiosity, surprise), E3 (surprising yet
+caused), DESIGN §8.
+
+- **U1. Is there a designed sequence of revelations?** Truby: "The key to
+  plot is the way you surprise the audience … The problem comes in
+  sequencing these surprises, or revelations, in the most dramatic
+  order"; "you track the revelations through the hero" [V].
+- **U2. Are the surprises fair?** Truby: a reveal with "no clues woven in
+  earlier" is "a betrayal of the audience"; the audience should be
+  surprised and then "realize the information was there all along" [V].
+- **U3. Do the turning points do real work?** Aristotle: reversal is "a
+  change by which the action veers round to its opposite"; recognition "a
+  change from ignorance to knowledge"; "Of all plots and actions the
+  epeisodic are the worst" [V]. McKee's four effects (§22.1 M3) [S].
+- **U4. Which effect is each chapter using?** Sternberg's curiosity (a gap
+  in the past), suspense (the future) and surprise (a gap noticed only in
+  retrospect) [S].
+- **U5. How predictable is the book?** WILLA's low band: "Plot
+  predictable" [V]. When the reader knows the outcome, the question
+  moves to how and at what cost (§17.6).
+- **U6. False leads.** Story Grid's thriller conventions include red
+  herrings and "False Ending. There must be two endings" [V].
+- **U7. Is believability kept?** A surprise that needs a character to act
+  against type is not a surprise but a break (Truby, summarised [S]).
+
+**Evidence.** A revelation list: chapter, what the hero learns, how it
+changes his desire or strategy, how big it is, the chapters of its clues
+(at least one, ideally two), each plant quoted; reversals and
+recognitions per act.
+
+**Failures.** Reversals that are news from off the page; twists with no
+clue; a twist that breaks a character; all reveals bunched at the end; a
+book of steady information with no recognitions; a known outcome treated
+as the only question.
+
+**Anchors.** 9–10: revelations escalate and land on the hero, each
+planted and re-readable; at least one reversal per act; the climax
+surprising yet inevitable. 5–6: some well-planted reversals, but the
+order is flat (same size, evenly spaced) or the climax is foreseeable.
+1–3: few turns, all foreseeable, or surprises that cheat.
+
+### 22.8 The smaller checks (`book_checks`)
+
+Recorded with evidence and a verdict (`ok` or `flag`), not scored; every
+flag goes into the report with the worst items.
+
+- **Cast load and naming.** Named people introduced per chapter,
+  especially in the first three; people on stage with lines (count
+  people, not names); pairs of names that share an initial or a shape.
+  Beth Hill: "no unnecessary characters" [V]. Flag: more than about ten
+  new names in chapter 1, or look-alike names among the principals.
+- **Point-of-view allocation.** Each point of view's share of words and
+  chapters, and whether each has an arc (CH3). WILLA: "POV shifts clear
+  & intentional" against "Point of view wavers" [V].
+- **Continuity and timeline.** A dated timeline with day counts, travel
+  times against distance and the period's speeds, ages, seasons; the
+  slips `/autonovel:said-once` records under `## Noticed in passing`.
+  Story Grid: "a consistent linear movement of time" [V].
+- **Stakes, stated plainly.** One sentence each for what is lost publicly
+  and personally if the protagonist fails (Maass [V]; DeFreitas: stakes
+  that "can't be stated in a way that's compelling" [V]).
+- **Dialogue at book scale.** Dialogue's share of words per chapter (runs
+  near 0% or 70%); whether ten unattributed lines could be told apart by
+  speaker. WILLA: "Good balance between dialogue & narrative" [V].
+- **The content genre's obligatory moments.** Story Grid's Society genre
+  (power changes hands; "Power shifts must be clearly defined and
+  dramatized"; a "win-but-lose or lose-but-win" ending) and Status genre
+  (failure to success; "The Big Choice"; a point of no return) [V]: which
+  one the book promises, and whether its moments are on the page (§13).
+- **Appeal profile.** Wyatt and Saricks describe a book by "pacing,
+  characterization, story line, frame/setting, tone, and language/style"
+  [V]; describe the book on each and check it against the genre's
+  readers.
+- **Originality and durability.** Grant: "ambition, originality,
+  innovation and durability" [V]. What does this book do that its
+  comparable titles do not (T2)?
+- **Length against the market.** One UK agency gives historical fiction
+  "100-120k", crime and thrillers "longer than 70k but shorter than
+  100k" [V]. A positioning fact for the letter, not a verdict.
+
+### 22.9 Sources for this part
+
+- Story Grid: "Thriller Story Cheat Sheet"; "How to Spreadsheet Your
+  Novel"; "The Math of Storytelling"; "Society Genre"; "Status Genre"
+  (storygrid.com) [V].
+- Robert McKee, *Story* (1997), via *Game Developer*, "Life is Strange and
+  the Power of Subplots" [S].
+- John Truby, *Blockbuster* manual (truby.com/software/bb6_manual.pdf);
+  review of *24* (truby.com/24-2001/) [V].
+- K. M. Weiland, "Should All Your Minor Characters Have Arcs?"; "What Are
+  Pinch Points?" (helpingwritersbecomeauthors.com) [V].
+- Jessica Brody, *Save the Cat! Writes a Novel* starter kit [V].
+- Donald Maass: *The Fire in Fiction* ch. 4 and *Writing the Breakout
+  Novel* via Kaye Dacus [S]; "Exercise: Raising Public Stakes", *Writer's
+  Digest* (2010); "Moving Along" (2024) and "Seeking vs. Suffering"
+  (2021), *Writer Unboxed* [V].
+- Joseph Bates, *The Nighttime Novelist*, excerpt in *Writer's Digest*
+  [V]; Beth Hill, checklist, *The Editor's Blog* [V]; Susan DeFreitas,
+  *Jane Friedman* [V].
+- Darcy Pattison via *ProWritingAid* [V]; Martha Alderson, *Jungle Red
+  Writers* (2012) [V]; Cheryl Klein's book map via a workshop attendee
+  [S]; Dwight Swain via Wikipedia [S]; Fictionary, "Story Elements" and
+  "Setting of a Story" [V]; Lee Child, *NYT* (2012), reprint [S].
+- Savannah Gilbo, "5 Tips for Writing a Multiple POV Novel" [V]; Jami
+  Gold, beat sheet [V]; James Scott Bell, *Write Your Novel From the
+  Middle* [S].
+- Aristotle, *Poetics*, Butcher trans., Project Gutenberg #1974 [V];
+  Sternberg, "Telling in Time", via Fishelov and Yuan [S].
+- Katharine Grant, Five Books interviews (2019, 2024) [V]; Elizabeth
+  Hawksley on the HWA Gold Crown [V]; Historical Novel Society, "About
+  our reviews" [V]; Edward Rutherfurd's rules via M. K. Tod [S]; Margaret
+  Atwood, *Alias Grace* Q&A, Penguin Random House [V]; Robert Harris,
+  Goodreads Q&A [V]; Louise Harnby on style sheets [V]; Kirk McElhearn,
+  *Literature & Latte* (2023) [V]; Emma Darwin, "The right voice",
+  *Historia* [V]; Lukács via secondary accounts [S]; Jerome de Groot via
+  the IHR blog [V]; M. K. Tod, surveys of 2013 and 2015 [V].
+- Women Writing the West, WILLA rubric, historical fiction (rev. 2022)
+  [V]; Neal Wyatt and Joyce Saricks, *The Readers' Advisory Guide to
+  Genre Fiction*, 3rd ed. (ALA, 2019) [V]; Mushens Entertainment, "How
+  long should my novel be?" [V].

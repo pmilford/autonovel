@@ -2941,7 +2941,36 @@ added beside the unclear sentence instead of replacing it. Fixes:
   it, and counts again before it finishes.
 +17 tests.
 
+### 2026-10-25 — the whole-book scorecard
+
+The author asked where the whole-book reviews were, how many areas they
+checked, and for research to fill out main plot, subplots, action and
+pace, character development, location development, historical
+development and accuracy, unexpected plot points, "and add more". A
+research pass (about sixty sources, each marked verified or second-hand)
+found the craft docs thin on subplots, pace across the whole book,
+secondary and relationship arcs, setting that develops, how accuracy is
+judged, and revelation design. Now:
+- **`EDITING.md` Part VII, §22**: seven areas with questions, countable
+  evidence, failures and 0–10 anchors (turning points and promises;
+  subplots by McKee's four jobs; pace by proportions, strong-scene map and
+  control line; secondary, point-of-view and relationship arcs; setting
+  that develops; accuracy and the age turning; surprise), plus the smaller
+  checks (cast load, POV, continuity, stakes, dialogue, content genre,
+  appeal, originality, length). §20's checklist points to it.
+- **`evaluate --full`** scores them: new dimensions `turning_points`,
+  `surprise`, `subplots`, `secondary_arcs`, `pace_distribution`,
+  `setting_development`, weights rebalanced (structure 40%, cap
+  unchanged), unscored `book_checks`, and a worst-first list above the
+  table. Strict, as chapter mode now is.
+- **`genres/historical.md`** gives the whole-book pair `history_accuracy`
+  (4) and `history_development` (3), with a claims ledger and evidence for
+  every anachronism flagged.
+- **`developmental-edit`**'s measurement pass counts the same evidence.
++4 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (whole-book scorecard) — **2341 passing, 1 skipped** (+4).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (release-check, report stamps, review-cycle, strict scoring, draft notice) — **2337 passing, 1 skipped** (+17).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (scores record the text they scored; reader column counts open items; redesign keeps the preface; names are the author's; two-page spreads; framed cover) — **2320 passing, 1 skipped** (+13).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (revise accounts for every cut) — **2304 passing, 1 skipped** (+0; assertions added).

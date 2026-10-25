@@ -260,7 +260,16 @@ Re-read these before writing the letter.
    force first appears, and the chapters they are on stage; where the
    book's central question is first posed and where it is answered;
    which chapters a later chapter's choice depends on (plot or
-   relationship). Put the tables in the notes under **Measurements**.
+   relationship). Then the whole-book scorecard's evidence, as
+   `shared/craft/EDITING.md` §22 lists it for each area: the turns and
+   their positions, and the promise ledger (§22.1); the subplot grid with
+   each thread's job and longest gap (§22.2); the strong-scene map and who
+   is in control chapter by chapter (§22.3); the secondary and
+   relationship arcs (§22.4); the location register (§22.5); for
+   historical fiction the claims that jar and whether the age turns
+   (§22.6); the revelation list with its clues (§22.7); and the smaller
+   checks of §22.8. Put the tables in the notes under **Measurements**;
+   the letter ranks the areas that fail by what they cost the reader.
 
 8. **The intent pass.** Now read `books/{book}/seed.txt`,
    `books/{book}/outline.md`, `books/{book}/voice.md` and
