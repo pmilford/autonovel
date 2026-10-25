@@ -37,6 +37,32 @@ def test_begin_creates_lock_and_checkpoint(demo_series: SeriesLayout) -> None:
     assert (cp_dir / "books/one/chapters/ch_05.md.absent").exists()
 
 
+def test_a_sweep_checkpoints_every_chapter_in_its_range(demo_series: SeriesLayout) -> None:
+    """`revision-pass --chapters all` writes `ch_{chapter}.md` for every
+    chapter. The placeholder used to go unresolved, so the sweep's
+    checkpoint held no chapter and its rollback restored nothing, and
+    `ch{chapter:02d}_eval.json` was checkpointed under its literal name."""
+    chapters = demo_series.root / "books/one/chapters"
+    for n in (1, 2, 3):
+        (chapters / f"ch_{n:02d}.md").write_text(f"---\nchapter: {n}\n---\n\nText {n}.\n")
+    result = lifecycle.begin("autonovel:revision-pass", "--chapters all --book one",
+                             series=demo_series)
+    rel = {str(p.relative_to(demo_series.root)) for p in result.resolved_writes}
+    assert {"books/one/chapters/ch_01.md", "books/one/chapters/ch_02.md",
+            "books/one/chapters/ch_03.md"} <= rel
+    assert "books/one/eval_logs/ch02_eval.json" in rel
+    assert not any("{" in r for r in rel)
+    cp_dir = result.checkpoint.directory
+    assert (cp_dir / "books/one/chapters/ch_02.md.bak").read_text().endswith("Text 2.\n")
+    lifecycle.end("autonovel:revision-pass", "--chapters all --book one", status="ok",
+                  wrote=[], series=demo_series)
+
+    ranged = lifecycle.begin("autonovel:revision-pass", "--chapters 2-3 --book one",
+                             series=demo_series)
+    rel = {str(p.relative_to(demo_series.root)) for p in ranged.resolved_writes}
+    assert "books/one/chapters/ch_03.md" in rel and "books/one/chapters/ch_01.md" not in rel
+
+
 def test_end_releases_lock_and_writes_last_action(demo_series: SeriesLayout) -> None:
     lifecycle.begin("autonovel:draft", "5 --book one", series=demo_series)
     result = lifecycle.end(

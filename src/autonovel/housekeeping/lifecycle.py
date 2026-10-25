@@ -476,7 +476,9 @@ def _render_verify_warning(report: "checkpoints.WriteVerificationReport") -> str
 
 
 _ARG_HINT_PLACEHOLDER = re.compile(r"<([^>]+)>")
-_PATH_PLACEHOLDER = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+# `{name}` or `{name:spec}` (`ch{chapter:02d}_eval.json`); the spec is a
+# Python format spec applied to the value as an integer when it is one.
+_PATH_PLACEHOLDER = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([^{}]*))?\}")
 
 
 def _infer_book(ctx: dict[str, str], series: SeriesLayout) -> dict[str, str]:
@@ -593,8 +595,20 @@ def _resolve_writes(cmd: CommandDef, ctx: dict[str, str], series_root: Path) -> 
                 break
     if "chapter" not in ctx_for_paths and "chapter_number" in ctx_for_paths:
         ctx_for_paths["chapter"] = ctx_for_paths["chapter_number"]
+    # A sweep (`--chapters 3-7`, `all`, `structural`) writes every chapter in
+    # its range, so `{chapter}` stands for each of them in turn. Before this
+    # the placeholder went unresolved and a sweep checkpointed no chapter at
+    # all, so its rollback restored nothing.
+    sweep = (_chapters_in_range(ctx_for_paths, series_root)
+             if "chapter" not in ctx_for_paths else [])
 
     for raw in cmd.writes:
+        if sweep and _PATH_PLACEHOLDER.search(raw) and "{chapter" in raw:
+            for n in sweep:
+                resolved = _substitute_placeholders(raw, {**ctx_for_paths, "chapter": f"{n:02d}"})
+                if resolved is not None:
+                    out.append(series_root / resolved)
+            continue
         resolved = _substitute_placeholders(raw, ctx_for_paths)
         if resolved is None:
             # Unresolved placeholder — skip rather than crash; the command
@@ -611,11 +625,46 @@ def _resolve_writes(cmd: CommandDef, ctx: dict[str, str], series_root: Path) -> 
     return out
 
 
+def _chapters_in_range(ctx: dict[str, str], series_root: Path) -> list[int]:
+    """The chapter numbers a `--chapters` argument names: `3-7`, `2,5,9-11`,
+    or (`all`, `structural`, anything else) every chapter the book has."""
+    spec = ctx.get("chapters")
+    book = ctx.get("book")
+    if not spec or spec == "true" or not book:
+        return []
+    numbers: list[int] = []
+    try:
+        for part in spec.split(","):
+            part = part.strip()
+            if "-" in part:
+                lo, hi = (int(x) for x in part.split("-", 1))
+                numbers.extend(range(lo, hi + 1))
+            else:
+                numbers.append(int(part))
+        return sorted(set(numbers))
+    except ValueError:
+        pass
+    from ..paths import iter_chapter_files
+    found = []
+    for p in iter_chapter_files(series_root / "books" / book / "chapters"):
+        try:
+            found.append(int(p.stem.split("_")[-1]))
+        except ValueError:
+            continue
+    return found
+
+
 def _substitute_placeholders(path: str, ctx: dict[str, str]) -> str | None:
     def repl(match: re.Match[str]) -> str:
         key = _normalize_key(match.group(1))
         if key not in ctx:
             raise KeyError(key)
+        spec = match.group(2)
+        if spec:
+            try:
+                return format(int(ctx[key]), spec)
+            except (TypeError, ValueError):
+                return ctx[key]
         return ctx[key]
 
     try:

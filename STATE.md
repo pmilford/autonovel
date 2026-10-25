@@ -2788,7 +2788,21 @@ period detail told only there, a person speaking their mind and the
 closing hand-off. FUTURE-TODOS "Cuts nobody asked for" (a). One contract
 assertion added.
 
+### 2026-10-25 — a sweep checkpoints every chapter in its range
+
+Found while wiring revise's "Account for every cut" to `checkpoint:latest`:
+`_begin` resolved `writes:` placeholders only from a single `--chapter`, so
+for `revision-pass --chapters all` (or `3-7`, `structural`) every
+`ch_{chapter}.md` went unresolved and was skipped. The sweep's checkpoint
+held no chapter, and its promised one-shot rollback restored nothing; the
+`{chapter:02d}` paths were checkpointed under their literal names. Now the
+placeholder pattern takes a format spec, and a `--chapters` range (or every
+chapter the book has, for `all` / `structural`) expands each chapter path.
+Found on kingmaker2's version 4 sweep, whose chapters are safe in git (tag
+kingmaker2-v3). +1 test.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (sweeps checkpoint their chapters) — **2305 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (revise accounts for every cut) — **2304 passing, 1 skipped** (+0; assertions added).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (repeats across chapters; said-once) — **2304 passing, 1 skipped** (+10, of which 6 are the generic per-command contract checks picking up the new command).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (say each thing once) — **2294 passing, 1 skipped** (+13).
