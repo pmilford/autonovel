@@ -36,6 +36,7 @@ reads:
 writes:
   - books/{book}/eval_logs/*.json
   - .autonovel/eval_logs/*.json
+  - books/{book}/edit_logs/report_stamps.json
 context_mode: book
 ---
 
@@ -273,6 +274,20 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
    back to revise for it even when `overall_score` passes
    (`/autonovel:draft-pass` and `/autonovel:revision-pass` gate on it;
    `/autonovel:dashboard` ranks the book's lowest scores).
+
+   **Score strictly: what a first-time reader would feel.** One author
+   found a chapter "long and a bit slow" and repetitive two-thirds of the
+   way in while every score for it was 7.5 or more, and the book's scores
+   ran from 7.6 to 8.3, too close together to tell a slow chapter from a
+   good one. Judge where a reader would skim, where they are told what
+   they already know (in this chapter or an earlier one), and where they
+   lose track of who is who. Apply each rubric's anchors literally (a
+   point told three or more times caps `repetition` at 6, whatever else
+   the chapter does well) and give every dimension the score its evidence
+   earns, not a comfortable default near 8. A payoff, a plant or a
+   character's signature habit is not a repeat; say which you counted.
+   The same judge given the same instruction found three to five times
+   as many repeats in chapters a lenient pass had scored 7.5 to 8.5.
 
    **`first_reader` (the cold reader's serious items).** Use
    `file_read` on `books/{book}/edit_logs/first_read_ch{chapter}.md` (the
@@ -869,6 +884,10 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
     is `YYYYMMDD_HHMMSS` and `<mode>` is one of `foundation`,
     `ch{chapter:02d}`, `full`, `compare_{N}_vs_{M}`.
 
+    In `--full` mode, then use `bash` to run `autonovel _stamp-report
+    --book {book} --report full_eval`, which records in
+    `books/{book}/edit_logs/report_stamps.json` the text the book score
+    read (`autonovel mechanical release-check`).
     In `--chapter` mode, then use `bash` to run `autonovel _stamp-eval
     --book {book} --chapter {chapter}`, which records in the log the
     fingerprint of the chapter text you scored. A score describes the text

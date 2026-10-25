@@ -6,6 +6,7 @@ model_tier: heavy
 allowed-tools:
   - file_read
   - file_write
+  - bash
 reads:
   - project.yaml
   - books/{book}/voice.md
@@ -16,6 +17,7 @@ reads:
   - shared/genres/*.md
 writes:
   - books/{book}/edit_logs/reader_panel.json
+  - books/{book}/edit_logs/report_stamps.json
 context_mode: book
 ---
 
@@ -166,6 +168,10 @@ signal; the scored structural judgement is `/autonovel:structure-review`.
    }
    ```
    Omit the `custom_rubric` key when no rubric was parsed in step 2.
+   Then use `bash` to run `autonovel _stamp-report --book {book} --report
+   reader_panel`, which records in `books/{book}/edit_logs/report_stamps.json`
+   the text this panel read; `autonovel mechanical release-check` counts
+   the panel as current only while every chapter still matches.
 
 8. Print a one-screen summary: per-persona one-line takes, the four
    `book_in_one_sentence` answers side by side, the `book_level`

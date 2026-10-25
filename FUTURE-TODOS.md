@@ -11,6 +11,18 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **The review cycle: measure it on a real run (opened 2026-10-25).**
+  `/autonovel:review-cycle` and `release-check` shipped the same day
+  (STATE.md, "the review cycle"); the first full run is kingmaker2's.
+  Open: (1) the light-fix limits (a quarter of a chapter, a tenth of the
+  book) are a first guess; record each round's paragraph churn and
+  whether a re-run review found anything the stale one missed, and tune;
+  (2) no smoke test drives the cycle end to end on a fixture (it costs a
+  whole-book read per round; a three-chapter fixture with seeded repeats
+  would do); (3) the cycle stages findings as `**Status:** queued` turns
+  and the gate counts them, but a finding the editor declined leaves no
+  turn, so the round notes are the only record: consider a `declined`
+  status so `next` and the gate can tell declined from forgotten.
 - **Calibrate the judge against the author's reading (opened 2026-10-25).**
   On kingmaker2 the author found version 3's chapter 1 "long and a bit
   slow" and repetitive two-thirds in, while the judge gave it 7.7 with

@@ -12,6 +12,7 @@ Subcommands:
   motifs <book> [--format]         Per-chapter motif density (reads books/<book>/motifs.md).
   chapter-summary <book> [--format] One-line-per-chapter overview (date/POV/score/cast/plot).
   summary-check <book> [--chapters] Is each continuity summary still a summary of its chapter (fresh/stale/unverified/missing)?
+  release-check <book>              Is this version ready for the author? (scores current, whole-book reviews current, fixes made)
   structure-dossier <book>         Pack outline + summaries + word counts + story_time + scores for structure-review.
   structure-validate <book|json>   Validate structure_review.json + compute the book-level stop-revising gate.
   design-validate <book> [--outline] Check design.md's shape (DESIGN.md Part II); --outline also checks outline.md carries it.
@@ -665,6 +666,39 @@ def _cmd_prolepsis(args: argparse.Namespace) -> int:
         json.dump(report, sys.stdout, indent=2, ensure_ascii=False)
         sys.stdout.write("\n")
     return 0
+
+
+def _cmd_release_check(args: argparse.Namespace) -> int:
+    """The gate before a version goes to the author
+    (`housekeeping.release_gate`)."""
+    from ..housekeeping import release_gate
+    book_root = Path(args.book_root)
+    if not (book_root / "chapters").is_dir():
+        print(f"release-check: no chapters/ under {book_root}", file=sys.stderr)
+        return 2
+    floor = args.floor
+    if floor is None:
+        floor = _project_floor(book_root)
+    rep = release_gate.check(book_root, floor=floor)
+    if args.format == "json":
+        json.dump(rep.to_dict(), sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(release_gate.render_markdown(rep))
+    return 0 if rep.passes else 1
+
+
+def _project_floor(book_root: Path) -> float:
+    """`defaults.dimension_floor` (else `chapter_threshold`, else 7.0) from
+    the series' project.yaml two levels above the book."""
+    try:
+        import yaml
+        data = yaml.safe_load((book_root.parent.parent / "project.yaml").read_text(encoding="utf-8")) or {}
+        defaults = data.get("defaults") or {}
+        value = defaults.get("dimension_floor", defaults.get("chapter_threshold", 7.0))
+        return float(value)
+    except Exception:  # noqa: BLE001
+        return 7.0
 
 
 def _cmd_summary_check(args: argparse.Namespace) -> int:
@@ -2446,6 +2480,19 @@ def main(argv: list[str] | None = None) -> int:
     smc.add_argument("--format", choices=("json", "markdown"), default="json",
                      help="Output format (default: json).")
     smc.set_defaults(func=_cmd_summary_check)
+
+    rc = sub.add_parser("release-check",
+                        help="Is this version ready for the author? Every chapter scored on its "
+                             "current text with nothing under the floor, every whole-book review "
+                             "(said-once, structure, developmental edit, reader panel, review, "
+                             "evaluate --full) read this text, cold-reader items closed and staged "
+                             "fixes carried out. Exit 0 when ready, 1 when not.")
+    rc.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    rc.add_argument("--floor", type=float, default=None,
+                    help="Dimension floor (default: project.yaml defaults.dimension_floor, else 7.0).")
+    rc.add_argument("--format", choices=("json", "markdown"), default="markdown",
+                    help="Output format (default: markdown).")
+    rc.set_defaults(func=_cmd_release_check)
 
     plp = sub.add_parser("prolepsis",
                          help="Candidate narrator flash-forwards per chapter (sentences that reach "

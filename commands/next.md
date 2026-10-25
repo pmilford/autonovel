@@ -1,6 +1,6 @@
 ---
 name: autonovel:next
-description: Show state-aware next actions — pending conflicts, regressions, fresh briefs, panel/review staleness, the book-level structure gate, backup status, plus the canonical pipeline next step.
+description: Show state-aware next actions — pending conflicts, regressions, fresh briefs, panel/review staleness, the book-level structure gate, whether the book is ready for its author (release-check), backup status, plus the canonical pipeline next step.
 argument-hint: "[--book <short-name>]"
 model_tier: light
 allowed-tools:
@@ -15,6 +15,7 @@ reads:
   - books/{book}/edit_logs/reader_panel.json
   - books/{book}/edit_logs/review.md
   - books/{book}/edit_logs/structure_review.json
+  - books/{book}/edit_logs/report_stamps.json
   - books/{book}/typeset/*.pdf
   - books/{book}/preface.md
   - books/{book}/introduction.md
@@ -76,6 +77,12 @@ repeatedly.
        with `/autonovel:revision-pass --chapters structural`, with
        any merge / cut / reorder / split commands the review asked
        for listed for you to run. Silent when the gate passes.
+     - the release gate (`autonovel mechanical release-check
+       books/{book}`, which reads `books/{book}/edit_logs/report_stamps.json`)
+       for any book of three chapters or more: while any of its checks is
+       open, "Not ready for the author: N of M checks open" (HIGH) with
+       `/autonovel:review-cycle --book {book}` and the open checks listed.
+       No version goes to the author before it passes.
      - `books/{book}/typeset/*_latest.pdf` mtime vs
        `books/{book}/chapters/ch_*.md` mtimes (typeset staleness)
      - `project.yaml` for missing `books[].title` / `.author`

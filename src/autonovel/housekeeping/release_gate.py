@@ -1,0 +1,338 @@
+"""Is this version ready for the author to read?
+
+A version went to one author four times with whole-book reviews that had
+never run on it, or ran two versions earlier: the reader panel and the
+dual review never ran on the book at all, the developmental edit was two
+versions old, and every chapter score had been taken before the last
+pass. The footer had printed the next review after every build; nothing
+stopped the build going out. The author: "You are wasting my time asking
+me to read content that has not been reviewed and corrected by our
+tools." (2026-10-25)
+
+`check` lists everything that must hold before a version goes to the
+author, in the order `/autonovel:review-cycle` makes it hold:
+
+  1. summaries        every continuity summary matches its chapter
+  2. chapter scores   every chapter scored on the text as it stands
+  3. floor            no chapter dimension under the floor
+  4. cold readers     no cold-reader item still open
+  5. said-once        the whole-book repetition ledger read this text
+  6. structure        the structure review read this text, and passes
+  7. letter           the developmental edit read this text
+  8. reader panel     the reader panel read this text
+  9. review           the dual review read this text
+ 10. book score       `evaluate --full` read this text
+ 11. fixes acted on   no staged fix in briefs/conversation.md still queued
+
+A whole-book report "read this text" when it was stamped
+(`autonovel _stamp-report`) with the fingerprint of every chapter as it
+now stands, or when the chapters have changed since only by a light fix
+pass (see `BOOK_CHANGE_LIMIT`); `report_stamps.json` under edit_logs/
+holds the stamps. A report without a stamp counts as not read. Pure
+Python; no LLM.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+
+from .. import summaries
+from ..paths import iter_chapter_files
+
+STAMPS_FILE = "report_stamps.json"
+
+# key -> (what it is, file it writes relative to the book root, command)
+REPORTS: dict[str, tuple[str, str, str]] = {
+    "said_once": ("the whole-book repetition ledger", "edit_logs/said_once_ledger.md",
+                  "/autonovel:said-once --book {book} --stage"),
+    "structure_review": ("the structure review", "edit_logs/structure_review.json",
+                         "/autonovel:structure-review --book {book}"),
+    "developmental_edit": ("the developmental edit (editor's letter)", "edit_logs/editor_letter.md",
+                           "/autonovel:developmental-edit --book {book} --stage"),
+    "reader_panel": ("the reader panel", "edit_logs/reader_panel.json",
+                     "/autonovel:reader-panel --book {book}"),
+    "review": ("the dual review", "edit_logs/review.json",
+               "/autonovel:review --book {book}"),
+    "full_eval": ("the whole-book score (evaluate --full)", "eval_logs",
+                  "/autonovel:evaluate --full --book {book}"),
+}
+
+_CHAPTER_RE = re.compile(r"^ch_(\d+)\.md$")
+
+
+@dataclass
+class Check:
+    key: str
+    ok: bool
+    what: str
+    detail: str = ""
+    command: str | None = None
+
+    def to_dict(self) -> dict:
+        return {"key": self.key, "ok": self.ok, "what": self.what,
+                "detail": self.detail, "command": self.command}
+
+
+@dataclass
+class GateReport:
+    book: str
+    checks: list[Check] = field(default_factory=list)
+
+    @property
+    def passes(self) -> bool:
+        return all(c.ok for c in self.checks)
+
+    @property
+    def open(self) -> list[Check]:
+        return [c for c in self.checks if not c.ok]
+
+    def to_dict(self) -> dict:
+        return {"book": self.book, "passes": self.passes,
+                "open": len(self.open), "checks": [c.to_dict() for c in self.checks]}
+
+
+# ------------------------------------------------------------ report stamps
+
+
+def chapter_fingerprints(book_root: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for path in iter_chapter_files(book_root / "chapters"):
+        m = _CHAPTER_RE.match(path.name)
+        if m:
+            out[str(int(m.group(1)))] = summaries.body_hash(path.read_text(encoding="utf-8"))
+    return out
+
+
+def paragraph_hashes(book_root: Path) -> dict[str, list[str]]:
+    """Short hashes of every paragraph of every chapter, so a later check
+    can tell a light fix pass from a rewrite."""
+    import hashlib
+    from ..mechanical.frontmatter import strip_yaml_frontmatter
+    out: dict[str, list[str]] = {}
+    for path in iter_chapter_files(book_root / "chapters"):
+        m = _CHAPTER_RE.match(path.name)
+        if not m:
+            continue
+        body = strip_yaml_frontmatter(path.read_text(encoding="utf-8"))
+        paras = [p.strip() for p in body.split("\n\n") if p.strip()]
+        out[str(int(m.group(1)))] = [hashlib.sha1(p.encode("utf-8")).hexdigest()[:8] for p in paras]
+    return out
+
+
+# A whole-book report stays current through a light fix pass: it read the
+# book, and a few changed sentences don't change what it found. One that
+# re-ran after every pass would never let the review cycle finish. A
+# rewrite (more than this share of the book's paragraphs, or of one
+# chapter's) sends it back to be read again. Chapter scores have no such
+# allowance: they describe one chapter's text exactly.
+BOOK_CHANGE_LIMIT = 0.10
+CHAPTER_CHANGE_LIMIT = 0.25
+
+
+def _stamps_path(book_root: Path) -> Path:
+    return book_root / "edit_logs" / STAMPS_FILE
+
+
+def load_stamps(book_root: Path) -> dict:
+    path = _stamps_path(book_root)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def stamp_report(book_root: Path, key: str) -> dict:
+    """Record that report `key` was written from the chapters as they now
+    stand. Run it right after the report is written."""
+    if key not in REPORTS:
+        raise KeyError(f"unknown report {key!r}; one of {', '.join(REPORTS)}")
+    stamps = load_stamps(book_root)
+    entry = {"when": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+             "chapters": chapter_fingerprints(book_root),
+             "paragraphs": paragraph_hashes(book_root)}
+    stamps[key] = entry
+    path = _stamps_path(book_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(stamps, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return entry
+
+
+def report_state(book_root: Path, key: str) -> tuple[str, list[int]]:
+    """(`current` | `light` | `older` | `unstamped` | `missing`, chapters
+    changed since the report read them). `light`: changed, but within
+    the limits above, so the report still stands."""
+    _what, rel, _cmd = REPORTS[key]
+    target = book_root / rel
+    if key == "full_eval":
+        present = target.is_dir() and any(target.glob("*_full.json"))
+    else:
+        present = target.is_file()
+    if not present:
+        return "missing", []
+    entry = load_stamps(book_root).get(key)
+    if not isinstance(entry, dict) or not isinstance(entry.get("chapters"), dict):
+        return "unstamped", []
+    then = entry["chapters"]
+    now = chapter_fingerprints(book_root)
+    changed = sorted(int(n) for n in set(now) | set(then) if now.get(n) != then.get(n))
+    if not changed:
+        return "current", []
+    if set(now) != set(then) or not isinstance(entry.get("paragraphs"), dict):
+        return "older", changed
+    before = entry["paragraphs"]
+    after = paragraph_hashes(book_root)
+    total = moved = 0
+    for n, paras in after.items():
+        old = before.get(n) or []
+        gone = len(set(old) - set(paras))
+        new = len(set(paras) - set(old))
+        size = max(len(old), len(paras), 1)
+        if max(gone, new) / size > CHAPTER_CHANGE_LIMIT:
+            return "older", changed
+        total += size
+        moved += max(gone, new)
+    if total and moved / total > BOOK_CHANGE_LIMIT:
+        return "older", changed
+    return "light", changed
+
+
+# ------------------------------------------------------------ the gate
+
+
+def _ranges(nums: list[int]) -> str:
+    out: list[str] = []
+    start = prev = None
+    for n in sorted(nums):
+        if start is None:
+            start = prev = n
+        elif n == prev + 1:
+            prev = n
+        else:
+            out.append(f"{start}" if start == prev else f"{start}-{prev}")
+            start = prev = n
+    if start is not None:
+        out.append(f"{start}" if start == prev else f"{start}-{prev}")
+    return ", ".join(out)
+
+
+def check(book_root: Path, *, floor: float = 7.0) -> GateReport:
+    from ..mechanical.chapter_summary import chapter_score_details
+    from ..mechanical import structure_review
+
+    book = book_root.name
+    rep = GateReport(book=book)
+    chapters = [p for p in iter_chapter_files(book_root / "chapters") if _CHAPTER_RE.match(p.name)]
+    numbers = {int(_CHAPTER_RE.match(p.name).group(1)): p for p in chapters}
+
+    stale = [s.chapter for s in summaries.book_states(book_root) if s.needs_refresh]
+    rep.checks.append(Check(
+        "summaries", not stale, "every continuity summary matches its chapter",
+        f"refresh ch {_ranges(stale)}" if stale else "",
+        f"/autonovel:summarize-chapter --stale --book {book}" if stale else None))
+
+    details = chapter_score_details(book_root / "eval_logs")
+    unscored, older = [], []
+    for n, path in numbers.items():
+        d = details.get(n)
+        if d is None:
+            unscored.append(n)
+        elif summaries.score_state(path, d.scored_text) != "current":
+            older.append(n)
+    need = sorted(unscored + older)
+    rep.checks.append(Check(
+        "chapter_scores", not need, "every chapter scored on the text as it stands",
+        f"score ch {_ranges(need)}" if need else "",
+        f"/autonovel:evaluate --chapter {need[0]} --book {book} (and each of ch {_ranges(need)})"
+        if need else None))
+
+    low = sorted((d.chapter, d.low_dim, d.low_score) for d in details.values()
+                 if d.low_score is not None and d.low_score < floor and d.chapter in numbers)
+    rep.checks.append(Check(
+        "floor", not low, f"no chapter dimension under the {floor:.1f} floor",
+        "; ".join(f"ch {c} {dim} {s:.1f}" for c, dim, s in low),
+        f"/autonovel:revision-pass --chapters {','.join(str(c) for c, _, _ in low)} --book {book}"
+        if low else None))
+
+    open_reader = sorted(d.chapter for d in details.values()
+                         if d.reader_open and d.chapter in numbers)
+    rep.checks.append(Check(
+        "cold_readers", not open_reader, "no cold-reader item still open",
+        f"open in ch {_ranges(open_reader)}" if open_reader else "",
+        f"/autonovel:revision-pass --chapters {','.join(map(str, open_reader))} --book {book}"
+        if open_reader else None))
+
+    for key, (what, _rel, cmd) in REPORTS.items():
+        state, changed = report_state(book_root, key)
+        ok = state in ("current", "light")
+        detail = {"missing": "never run on this book",
+                  "unstamped": "doesn't record which text it read",
+                  "older": f"read an older text (ch {_ranges(changed)} rewritten since)",
+                  "light": f"light fixes since in ch {_ranges(changed)}; still stands",
+                  "current": ""}[state]
+        if key == "structure_review" and ok:
+            gate = structure_review.check(book_root / "edit_logs" / "structure_review.json",
+                                          book_root=book_root).gate
+            # Its own staleness test reads file times; the stamp above has
+            # already decided whether this review read the text.
+            reasons = [str(r) for r in gate.get("reasons", []) if not str(r).startswith("stale")]
+            if reasons:
+                ok = False
+                detail = "read this text, but its gate blocks: " + "; ".join(reasons)
+        rep.checks.append(Check(key, ok, f"{what} read this text", detail,
+                                None if ok else cmd.format(book=book)))
+
+    queued = _queued_turns(book_root)
+    rep.checks.append(Check(
+        "fixes_acted_on", not queued, "every staged fix carried out",
+        f"{len(queued)} staged turn(s) still queued, ch {_ranges(sorted(set(queued)))}"
+        if queued else "",
+        f"/autonovel:revision-pass --chapters {','.join(map(str, sorted(set(queued))))} --book {book}"
+        if queued else None))
+    return rep
+
+
+_TURN_RE = re.compile(r"^## .*?turn", re.MULTILINE)
+
+
+def _queued_turns(book_root: Path) -> list[int]:
+    """Chapter numbers of turns in briefs/conversation.md still marked
+    `**Status:** queued`."""
+    path = book_root / "briefs" / "conversation.md"
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8")
+    starts = [m.start() for m in _TURN_RE.finditer(text)] + [len(text)]
+    out: list[int] = []
+    for a, b in zip(starts, starts[1:]):
+        block = text[a:b]
+        if not re.search(r"\*\*Status:\*\*\s*queued", block):
+            continue
+        m = re.search(r"\*\*Target:\*\*\s*chapter\s+(\d+)", block)
+        out.append(int(m.group(1)) if m else 0)
+    return out
+
+
+def render_markdown(rep: GateReport) -> str:
+    lines = [f"# Ready for the author? — {rep.book}", ""]
+    lines.append("**Ready.** Every whole-book review read this text and its fixes are made."
+                 if rep.passes else
+                 f"**Not ready: {len(rep.open)} of {len(rep.checks)} checks open.** "
+                 "Don't hand this version to the author; run "
+                 f"`/autonovel:review-cycle --book {rep.book}`.")
+    lines.append("")
+    for c in rep.checks:
+        mark = "✓" if c.ok else "✗"
+        line = f"- {mark} {c.what}"
+        if c.detail:
+            line += f" — {c.detail}"
+        if c.command and not c.ok:
+            line += f" (`{c.command}`)"
+        lines.append(line)
+    return "\n".join(lines) + "\n"

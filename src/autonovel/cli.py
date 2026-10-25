@@ -351,6 +351,17 @@ def _build_parser() -> argparse.ArgumentParser:
                      help="Chapter whose eval log was just written (repeatable).")
     _se.set_defaults(func=_cmd_stamp_eval)
 
+    _sr = sub.add_parser("_stamp-report", help=argparse.SUPPRESS)
+    _sr.add_argument("--book", required=True)
+    _sr.add_argument("--report", required=True,
+                     help="said_once | structure_review | developmental_edit | reader_panel "
+                          "| review | full_eval")
+    _sr.set_defaults(func=_cmd_stamp_report)
+
+    _cp = sub.add_parser("_command-path", help=argparse.SUPPRESS)
+    _cp.add_argument("name", help="Command name without the autonovel: prefix, e.g. evaluate.")
+    _cp.set_defaults(func=_cmd_command_path)
+
     _sb = sub.add_parser("_stamp-brief", help=argparse.SUPPRESS)
     _sb.add_argument("--book", required=True)
     _sb.add_argument("--chapter", type=int, action="append", required=True,
@@ -1199,6 +1210,40 @@ def _cmd_stamp_eval(args: argparse.Namespace) -> int:
             continue
         print(f"stamped: {log.name} scored chapter {n} as it now stands ({fp})")
     return rc
+
+
+def _cmd_stamp_report(args: argparse.Namespace) -> int:
+    """Hidden subcommand: record that a whole-book report was written from
+    the chapters as they now stand. `autonovel mechanical release-check`
+    counts a report as current only while every chapter still matches."""
+    from .housekeeping import release_gate
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    try:
+        entry = release_gate.stamp_report(series.books / args.book, args.report)
+    except KeyError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    print(f"stamped: {args.report} read chapters {', '.join(sorted(entry['chapters'], key=int))} "
+          f"as they now stand")
+    return 0
+
+
+def _cmd_command_path(args: argparse.Namespace) -> int:
+    """Hidden subcommand: print the path of a command's source file, so a
+    sweep can hand one step's workflow to a subagent to follow without its
+    preamble (`/autonovel:review-cycle`, `/autonovel:revision-pass`)."""
+    from .adapters.installer import _commands_source_dir
+    name = args.name.removeprefix("autonovel:")
+    path = _commands_source_dir() / f"{name}.md"
+    if not path.is_file():
+        print(f"error: no command {name!r}", file=sys.stderr)
+        return 1
+    print(path)
+    return 0
 
 
 def _cmd_stamp_brief(args: argparse.Namespace) -> int:

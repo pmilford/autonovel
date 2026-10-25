@@ -837,7 +837,11 @@ if _TEXTUAL_AVAILABLE:
                 "`/autonovel:review --book <name>` after a substantive "
                 "revision sweep — all three are stale by default once any "
                 "chapter changed, and review will not declare "
-                "stop-revising until the structure gate passes.\n"
+                "stop-revising until the structure gate passes. "
+                "`/autonovel:review-cycle --book <name>` runs every one "
+                "that hasn't read the current text and acts on what they "
+                "find; `autonovel mechanical release-check books/<name>` "
+                "says whether the book is ready for its author.\n"
             )
             self.query_one("#reviews_md", Markdown).update(text)
 

@@ -67,6 +67,9 @@ workflow. Topics:
                  whole book and a ranked letter on the story.
                  said-once: what the book tells more than once,
                  across chapters, and where each point stays.
+                 review-cycle: every whole-book review on the text as
+                 it stands, acted on, until release-check passes —
+                 run it before any version goes to the author.
   reading      — see the book's shape without re-reading it:
                  story-map (one HTML page: synopsis, plot-thread
                  grid + score/tension curve, characters, timeline,
@@ -464,6 +467,15 @@ An editor's read (the judgement no score gives):
         the continuity slips noticed on the way), which draft, brief,
         revise and evaluate then check each chapter against; --stage
         queues each chapter's cuts and slips for revision-pass
+  /autonovel:review-cycle --book <name> [--max-rounds N]
+        before a version goes back to the author: runs every whole-book
+        review that hasn't read the text as it stands (strict chapter
+        scores, said-once, structure-review, developmental-edit, then
+        reader-panel, review, evaluate --full), judges each finding,
+        makes the fixes that hold and re-scores them, and repeats until
+        `autonovel mechanical release-check books/<name>` passes.
+        next lists it first while the check fails; typeset prints
+        "Draft: not yet through the whole-book review" until it passes
   /autonovel:developmental-edit --book <name> --stage
         also queues its in-chapter fixes in briefs/conversation.md
         for the next revision-pass; frames, cuts and merges stay

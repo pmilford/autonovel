@@ -223,6 +223,17 @@ each of these and the workaround is in the codebase:
   reader panel and the dual-persona review once the structure gate passes
   and the letter has nothing open, then typeset. The draft-pass that
   drafts the outline's last chapter runs the first structure review.
+- **No version goes to the author before the review cycle passes.**
+  `/autonovel:review-cycle --book <name>` runs every whole-book review
+  that hasn't read the text as it stands, judges each finding, makes the
+  fixes that hold, scores the changed chapters again, and repeats until
+  `autonovel mechanical release-check books/<name>` passes (every chapter
+  scored strictly on its current text with no dimension under the floor
+  and no cold-reader item open, every whole-book report stamped on this
+  text, no staged fix still queued). Until it passes, `/autonovel:next`
+  lists it first and `/autonovel:typeset` prints a draft notice in the
+  book; never hand that build to the author as a version to read. One
+  author was sent four versions whose reviews had never read them.
 - Run `/autonovel:developmental-edit --book <name>` once a book is
   drafted, and after each big revision. It is the editor's read the
   scores can't give: one reader (you, not a fan-out of subagents)

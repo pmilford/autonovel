@@ -17,6 +17,7 @@ reads:
 writes:
   - books/{book}/edit_logs/review.json
   - books/{book}/edit_logs/review.md
+  - books/{book}/edit_logs/report_stamps.json
 context_mode: book
 ---
 
@@ -125,6 +126,10 @@ Stop revising only when BOTH hold:
 7. Use `file_write` twice:
    - `books/{book}/edit_logs/review.json` — the parsed, structured review
    - `books/{book}/edit_logs/review.md` — the raw human-readable review text
+
+   Then use `bash` to run `autonovel _stamp-report --book {book} --report
+   review`, which records in `books/{book}/edit_logs/report_stamps.json` the
+   text this review read (`autonovel mechanical release-check`).
 
 8. Print the star rating, item counts (total, major, qualified,
    structural), the book-level gate (PASS / BLOCK and its reasons), and

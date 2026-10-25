@@ -29,6 +29,7 @@ writes:
   - books/{book}/edit_logs/editor_letter_*.md
   - books/{book}/edit_logs/editor_read_notes_*.md
   - books/{book}/briefs/conversation.md
+  - books/{book}/edit_logs/report_stamps.json
 context_mode: book
 ---
 
@@ -316,6 +317,11 @@ Re-read these before writing the letter.
      recommendation: `id | recommendation | chapters | kind | status`,
      where kind is `in-chapter`, `cross-chapter` or `author-decision`,
      and status is `proposed`.
+
+   Then use `bash` to run `autonovel _stamp-report --book {book} --report
+   developmental_edit`, which records in
+   `books/{book}/edit_logs/report_stamps.json` the text this letter read
+   (`autonovel mechanical release-check`).
 
 10. **Compare with the instruments, now.** Read
    `books/{book}/edit_logs/structure_review.md`,

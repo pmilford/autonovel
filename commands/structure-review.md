@@ -24,6 +24,7 @@ reads:
 writes:
   - books/{book}/edit_logs/structure_review.json
   - books/{book}/edit_logs/structure_review.md
+  - books/{book}/edit_logs/report_stamps.json
 context_mode: book
 ---
 
@@ -396,6 +397,10 @@ or the series' own `shared/genres/<genre>.md`)), read its `## Subgenres`
     modes`; `## Structural brief candidates` (numbered, each with its
     chapters, per-chapter instructions, command, expected effect);
     `## What the other reviewers said`; `## How to act on this`.
+    Then use `bash` to run `autonovel _stamp-report --book {book} --report
+    structure_review`, which records in
+    `books/{book}/edit_logs/report_stamps.json` the text this review read
+    (`autonovel mechanical release-check`).
 
 16. Print a one-screen summary: the score, the verdict, the gate
     (from the validator's `gate`), the removable chapters, the

@@ -63,6 +63,21 @@ edge across two facing pages.
    `books/{book}/art/pdf/<stem>.pdf` before building so the ornaments
    use vector versions; skipped if `rsvg-convert` isn't installed).
 
+1a. **Is this a version for the author?** Use `bash` to run `autonovel
+    mechanical release-check books/{book} --format json`. When `passes` is
+    false, this build is a draft for the writer and editor, not a version
+    for the author: pass `-s DRAFT_NOTICE='...'` to every `render-novel-tex`
+    call below, in the PDF as `\vspace{12pt}{\small\itshape Draft: not yet
+    through the whole-book review (N checks open).}` and in the ePub
+    templates as `*Draft: not yet through the whole-book review (N checks
+    open).*`, and in the summary (step 6) list every open check with its
+    command and say plainly that the build must not be sent to the author
+    until `/autonovel:review-cycle --book {book}` has made it pass. When it
+    passes, leave `DRAFT_NOTICE` out (it renders empty). One author was
+    sent four versions whose whole-book reviews had never run on them
+    ("You are wasting my time asking me to read content that has not been
+    reviewed and corrected by our tools").
+
 2. Use `file_read` on `project.yaml` to pull the book's display
    metadata. Resolution rules (matches `BookEntry.display_title()` /
    `display_author()` in `src/autonovel/project.py`):

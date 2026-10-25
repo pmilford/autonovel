@@ -88,6 +88,10 @@ def _actions_for_book(series: SeriesLayout, cfg: project_mod.ProjectConfig,
     out.extend(_weakest_item_actions(book_root, book, cfg))
     out.extend(_brief_newer_than_chapter_actions(book_root, book))
     out.extend(_summary_stale_actions(book_root, book))
+    # After the specific HIGH items above (a fresh brief, a stale summary):
+    # fix the thing in hand first, then the gate says what the book still
+    # needs before its author reads it.
+    out.extend(_release_gate_actions(book_root, book, cfg))
     out.extend(_panel_staleness_actions(book_root, book))
     out.extend(_review_staleness_actions(book_root, book))
     out.extend(_genre_actions(series, cfg, book))
@@ -460,6 +464,41 @@ def _brief_newer_than_chapter_actions(book_root: Path, book: str) -> list[NextAc
             f"work the brief captures isn't applied to the prose. "
             f"For non-contiguous chapters, run `/autonovel:revise "
             f"--chapter <N>` per chapter (revision-pass takes a range)."
+        ),
+        book=book,
+    )]
+
+
+def _release_gate_actions(book_root: Path, book: str,
+                          cfg: project_mod.ProjectConfig) -> list[NextAction]:
+    """A drafted book that hasn't passed `release-check` is not ready for
+    its author, whatever its chapter scores say.
+
+    One author was handed four versions to read with whole-book reviews
+    that had never run on them, while every footer listed the next review
+    as a suggestion ("You are wasting my time asking me to read content
+    that has not been reviewed and corrected by our tools", 2026-10-25).
+    HIGH, and first among the book's actions: until it passes, no build is
+    a version for the author, and `/autonovel:review-cycle` makes it pass."""
+    from . import release_gate
+    chapters = iter_chapter_files(book_root / "chapters")
+    if len(chapters) < 3:
+        return []
+    floor = cfg.defaults.get("dimension_floor", cfg.defaults.get("chapter_threshold", 7.0))
+    rep = release_gate.check(book_root, floor=float(floor))
+    if rep.passes:
+        return []
+    listing = "; ".join(f"{c.what} ({c.detail})" if c.detail else c.what for c in rep.open)
+    return [NextAction(
+        priority="HIGH",
+        title=f"Not ready for the author: {len(rep.open)} of {len(rep.checks)} checks open",
+        command=f"/autonovel:review-cycle --book {book}",
+        rationale=(
+            f"Before a version goes to the author, every whole-book review must "
+            f"have read the text as it stands and its fixes must be made. Open: "
+            f"{listing}. `autonovel mechanical release-check books/{book}` lists "
+            f"them; `/autonovel:review-cycle` runs them in order and acts on "
+            f"what they find."
         ),
         book=book,
     )]

@@ -39,7 +39,15 @@ def render_novel_tex(template: str, substitutions: dict[str, str]) -> str:
     out = template
     for key, value in substitutions.items():
         out = out.replace(f"@{key}@", value)
+    # Optional placeholders render empty when the caller doesn't fill
+    # them: `@DRAFT_NOTICE@` is filled by typeset only when the book
+    # hasn't passed `release-check`.
+    for key in OPTIONAL_PLACEHOLDERS:
+        out = out.replace(f"@{key}@", "")
     return out
+
+
+OPTIONAL_PLACEHOLDERS = ("DRAFT_NOTICE",)
 
 
 def output_filename(slug: str, kind: str, *, when: datetime | None = None) -> str:

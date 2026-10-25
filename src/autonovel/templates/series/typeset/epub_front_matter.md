@@ -11,3 +11,5 @@
 \
 
 *Typeset by autonovel.*
+
+@DRAFT_NOTICE@

@@ -20,6 +20,7 @@ reads:
 writes:
   - books/{book}/edit_logs/said_once_ledger.md
   - books/{book}/briefs/conversation.md
+  - books/{book}/edit_logs/report_stamps.json
 context_mode: book
 ---
 
@@ -159,7 +160,10 @@ carries them out. It never changes a chapter.
    Order the points by how often they are told again, most first. Under
    `## By chapter`, list only the chapters with a mention to cut or
    shorten; a chapter with none gets no heading. `## Noticed in passing`
-   says `none` when the read found no slip.
+   says `none` when the read found no slip. Then use `bash` to run
+   `autonovel _stamp-report --book {book} --report said_once`, which
+   records in `books/{book}/edit_logs/report_stamps.json` the text this
+   ledger read (`autonovel mechanical release-check`).
 
 7. **`--stage` only.** For each chapter under `## By chapter` with a cut
    or a clause, use `file_write` to append one turn to

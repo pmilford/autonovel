@@ -206,6 +206,18 @@ file blocked a full revision-pass.
    chapter's entries under `### Chapter {chapter}` that the brief has not
    already listed. This is what `/autonovel:evaluate` scores as
    `repetition`.
+   **Then read each scene once more for the same point told twice inside
+   it**, which neither the scanner (it sees wording) nor the whole-book
+   ledger (it sees chapters) catches, and which is most of what a strict
+   judge still finds after both have run: the narrator explains a point
+   and a character then says it, or the reverse; a messenger recites a
+   scene the reader has just watched; a closing sentence sums up what the
+   scene showed; the same fact given by two people a page apart. Keep the
+   telling that does the most (usually the one in a person's mouth, or the
+   one where it is at stake) and cut the rest. Every clarification you add
+   for a reader who was lost replaces the unclear sentence; it never sits
+   beside it. Then count once more: if any point is still told three or
+   more times in the chapter, cut again before you go on.
    **Account for every cut.** Then use `bash` to run `autonovel mechanical
    diff-chapters --book {book} --from checkpoint:latest --chapters {chapter}
    --format hunks --no-story-map` (the chapter as it stood before this

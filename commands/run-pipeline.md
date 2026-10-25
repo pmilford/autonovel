@@ -43,8 +43,8 @@ Loop structure for each book in `--books`:
      after 6 cycles. Cross-chapter moves the structure review asks
      for (merge / cut / reorder / split) are surfaced to the user,
      never run by the loop.
-  4. export via PR-7 commands if available; otherwise surface the
-     missing command and stop.
+  4. export: `/autonovel:review-cycle` until `autonovel mechanical
+     release-check` passes, then `/autonovel:typeset`.
 
 Multi-book wiring: before drafting a chapter, this command shells out
 to `python -m autonovel.context_loader --book <b> --chapter <N>` so
@@ -120,10 +120,12 @@ should be valid per `autonovel mechanical` — run
       review's cross-chapter commands for the user and keep cycling
       on its structural candidates.
 
-   e. If the requested phase includes `export`: surface the PR-7
-      commands once they ship. For now, print a single line
-      explaining that export commands land in PR 7 and point at the
-      legacy typeset templates under `typeset/`.
+   e. If the requested phase includes `export`: use `bash` to run
+      `autonovel mechanical release-check books/{book}`. When it fails,
+      the next command is `/autonovel:review-cycle --book {book}`, with
+      the open checks listed: no version goes to the author before every
+      whole-book review has read it and its fixes are made. When it
+      passes, the next command is `/autonovel:typeset --book {book}`.
 
 5. After each book's step, read `.autonovel/last-action.json` (if
    present) and print a one-line summary: which book, which phase,

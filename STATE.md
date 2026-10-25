@@ -2884,7 +2884,65 @@ auto-prepare rebuilds the same cover. The command's one-liner had no
 `series_root` and could not have run; it now passes one (and the
 function defaults to the current directory). +2 tests.
 
+### 2026-10-25 — the review cycle: no version to the author before every whole-book review has read it
+
+The author, the same evening: "It is equally important why the existing
+whole book reviews were not run. Improve the tools so they are routinely
+run, with results acted upon. You are wasting my time asking me to read
+content that has not been reviewed and corrected by our tools. Also, why
+is there so much repetition after targeting that already?" On kingmaker2
+the reader panel and the dual review had never run, the developmental
+edit was two versions old, and the said-once ledger and the structure
+review predated the last pass. Why: the order lived in footers and
+`/autonovel:next` as suggestions, `run-pipeline` only suggests, and
+`typeset` built a version for the author whatever state the book was in;
+the session followed the footer's suggestions selectively. Why the
+repetition: the judge scored leniently (a strict instruction found three
+to five times as many repeats in chapters scored 7.5–8.5), the scanner
+sees wording and the ledger sees chapters, so the same point told twice
+inside one scene (narrator then character, a messenger reciting what the
+reader watched, a closing summary) went uncaught, and clarity fixes were
+added beside the unclear sentence instead of replacing it. Fixes:
+- **`autonovel mechanical release-check`** (`housekeeping/release_gate.py`):
+  eleven checks before a version goes to the author (summaries; every
+  chapter scored on its current text; no dimension under the floor; no
+  cold-reader item open; said-once, structure review and its gate,
+  developmental edit, reader panel, dual review and `evaluate --full`
+  each read this text; no staged fix still queued). Exit 1 when any is
+  open.
+- **`autonovel _stamp-report`**: each of those six commands now stamps
+  the chapter fingerprints (and paragraph hashes) it read into
+  `edit_logs/report_stamps.json` after writing its report. A report
+  stands through a light fix pass (no chapter more than a quarter
+  changed, the book no more than a tenth), so a cycle can finish; a
+  rewrite or a chapter added or removed sends it back.
+- **`/autonovel:review-cycle`**: runs the open reviews in order as
+  subagents following each command's own workflow (`autonovel
+  _command-path <name>` prints its file), judges every finding against the
+  chapter and records staged / in part / declined with the reason, makes
+  the fixes chapter by chapter with a strict re-score, puts back what a
+  fix cut that the reader came for, and loops until the gate passes (3
+  rounds). It never typesets or sends.
+- **`/autonovel:next`** lists "Not ready for the author: N of M checks
+  open" as HIGH for any book of three chapters or more, after the
+  specific items in hand (a fresh brief, a stale summary); `run-pipeline`'s
+  export step runs the check and points at the cycle.
+- **`/autonovel:typeset`** runs the check first; while it fails, the PDF's
+  copyright page and the ePub's front matter carry "Draft: not yet through
+  the whole-book review (N checks open)" (`@DRAFT_NOTICE@`, which renders
+  empty otherwise) and the summary lists the open checks.
+- **Strict scoring in evaluate.** The calibration that found the repeats
+  is now in the command: judge where a first-time reader would skim or be
+  told again, apply the anchors literally (a point told three times caps
+  `repetition` at 6), never a comfortable default near 8, and say which
+  payoffs were not counted.
+- **revise reads each scene for the same point told twice inside it**,
+  replaces an unclear sentence instead of adding a clarification beside
+  it, and counts again before it finishes.
++17 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (release-check, report stamps, review-cycle, strict scoring, draft notice) — **2337 passing, 1 skipped** (+17).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (scores record the text they scored; reader column counts open items; redesign keeps the preface; names are the author's; two-page spreads; framed cover) — **2320 passing, 1 skipped** (+13).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (revise accounts for every cut) — **2304 passing, 1 skipped** (+0; assertions added).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (repeats across chapters; said-once) — **2304 passing, 1 skipped** (+10, of which 6 are the generic per-command contract checks picking up the new command).
