@@ -1,7 +1,7 @@
 ---
 name: autonovel:cover-composite
 description: Composite title + author text over the picked cover art (front only).
-argument-hint: "--book <short-name> [--preset auto|dark|light] [--title X] [--author Y] [--subtitle Z]"
+argument-hint: "--book <short-name> [--preset auto|dark|light|frame] [--focus-y 0-1] [--title X] [--author Y] [--subtitle Z]"
 model_tier: light
 allowed-tools:
   - file_read
@@ -11,6 +11,7 @@ reads:
   - books/{book}/art/cover.png
 writes:
   - books/{book}/art/cover_titled.png
+  - books/{book}/art/cover_layout.json
 context_mode: book
 ---
 
@@ -26,9 +27,17 @@ Light tier — pure PIL, no LLM.
 <workflow>
 1. Parse `$ARGUMENTS`. `--book <short-name>` is required. Optional:
    `--title`, `--author`, `--subtitle` (default `"A Novel"`), `--preset
-   auto|dark|light` (default `auto` — the script samples the top and
+   auto|dark|light|frame` (default `auto` — the script samples the top and
    bottom of the art and picks light-text-on-dark-band or
-   dark-text-on-light-band accordingly).
+   dark-text-on-light-band accordingly), `--focus-y <0–1>` (default 0.5).
+   `frame` shows the art whole between two solid dark bands, the title
+   and subtitle above it and the author below, for a period painting
+   whose top or bottom carries detail a band laid over it would hide;
+   `--focus-y` says which part of a tall painting the frame keeps (0 the
+   top, 1 the bottom). A preset you pass is saved in
+   `books/{book}/art/cover_layout.json`, and a later run with none (as
+   typeset's auto-prepare does) uses it, so the cover the author chose
+   is rebuilt, not replaced.
 
 2. Use `file_read` on `project.yaml` to resolve defaults for the three
    text fields if the user did not pass them: the book's display title
@@ -54,8 +63,9 @@ Light tier — pure PIL, no LLM.
 
    The exact single-line form is:
    ```
-   python3 -c "from autonovel.export.cover import composite_cover; composite_cover(book='{book}', title='{title}', author='{author}', subtitle='{subtitle}', preset='{preset}')"
+   python3 -c "from autonovel.export.cover import composite_cover; composite_cover(series_root='.', book='{book}', title='{title}', author='{author}', subtitle='{subtitle}', preset='{preset}', focus_y={focus_y})"
    ```
+   Run it from the series root.
    `autonovel.export.cover` is shipped with the wheel; do not attempt
    to inline the ~150-line PIL script into this command body. (PR 9
    polishes the CLI surface further; the module lives at

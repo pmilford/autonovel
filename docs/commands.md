@@ -132,7 +132,7 @@ checkpoint so `autonovel rollback` undoes the full operation.
 
 | Command | Tier | Description |
 |---|---|---|
-| `/autonovel:cover-composite --book <short-name> [--preset auto\|dark\|light] [--title X] [--author Y]` | light | Composite title + author text over the picked cover art (front only). |
+| `/autonovel:cover-composite --book <short-name> [--preset auto\|dark\|light\|frame] [--focus-y 0-1] [--title X] [--author Y]` | light | Composite title + author text over the picked cover art (front only). `frame` shows a period painting whole between a title band and an author band; the chosen preset is saved in `art/cover_layout.json` so typeset's rebuild keeps it. |
 | `/autonovel:cover-print --book <short-name> --pages <N> [--paper cream\|white] [--trim-w 5.5] [--trim-h 8.5]` | light | Print-ready wraparound cover + thumbnail matrix. |
 | `/autonovel:audiobook-voices --book <short-name> [--list \| --set SPEAKER=voice-id ...]` | light | Configure or list ElevenLabs voice IDs. |
 | `/autonovel:audiobook-script --book <short-name> [--chapters <N,M,...>]` | standard | Parse chapters into speaker-attributed audiobook scripts. |

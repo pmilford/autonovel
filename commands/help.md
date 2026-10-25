@@ -184,6 +184,8 @@ The 10 art commands at a glance:
   /autonovel:art-import         import existing image (skip AI)
   /autonovel:art-vectorize      PNGs → SVGs (potrace)
   /autonovel:cover-composite    overlay title/author on cover art
+                                (--preset frame: a painting shown whole
+                                between title and author bands)
   /autonovel:cover-print        wraparound print + thumbnails
 
 `/autonovel:typeset` auto-prepares vectorize / composite /

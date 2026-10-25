@@ -60,15 +60,23 @@ def _analyze_brightness(img, region: str = "top") -> float:
 
 def composite_cover(
     *,
-    series_root: Path | str,
+    series_root: Path | str = ".",
     book: str,
     title: str,
     author: str,
     subtitle: str = "A Novel",
     preset: str = "auto",
     output: Path | str | None = None,
+    focus_y: float = 0.5,
 ) -> Path:
-    """E-book cover. Writes `books/{book}/art/cover_titled.png`."""
+    """E-book cover. Writes `books/{book}/art/cover_titled.png`.
+
+    `preset` `dark` / `light` / `auto` lay translucent bands over the art.
+    `frame` shows the art whole between two solid bands, the title above
+    and the author below, for a period painting whose top and bottom
+    carry detail a band would hide (kingmaker2's counting-room picture,
+    whose drawers are labelled with the house's cities). `focus_y` (0 top,
+    1 bottom) says which part of a tall painting the frame keeps."""
     from PIL import Image, ImageDraw, ImageFont
 
     series = SeriesLayout(root=Path(series_root))
@@ -78,6 +86,29 @@ def composite_cover(
     if not art_path.exists():
         raise FileNotFoundError(art_path)
     out_path = Path(output) if output else art_dir / "cover_titled.png"
+
+    # The layout the author chose is kept beside the art, so a later run
+    # with no preset (typeset's auto-prepare re-composites whenever
+    # cover.png is newer) rebuilds the same cover instead of reverting.
+    import json
+    layout_file = art_dir / "cover_layout.json"
+    if preset == "auto" and layout_file.is_file():
+        try:
+            saved = json.loads(layout_file.read_text(encoding="utf-8"))
+            preset = str(saved.get("preset", "auto"))
+            focus_y = float(saved.get("focus_y", focus_y))
+        except (ValueError, TypeError):
+            pass
+    elif preset != "auto":
+        layout_file.write_text(json.dumps({"preset": preset, "focus_y": focus_y}) + "\n",
+                               encoding="utf-8")
+
+    if preset == "frame":
+        result = _frame_cover(Image.open(art_path).convert("RGB"), title=title,
+                              author=author, subtitle=subtitle, focus_y=focus_y)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        result.save(str(out_path), "PNG")
+        return out_path
 
     img = Image.open(art_path).convert("RGBA")
     w, h = img.size
@@ -123,6 +154,37 @@ def composite_cover(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     result.save(str(out_path), "PNG")
     return out_path
+
+
+def _frame_cover(art, *, title: str, author: str, subtitle: str, focus_y: float = 0.5):
+    """A 2:3 cover: a dark band with the title and subtitle, the art
+    across the full width, and a dark band with the author."""
+    from PIL import Image, ImageDraw
+
+    w = art.width
+    h = round(w * 1.5)
+    top, bottom = int(h * 0.167), int(h * 0.127)
+    ground, ink, soft = (24, 20, 16), (236, 222, 190), (200, 186, 156)
+    canvas = Image.new("RGB", (w, h), ground)
+    canvas.paste(_fit_cover(art, w, h - top - bottom, focus_y=focus_y), (0, top))
+    draw = ImageDraw.Draw(canvas)
+    title_font = _load_font(_resolve_font("title"), max(int(w * 0.11), 28))
+    sub_font = _load_font(_resolve_font("subtitle", italic=True), max(int(w * 0.044), 12))
+    author_font = _load_font(_resolve_font("author"), max(int(w * 0.04), 12))
+    _spaced(draw, w // 2, int(h * 0.027), title.upper(), title_font, ink, int(w * 0.014))
+    if subtitle:
+        draw.text((w // 2, int(h * 0.12)), subtitle, font=sub_font, fill=soft, anchor="mt")
+    _spaced(draw, w // 2, h - int(bottom * 0.68), author.upper(), author_font, ink, int(w * 0.004))
+    return canvas
+
+
+def _spaced(draw, cx: int, y: int, text: str, font, fill, tracking: int) -> None:
+    """Draw `text` centred on `cx` with `tracking` pixels between letters."""
+    widths = [draw.textlength(ch, font=font) for ch in text]
+    x = cx - (sum(widths) + tracking * (len(text) - 1)) / 2
+    for ch, cw in zip(text, widths):
+        draw.text((x, y), ch, font=font, fill=fill)
+        x += cw + tracking
 
 
 def _load_font(path: str | None, size: int):
@@ -318,8 +380,9 @@ def thumbnail_matrix(
     return written
 
 
-def _fit_cover(img, target_w: int, target_h: int):
-    """Resize + crop to exactly (target_w, target_h) preserving aspect."""
+def _fit_cover(img, target_w: int, target_h: int, *, focus_y: float = 0.5):
+    """Resize + crop to exactly (target_w, target_h) preserving aspect.
+    `focus_y` places a vertical crop (0 keeps the top, 1 the bottom)."""
     from PIL import Image
 
     src_ratio = img.width / img.height
@@ -332,5 +395,5 @@ def _fit_cover(img, target_w: int, target_h: int):
         new_h = int(target_w / src_ratio)
     resized = img.resize((new_w, new_h), Image.LANCZOS)
     x = (new_w - target_w) // 2
-    y = (new_h - target_h) // 2
+    y = round((new_h - target_h) * min(max(focus_y, 0.0), 1.0))
     return resized.crop((x, y, x + target_w, y + target_h))

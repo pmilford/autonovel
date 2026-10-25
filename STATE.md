@@ -2874,9 +2874,18 @@ pages?" a week before. Fixes:
 Not fixed by a tool: the judge's scores still cluster at 7.5–8.3 and
 missed what the author felt reading chapter 1 (FUTURE-TODOS: calibrate
 against the author's reading). +11 tests.
+Then the author chose a cover (Renner's counting-room picture of Jakob
+and Schwarz): `cover-composite --preset frame` shows a painting whole
+between a title band and an author band instead of laying translucent
+bands over it (they would hide the drawers labelled with the house's
+cities), `--focus-y` picks the part of a tall painting kept, and the
+chosen preset is saved in `art/cover_layout.json` so typeset's
+auto-prepare rebuilds the same cover. The command's one-liner had no
+`series_root` and could not have run; it now passes one (and the
+function defaults to the current directory). +2 tests.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (scores record the text they scored; reader column counts open items; redesign keeps the preface; names are the author's; two-page spreads) — **2318 passing, 1 skipped** (+11).
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (scores record the text they scored; reader column counts open items; redesign keeps the preface; names are the author's; two-page spreads; framed cover) — **2320 passing, 1 skipped** (+13).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (revise accounts for every cut) — **2304 passing, 1 skipped** (+0; assertions added).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (repeats across chapters; said-once) — **2304 passing, 1 skipped** (+10, of which 6 are the generic per-command contract checks picking up the new command).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (say each thing once) — **2294 passing, 1 skipped** (+13).
