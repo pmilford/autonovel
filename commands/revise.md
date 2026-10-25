@@ -218,7 +218,13 @@ file blocked a full revision-pass.
    line in which a person speaks their mind, and the chapter's closing
    hand-off to the next chapter (`/autonovel:draft` step 3a). A cutting
    pass that loses these is the commonest way a revision makes a book
-   worse.
+   worse. Then read each place a cut was made as the reader will: a
+   *that*, *it*, *so* or *that was why* that pointed at the cut words must
+   still point at something on the page; a reason the cut words gave (why
+   someone wasn't worried, what a sum paid for) must still be there; a
+   shown reaction (a blush, a hand going still) is not swapped for a named
+   feeling (*ashamed*); and nothing new stands in a cut's place, least of
+   all a fact the book has never told.
    Preserve the chapter's YAML frontmatter (`book`, `chapter`, `pov`,
    `story_time`, `events`) verbatim; update `status` to `revised` and
    recompute `word_count`.

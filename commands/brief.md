@@ -135,7 +135,10 @@ of the file:
      `/autonovel:said-once` writes; it sees points told again in new
      words across chapters, which the scanner cannot) when they exist.
      They feed `## Said already`; a ledger entry's verdict (cut, a
-     clause, keep) stands unless the chapter has changed since.
+     clause, keep) stands unless the chapter has changed since. A slip the
+     ledger's `## Noticed in passing` names for this chapter (two chapters
+     that disagree on a date, an age, who knew what) goes into `## Specific
+     rewrites`, fixed the way the ledger says.
 
 4a. **The genre's payload.** Use `file_read` on the book's genre guide:
 the file `_begin`'s `genre:` line names (`autonovel genre show --book

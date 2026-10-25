@@ -1,6 +1,6 @@
 ---
 name: autonovel:said-once
-description: Read the whole book for what it says more than once — a fact, a rule, a count, an explanation, who someone is or an earlier scene, told again in any words — and write the ledger of where each point is told and what every other mention gets, which draft, brief, revise and evaluate check each chapter against. --stage queues each chapter's cuts for revision-pass.
+description: Read the whole book for what it says more than once — a fact, a rule, a count, an explanation, who someone is or an earlier scene, told again in any words — and write the ledger of where each point is told and what every other mention gets, with the continuity slips noticed on the way, which draft, brief, revise and evaluate check each chapter against. --stage queues each chapter's cuts for revision-pass.
 argument-hint: "--book <short-name> [--stage]"
 model_tier: heavy
 allowed-tools:
@@ -15,6 +15,8 @@ reads:
   - books/{book}/voice.md
   - books/{book}/chapters/ch_*.md
   - books/{book}/edit_logs/said_once_ledger.md
+  - books/{book}/canon.md
+  - shared/canon.md
 writes:
   - books/{book}/edit_logs/said_once_ledger.md
   - books/{book}/briefs/conversation.md
@@ -86,24 +88,36 @@ carries them out. It never changes a chapter.
      a sentence); or **cut** (the reader has it);
    - note every paragraph near a chapter's start that restates the story
      so far, and every count or list recited again when only one line of
-     it changed.
+     it changed;
+   - note in passing any continuity slip: two chapters that disagree on a
+     date, a day, a person's age, who knew what when, how a place looks or
+     what a person can do (a man who can't climb stairs standing in an
+     upstairs room the day before). It is not a repeat, but a reader who
+     reads the whole book in order is the one who sees it.
    Never judge a chapter from its summary.
 
    **Context budget.** When the chapters fit in this conversation (up to
    about 250,000 tokens), read them yourself. Otherwise use `task` to read
    the book act by act, **one act at a time, in order**: give the first
    reader the first act's chapters and this step's instructions, and each
-   next reader the ledger so far and its act. A later act's reader must
-   know what the earlier acts told, so the readers never run in
-   parallel. Each returns its additions to the ledger with quotes; every
-   decision in step 5 stays in this conversation.
+   next reader its act and every earlier reader's list of points **as
+   that reader returned it, whole, not a digest of it**. A later act's
+   reader can only see a point told again if it was handed the first
+   telling; on one book a digest left out a single scene, and its retelling
+   four chapters later went unflagged. The readers never run in parallel.
+   Each returns its additions to the ledger with quotes; every decision in
+   step 5 stays in this conversation.
 
 5. **Where each point is told.** For each point told more than once,
    choose the one telling that stays: the first, unless a later one sits
    where the point matters more (the scene where it is at stake); give
    every other telling its verdict from step 4. A point the book needs
    that is only ever told in a repeat keeps one telling. Nothing the
-   genre's reader came for leaves the book.
+   genre's reader came for leaves the book. Check each continuity slip
+   against `books/{book}/canon.md` and `shared/canon.md` and the chapters
+   themselves before recording it, and say which side is right: a slip the
+   record explains (a man who ran one office and, years later, another) is
+   not one.
 
 6. Use `file_write` on `books/{book}/edit_logs/said_once_ledger.md`, in
    this shape:
@@ -135,11 +149,17 @@ carries them out. It never changes a chapter.
    ## Gestures and phrases
 
    - “<phrase>” (ch A, B, C): vary or cut the repeats.
+
+   ## Noticed in passing
+
+   - ch N L<line> against ch M L<line>: <the slip> — <which is right, and
+     the fix, in a few words>.
    ```
 
    Order the points by how often they are told again, most first. Under
    `## By chapter`, list only the chapters with a mention to cut or
-   shorten; a chapter with none gets no heading.
+   shorten; a chapter with none gets no heading. `## Noticed in passing`
+   says `none` when the read found no slip.
 
 7. **`--stage` only.** For each chapter under `## By chapter` with a cut
    or a clause, use `file_write` to append one turn to
@@ -151,13 +171,18 @@ carries them out. It never changes a chapter.
    ledger keeps, improve it if needed, and never add a second
    explanation; nothing the genre's reader came for is cut; keep every
    scene, its order, every fact, date and sum, and every character beat;
-   change nothing else; run the scanner afterwards), then the chapter's
-   entries from `## By chapter` with their quotes; `**Status:** queued`.
-   Never queue a turn for a chapter with nothing to change.
+   after each cut, read the sentences either side, so that a *that*, *it*
+   or *that was why* still points at something and a reason the cut words
+   gave is still on the page; change nothing else; run the scanner
+   afterwards), then the chapter's entries from `## By chapter` with their
+   quotes and its slips from `## Noticed in passing`;
+   `**Status:** queued`. Never queue a turn for a chapter with nothing to
+   change.
 
 8. Report, in plain sentences: how many points the book tells more than
    once and the five told most; which chapters open on the story so
-   far; the chapters with the most repeats; the ledger's path; and the
+   far; the chapters with the most repeats; each continuity slip, with
+   the chapters it sets against each other; the ledger's path; and the
    next step: with `--stage`, `/autonovel:revision-pass --chapters
    <the staged chapters> --book {book}`; without it, `/autonovel:said-once
    --book {book} --stage` to queue the cuts, or `/autonovel:talk` to
@@ -165,9 +190,10 @@ carries them out. It never changes a chapter.
 </workflow>
 
 <acceptance>
-- `books/{book}/edit_logs/said_once_ledger.md` exists with `## Points`
-  and `## By chapter`; every point names where it is told, and every
-  by-chapter entry carries a line number, a verdict and a quote.
+- `books/{book}/edit_logs/said_once_ledger.md` exists with `## Points`,
+  `## By chapter` and `## Noticed in passing`; every point names where it
+  is told, every by-chapter entry carries a line number, a verdict and a
+  quote, and every slip names both chapters and which is right.
 - Every chapter was read in full, in order (by this conversation or by
   act readers run one after another), never judged from its summary.
 - With `--stage`, one queued turn per chapter that has a cut or a

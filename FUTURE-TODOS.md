@@ -139,7 +139,11 @@ to start.
   fixture measures how often a reader (said-once or the judge) catches a
   point told again in new words; kingmaker2's 37-point list is the only
   measure so far (the scanner alone: 59/69 places in near-identical
-  words, 22/46 in new words). Chapter 1
+  words, 22/46 in new words). said-once's first run on that book (three
+  act readers) found about 160 tellings the sweep had left, and missed one
+  the editor caught (a digest handed to act three; fixed, STATE.md "said-
+  once's first run"), so a seeded fixture with known repeats and known
+  continuity slips would give it a recall number. Chapter 1
   explains that seven princes choose the Emperor four times, states the
   pay-after-the-vote rule five times and recites the vote count four times
   in twelve lines. A sweep of all 19 chapters found the same in nearly

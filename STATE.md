@@ -2801,8 +2801,39 @@ chapter the book has, for `all` / `structural`) expands each chapter path.
 Found on kingmaker2's version 4 sweep, whose chapters are safe in git (tag
 kingmaker2-v3). +1 test.
 
+### 2026-10-25 — said-once's first run: whole lists handed on, slips recorded, cuts read in place
+
+The first real run of `/autonovel:said-once` (kingmaker2, after the version
+4 sweep, three act readers one after another) found about 160 tellings
+still to cut or shorten, eight story-so-far openings and the book's habits
+("in his own hand" about 40 times, "read it twice" about 25). Three
+lessons, now in the commands:
+- **Hand on the lists whole.** The orchestrator gave act three a digest
+  of acts one and two; the digest left out chapter 12's Cortisan scene,
+  and chapter 16's retelling of it (gloss and all) went unflagged until
+  the editor read the fixes. Step 4 now gives each later reader every
+  earlier reader's list as returned.
+- **`## Noticed in passing`.** The readers volunteered eight continuity
+  slips (a man who couldn't climb stairs standing upstairs the day
+  before, an entry dated the wrong night, a boat that wasn't the first).
+  Seven were real; one (a brother who ran Venice, then Nuremberg) the
+  canon explained. The ledger now records them, checked against canon,
+  with which side is right; the brief puts them in `## Specific
+  rewrites` and `--stage` queues them.
+- **Read around every cut.** Applying the ledger by hand-instructed
+  helpers left a dangling *that was why*, a "Jakob wasn't worried" with
+  its reason cut, a blush turned into *ashamed*, and one invented fact
+  (rents the house never held) put where a cut was. revise's "Account for
+  every cut" now reads each cut in place for all four; the staged turns
+  carry the first two.
+Measured and rejected: a book-wide habit list from the scanner (3–5-word
+phrases in many chapters). On kingmaker2 its top 80 were ordinary English
+("in front of", "at the end of"), with the real habits buried in them; the
+whole-book reader found the habits and the per-chapter `phrases` stay as
+they are. +2 tests.
+
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (sweeps checkpoint their chapters) — **2305 passing, 1 skipped** (+1).
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (said-once hands on whole lists, records slips; revise reads around cuts) — **2307 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (revise accounts for every cut) — **2304 passing, 1 skipped** (+0; assertions added).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (repeats across chapters; said-once) — **2304 passing, 1 skipped** (+10, of which 6 are the generic per-command contract checks picking up the new command).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (say each thing once) — **2294 passing, 1 skipped** (+13).

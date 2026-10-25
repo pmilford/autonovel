@@ -176,8 +176,9 @@ each of these and the workaround is in the codebase:
   repeats` lists candidates, and the cold reader reports "Told again".
   Across chapters, where a point comes back in new words, only a reader of
   the whole book sees it: `/autonovel:said-once --book <name>` writes
-  `edit_logs/said_once_ledger.md` (where each point is told), which draft,
-  brief, revise and evaluate read; `--stage` queues the cuts.
+  `edit_logs/said_once_ledger.md` (where each point is told, and the
+  continuity slips it noticed), which draft, brief, revise and evaluate
+  read; `--stage` queues the cuts.
   One book's first chapter explained the same thing four times after
   every check had passed it.
 

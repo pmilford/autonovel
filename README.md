@@ -569,7 +569,8 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   `said-once` reads the whole book for what it tells more than once —
   the same point in any words, across chapters — and writes the ledger
   of where each point is told, which drafting, revising and the chapter
-  evaluation then check against.
+  evaluation then check against, with the continuity slips it saw on the
+  way (two chapters that disagree on a date, an age, who knew what).
   `developmental-edit` is the editor's read: one reader reads the
   whole book in order, cold, keeps notes per chapter, counts what the
   diagnosis rests on, and writes you a ranked letter on the story —

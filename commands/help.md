@@ -458,9 +458,10 @@ An editor's read (the judgement no score gives):
         (a fact, a rule, a count, an explanation, who someone is, an
         earlier scene, the story so far at a chapter's start), in any
         words; writes edit_logs/said_once_ledger.md (where each point is
-        told, and cut / a clause / keep for every other telling), which
-        draft, brief, revise and evaluate then check each chapter
-        against; --stage queues each chapter's cuts for revision-pass
+        told, and cut / a clause / keep for every other telling, plus
+        the continuity slips noticed on the way), which draft, brief,
+        revise and evaluate then check each chapter against; --stage
+        queues each chapter's cuts and slips for revision-pass
   /autonovel:developmental-edit --book <name> --stage
         also queues its in-chapter fixes in briefs/conversation.md
         for the next revision-pass; frames, cuts and merges stay

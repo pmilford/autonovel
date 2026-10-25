@@ -105,6 +105,28 @@ def test_said_once_writes_the_ledger_from_a_read_in_order() -> None:
     assert "`--stage`" in cmd and "**Status:** queued" in cmd
 
 
+def test_said_once_hands_on_whole_lists_and_records_continuity_slips() -> None:
+    # A digest of the earlier acts' points lost a scene on one book, and its
+    # retelling four chapters later went unflagged; the readers also saw
+    # continuity slips the ledger had nowhere to put.
+    flat = _flat(_read("commands/said-once.md"))
+    assert "as that reader returned it, whole, not a digest of it" in flat
+    assert "## Noticed in passing" in flat
+    assert "against `books/{book}/canon.md` and `shared/canon.md`" in flat
+    assert "a *that*, *it* or *that was why* still points at something" in flat
+    brief = _flat(_read("commands/brief.md"))
+    assert "`## Noticed in passing` names for this chapter" in brief
+    assert "goes into `## Specific rewrites`" in brief
+
+
+def test_revise_reads_around_every_cut() -> None:
+    revise = _flat(_read("commands/revise.md"))
+    assert "read each place a cut was made as the reader will" in revise
+    assert "a reason the cut words gave" in revise
+    assert "is not swapped for a named feeling" in revise
+    assert "least of all a fact the book has never told" in revise
+
+
 def test_every_chapter_reader_checks_against_the_ledger() -> None:
     for rel in ("commands/draft.md", "commands/brief.md", "commands/revise.md",
                 "commands/evaluate.md", "commands/developmental-edit.md"):
