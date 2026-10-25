@@ -469,10 +469,10 @@ An editor's read (the judgement no score gives):
         queues each chapter's cuts and slips for revision-pass
   /autonovel:review-cycle --book <name> [--max-rounds N]
         before a version goes back to the author: runs every whole-book
-        review that hasn't read the text as it stands (strict chapter
-        scores, said-once, structure-review, developmental-edit, then
-        reader-panel, review, evaluate --full), judges each finding,
-        makes the fixes that hold and re-scores them, and repeats until
+        review that hasn't read the text as it stands (said-once and
+        structure-review, then reader-panel, review and evaluate --full,
+        then developmental-edit), judges each finding, makes the fixes
+        that hold, scores every chapter strictly, and repeats until
         `autonovel mechanical release-check books/<name>` passes.
         next lists it first while the check fails; typeset prints
         "Draft: not yet through the whole-book review" until it passes

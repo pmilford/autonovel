@@ -1,6 +1,6 @@
 ---
 name: autonovel:review-cycle
-description: Make a drafted book ready for its author — run every whole-book review that hasn't read the text as it stands (chapter scores, said-once, structure review, developmental edit, reader panel, dual review, evaluate --full), judge their findings, act on the ones that hold, re-score what changed, and repeat until `release-check` passes. No version goes to the author before it does.
+description: Make a drafted book ready for its author — run every whole-book review that hasn't read the text as it stands (said-once, structure review, reader panel, dual review, evaluate --full, developmental edit; then every chapter scored strictly), judge their findings, act on the ones that hold, re-score what changed, and repeat until `release-check` passes. No version goes to the author before it does.
 argument-hint: "--book <short-name> [--max-rounds N]"
 model_tier: heavy
 allowed-tools:
@@ -47,16 +47,16 @@ not been reviewed and corrected by our tools." (2026-10-25)
 This command is the cycle a publisher runs before a manuscript goes back
 to its author, and it acts on what it finds:
 
-1. every chapter scored, strictly, on the text as it stands;
-2. the whole-book reviews that haven't read this text, in the order each
-   needs the last: said-once (repetition across and inside chapters),
-   the structure review, the developmental edit (one reader, the editor's
-   letter), then, once the structure gate passes, the reader panel, the
-   dual review and the whole-book score;
-3. the editor (this conversation) reads every report, judges each
+1. the whole-book reviews that haven't read this text, in the order each
+   needs the last: said-once (repetition across and inside chapters) and
+   the structure review; once the structure gate passes, the reader
+   panel, the dual review and the whole-book scorecard (`evaluate
+   --full`); then the developmental edit (one reader, the editor's
+   letter), which says where it disagrees with all of them;
+2. the editor (this conversation) reads every report, judges each
    finding, and stages the ones that hold as fixes;
-4. the fixes are made chapter by chapter and every changed chapter is
-   scored again;
+3. the fixes are made chapter by chapter;
+4. every chapter scored, strictly, on the text as it then stands;
 5. `autonovel mechanical release-check` decides whether to go round
    again (at most `--max-rounds`, default 3).
 
@@ -89,22 +89,20 @@ says what is still open and why.
    `<autonovel-preamble>` and `<autonovel-postamble>` (this command holds
    the lock), to run the stamp command the workflow names, and to change
    no file the workflow doesn't write. Give it the genre line `_begin`
-   printed.
+   printed. The whole-book reviews come first and the chapter scores
+   last (step 5): a score describes one text exactly, so a chapter
+   scored before this round's fixes would have to be scored again.
 
-   a. **Chapter scores.** For every chapter `release-check` lists under
-      `chapter_scores`, one subagent per chapter, up to four at a time:
-      `evaluate --chapter N --book {book}`. Each returns its overall
-      score, every dimension, the weakest, `top_3_revisions`, the
-      cold reader's open items and its repeats.
-   b. **said-once**, when its check is open: `said-once --book {book}
-      --stage`. It reads the chapters itself, act by act.
-   c. **structure-review**, when open: `structure-review --book {book}`.
-   d. **developmental-edit**, when open: `developmental-edit --book
-      {book} --stage`. One reader, every chapter in order; it reads the
-      structure review, and the panel and review when they exist.
-   e. Only when the structure gate passes (`release-check`'s
+   a. **said-once** and **structure-review**, each when its check is
+      open, side by side (neither reads the other): `said-once --book
+      {book} --stage` (it reads the chapters itself, act by act) and
+      `structure-review --book {book}`.
+   b. Only when the structure gate passes (`release-check`'s
       `structure_review` check is ok): **reader-panel**, **review** and
-      **evaluate --full**, each when open, one after another.
+      **evaluate --full**, each when open, side by side.
+   c. **developmental-edit**, when open: `developmental-edit --book
+      {book} --stage`, last, so its letter can say where it disagrees
+      with every instrument above. One reader, every chapter in order.
 
 4. **Judge the findings before acting on them.** Read every report the
    round produced, with `file_read`: each chapter's eval log under
@@ -134,13 +132,19 @@ says what is still open and why.
    reorder, split) or an author's decision is not staged: list it for the
    author in the round notes and in the final report.
 
-5. **Make the fixes.** For every chapter with a queued turn, a dimension
+5. **Make the fixes, then score.** For every chapter with a queued turn, a dimension
    under the floor, or an open cold-reader item: one subagent per
    chapter, in chapter order, following `autonovel _command-path
    revision-pass` step 3's per-chapter sequence for that chapter (brief
    from the queued turns and the eval log, then revise, then evaluate,
    then `_stamp-summary` and `_stamp-eval`), skipping its anachronism
-   check unless the chapter's dateline or period content changed. Read
+   check unless the chapter's dateline or period content changed. Then,
+   for every chapter `release-check` still lists under `chapter_scores`
+   (changed by no fix but scored on an older text), one subagent per
+   chapter, up to four at a time: `evaluate --chapter N --book {book}`.
+   Each returns its overall score, every dimension, the weakest,
+   `top_3_revisions`, the cold reader's open items and its repeats;
+   judge them as step 4 does before the next round. Read
    every change it made (`autonovel mechanical diff-chapters --book
    {book} --from checkpoint:latest --chapters N --format hunks`) and put
    back anything it cut that a reader came for, as revise's "Account
