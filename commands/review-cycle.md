@@ -92,6 +92,12 @@ says what is still open and why.
    printed. The whole-book reviews come first and the chapter scores
    last (step 5): a score describes one text exactly, so a chapter
    scored before this round's fixes would have to be scored again.
+   Start `books/{book}/edit_logs/review_cycle_round<N>.md` now with the
+   release check's open items and every correction the last chapter
+   scores asked for that is not yet made. Change no chapter while a
+   whole-book review is reading the book (its line numbers and quotes
+   would stop matching the text); note any fix you find meanwhile in the
+   round notes and make it in step 5.
 
    a. **said-once** and **structure-review**, each when its check is
       open, side by side (neither reads the other): `said-once --book
@@ -118,11 +124,12 @@ says what is still open and why.
    `books/{book}/chapters/ch_*.summary.md` for context) before you
    believe it. For each
    finding decide: holds (stage it), holds in part (stage the part), or
-   doesn't (note why: a payoff counted as a repeat, a period detail a
+   doesn't (note why: a payoff counted as a repeat, the genre's payload a
    reviewer would cut, a name the author decided, a fix that would damage
-   what works). Nothing the genre's reader came for is cut; history is
-   moved, never removed; a place or person keeps the name `design.md`
-   records. Write the judgements to
+   what works). Nothing the genre's reader came for is cut: what the
+   genre guide's `## Cutting` protects (in historical fiction, the
+   period) is moved or given to a person, never removed; a place or
+   person keeps the name `design.md` records. Write the judgements to
    `books/{book}/edit_logs/review_cycle_round<N>.md`: per report, what was
    staged and what wasn't, and why. Stage every held finding as a turn in
    `books/{book}/briefs/conversation.md` in the shape `/autonovel:talk`
