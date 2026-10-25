@@ -70,6 +70,12 @@ def test_draft_and_revise_say_once_and_replace_not_add() -> None:
     revise = _flat(_read("commands/revise.md"))
     assert "**Replace, don't add.**" in revise
     assert "## Said already" in revise
+    # A cutting pass accounts for every removed passage (FUTURE-TODOS
+    # "Cuts nobody asked for" (a)).
+    assert "**Account for every cut.**" in revise
+    assert ("autonovel mechanical diff-chapters --book {book} --from checkpoint:latest "
+            "--chapters {chapter} --format hunks --no-story-map") in revise
+    assert "closing hand-off" in revise
     assert "autonovel mechanical repeats books/{book} --chapter {chapter}" in revise
 
 

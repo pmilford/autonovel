@@ -3299,7 +3299,14 @@ prose ≈ 8 / 10, with investigation-heavy plots).
   the turns folded in; any untraced deletion is restored or named in the
   hand-back. (b) In the diff page, a "Changes nobody asked for" list at the
   top, built from the `why` notes that say "not traced", so the author and
-  the editor see them first.
+  the editor see them first. **(a) shipped 2026-10-25** as a revise step
+  ("Account for every cut": diff against `checkpoint:latest`, name the
+  brief item or the place the book still tells it for every removed
+  passage, put back the rest, above all a period detail told only there, a
+  person speaking their mind and the chapter's closing hand-off), after the
+  version 4 tightening pass repeated the fault: its revisers cut four
+  period details in ch 6 and ch 7's closing hand-off to ch 9, all found by
+  the editor's read of the hunks. (b) is still open.
 - **A stale last-read bookmark (2026-10-24).** `--from last-read` resolved
   to a bookmark recorded before the book's chapters existed under their
   current paths, so every chapter showed as "added". When the bookmark's

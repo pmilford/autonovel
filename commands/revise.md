@@ -206,6 +206,19 @@ file blocked a full revision-pass.
    chapter's entries under `### Chapter {chapter}` that the brief has not
    already listed. This is what `/autonovel:evaluate` scores as
    `repetition`.
+   **Account for every cut.** Then use `bash` to run `autonovel mechanical
+   diff-chapters --book {book} --from checkpoint:latest --chapters {chapter}
+   --format hunks --no-story-map` (the chapter as it stood before this
+   command against your rewrite) and read every removed passage. Each one
+   must answer a brief item (name it) or repeat something the book still
+   tells elsewhere (name where). Put back any that does neither: a cut no
+   brief asked for. Above all put back, whatever the brief seems to say,
+   a period detail told only here (a law, a penalty, a price, a wage, a
+   season, a custom, a description of a place or thing of the time), a
+   line in which a person speaks their mind, and the chapter's closing
+   hand-off to the next chapter (`/autonovel:draft` step 3a). A cutting
+   pass that loses these is the commonest way a revision makes a book
+   worse.
    Preserve the chapter's YAML frontmatter (`book`, `chapter`, `pov`,
    `story_time`, `events`) verbatim; update `status` to `revised` and
    recompute `word_count`.

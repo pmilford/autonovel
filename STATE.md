@@ -2775,7 +2775,21 @@ phrases).
 
 +4 tests.
 
+### 2026-10-25 — revise accounts for every cut
+
+The version 4 tightening pass repeated version 3's fault: its revisers,
+told to cut repeats, also cut four period details told only once (ch 6)
+and chapter 7's closing hand-off to chapter 9, found only by the editor
+reading every hunk. `revise` gains "Account for every cut": after the
+rewrite it runs `diff-chapters --from checkpoint:latest --format hunks`
+on its chapter, names for every removed passage the brief item it answers
+or where the book still tells it, and puts back the rest, above all a
+period detail told only there, a person speaking their mind and the
+closing hand-off. FUTURE-TODOS "Cuts nobody asked for" (a). One contract
+assertion added.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (revise accounts for every cut) — **2304 passing, 1 skipped** (+0; assertions added).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (repeats across chapters; said-once) — **2304 passing, 1 skipped** (+10, of which 6 are the generic per-command contract checks picking up the new command).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (say each thing once) — **2294 passing, 1 skipped** (+13).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-24 (table of contents fits Roman numerals) — **2281 passing, 1 skipped** (+0; one assertion added).
