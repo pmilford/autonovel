@@ -173,7 +173,11 @@ carries them out. It never changes a chapter.
    scene, its order, every fact, date and sum, and every character beat;
    after each cut, read the sentences either side, so that a *that*, *it*
    or *that was why* still points at something and a reason the cut words
-   gave is still on the page; change nothing else; run the scanner
+   gave is still on the page; never rename, unname or drop a place or a
+   person to avoid a repeat, because which names the book uses is the
+   author's decision, recorded in `design.md`, and where the design and
+   the chapters disagree the author settles it, not this pass; change
+   nothing else; run the scanner
    afterwards), then the chapter's entries from `## By chapter` with their
    quotes and its slips from `## Noticed in passing`;
    `**Status:** queued`. Never queue a turn for a chapter with nothing to

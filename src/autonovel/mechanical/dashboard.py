@@ -54,6 +54,7 @@ from .chapter_summary import (
 from .frontmatter import strip_yaml_frontmatter
 from .motifs import build_report as build_motif_report
 from ..paths import iter_chapter_files
+from ..summaries import score_state
 
 
 _SCENE_BREAK_RE = re.compile(r"^(\*\s*\*\s*\*|---|\*\s*\*\s*\*)\s*$", re.MULTILINE)
@@ -74,6 +75,7 @@ class ChapterMetrics:
     motif_density: int | None = None       # sum of all motif hits
     pov: str | None = None
     detail: ScoreDetail | None = None      # every dimension, the lowest, the reader
+    scored: str | None = None              # current | older | unstamped (summaries.score_state)
 
     @property
     def low_dim(self) -> str | None:
@@ -85,14 +87,22 @@ class ChapterMetrics:
 
     @property
     def reader_status(self) -> str:
-        """`✓` (serious items fixed and confirmed), `2 left` (the second
-        reader still found items), `6 unchecked` (the first reader's items
-        were never re-read), `—` (no reader recorded)."""
+        """`✓` (no serious item open), `1 open` (the evaluator checked the
+        last reader's items against the chapter and found one still there),
+        `2 left` (the second reader found items and no evaluator has checked
+        them since), `6 unchecked` (the first reader's items were never
+        re-read or checked), `—` (no reader recorded).
+
+        It counts what is still open, not the length of the last report:
+        a revised chapter can keep one of a report's twenty-seven items,
+        and this column said "27 left" for it (kingmaker2 ch 3, 2026-10-25)."""
         d = self.detail
         if d is None or (d.reader_first is None and d.reader_second is None):
             return "—"
         if d.reader_all_fixed:
             return "✓"
+        if d.reader_checked:
+            return f"{d.reader_open} open" if d.reader_open else "✓"
         if d.reader_second is not None:
             return f"{d.reader_second} left" if d.reader_second else "✓"
         return f"{d.reader_first} unchecked" if d.reader_first else "✓"
@@ -162,6 +172,7 @@ class DashboardReport:
                     "low_dim": r.low_dim,
                     "low_score": r.low_score,
                     "reader": r.reader_status,
+                    "scored": r.scored,
                     "dimensions": dict(r.detail.dimensions) if r.detail else {},
                 }
                 for r in self.rows
@@ -272,6 +283,8 @@ def build_dashboard(book_root: Path, *, threshold: float = 7.0,
         prose = strip_yaml_frontmatter(ch_path.read_text(encoding="utf-8"))
 
         m_row = ChapterMetrics(chapter=n, detail=details.get(n))
+        if m_row.detail is not None:
+            m_row.scored = score_state(ch_path, m_row.detail.scored_text)
         sm_row = summary_rows.get(n)
         if sm_row is not None:
             m_row.word_count = sm_row.word_count
@@ -537,8 +550,11 @@ def render_markdown(report: DashboardReport, *, threshold: float = 7.0) -> str:
     has_low = any(r.low_dim is not None for r in report.rows)
     has_reader = any(r.reader_status != "—" for r in report.rows)
     floor = report.aggregate.floor if report.aggregate else None
+    has_scored = any(r.scored is not None for r in report.rows)
     if has_score:
         cols.append(("score", "Score"))
+    if has_scored:
+        cols.append(("scored", "Scored on"))
     if has_low:
         cols.append(("low", "Lowest"))
     if has_reader:
@@ -566,18 +582,30 @@ def render_markdown(report: DashboardReport, *, threshold: float = 7.0) -> str:
             cells.append(_fmt_cell(r, key, threshold=threshold, floor=floor))
         parts.append("| " + " | ".join(cells) + " |")
 
-    if has_low or has_reader:
+    if has_low or has_reader or has_scored:
         parts.append("")
         legend = []
+        if has_scored:
+            legend.append("Scored on = the text the judge read: this text, an older text "
+                          "(the chapter changed after it was scored, so the score describes "
+                          "a chapter that is no longer on the page), or not recorded")
         if has_low and floor is not None:
             legend.append(f"Lowest is the chapter's weakest dimension; ⚠ = under the "
                           f"{floor:.1f} floor, which sends a chapter to revise even when "
                           f"its mean passes")
         if has_reader:
-            legend.append("Reader = the cold first reader's serious items: ✓ fixed and "
-                          "re-read, N left = the second reader still found N, N unchecked "
-                          "= the first reader's N were fixed but never re-read")
+            legend.append("Reader = the cold first reader's serious items: ✓ none open, "
+                          "N open = still in the chapter when it was last scored, N left = "
+                          "the second reader still found N, N unchecked = the first "
+                          "reader's N were fixed but never re-read")
         parts.append("_" + ". ".join(legend) + "._")
+    not_current = [r.chapter for r in report.rows if r.scored in ("older", "unstamped")]
+    if has_scored and not_current:
+        parts.append("")
+        parts.append(
+            f"**Not scores of the text as it stands: ch {_ranges(not_current)}.** Until "
+            f"they are scored again (`/autonovel:evaluate --chapter N`), their rows may "
+            f"describe a text that is no longer on the page.")
 
     # Sparklines.
     if has_score:
@@ -659,6 +687,23 @@ def render_markdown(report: DashboardReport, *, threshold: float = 7.0) -> str:
     return "\n".join(parts) + "\n"
 
 
+def _ranges(chapters: list[int]) -> str:
+    """`2-5, 7, 9-11` from a sorted list of chapter numbers."""
+    out: list[str] = []
+    start = prev = None
+    for c in sorted(chapters):
+        if start is None:
+            start = prev = c
+        elif c == prev + 1:
+            prev = c
+        else:
+            out.append(f"{start}" if start == prev else f"{start}-{prev}")
+            start = prev = c
+    if start is not None:
+        out.append(f"{start}" if start == prev else f"{start}-{prev}")
+    return ", ".join(out)
+
+
 def _clip(text: str, limit: int) -> str:
     text = " ".join(str(text).split())
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
@@ -672,6 +717,9 @@ def _fmt_cell(r: ChapterMetrics, key: str, *, threshold: float,
         return format_low(r.low_dim, r.low_score, floor=floor)
     if key == "reader":
         return r.reader_status
+    if key == "scored":
+        return {"current": "this text", "older": "older text ⚠",
+                "unstamped": "not recorded"}.get(r.scored or "", "—")
     if key == "words":
         return str(r.word_count) if r.word_count is not None else "—"
     if key == "score":

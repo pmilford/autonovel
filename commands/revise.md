@@ -224,7 +224,11 @@ file blocked a full revision-pass.
    someone wasn't worried, what a sum paid for) must still be there; a
    shown reaction (a blush, a hand going still) is not swapped for a named
    feeling (*ashamed*); and nothing new stands in a cut's place, least of
-   all a fact the book has never told.
+   all a fact the book has never told. A place or a person keeps the name
+   the chapter gave it unless the brief names that change and cites the
+   author's decision in `design.md`: names are the author's to change,
+   and one book lost a town the author had decided to keep because a
+   pass followed an older line of its plan.
    Preserve the chapter's YAML frontmatter (`book`, `chapter`, `pov`,
    `story_time`, `events`) verbatim; update `status` to `revised` and
    recompute `word_count`.

@@ -125,7 +125,15 @@ wins over the seed and over any earlier direction.
       with `books/{from_book}/typeset/plates.yaml` to
       `books/{book}/typeset/`. The plates' `chapter:` numbers belong
       to the old book; leave them, and say in the report that the
-      outline step reassigns them.
+      outline step reassigns them. Copy `books/{from_book}/preface.md`
+      too, unchanged, if the new book has none: a preface is the author's
+      own words about the book, not the old book's shape (one redesign
+      left it behind and the author found the front matter gone, "removed
+      for no reason"). The old `introduction.md`, `glossary.md` and
+      `appendix.md` describe the old book's people and terms; don't copy
+      them, and say in the report that `/autonovel:introduction`,
+      `/autonovel:glossary` and `/autonovel:appendix` write the new
+      book's once it is drafted.
    c. Read the drafted book's record of what failed and what worked:
       every `books/{from_book}/edit_logs/editor_letter*.md` (newest
       first), `books/{from_book}/edit_logs/structure_review.md`,

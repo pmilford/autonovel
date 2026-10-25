@@ -52,7 +52,8 @@ Each chapter's frontmatter `dateline:` ("Venice, autumn 1473") is
 printed in small italics under its title in the PDF and the ePub — set
 it in every chapter of a book that moves between times or places.
 Plates marked `layout: landscape` in `plates.yaml` get a sideways
-full page in the PDF.
+full page in the PDF; `layout: spread` sets a very wide picture edge to
+edge across two facing pages.
 </purpose>
 
 <workflow>

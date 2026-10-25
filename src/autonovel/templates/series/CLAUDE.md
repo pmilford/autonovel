@@ -294,7 +294,13 @@ each of these and the workaround is in the codebase:
   every dimension for every chapter. When you report scores to the
   author, lead with the worst item, not the mean: a chapter's mean
   hides the one dimension that fails, and a dimension under
-  `defaults.dimension_floor` sends the chapter to revise.
+  `defaults.dimension_floor` sends the chapter to revise. Its
+  **Scored on** column says whether each score was taken on the
+  chapter as it now stands; a score of an older text (the chapter
+  changed after it was scored) is not the book's score, so score the
+  chapter again (`/autonovel:evaluate --chapter N`) before reporting it
+  or calling the book finished. Every evaluate records the text it
+  scored (`autonovel _stamp-eval`).
 - Run `/autonovel:story-map --book <name>` to *see* how the plot
   develops: it writes one HTML page
   (`books/<name>/edit_logs/story_map.html`) with the synopsis in

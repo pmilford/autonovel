@@ -256,7 +256,9 @@ the whole sweep on a single missing input.
       guide's extra dimensions (historical fiction: `history`), write
       `books/{book}/eval_logs/ch{N:02d}_eval.json` (with
       `weakest_dimension`, `weakest_score` and the `first_reader`
-      block, evaluate step 6). Read the new `overall_score` from the
+      block, evaluate step 6), then use `bash` to run `autonovel
+      _stamp-eval --book {book} --chapter {N}` (evaluate step 11: the
+      log records the text it scored). Read the new `overall_score` from the
       file you just wrote and remember it as `new_score`, and the
       weakest dimension and score as `new_low`. The eval file is what the next sweep
       iteration's brief will pull from.

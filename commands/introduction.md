@@ -148,6 +148,14 @@ command refuses to clobber author content).
    preface is the one piece of front matter that has to come from
    the writer.
 
+   **A re-designed book keeps the author's preface.** Before writing
+   the stub, use `file_read` on `books/{book}/design.md`: when it names
+   `redesign_of: <old>` and `books/<old>/preface.md` exists with the
+   author's text, write that text to `books/{book}/preface.md`
+   unchanged (every word, including any slips; only the author edits
+   it) instead of the stub, and say so in the report. One redesign left
+   the preface behind, and the author found it gone two versions later.
+
 4. **Introduction generation** (when `--from` is `auto` or `both`).
    Use `file_read` on `project.yaml` (genre, period), `seed.txt`
    (the writer's pitch), `outline.md` (chapter beats reveal what's
@@ -178,6 +186,16 @@ command refuses to clobber author content).
      - any plot reveal beyond what a back-cover blurb would carry
      - any AI-tells from `ANTI-SLOP.md` (the introduction is the
        book's first impression in print — slop here is loud)
+     - a remark put in the mouth of an unnamed authority ("a
+       historian once observed…", "as scholars note…"). An
+       introduction to a book that keeps to the record must keep to
+       it too: quote a named source from the research notes, or say
+       the thing in the book's own voice. One introduction opened on
+       a historian's observation that no historian made.
+     - people, places or events the book doesn't contain. When the
+       book was re-designed from another (`redesign_of:` in
+       `design.md`), check every name and scene against this book's
+       chapters and `appendix.md`'s people list, not the old book's
 
    Write to `books/{book}/introduction.md` with a `# Introduction`
    heading. Body is plain markdown paragraphs; keep it ≤1200

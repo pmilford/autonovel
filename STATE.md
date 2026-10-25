@@ -2832,8 +2832,51 @@ phrases in many chapters). On kingmaker2 its top 80 were ordinary English
 whole-book reader found the habits and the per-chapter `phrases` stay as
 they are. +2 tests.
 
+### 2026-10-25 — scores say which text they scored; the author's decisions survive a redesign and a pass
+
+The author, after version 4 of kingmaker2 was reported done: "Are you
+claiming a draft is done without applying known corrections? Without
+scoring the current content to see how good?" Every chapter but the
+first had been scored before the whole-book pass cut about 160 repeats,
+and the first before its last ten fixes; the dashboard showed those
+scores as the book's. In the same message the author found the front
+matter gone, Strasbourg unnamed against a decision they had accepted,
+and the Venice view still too small after asking for "landscape 2
+pages?" a week before. Fixes:
+- **`autonovel _stamp-eval`.** An eval log records the fingerprint of the
+  chapter text it scored (`scored_text`), as summaries do. evaluate step
+  11, revision-pass (d) and draft-pass (3) run it. The dashboard's new
+  **Scored on** column says this text / older text ⚠ / not recorded and
+  names the chapters whose scores aren't of the text as it stands;
+  `/autonovel:next` lists them as HIGH ("Scores of an older text"), and a
+  floor warning drawn from such a score says so.
+- **Reader column counts what is open.** It said "27 left" (the second
+  reader's report) for a chapter whose evaluator found one item still
+  there; it now shows the evaluator's `open_items` ("1 open").
+- **A redesign keeps the author's preface.** `/autonovel:design
+  --from-book` copied art and plates but not `preface.md`, the author's
+  own words; it now does, and says the introduction, glossary and
+  appendix are rewritten for the new book. `/autonovel:introduction`
+  carries a re-designed book's preface unchanged, and `/autonovel:next`
+  flags one left behind (MEDIUM). The introduction may not put a remark
+  in an unnamed authority's mouth (the old one opened on "A historian
+  once observed…", a remark nobody made) or name people the book lacks.
+- **Names are the author's.** said-once's standing rules and revise's
+  cut accounting now forbid renaming, unnaming or dropping a place or a
+  person; where design.md's plan and the chapters disagree, the author
+  settles it. (The author had accepted keeping Wels, Bruges and
+  Strasbourg in version 3, but design.md still listed them as dropped,
+  and the version 4 pass followed the file.)
+- **`layout: spread`.** A panorama twice as wide as high runs edge to edge
+  across two facing pages, set once at twice the paper width and trimmed
+  by each page's edge, the left half on an even page of the PDF file
+  (`\ReadonlyShipoutCounter`, so the front matter's length can't flip it).
+Not fixed by a tool: the judge's scores still cluster at 7.5–8.3 and
+missed what the author felt reading chapter 1 (FUTURE-TODOS: calibrate
+against the author's reading). +11 tests.
+
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (said-once hands on whole lists, records slips; revise reads around cuts) — **2307 passing, 1 skipped** (+2).
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (scores record the text they scored; reader column counts open items; redesign keeps the preface; names are the author's; two-page spreads) — **2318 passing, 1 skipped** (+11).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (revise accounts for every cut) — **2304 passing, 1 skipped** (+0; assertions added).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (repeats across chapters; said-once) — **2304 passing, 1 skipped** (+10, of which 6 are the generic per-command contract checks picking up the new command).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (say each thing once) — **2294 passing, 1 skipped** (+13).

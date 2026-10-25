@@ -504,6 +504,8 @@ class ScoreDetail:
     reader_second: int | None = None  # serious items, second reader (None: none ran)
     reader_all_fixed: bool | None = None
     reader_open: int | None = None
+    reader_checked: bool = False      # the log holds the evaluator's check (`open_items`)
+    scored_text: str | None = None    # fingerprint of the chapter text the judge scored
 
     def to_dict(self) -> dict:
         return {
@@ -513,11 +515,12 @@ class ScoreDetail:
             "low_moment": self.low_moment, "low_fix": self.low_fix,
             "reader_first": self.reader_first, "reader_second": self.reader_second,
             "reader_all_fixed": self.reader_all_fixed, "reader_open": self.reader_open,
+            "scored_text": self.scored_text,
         }
 
 
-def _iter_chapter_eval_logs(eval_dir: Path):
-    """Yield `(chapter, when, data)` for every per-chapter eval log in the
+def _iter_chapter_eval_files(eval_dir: Path):
+    """Yield `(chapter, when, path)` for every per-chapter eval log in the
     three naming shapes. `when` is seconds since the epoch: the filename's
     `YYYYMMDD_HHMMSS` stamp, or the file's mtime when it has none."""
     if not eval_dir.is_dir():
@@ -537,12 +540,37 @@ def _iter_chapter_eval_logs(eval_dir: Path):
             if not plain:
                 continue
             chapter, when = int(plain.group(1)), path.stat().st_mtime
+        yield chapter, when, path
+
+
+def _iter_chapter_eval_logs(eval_dir: Path):
+    """Yield `(chapter, when, data)` for every per-chapter eval log that
+    parses (`_iter_chapter_eval_files`)."""
+    for chapter, when, path in _iter_chapter_eval_files(eval_dir):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001 — skip malformed eval logs
             continue
         if isinstance(data, dict):
             yield chapter, when, data
+
+
+def latest_chapter_eval_path(eval_dir: Path, chapter: int) -> Path | None:
+    """The chapter's latest eval log carrying an `overall_score`: the one
+    every score column reads (`chapter_score_details`)."""
+    best: tuple[float, Path] | None = None
+    for ch, when, path in _iter_chapter_eval_files(eval_dir):
+        if ch != chapter:
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if not isinstance(data, dict) or _eval_number(data, "overall_score") is None:
+            continue
+        if best is None or when > best[0]:
+            best = (when, path)
+    return best[1] if best else None
 
 
 def _count_items(value: object) -> int | None:
@@ -558,6 +586,8 @@ def _count_items(value: object) -> int | None:
 def score_detail(chapter: int, data: dict) -> ScoreDetail:
     """Reduce one eval log to a ScoreDetail."""
     d = ScoreDetail(chapter=chapter, overall=_eval_number(data, "overall_score"))
+    stamp = data.get("scored_text")
+    d.scored_text = stamp if isinstance(stamp, str) and stamp else None
     dims = data.get("dimensions")
     if isinstance(dims, dict):
         for name, value in dims.items():
@@ -586,6 +616,7 @@ def score_detail(chapter: int, data: dict) -> ScoreDetail:
         open_items = _count_items(fr.get("open_items"))
         if open_items is not None:
             # The evaluator's own check of the chapter as it stands.
+            d.reader_checked = True
             d.reader_open = 0 if d.reader_all_fixed else open_items
         elif last is not None:
             # Older evals carry no `open_items`: everything in the last

@@ -295,7 +295,10 @@ that stalled long sweeps around chapter 8-10.
          `autonovel mechanical sensory` for mechanical penalties.
          Write books/{book}/eval_logs/ch{N:02d}_eval.json, with
          `weakest_dimension`, `weakest_score` and the `first_reader`
-         block (evaluate step 6). Capture overall_score as score_v1,
+         block (evaluate step 6), then run `autonovel _stamp-eval
+         --book {book} --chapter N` (the log records the text it
+         scored; run it again after any later eval of the chapter).
+         Capture overall_score as score_v1,
          and weakest_dimension / weakest_score as low_v1.
 
       3b. SPINE CHECK (skip if `no-spine` is in flags): reread the

@@ -198,6 +198,53 @@ def stamp(chapter_path: Path) -> str:
     return fp
 
 
+# ------------------------------------------------------------ eval logs
+
+# A chapter's score describes the text the judge read. On one book every
+# chapter but the first was scored before a whole-book pass cut about 160
+# repeats, and the scores went on being reported as the book's (author,
+# 2026-10-25: "Without scoring the current content to see how good?").
+# An eval log now records the fingerprint of the text it scored, and every
+# surface that shows a score says whether it is a score of this text.
+
+EVAL_KEY = "scored_text"
+SCORE_STATES = {
+    "current": "scored on the chapter as it now stands",
+    "older": "scored on an older text of the chapter",
+    "unstamped": "the score doesn't record which text it was taken on",
+}
+
+
+def score_state(chapter_path: Path, scored_text: str | None) -> str:
+    """`current`, `older` or `unstamped` for a score whose eval log
+    recorded `scored_text` (None: no record)."""
+    if not scored_text:
+        return "unstamped"
+    return "current" if scored_text == body_hash(chapter_path.read_text(encoding="utf-8")) else "older"
+
+
+def stamp_eval(chapter_path: Path) -> tuple[Path, str]:
+    """Record in the chapter's latest eval log (the one every score
+    column reads) the fingerprint of the chapter as it now stands. Run it
+    right after writing the log, before anything changes the chapter.
+    Returns the log's path and the fingerprint."""
+    import json
+
+    from .mechanical.chapter_summary import latest_chapter_eval_path
+    m = _CHAPTER_RE.match(chapter_path.name)
+    if not m or not chapter_path.is_file():
+        raise StampError(f"no chapter file at {chapter_path}")
+    log = latest_chapter_eval_path(chapter_path.parent.parent / "eval_logs", int(m.group(1)))
+    if log is None:
+        raise StampError(f"no eval log with an overall_score for {chapter_path.name}; "
+                         f"write the eval log first")
+    data = json.loads(log.read_text(encoding="utf-8"))
+    fp = body_hash(chapter_path.read_text(encoding="utf-8"))
+    data[EVAL_KEY] = fp
+    log.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return log, fp
+
+
 # ------------------------------------------------------------ briefs
 
 BRIEF_KEY = "brief_for"

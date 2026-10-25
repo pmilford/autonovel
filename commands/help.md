@@ -587,7 +587,8 @@ Chapter datelines and wide plates: each chapter's frontmatter
 `dateline: "Venice, autumn 1473"` prints under its title (set it when
 the book moves between times or places); a plate in
 books/<name>/typeset/plates.yaml with `layout: landscape` gets a
-sideways full page in the PDF.
+sideways full page in the PDF, and one with `layout: spread` runs edge
+to edge across two facing pages (for a panorama twice as wide as high).
 
 For a typography-only cover (no AI art at all):
 

@@ -869,6 +869,14 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
     is `YYYYMMDD_HHMMSS` and `<mode>` is one of `foundation`,
     `ch{chapter:02d}`, `full`, `compare_{N}_vs_{M}`.
 
+    In `--chapter` mode, then use `bash` to run `autonovel _stamp-eval
+    --book {book} --chapter {chapter}`, which records in the log the
+    fingerprint of the chapter text you scored. A score describes the text
+    the judge read: once the chapter changes, the dashboard, the chapter
+    summary table and `/autonovel:next` show this score as one of an older
+    text, so nobody reports it as the book's (one book was called finished
+    on scores taken before its last pass cut about 160 repeats).
+
 12. Print a one-screen summary to stdout. **Render the per-dimension
     scores as a real markdown table** so the user gets a visually
     aligned grid, not a wall of `dimension: 6.5` text. The exact

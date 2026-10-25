@@ -5,7 +5,9 @@ Bug class (author, 2026-10-18, on a book that alternates 1519 with
 by dates" — the place and date must sit under every chapter title. And a
 wide city view (de' Barbari's Venice) printed as a strip across a
 portrait page was "way too small to be of interest": `layout:
-landscape` turns the plate's page sideways.
+landscape` turns the plate's page sideways. That still filled under half
+the page, and the author asked again (2026-10-25): `layout: spread`
+sets it across two facing pages.
 """
 
 from __future__ import annotations
@@ -57,6 +59,35 @@ def test_latex_landscape_plate_turns_the_page(tmp_path: Path) -> None:
                                       plates_manifest=book / "typeset" / "plates.yaml")
     assert "\\begin{landscape}" in tex and "\\end{landscape}" in tex
     assert tex.index("\\end{landscape}") < tex.index("\\chapter{The Gate}")
+
+
+def test_latex_spread_plate_crosses_two_facing_pages(tmp_path: Path) -> None:
+    """The author asked again (2026-10-25) for the Venice view at "at least
+    one full page, and possibly 2": `layout: spread` sets it edge to edge
+    across a verso and the recto beside it."""
+    book = _book(tmp_path, dateline=None, layout="spread")
+    tex, _ = latex.build_chapters_tex(book / "chapters",
+                                      plates_manifest=book / "typeset" / "plates.yaml")
+    block = tex[: tex.index("\\chapter{The Gate}")]
+    assert "\\begin{landscape}" not in block
+    # Starts on a verso, set once at twice the paper width, placed twice:
+    # ending at the fold on the left page, starting at it on the right.
+    assert block.index("\\ReadonlyShipoutCounter") < block.index("\\newgeometry{margin=0pt}")
+    assert "width=2\\paperwidth" in block and block.count("view.jpg") == 1
+    assert block.count("\\usebox{\\autonovelspread}") == 2
+    left = block.index("[\\paperwidth][r]{\\makebox[0.5\\wd\\autonovelspread][l]")
+    right = block.index("[\\paperwidth][l]{\\makebox[0.5\\wd\\autonovelspread][r]")
+    assert left < block.index("\\clearpage", left) < right
+    # The caption is under the right half, in a box of no height.
+    assert right < block.index("A view.") < block.index("\\restoregeometry")
+    assert block.count("\\smash{") == 2
+
+
+def test_epub_spread_plate_fills_the_width(tmp_path: Path) -> None:
+    book = _book(tmp_path, dateline=None, layout="spread")
+    md, _ = epub.build_epub_md(book / "chapters",
+                               plates_manifest=book / "typeset" / "plates.yaml")
+    assert "width: 100%; max-width: 1400px;" in md
 
 
 def test_epub_dateline_and_wide_plate(tmp_path: Path) -> None:

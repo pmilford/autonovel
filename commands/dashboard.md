@@ -39,9 +39,20 @@ the original `--full` table didn't have:
 of fifteen-odd dimensions, and a mean hides the one that fails (a 6.9
 for sense of place inside a 7.8). Every row shows the chapter's
 **Lowest** dimension (`place 6.9`, ⚠ under the dimension floor) and
-the **Reader** column the cold first reader's serious items (✓ fixed
-and re-read, `N left` the second reader still found N, `N unchecked`
-never re-read). Under the table, **Needs attention first** ranks the
+the **Reader** column the cold first reader's serious items (✓ none
+open, `N open` the evaluator found N still in the chapter, `N left` the
+second reader still found N and nobody has checked since, `N unchecked`
+never re-read).
+
+**Which text each score describes.** The **Scored on** column says
+whether the judge read the chapter as it now stands (`this text`), an
+older text of it (`older text ⚠`: the chapter changed after it was
+scored), or doesn't record which (`not recorded`, logs from before
+`autonovel _stamp-eval`). Under the table a bold line names every
+chapter whose score isn't a score of the text as it stands. Don't
+report those scores as the book's: score the chapters again first
+(one book was called finished on scores taken before its last pass cut
+about 160 repeats). Under the table, **Needs attention first** ranks the
 ten lowest chapter-dimension scores in the book, each with the judge's
 weakest moment. `--dimensions` prints every dimension for every
 chapter instead: Story, People and place, Writing (and any genre

@@ -160,24 +160,17 @@ def build_epub_md(
         # User-imported plates from plates.yaml — placed before the
         # chapter heading, between heading and prose, or after prose,
         # matching the PDF's behaviour.
-        before_md = "".join(
-            _epub_image_block(src=p[0], caption=p[1], attribution=p[2],
-                              width_pct=100 if p[3] == "landscape" else 80,
-                              max_px=1400 if p[3] == "landscape" else 600)
-            for p in plates_index.get((num, "before-chapter"), [])
-        )
-        start_md = "".join(
-            _epub_image_block(src=p[0], caption=p[1], attribution=p[2],
-                              width_pct=100 if p[3] == "landscape" else 80,
-                              max_px=1400 if p[3] == "landscape" else 600)
-            for p in plates_index.get((num, "chapter-start"), [])
-        )
-        after_md = "".join(
-            _epub_image_block(src=p[0], caption=p[1], attribution=p[2],
-                              width_pct=100 if p[3] == "landscape" else 80,
-                              max_px=1400 if p[3] == "landscape" else 600)
-            for p in plates_index.get((num, "after-chapter"), [])
-        )
+        # A wide plate (`landscape`, or a two-page `spread` in the PDF)
+        # fills the screen's width; a reader zooms in for the detail.
+        def _plate(p: tuple) -> str:
+            wide = p[3] in ("landscape", "spread")
+            return _epub_image_block(src=p[0], caption=p[1], attribution=p[2],
+                                     width_pct=100 if wide else 80,
+                                     max_px=1400 if wide else 600)
+
+        before_md = "".join(_plate(p) for p in plates_index.get((num, "before-chapter"), []))
+        start_md = "".join(_plate(p) for p in plates_index.get((num, "chapter-start"), []))
+        after_md = "".join(_plate(p) for p in plates_index.get((num, "after-chapter"), []))
 
         pieces.append(
             f"{before_md}{canonical_heading}\n{ornament_md}{start_md}\n"

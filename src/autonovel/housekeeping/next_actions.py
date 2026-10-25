@@ -84,6 +84,7 @@ def _actions_for_book(series: SeriesLayout, cfg: project_mod.ProjectConfig,
     out: list[NextAction] = []
     out.extend(_pending_canon_conflict_actions(book_root, book))
     out.extend(_chapter_regression_actions(book_root, book))
+    out.extend(_score_stale_actions(book_root, book))
     out.extend(_weakest_item_actions(book_root, book, cfg))
     out.extend(_brief_newer_than_chapter_actions(book_root, book))
     out.extend(_summary_stale_actions(book_root, book))
@@ -293,8 +294,15 @@ def _weakest_item_actions(book_root: Path, book: str,
                    if d.low_score is not None and d.low_score < floor),
                   key=lambda d: (d.low_score, d.chapter))
     if weak:
+        from .. import summaries
         chapters = ",".join(str(d.chapter) for d in sorted(weak, key=lambda d: d.chapter))
-        listing = "; ".join(f"ch {d.chapter} {format_low(d.low_dim, d.low_score)}"
+
+        def _older(d) -> str:
+            path = book_root / "chapters" / f"ch_{d.chapter:02d}.md"
+            if path.is_file() and summaries.score_state(path, d.scored_text) == "older":
+                return " (scored on an older text)"
+            return ""
+        listing = "; ".join(f"ch {d.chapter} {format_low(d.low_dim, d.low_score)}{_older(d)}"
                             for d in weak)
         out.append(NextAction(
             priority="MEDIUM",
@@ -452,6 +460,50 @@ def _brief_newer_than_chapter_actions(book_root: Path, book: str) -> list[NextAc
             f"work the brief captures isn't applied to the prose. "
             f"For non-contiguous chapters, run `/autonovel:revise "
             f"--chapter <N>` per chapter (revision-pass takes a range)."
+        ),
+        book=book,
+    )]
+
+
+def _score_stale_actions(book_root: Path, book: str) -> list[NextAction]:
+    """A chapter whose latest score was taken on an older text of it.
+
+    The score, its lowest dimension and the judge's fixes describe a
+    chapter that is no longer on the page. On one book every chapter but
+    the first was scored before a whole-book pass cut about 160 repeats,
+    and the book was reported finished on those scores (author,
+    2026-10-25: "Without scoring the current content to see how good?").
+    The eval log records the text it scored (`autonovel _stamp-eval`);
+    logs from before that record nothing and are not listed here (the
+    dashboard says "not recorded" for them).
+
+    HIGH priority: a score is how the pipeline decides what to fix next,
+    and the author reads it as the book's."""
+    from .. import summaries
+    from ..mechanical.chapter_summary import chapter_score_details
+    details = chapter_score_details(book_root / "eval_logs")
+    older = []
+    for path in iter_chapter_files(book_root / "chapters"):
+        m = re.match(r"^ch_(\d+)\.md$", path.name)
+        d = details.get(int(m.group(1))) if m else None
+        if d is not None and summaries.score_state(path, d.scored_text) == "older":
+            older.append(int(m.group(1)))
+    if not older:
+        return []
+    chapters_str = ",".join(str(c) for c in older)
+    if len(older) == 1:
+        command = f"/autonovel:evaluate --chapter {older[0]} --book {book}"
+    else:
+        command = f"/autonovel:evaluate --chapter {older[0]} --book {book} (then each of {chapters_str})"
+    return [NextAction(
+        priority="HIGH",
+        title=f"Scores of an older text: ch {chapters_str}",
+        command=command,
+        rationale=(
+            f"Chapter(s) {chapters_str} changed after they were last scored, so "
+            f"their scores, lowest dimensions and the judge's fixes describe text "
+            f"that is no longer on the page. Score them again before reporting "
+            f"the book's scores or choosing what to revise from them."
         ),
         book=book,
     )]
@@ -1002,6 +1054,17 @@ def _missing_glossary_actions(cfg: project_mod.ProjectConfig,
     )]
 
 
+def _redesigned_from(book_root: Path) -> str | None:
+    """The `redesign_of:` book named in design.md (`/autonovel:design
+    --from-book` writes it), or None."""
+    design = book_root / "design.md"
+    if not design.is_file():
+        return None
+    m = re.search(r"^\s*-?\s*redesign_of:\s*([A-Za-z0-9_.-]+)\s*$",
+                  design.read_text(encoding="utf-8"), re.MULTILINE)
+    return m.group(1) if m else None
+
+
 def _missing_front_matter_actions(book_root: Path, book: str) -> list[NextAction]:
     """Suggest /autonovel:introduction only once the book has
     chapters drafted — front matter doesn't matter during
@@ -1011,6 +1074,25 @@ def _missing_front_matter_actions(book_root: Path, book: str) -> list[NextAction
         return []
     has_preface = (book_root / "preface.md").is_file()
     has_intro = (book_root / "introduction.md").is_file()
+    # A book re-designed from another (`/autonovel:design --from-book`)
+    # keeps the author's preface: it is their words, not the old book's
+    # shape. One redesign left it behind, and the author found the front
+    # matter "removed for no reason" two versions later (2026-10-25).
+    old = _redesigned_from(book_root)
+    if old and not has_preface and (book_root.parent / old / "preface.md").is_file():
+        return [NextAction(
+            priority="MEDIUM",
+            title=f"Your preface for {old} is not in {book}",
+            command=f"/autonovel:introduction --book {book} --from both",
+            rationale=(
+                f"{book} was re-designed from {old}, whose preface.md is the "
+                f"author's own text; {book} has none, so its typeset book opens "
+                f"without it. Bring the preface across unchanged (the introduction "
+                f"command does it for a re-designed book), and have the introduction "
+                f"and glossary rewritten for this book's people and terms."
+            ),
+            book=book,
+        )]
     if has_preface or has_intro:
         return []
     return [NextAction(

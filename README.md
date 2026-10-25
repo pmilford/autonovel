@@ -589,7 +589,8 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   says the period is part of the payload, so cold readers and cut lists
   move badly placed history instead of cutting it; `--add` researches a
   guide for a genre that has none);
-  `dashboard` — score and each chapter's lowest dimension, the ten
+  `dashboard` — score and each chapter's lowest dimension, which text
+  each score was taken on (this text, or an older one), the ten
   lowest scores in the book ("Needs attention first"), cold-reader
   items, tension, aggregates and sparklines, re-rendered from existing
   eval logs without firing another evaluate (`--dimensions` prints

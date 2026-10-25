@@ -329,8 +329,9 @@ def _load_plates_index(
     manifest: Path | None, plates_root: Path | None,
 ) -> dict[tuple[int, str], list[tuple[str, str, str, str]]]:
     """Return {(chapter, placement): [(file_abs_path, caption, attribution, layout)]}.
-    `layout` is `landscape` (a wide picture turned to fill a whole page)
-    or `portrait` (the default).
+    `layout` is `landscape` (a wide picture turned to fill a whole page),
+    `spread` (a very wide picture across two facing pages) or `portrait`
+    (the default).
 
     Reading the manifest is intentionally tolerant — a missing or
     malformed manifest is treated as "no plates" rather than failing
@@ -390,7 +391,11 @@ def _render_plate_block(file_abs: str, caption: str, attribution: str, placement
     flow (no page break). `layout: landscape` (plates.yaml) turns a
     full-page plate sideways (pdflscape) so a wide picture — a city
     view, a map — fills the page's long side instead of shrinking to
-    a strip across the short one."""
+    a strip across the short one. `layout: spread` sets a picture too
+    wide even for that (de' Barbari's Venice, twice as wide as it is
+    high) across two facing pages, each a full page wide."""
+    if layout == "spread" and placement in ("before-chapter", "after-chapter"):
+        return _render_spread_block(file_abs, caption, attribution)
     caption_tex = ""
     if caption:
         caption_tex = f"\\\\\n\\vspace{{0.6em}}\n\\textit{{{latex_escape(caption)}}}"
@@ -473,4 +478,61 @@ def _render_plate_block(file_abs: str, caption: str, attribution: str, placement
         f"{caption_tex}{attribution_tex}\n"
         "\\end{center}\n"
         "\\vspace{0.4em}\n"
+    )
+
+
+def _render_spread_block(file_abs: str, caption: str, attribution: str) -> str:
+    """A picture across two facing pages, edge to edge: its left half on
+    a verso, its right half on the recto beside it.
+
+    The author asked twice for de' Barbari's Venice, a view twice as
+    wide as it is high, to be bigger ("landscape 2 pages?", 2026-10-18;
+    "at least one full page, and possibly 2", 2026-10-25). Turned
+    sideways on a 5.5 x 8.5 inch page it filled under half the page.
+
+    The picture is set once, at up to twice the paper width, and placed
+    on both pages: on the verso it ends at the fold and runs on past the
+    page edge, on the recto it starts at the fold, and each page's edge
+    trims the other half, so no image is cut into files. Both pages are
+    built alike so the halves meet at the same height across the fold;
+    the caption sits under the right half in a box of no height, so it
+    doesn't move the picture."""
+    caption_lines = []
+    if caption:
+        caption_lines.append(f"\\textit{{{latex_escape(caption)}}}")
+    if attribution:
+        caption_lines.append(f"{{\\footnotesize {latex_escape(attribution)}}}")
+    # `\\` not `\par`: `\smash` won't take a paragraph break.
+    under = "\\\\ ".join(caption_lines)
+
+    def page(align_outer: str, align_inner: str, text: str) -> str:
+        return (
+            "\\thispagestyle{empty}\n"
+            "\\vspace*{\\fill}\n"
+            f"\\noindent\\makebox[\\paperwidth][{align_outer}]"
+            f"{{\\makebox[0.5\\wd\\autonovelspread][{align_inner}]{{\\usebox{{\\autonovelspread}}}}}}\\par\n"
+            "\\noindent\\makebox[\\paperwidth]{\\smash{\\parbox[t]{0.8\\paperwidth}"
+            f"{{\\centering\\strut {text}}}}}}}\\par\n"
+            "\\vspace*{\\fill}\n"
+        )
+
+    # The left half goes on an even page of the PDF file itself, cover
+    # included, which is how a viewer pairs pages in two-page view (the
+    # cover alone, then 2|3, 4|5 ...). The chapters' own page numbers
+    # restart after the front matter, so their parity changes whenever
+    # the front matter's length does; the count of pages shipped doesn't.
+    return (
+        "\\clearpage\n"
+        "\\ifdefined\\ReadonlyShipoutCounter\n"
+        "  \\ifodd\\ReadonlyShipoutCounter\\else\\hbox{}\\thispagestyle{empty}\\clearpage\\fi\n"
+        "\\else\\cleartoverso\\fi\n"
+        "\\ifdefined\\autonovelspread\\else\\newsavebox{\\autonovelspread}\\fi\n"
+        "\\newgeometry{margin=0pt}\n"
+        "\\sbox{\\autonovelspread}{\\includegraphics"
+        f"[width=2\\paperwidth,height=0.85\\paperheight,keepaspectratio]{{{file_abs}}}}}\n"
+        + page("r", "l", "")
+        + "\\clearpage\n"
+        + page("l", "r", under)
+        + "\\restoregeometry\n"
+        "\\clearpage\n"
     )

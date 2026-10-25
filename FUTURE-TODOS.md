@@ -11,6 +11,22 @@ to start.
 
 ## Near-term — pull into the next PR
 
+- **Calibrate the judge against the author's reading (opened 2026-10-25).**
+  On kingmaker2 the author found version 3's chapter 1 "long and a bit
+  slow" and repetitive two-thirds in, while the judge gave it 7.7 with
+  pull (engagement) at 7.5 or more and no repetition mark at all; across
+  the book the scores sat between 7.6 and 8.3 (stdev 0.17), so they could
+  not tell a slow chapter from a good one. Scores now record the text they
+  scored (`_stamp-eval`), and the judge has a repetition dimension and the
+  whole-book ledger, but nothing ties the scale to a real reader.
+  Proposed: an author's reading log (`edit_logs/author_reading.md`: per
+  chapter, where they slowed, skimmed or were lost, in their words) that
+  evaluate reads as ground truth for the dimensions it touches, a
+  dashboard column beside the judge's score, and a check that flags a
+  chapter the author found slow while the judge's pull is 7.5 or more.
+  The cold first reader's "would you turn the page?" is the nearest
+  instrument today.
+
 - **A PDF plate breaks the ePub (opened 2026-10-24).** `art-import`
   accepts `.pdf` (good for a vector map in the PDF), but
   `mechanical/epub.py` emits it as an `<img>`, which no reader shows.
