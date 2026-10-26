@@ -135,7 +135,13 @@ says what is still open and why.
    `books/{book}/briefs/conversation.md` in the shape `/autonovel:talk`
    writes (`**Mode:** suggest`, `**Target:** chapter N`, the finding with
    its line and quote, the fix, `**Status:** queued`), one turn per
-   chapter. A finding that needs a cross-chapter move (merge, cut,
+   chapter. When a finding names several chapters ("the protagonist
+   sees what his mistake cost, in chapters 9 and 11"), say in every one
+   of its turns which chapter tells the point in full and which give it
+   a clause, and check the chapters before and after for an earlier
+   telling: staged one per chapter without that, each worker tells it in
+   full, and on one book the fix made a third telling a scorer then marked
+   down (`shared/craft/PROSE.md` §7 rule 9). A finding that needs a cross-chapter move (merge, cut,
    reorder, split) or an author's decision is not staged: list it for the
    author in the round notes and in the final report.
 
