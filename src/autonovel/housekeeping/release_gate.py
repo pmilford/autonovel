@@ -129,11 +129,57 @@ def paragraph_hashes(book_root: Path) -> dict[str, list[str]]:
 # A whole-book report stays current through a light fix pass: it read the
 # book, and a few changed sentences don't change what it found. One that
 # re-ran after every pass would never let the review cycle finish. A
-# rewrite (more than this share of the book's paragraphs, or of one
-# chapter's) sends it back to be read again. Chapter scores have no such
-# allowance: they describe one chapter's text exactly.
+# rewrite (more than this share of the book's words, or of one chapter's)
+# sends it back to be read again. A cold reader's report on one chapter
+# stands through less (FIRST_READ_CHANGE_LIMIT). Chapter scores have no
+# such allowance: they describe one chapter's text exactly.
+#
+# The share is of the words the reviewer read that are now changed or
+# gone, measured against a copy of that text kept at the stamp
+# (`stamped_texts/`). Counting touched paragraphs instead made a pass of
+# forty one-clause fixes look like a rewrite, and sent every chapter back
+# to a fresh reader who found forty more (2026-10-26). Stamps made before
+# the copies were kept fall back to the paragraph count.
 BOOK_CHANGE_LIMIT = 0.10
 CHAPTER_CHANGE_LIMIT = 0.25
+FIRST_READ_CHANGE_LIMIT = 0.15
+SNAPSHOT_DIR = "stamped_texts"
+
+
+def _body_of(path: Path) -> str:
+    from ..mechanical.frontmatter import strip_yaml_frontmatter
+    return strip_yaml_frontmatter(path.read_text(encoding="utf-8"))
+
+
+def _snapshot_path(book_root: Path, key: str, chapter: int | str) -> Path:
+    return book_root / "edit_logs" / SNAPSHOT_DIR / key / f"ch{int(chapter):02d}.md"
+
+
+def _write_snapshots(book_root: Path, key: str, chapters: dict[int, Path]) -> None:
+    folder = book_root / "edit_logs" / SNAPSHOT_DIR / key
+    folder.mkdir(parents=True, exist_ok=True)
+    for n, path in chapters.items():
+        (folder / f"ch{n:02d}.md").write_text(_body_of(path), encoding="utf-8")
+
+
+def word_change(old_text: str, new_text: str) -> float:
+    """Share of the old text's words that are changed or gone in the new
+    (0.0 identical, 1.0 nothing left)."""
+    import difflib
+    a, b = old_text.split(), new_text.split()
+    if not a:
+        return 0.0 if not b else 1.0
+    same = sum(m.size for m in difflib.SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks())
+    return 1.0 - same / len(a)
+
+
+def _numbered_chapters(book_root: Path) -> dict[int, Path]:
+    out: dict[int, Path] = {}
+    for path in iter_chapter_files(book_root / "chapters"):
+        m = _CHAPTER_RE.match(path.name)
+        if m:
+            out[int(m.group(1))] = path
+    return out
 
 
 def _stamps_path(book_root: Path) -> Path:
@@ -159,7 +205,13 @@ def stamp_report(book_root: Path, key: str) -> dict:
     stamps = load_stamps(book_root)
     entry = {"when": datetime.now(timezone.utc).isoformat(timespec="seconds"),
              "chapters": chapter_fingerprints(book_root),
-             "paragraphs": paragraph_hashes(book_root)}
+             "paragraphs": paragraph_hashes(book_root),
+             "texts": f"{SNAPSHOT_DIR}/{key}"}
+    folder = book_root / "edit_logs" / SNAPSHOT_DIR / key
+    if folder.is_dir():
+        for old in folder.glob("ch*.md"):
+            old.unlink()
+    _write_snapshots(book_root, key, _numbered_chapters(book_root))
     stamps[key] = entry
     path = _stamps_path(book_root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -187,7 +239,27 @@ def report_state(book_root: Path, key: str) -> tuple[str, list[int]]:
     changed = sorted(int(n) for n in set(now) | set(then) if now.get(n) != then.get(n))
     if not changed:
         return "current", []
-    if set(now) != set(then) or not isinstance(entry.get("paragraphs"), dict):
+    if set(now) != set(then):
+        return "older", changed
+    if entry.get("texts"):
+        chapters = _numbered_chapters(book_root)
+        total = moved = 0.0
+        for n in changed:
+            snap = _snapshot_path(book_root, key, n)
+            if not snap.is_file() or n not in chapters:
+                return "older", changed
+            old = snap.read_text(encoding="utf-8")
+            share = word_change(old, _body_of(chapters[n]))
+            if share > CHAPTER_CHANGE_LIMIT:
+                return "older", changed
+            moved += share * len(old.split())
+        for n, path in chapters.items():
+            snap = _snapshot_path(book_root, key, n)
+            total += len(snap.read_text(encoding="utf-8").split()) if snap.is_file() else 0
+        if total and moved / total > BOOK_CHANGE_LIMIT:
+            return "older", changed
+        return "light", changed
+    if not isinstance(entry.get("paragraphs"), dict):
         return "older", changed
     before = entry["paragraphs"]
     after = paragraph_hashes(book_root)
@@ -279,7 +351,9 @@ def stamp_first_read(book_root: Path, chapter: int) -> dict:
         reads = {}
     entry = {"when": datetime.now(timezone.utc).isoformat(timespec="seconds"),
              "chapter": summaries.body_hash(text),
-             "paragraphs": _paragraph_hashes_of(text)}
+             "paragraphs": _paragraph_hashes_of(text),
+             "text": f"{SNAPSHOT_DIR}/{FIRST_READ_KEY}/ch{chapter:02d}.md"}
+    _write_snapshots(book_root, FIRST_READ_KEY, {chapter: path})
     reads[str(chapter)] = entry
     stamps[FIRST_READ_KEY] = reads
     out = _stamps_path(book_root)
@@ -302,6 +376,10 @@ def first_read_state(book_root: Path, chapter: int) -> str:
     text = path.read_text(encoding="utf-8")
     if entry.get("chapter") == summaries.body_hash(text):
         return "current"
+    snap = _snapshot_path(book_root, FIRST_READ_KEY, chapter)
+    if entry.get("text") and snap.is_file():
+        share = word_change(snap.read_text(encoding="utf-8"), _body_of(path))
+        return "light" if share <= FIRST_READ_CHANGE_LIMIT else "older"
     old = entry.get("paragraphs")
     if not isinstance(old, list):
         return "older"

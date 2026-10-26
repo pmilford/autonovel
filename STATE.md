@@ -3044,7 +3044,27 @@ as `declined_items` and doesn't count it open, brief doesn't stage it.
 Without that, a scorer would count it open in every round and the gate
 could never pass. +7 tests.
 
+### 2026-10-26 — "light" is measured in words, against the text that was read
+
+The review cycle's round 3 changed 8–16% of each chapter's words (10.5% of
+the book) and touched most paragraphs. Counting touched paragraphs, every
+cold read and every whole-book report went stale, and a pass of one-clause
+fixes for a fresh reader's forty items would have sent the chapter to yet
+another reader who found forty more: the cycle could not converge. Now each
+stamp keeps a copy of the text it read (`edit_logs/stamped_texts/<report>/`)
+and "light" is the share of those words changed or gone (`word_change`): a
+whole-book report stands through a quarter of any chapter and a tenth of the
+book; a cold read through 15% of its chapter. Stamps without a kept copy fall
+back to the paragraph count. With it, the cycle's order converges: the
+round's fixes, then a fresh cold read where a chapter changed past 15%,
+its items judged and fixed lightly in the same round (056c6b3), then the
+whole-book reviews again if the book changed past a tenth, then scores.
+Also this round: the round's starting point is recorded and every cut
+check diffs from it (c141a6b); an amend is written whole (revise step 10);
+a limit is met by moving the extra, never deleting it (d9584d5). +2 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-26 (light measured in words; same-round cold-read fixes; round starting point) — **2353 passing, 1 skipped** (+5 since 2348).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (cold readers stamped with the text they read; whole-book re-take) — **2348 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (a revision supersedes the canon entry it names; a conflict parked twice) — **2346 passing, 1 skipped** (+2; the earlier 2343 line predates one test added with the release gate's book floor).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (review cycle's first run: turn status, UTC eval names, promote-canon note) — **2343 passing, 1 skipped** (+2 since the scorecard; +1 assertion).

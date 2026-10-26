@@ -153,10 +153,41 @@ def test_a_cold_reader_must_have_read_the_text_as_it_stands(book: Path) -> None:
     assert _by_key(release_gate.check(book))["cold_readers"].ok
     assert release_gate.first_read_state(book, 1) == "current"
 
-    # A light fix (one paragraph in ten) leaves the read standing; a rewrite doesn't.
+    # A light fix leaves the read standing; a rewrite doesn't.
     ch1 = book / "chapters" / "ch_01.md"
     ch1.write_text(ch1.read_text().replace("Paragraph 3 of chapter 1", "Paragraph three of chapter 1"))
     assert release_gate.first_read_state(book, 1) == "light"
+    ch2 = book / "chapters" / "ch_02.md"
+    text = ch2.read_text()
+    for i in range(4):
+        text = text.replace(_para(2, i), f"New paragraph {i}: the gate is shut and the toll-keeper asleep.")
+    ch2.write_text(text)
+    assert release_gate.first_read_state(book, 2) == "older"
+
+
+def test_a_clause_in_every_paragraph_is_still_a_light_fix(book: Path) -> None:
+    """Counting touched paragraphs made a pass of one-clause fixes look like a
+    rewrite and sent every chapter back to a fresh reader, who found as many
+    items again (2026-10-26). The measure is the words changed."""
+    for n in (1, 2, 3):
+        _first_read(book, n)
+    _write_reports(book)
+    release_gate.stamp_report(book, "said_once")
+    ch2 = book / "chapters" / "ch_02.md"
+    ch2.write_text(ch2.read_text().replace("Ana counts", "Ana weighs"))   # every paragraph touched
+    assert release_gate.first_read_state(book, 2) == "light"
+    assert release_gate.report_state(book, "said_once")[0] == "light"
+    assert (book / "edit_logs" / "stamped_texts" / "first_read" / "ch02.md").is_file()
+    assert release_gate.word_change("a b c d", "a b x d") == 0.25
+
+
+def test_a_stamp_without_a_kept_text_falls_back_to_paragraphs(book: Path) -> None:
+    for n in (1, 2, 3):
+        _first_read(book, n)
+    stamps_path = book / "edit_logs" / release_gate.STAMPS_FILE
+    stamps = json.loads(stamps_path.read_text())
+    del stamps["first_read"]["2"]["text"]
+    stamps_path.write_text(json.dumps(stamps))
     ch2 = book / "chapters" / "ch_02.md"
     ch2.write_text(ch2.read_text().replace("Ana counts", "Ana weighs"))
     assert release_gate.first_read_state(book, 2) == "older"

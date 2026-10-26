@@ -201,7 +201,7 @@ says what is still open and why.
       never a rewrite. A fresh reader always finds something; fixing it
       only next round would send every chapter back to another fresh
       reader, round after round. Fixed lightly, the read still stands
-      (`release-check` allows a quarter of a chapter's paragraphs), and the
+      (`release-check` lets a cold read stand while no more than 15% of the words the reader read have changed), and the
       scorer checks the items against the fixed text; a fix that has to go
       further is staged for the next round instead. Run the readers and
       these fixes before the scorers, so each scorer checks the report's
