@@ -3019,7 +3019,25 @@ Found on the re-run: a conflict parked twice was wrapped in its
 `**New candidate:**` label twice, because the parser kept the labelled
 line as the candidate (b8539fb). +2 tests.
 
+### 2026-10-25 — a cold reader must have read the text the author will read
+
+On kingmaker2 a scorer noticed that every cold-reader report dated from
+2026-10-18, before two versions and two review rounds: the gate's "no
+cold-reader item open" had been counting items from readers of older
+texts, and no reader had seen the version going to the author. Now
+`/autonovel:first-read` (and draft, draft-pass) stamps each report with
+the chapter it read (`_stamp-report --report first_read --chapter N`),
+and release-check's `cold_readers` check holds a chapter until a reader
+read it as it stands (a light fix of that chapter, a quarter of its
+paragraphs, leaves the read standing), the chapter was scored after that
+read (so the scorer checked its items), and no item is open. The review
+cycle reads cold after the fixes and before the scorers (step 5c). Also:
+the whole-book score is taken again after a round fixes for a dimension
+under the floor (step 5e); a light fix let the old score stand for ever.
++4 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (cold readers stamped with the text they read; whole-book re-take) — **2348 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (a revision supersedes the canon entry it names; a conflict parked twice) — **2346 passing, 1 skipped** (+2; the earlier 2343 line predates one test added with the release gate's book floor).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (review cycle's first run: turn status, UTC eval names, promote-canon note) — **2343 passing, 1 skipped** (+2 since the scorecard; +1 assertion).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (whole-book scorecard) — **2341 passing, 1 skipped** (+4).

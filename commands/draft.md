@@ -423,7 +423,10 @@ required reads — surface the error and stop, don't retry.
    rest as summaries when the book is long) — never the outline,
    design, research, voice file or your notes — and it reports in the
    brief's eleven sections, quoting the text. Save its report at
-   `books/{book}/edit_logs/first_read_ch{chapter}.md`. Then fix every
+   `books/{book}/edit_logs/first_read_ch{chapter}.md` and use `bash` to
+   run `autonovel _stamp-report --book {book} --report first_read
+   --chapter {chapter}` (the text it read; `release-check` counts a
+   report only on that text or a light fix of it). Then fix every
    item under Lost, Didn't know, Read twice, Too many at once and Forgot
    who, fixing an explanation where it first appears rather than adding a
    second one; cut every repeat under Told again (keep the first
@@ -433,8 +436,8 @@ required reads — surface the error and stop, don't retry.
    page turn as a scene to rework before anything else. When the report
    had serious items, spawn a second fresh reader on the fixed chapter,
    save its report at
-   `books/{book}/edit_logs/first_read_ch{chapter}_2.md`, and fix what it
-   finds. A history or other payload passage a reader skimmed is moved,
+   `books/{book}/edit_logs/first_read_ch{chapter}_2.md`, stamp it the same
+   way, and fix what it finds. A history or other payload passage a reader skimmed is moved,
    given to a person or dramatised, never cut (the guide's `## The first
    reader`). (`/autonovel:evaluate` records both readers' serious items and
    whether the chapter as it stands fixes them; the dashboard shows a

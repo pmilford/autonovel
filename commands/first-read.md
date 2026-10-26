@@ -7,6 +7,7 @@ allowed-tools:
   - file_read
   - file_write
   - task
+  - bash
 reads:
   - shared/craft/FIRST-READER.md
   - books/{book}/voice.md
@@ -72,7 +73,12 @@ file. `shared/craft/FIRST-READER.md` is its brief.
    too many N · forgot N · told again N · couldn't picture N · types N ·
    skimmed N · turn the page: yes|no` (types = the people it read as a
    type), plus
-   `learned N` when the genre guide added "What I learned".
+   `learned N` when the genre guide added "What I learned". Then use
+   `bash` to run `autonovel _stamp-report --book {book} --report
+   first_read --chapter {chapter}`, which records the text the reader
+   read: `autonovel mechanical release-check` counts the report only
+   while the chapter is that text or within a light fix of it, so a
+   report on an older version never stands in for a reader of this one.
 
 6. Report the count line, the three most serious items (quoted), and
    **Next:** when there are items under Lost, Didn't know, Read twice,

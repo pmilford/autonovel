@@ -228,8 +228,9 @@ each of these and the workaround is in the codebase:
   that hasn't read the text as it stands, judges each finding, makes the
   fixes that hold, scores the changed chapters again, and repeats until
   `autonovel mechanical release-check books/<name>` passes (every chapter
-  scored strictly on its current text with no dimension under the floor
-  and no cold-reader item open, every whole-book report stamped on this
+  scored strictly on its current text with no dimension under the floor,
+  read by a cold reader on this text (or a light fix of it) with no item
+  open, every whole-book report stamped on this
   text, no dimension of the whole-book score under the floor either, no
   staged fix still queued). Until it passes, `/autonovel:next`
   lists it first and `/autonovel:typeset` prints a draft notice in the

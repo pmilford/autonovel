@@ -15,6 +15,7 @@ reads:
   - books/{book}/eval_logs/*.json
   - books/{book}/edit_logs/report_stamps.json
   - books/{book}/edit_logs/said_once_ledger.md
+  - books/{book}/edit_logs/first_read_ch*.md
   - books/{book}/edit_logs/structure_review.json
   - books/{book}/edit_logs/structure_review.md
   - books/{book}/edit_logs/editor_letter.md
@@ -118,8 +119,9 @@ says what is still open and why.
    `books/{book}/edit_logs/editor_letter.md`;
    `books/{book}/edit_logs/reader_panel.json`;
    `books/{book}/edit_logs/review.json` and `books/{book}/edit_logs/review.md`;
-   the book score; and `books/{book}/edit_logs/report_stamps.json` for
-   which text each read. Check a finding against the chapter itself
+   the book score; the cold readers' reports,
+   `books/{book}/edit_logs/first_read_ch*.md`; and
+   `books/{book}/edit_logs/report_stamps.json` for which text each read. Check a finding against the chapter itself
    (`books/{book}/chapters/*.md`, and its summary
    `books/{book}/chapters/ch_*.summary.md` for context) before you
    believe it. For each
@@ -174,7 +176,20 @@ says what is still open and why.
       --book {book} --turns <N,M,…> --status applied`, and any the editor
       decided against `--status declined` (the reason goes in the round
       notes); the gate counts only turns still `queued`.
-   c. **Score, by a reader who didn't write it.** For every chapter
+   c. **Read cold.** For every chapter `release-check` lists under
+      `cold_readers` as not read on the text as it stands (a rewrite, or a
+      report older than the text; a light fix leaves the last read
+      standing), after its last fix: `first-read N --book {book}`, one
+      fresh subagent per chapter, several at a time (each spawns its own
+      reader, who sees only the book up to that chapter, and stamps the
+      report). Run them before the scorers, so each scorer checks the new
+      report's items against the chapter (`open_items`); the round's
+      judging (step 4) reads the reports,
+      `books/{book}/edit_logs/first_read_ch*.md`, and the next round's
+      fixes take the items that hold. On one book every report predated
+      two versions and two review rounds, and the gate had been counting
+      items no reader had looked for in the text the author would read.
+   d. **Score, by a reader who didn't write it.** For every chapter
       `release-check` lists under `chapter_scores` (every chapter just
       fixed, and any scored on an older text), fresh subagents, each
       scoring three or four chapters in a row (it reads the shared files
@@ -187,7 +202,7 @@ says what is still open and why.
       Each returns its overall score, every dimension, the weakest,
       `top_3_revisions`, the cold reader's open items and its repeats;
       judge them as step 4 does before the next round.
-   d. **Re-take the whole-book score** when `release-check`'s
+   e. **Re-take the whole-book score** when `release-check`'s
       `book_floor` check was open at the round's start and this round
       fixed for it: once the round's last fix is made, one fresh
       subagent runs `evaluate --full --book {book}` on the fixed text and

@@ -267,10 +267,12 @@ that stalled long sweeps around chapter 8-10.
          3c (the reader's map), 3d (people with depth, from
          cast.md), and step 10's first reader: spawn one fresh cold
          reader with `task` per shared/craft/FIRST-READER.md, save
-         its report at books/{book}/edit_logs/first_read_ch{N:02d}.md,
-         fix what it finds, and a second fresh reader only if the
-         first found serious items (its report at
-         books/{book}/edit_logs/first_read_ch{N:02d}_2.md).
+         its report at books/{book}/edit_logs/first_read_ch{N:02d}.md
+         and run `autonovel _stamp-report --book {book} --report
+         first_read --chapter {N}`, fix what it finds, and a second
+         fresh reader only if the first found serious items (its
+         report at books/{book}/edit_logs/first_read_ch{N:02d}_2.md,
+         stamped the same way).
          Write books/{book}/chapters/ch_{N:02d}.md with YAML
          frontmatter + the 150-250 word
          books/{book}/chapters/ch_{N:02d}.summary.md, then run

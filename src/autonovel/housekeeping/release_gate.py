@@ -15,7 +15,9 @@ author, in the order `/autonovel:review-cycle` makes it hold:
   1. summaries        every continuity summary matches its chapter
   2. chapter scores   every chapter scored on the text as it stands
   3. floor            no chapter dimension under the floor
-  4. cold readers     no cold-reader item still open
+  4. cold readers     a cold reader read every chapter as it stands
+                      (within a light fix), the chapter was scored
+                      after that read, and no item it found is open
   5. said-once        the whole-book repetition ledger read this text
   6. structure        the structure review read this text, and passes
   7. letter           the developmental edit read this text
@@ -204,6 +206,106 @@ def report_state(book_root: Path, key: str) -> tuple[str, list[int]]:
     return "light", changed
 
 
+# ------------------------------------------------------------ cold readers
+#
+# A cold reader's open items were counted from whatever report was last
+# written, however old: on one book every report predated two versions and
+# two review rounds, so the gate counted items nobody had looked for in
+# the text the author would read (2026-10-25). The author should never be
+# the first reader (`/autonovel:first-read`), so each chapter's report is
+# stamped with the text it read, like the whole-book reports, and holds
+# through a light fix of that chapter only.
+
+FIRST_READ_KEY = "first_read"
+
+
+def _paragraph_hashes_of(text: str) -> list[str]:
+    import hashlib
+    from ..mechanical.frontmatter import strip_yaml_frontmatter
+    body = strip_yaml_frontmatter(text)
+    paras = [p.strip() for p in body.split("\n\n") if p.strip()]
+    return [hashlib.sha1(p.encode("utf-8")).hexdigest()[:8] for p in paras]
+
+
+def _chapter_file(book_root: Path, chapter: int) -> Path | None:
+    for path in iter_chapter_files(book_root / "chapters"):
+        m = _CHAPTER_RE.match(path.name)
+        if m and int(m.group(1)) == chapter:
+            return path
+    return None
+
+
+def first_read_reports(book_root: Path, chapter: int) -> list[Path]:
+    """`first_read_chNN.md` and the second reader's `first_read_chNN_2.md`."""
+    pat = re.compile(rf"^first_read_ch0*{chapter}(?:_\d+)?\.md$")
+    edit = book_root / "edit_logs"
+    if not edit.is_dir():
+        return []
+    return sorted(p for p in edit.iterdir() if pat.match(p.name))
+
+
+def stamp_first_read(book_root: Path, chapter: int) -> dict:
+    """Record that the cold reader's report on `chapter` read the chapter
+    as it now stands. `/autonovel:first-read` runs it after saving."""
+    path = _chapter_file(book_root, chapter)
+    if path is None:
+        raise KeyError(f"no chapter {chapter} in {book_root.name}")
+    text = path.read_text(encoding="utf-8")
+    stamps = load_stamps(book_root)
+    reads = stamps.get(FIRST_READ_KEY)
+    if not isinstance(reads, dict):
+        reads = {}
+    entry = {"when": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+             "chapter": summaries.body_hash(text),
+             "paragraphs": _paragraph_hashes_of(text)}
+    reads[str(chapter)] = entry
+    stamps[FIRST_READ_KEY] = reads
+    out = _stamps_path(book_root)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(stamps, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return entry
+
+
+def first_read_state(book_root: Path, chapter: int) -> str:
+    """`current` | `light` | `older` | `unstamped` | `missing` for the cold
+    reader's report on one chapter (`light`: changed since, within
+    `CHAPTER_CHANGE_LIMIT`, so the report still stands)."""
+    if not first_read_reports(book_root, chapter):
+        return "missing"
+    reads = load_stamps(book_root).get(FIRST_READ_KEY)
+    entry = reads.get(str(chapter)) if isinstance(reads, dict) else None
+    path = _chapter_file(book_root, chapter)
+    if not isinstance(entry, dict) or path is None:
+        return "unstamped"
+    text = path.read_text(encoding="utf-8")
+    if entry.get("chapter") == summaries.body_hash(text):
+        return "current"
+    old = entry.get("paragraphs")
+    if not isinstance(old, list):
+        return "older"
+    now = _paragraph_hashes_of(text)
+    changed = max(len(set(old) - set(now)), len(set(now) - set(old)))
+    return "light" if changed / max(len(old), len(now), 1) <= CHAPTER_CHANGE_LIMIT else "older"
+
+
+def _first_read_when(book_root: Path, chapter: int) -> float | None:
+    reads = load_stamps(book_root).get(FIRST_READ_KEY)
+    entry = reads.get(str(chapter)) if isinstance(reads, dict) else None
+    try:
+        return datetime.fromisoformat(entry["when"]).timestamp()
+    except (TypeError, KeyError, ValueError):
+        return None
+
+
+def _latest_score_when(eval_dir: Path) -> dict[int, float]:
+    from ..mechanical.chapter_summary import _eval_number, _iter_chapter_eval_logs
+    out: dict[int, float] = {}
+    for chapter, when, data in _iter_chapter_eval_logs(eval_dir):
+        if _eval_number(data, "overall_score") is not None and when > out.get(chapter, -1.0):
+            out[chapter] = when
+    return out
+
+
 # ------------------------------------------------------------ the gate
 
 
@@ -261,13 +363,36 @@ def check(book_root: Path, *, floor: float = 7.0) -> GateReport:
         f"/autonovel:revision-pass --chapters {','.join(str(c) for c, _, _ in low)} --book {book}"
         if low else None))
 
+    unread = [n for n in numbers if first_read_state(book_root, n) not in ("current", "light")]
+    scored_at = _latest_score_when(book_root / "eval_logs")
+    unchecked = [n for n in numbers if n not in unread and n not in need
+                 and (_first_read_when(book_root, n) or 0) > scored_at.get(n, 0)]
     open_reader = sorted(d.chapter for d in details.values()
-                         if d.reader_open and d.chapter in numbers)
+                         if d.reader_open and d.chapter in numbers
+                         and d.chapter not in unread and d.chapter not in unchecked)
+    parts = []
+    if unread:
+        parts.append(f"no cold reader has read the text as it stands: ch {_ranges(sorted(unread))}")
+    if unchecked:
+        parts.append(f"scored before its cold read, so nobody checked the reader's items: "
+                     f"ch {_ranges(sorted(unchecked))}")
+    if open_reader:
+        parts.append(f"open in ch {_ranges(open_reader)}")
+    if unread:
+        first = sorted(unread)
+        reader_cmd = (f"/autonovel:first-read {first[0]} --book {book} "
+                      f"(and each of ch {_ranges(first)})")
+    elif unchecked:
+        reader_cmd = (f"/autonovel:evaluate --chapter {min(unchecked)} --book {book} "
+                      f"(and each of ch {_ranges(sorted(unchecked))})")
+    elif open_reader:
+        reader_cmd = f"/autonovel:revision-pass --chapters {','.join(map(str, open_reader))} --book {book}"
+    else:
+        reader_cmd = None
     rep.checks.append(Check(
-        "cold_readers", not open_reader, "no cold-reader item still open",
-        f"open in ch {_ranges(open_reader)}" if open_reader else "",
-        f"/autonovel:revision-pass --chapters {','.join(map(str, open_reader))} --book {book}"
-        if open_reader else None))
+        "cold_readers", not parts,
+        "a cold reader read every chapter as it stands, and no item it found is open",
+        "; ".join(parts), reader_cmd))
 
     for key, (what, _rel, cmd) in REPORTS.items():
         state, changed = report_state(book_root, key)

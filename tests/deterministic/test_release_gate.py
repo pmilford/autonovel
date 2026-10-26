@@ -58,6 +58,17 @@ def _score(book: Path, n: int, low: float = 7.5, open_items: list[str] | None = 
     summaries.stamp_eval(book / "chapters" / f"ch_{n:02d}.md")
 
 
+def _first_read(book: Path, n: int, when: str = "2026-10-25T11:00:00+00:00") -> None:
+    """A cold reader's report on chapter n, stamped as read before the score
+    `_score` writes (12:00)."""
+    (book / "edit_logs" / f"first_read_ch{n:02d}.md").write_text("# first read\n")
+    release_gate.stamp_first_read(book, n)
+    path = book / "edit_logs" / release_gate.STAMPS_FILE
+    stamps = json.loads(path.read_text())
+    stamps["first_read"][str(n)]["when"] = when
+    path.write_text(json.dumps(stamps))
+
+
 def _write_reports(book: Path) -> None:
     for key, (_what, rel, _cmd) in release_gate.REPORTS.items():
         if key == "full_eval":
@@ -100,6 +111,7 @@ def test_a_report_without_a_stamp_counts_as_unread(book: Path) -> None:
 def test_everything_current_passes(book: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _pass_structure(monkeypatch)
     for n in (1, 2, 3):
+        _first_read(book, n)
         _score(book, n, open_items=[])
     _write_reports(book)
     for key in release_gate.REPORTS:
@@ -110,6 +122,8 @@ def test_everything_current_passes(book: Path, monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_floor_cold_readers_and_queued_fixes_hold_the_gate(book: Path) -> None:
+    for n in (1, 2, 3):
+        _first_read(book, n)
     _score(book, 1, low=5.0)
     _score(book, 2, open_items=["Lost: who is the toll-keeper?"])
     _score(book, 3)
@@ -120,8 +134,42 @@ def test_floor_cold_readers_and_queued_fixes_hold_the_gate(book: Path) -> None:
         encoding="utf-8")
     checks = _by_key(release_gate.check(book, floor=7.0))
     assert not checks["floor"].ok and "ch 1 repetition 5.0" in checks["floor"].detail
-    assert not checks["cold_readers"].ok and "2" in checks["cold_readers"].detail
+    assert not checks["cold_readers"].ok and checks["cold_readers"].detail == "open in ch 2"
     assert not checks["fixes_acted_on"].ok and "ch 3" in checks["fixes_acted_on"].detail
+
+
+def test_a_cold_reader_must_have_read_the_text_as_it_stands(book: Path) -> None:
+    """Every report on one book predated two versions and two review
+    rounds; the gate counted their items as if a reader had seen this text
+    (2026-10-25)."""
+    for n in (1, 2, 3):
+        _score(book, n, open_items=[])
+    check = _by_key(release_gate.check(book))["cold_readers"]
+    assert not check.ok and "no cold reader has read the text as it stands: ch 1-3" in check.detail
+    assert check.command.startswith("/autonovel:first-read 1 --book one")
+
+    for n in (1, 2, 3):
+        _first_read(book, n)
+    assert _by_key(release_gate.check(book))["cold_readers"].ok
+    assert release_gate.first_read_state(book, 1) == "current"
+
+    # A light fix (one paragraph in ten) leaves the read standing; a rewrite doesn't.
+    ch1 = book / "chapters" / "ch_01.md"
+    ch1.write_text(ch1.read_text().replace("Paragraph 3 of chapter 1", "Paragraph three of chapter 1"))
+    assert release_gate.first_read_state(book, 1) == "light"
+    ch2 = book / "chapters" / "ch_02.md"
+    ch2.write_text(ch2.read_text().replace("Ana counts", "Ana weighs"))
+    assert release_gate.first_read_state(book, 2) == "older"
+
+
+def test_a_chapter_scored_before_its_cold_read_is_not_checked(book: Path) -> None:
+    for n in (1, 2, 3):
+        _first_read(book, n)
+        _score(book, n, open_items=[])
+    _first_read(book, 3, when="2026-10-25T13:00:00+00:00")   # after the 12:00 score
+    check = _by_key(release_gate.check(book))["cold_readers"]
+    assert not check.ok and "scored before its cold read" in check.detail and "ch 3" in check.detail
+    assert check.command.startswith("/autonovel:evaluate --chapter 3 --book one")
 
 
 def test_a_whole_book_dimension_under_the_floor_holds_the_gate(book: Path) -> None:
@@ -208,6 +256,13 @@ def test_cli_stamp_report_and_release_check(book: Path) -> None:
     assert set(stamps["said_once"]["chapters"]) == {"1", "2", "3"}
     r = _run(series_root, "mechanical", "release-check", "books/one")
     assert "✓ the whole-book repetition ledger read this text" in r.stdout
+
+    (book / "edit_logs" / "first_read_ch02.md").write_text("# first read\n")
+    r = _run(series_root, "_stamp-report", "--book", "one", "--report", "first_read", "--chapter", "2")
+    assert r.returncode == 0, r.stderr
+    assert release_gate.first_read_state(book, 2) == "current"
+    r = _run(series_root, "_stamp-report", "--book", "one", "--report", "first_read")
+    assert r.returncode == 1 and "--chapter" in r.stderr
 
 
 def test_turn_status_marks_numbered_turns_and_the_gate_follows(book: Path) -> None:
