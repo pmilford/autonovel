@@ -189,9 +189,10 @@ says what is still open and why.
       judge them as step 4 does before the next round.
    d. **Re-take the whole-book score** when `release-check`'s
       `book_floor` check was open at the round's start and this round
-      fixed for it: once the chapters are scored, one fresh subagent
-      runs `evaluate --full --book {book}` on the fixed text and stamps
-      it. A light fix lets the other whole-book reviews stand, but the
+      fixed for it: once the round's last fix is made, one fresh
+      subagent runs `evaluate --full --book {book}` on the fixed text and
+      stamps it, alongside the chapter scorers (no score changes a
+      chapter). A light fix lets the other whole-book reviews stand, but the
       score whose floor the fixes were meant to lift is only known
       lifted when it is taken again; without this step the gate reads
       the old score for ever.
