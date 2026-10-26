@@ -188,11 +188,19 @@ says what is still open and why.
       archives the chapter's earlier reports first), one
       fresh subagent per chapter, several at a time (each spawns its own
       reader, who sees only the book up to that chapter, and stamps the
-      report). Run them before the scorers, so each scorer checks the new
-      report's items against the chapter (`open_items`); the round's
-      judging (step 4) reads the reports,
-      `books/{book}/edit_logs/first_read_ch*.md`, and the next round's
-      fixes take the items that hold. On one book every report predated
+      report). Then, in the same round, judge each report's serious items
+      as step 4 says (the declines go under the report's `## Editor's
+      calls`) and fix the ones that hold as a light pass, one subagent per
+      chapter as in step 5a, with `shared/craft/FIRST-READER.md` "What the
+      writer does with it" as the brief: a clause, a reorder, a cut repeat,
+      never a rewrite. A fresh reader always finds something; fixing it
+      only next round would send every chapter back to another fresh
+      reader, round after round. Fixed lightly, the read still stands
+      (`release-check` allows a quarter of a chapter's paragraphs), and the
+      scorer checks the items against the fixed text; a fix that has to go
+      further is staged for the next round instead. Run the readers and
+      these fixes before the scorers, so each scorer checks the report's
+      items against the chapter as it stands (`open_items`). On one book every report predated
       two versions and two review rounds, and the gate had been counting
       items no reader had looked for in the text the author would read.
    d. **Score, by a reader who didn't write it.** For every chapter
