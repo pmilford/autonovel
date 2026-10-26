@@ -164,9 +164,12 @@ says what is still open and why.
       notes); the gate counts only turns still `queued`.
    c. **Score, by a reader who didn't write it.** For every chapter
       `release-check` lists under `chapter_scores` (every chapter just
-      fixed, and any scored on an older text), one fresh subagent per
-      chapter, up to four at a time: `evaluate --chapter N --book
-      {book}`, then `_stamp-eval`. Never let the subagent that revised a
+      fixed, and any scored on an older text), fresh subagents, each
+      scoring three or four chapters in a row (it reads the shared files
+      once, which on one book halved the cost of a score), several at a
+      time: `evaluate --chapter N --book {book}`, then `_stamp-eval`.
+      Score a chapter once per round, after its last fix: when a round's
+      reviews will change a chapter again, its score waits for them. Never let the subagent that revised a
       chapter score it: a writer judging its own text favours it
       (EDITING.md §5), and a score the author can't trust is no gate.
       Each returns its overall score, every dimension, the weakest,
