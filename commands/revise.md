@@ -226,9 +226,13 @@ file blocked a full revision-pass.
    tells elsewhere (name where). Put back any that does neither: a cut no
    brief asked for. Above all put back, whatever the brief seems to say,
    a period detail told only here (a law, a penalty, a price, a wage, a
-   season, a custom, a description of a place or thing of the time), a
-   line in which a person speaks their mind, and the chapter's closing
-   hand-off to the next chapter (`/autonovel:draft` step 3a). A cutting
+   sum, a season, a custom, a description of a place or thing of the
+   time), a line in which a person speaks their mind, and the chapter's
+   closing hand-off to the next chapter (`/autonovel:draft` step 3a). A
+   rule that limits something in one place (one figure to a scene, one
+   gloss to a paragraph) is kept by moving the extra to where it is at
+   stake, never by deleting it: one worker obeyed "one figure per scene"
+   by removing the only telling of a recorded sum. A cutting
    pass that loses these is the commonest way a revision makes a book
    worse. Then read each place a cut was made as the reader will: a
    *that*, *it*, *so* or *that was why* that pointed at the cut words must
