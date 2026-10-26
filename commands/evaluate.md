@@ -913,7 +913,9 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
 
 11. Use `file_write` to save the eval log to
     `books/{book}/eval_logs/<timestamp>_<mode>.json` where `<timestamp>`
-    is `YYYYMMDD_HHMMSS` and `<mode>` is one of `foundation`,
+    is the UTC time as `YYYYMMDD_HHMMSS` (use `bash` to run `date -u
+    +%Y%m%d_%H%M%S`; a local time sorts the log among older ones, and
+    `_stamp-eval` refuses it) and `<mode>` is one of `foundation`,
     `ch{chapter:02d}`, `full`, `compare_{N}_vs_{M}`.
 
     In `--full` mode, then use `bash` to run `autonovel _stamp-report

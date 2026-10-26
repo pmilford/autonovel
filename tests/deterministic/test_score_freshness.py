@@ -61,6 +61,24 @@ def test_stamp_eval_marks_the_latest_log_and_tracks_the_text(tmp_path: Path) -> 
     assert summaries.score_state(chapter, detail.scored_text) == "older"
 
 
+def test_stamp_eval_refuses_a_log_named_out_of_order(tmp_path: Path) -> None:
+    """A scorer named its log by local time, so it sorted before an
+    older log and the stamp landed on the older score (2026-10-25)."""
+    import os
+    import time
+    book = _book(tmp_path)
+    older = _log(book, "20261026_005841_ch01.json")
+    misnamed = _log(book, "20261025_182130_ch01.json")  # local time: sorts earlier
+    now = time.time()
+    os.utime(older, (now - 3600, now - 3600))
+    os.utime(misnamed, (now, now))
+    with pytest.raises(summaries.StampError, match="UTC"):
+        summaries.stamp_eval(book / "chapters" / "ch_01.md")
+    misnamed.rename(book / "eval_logs" / "20261026_012130_ch01.json")
+    log, _fp = summaries.stamp_eval(book / "chapters" / "ch_01.md")
+    assert log.name == "20261026_012130_ch01.json"
+
+
 def test_stamp_eval_needs_a_log(tmp_path: Path) -> None:
     book = _book(tmp_path)
     with pytest.raises(summaries.StampError):

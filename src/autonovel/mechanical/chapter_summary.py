@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ..summaries import state as summary_state
@@ -532,7 +532,10 @@ def _iter_chapter_eval_files(eval_dir: Path):
         if m:
             chapter = int(m.group("chapter"))
             try:
-                when = datetime.strptime(m.group("ts"), "%Y%m%d_%H%M%S").timestamp()
+                # Log names carry UTC (evaluate step 11), so compare them
+                # as UTC against the mtimes of the plain `chNN_eval.json`.
+                when = (datetime.strptime(m.group("ts"), "%Y%m%d_%H%M%S")
+                        .replace(tzinfo=timezone.utc).timestamp())
             except ValueError:
                 when = path.stat().st_mtime
         else:

@@ -234,15 +234,36 @@ def stamp_eval(chapter_path: Path) -> tuple[Path, str]:
     m = _CHAPTER_RE.match(chapter_path.name)
     if not m or not chapter_path.is_file():
         raise StampError(f"no chapter file at {chapter_path}")
-    log = latest_chapter_eval_path(chapter_path.parent.parent / "eval_logs", int(m.group(1)))
+    eval_dir = chapter_path.parent.parent / "eval_logs"
+    log = latest_chapter_eval_path(eval_dir, int(m.group(1)))
     if log is None:
         raise StampError(f"no eval log with an overall_score for {chapter_path.name}; "
                          f"write the eval log first")
+    # The log just written must be the one the name order calls latest. A
+    # log named in local time instead of UTC sorts early, and the stamp
+    # would land on an older score and make it look current.
+    newest = _newest_written_eval(eval_dir, int(m.group(1)))
+    if newest is not None and newest != log and newest.stat().st_mtime > log.stat().st_mtime + 1:
+        raise StampError(f"{newest.name} was written after {log.name} but its name sorts "
+                         f"earlier; name eval logs by UTC time (`date -u +%Y%m%d_%H%M%S`) "
+                         f"and rename it before stamping")
     data = json.loads(log.read_text(encoding="utf-8"))
     fp = body_hash(chapter_path.read_text(encoding="utf-8"))
     data[EVAL_KEY] = fp
     log.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return log, fp
+
+
+def _newest_written_eval(eval_dir: Path, chapter: int) -> Path | None:
+    """The chapter's timestamp-named eval log with the latest mtime."""
+    from .mechanical.chapter_summary import _iter_chapter_eval_files
+    best: Path | None = None
+    for ch, _when, path in _iter_chapter_eval_files(eval_dir):
+        if ch != chapter or not re.match(r"^\d{8}_\d{6}_", path.name):
+            continue
+        if best is None or path.stat().st_mtime > best.stat().st_mtime:
+            best = path
+    return best
 
 
 # ------------------------------------------------------------ briefs
