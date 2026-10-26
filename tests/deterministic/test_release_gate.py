@@ -198,6 +198,27 @@ def test_cli_stamp_report_and_release_check(book: Path) -> None:
     assert "✓ the whole-book repetition ledger read this text" in r.stdout
 
 
+def test_turn_status_marks_numbered_turns_and_the_gate_follows(book: Path) -> None:
+    (book / "briefs").mkdir(exist_ok=True)
+    conv = book / "briefs" / "conversation.md"
+    conv.write_text(
+        "## 2026-10-25 — turn 7 — suggest\n**Target:** chapter 1\n\n**Status:** queued\n\n"
+        "## 2026-10-25 — turn 8 — suggest\n**Target:** chapter 2\n\n**Status:** queued\n\n"
+        "## 2026-10-25 — turn 9 — suggest\n**Target:** chapter 3\n\n**Status:** applied\n",
+        encoding="utf-8")
+    assert release_gate._queued_turns(book) == [1, 2]
+    prev = release_gate.set_turn_status(book, [7, 8], "applied")
+    assert prev == {7: "queued", 8: "queued"}
+    assert release_gate._queued_turns(book) == []
+    release_gate.set_turn_status(book, [9], "declined")
+    text = conv.read_text()
+    assert text.count("**Status:** applied") == 2 and "**Status:** declined" in text
+    with pytest.raises(KeyError):
+        release_gate.set_turn_status(book, [10], "applied")
+    r = _run(book.parent.parent, "_turn-status", "--book", "one", "--turns", "7", "--status", "queued")
+    assert r.returncode == 0 and "turn 7: applied -> queued" in r.stdout
+
+
 def test_cli_command_path_points_at_the_command_source(series_root: Path) -> None:
     r = _run(series_root, "_command-path", "evaluate")
     assert r.returncode == 0, r.stderr

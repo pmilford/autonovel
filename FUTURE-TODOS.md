@@ -19,10 +19,11 @@ to start.
   whether a re-run review found anything the stale one missed, and tune;
   (2) no smoke test drives the cycle end to end on a fixture (it costs a
   whole-book read per round; a three-chapter fixture with seeded repeats
-  would do); (3) the cycle stages findings as `**Status:** queued` turns
-  and the gate counts them, but a finding the editor declined leaves no
-  turn, so the round notes are the only record: consider a `declined`
-  status so `next` and the gate can tell declined from forgotten.
+  would do); (3) done 2026-10-25: `autonovel _turn-status --turns N,M
+  --status applied|declined|queued` is the one writer of a turn's status
+  in a parallel sweep, and `declined` (reason in the round notes) is a
+  status the gate doesn't count. Still open: `/autonovel:next` doesn't
+  list declined turns for the author to see.
 - **Calibrate the judge against the author's reading (opened 2026-10-25).**
   On kingmaker2 the author found version 3's chapter 1 "long and a bit
   slow" and repetitive two-thirds in, while the judge gave it 7.7 with

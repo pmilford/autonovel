@@ -319,6 +319,45 @@ def _queued_turns(book_root: Path) -> list[int]:
     return out
 
 
+TURN_STATUSES = ("queued", "applied", "declined")
+_TURN_NUM_RE = re.compile(r"^## .*?turn (\d+)\b", re.MULTILINE)
+
+
+def set_turn_status(book_root: Path, turns: list[int], status: str) -> dict[int, str]:
+    """Set `**Status:**` on the numbered turns of briefs/conversation.md.
+
+    The one writer of a turn's status when a sweep runs its chapters in
+    parallel (`/autonovel:review-cycle`): the per-chapter workers leave the
+    file alone and the sweep marks what each carried out. `declined` is for
+    a staged finding the editor decided against, with the reason in the
+    round notes; the gate counts only `queued`. Returns {turn: previous
+    status}; raises KeyError naming any turn not in the file."""
+    if status not in TURN_STATUSES:
+        raise ValueError(f"status must be one of {', '.join(TURN_STATUSES)}")
+    path = book_root / "briefs" / "conversation.md"
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    marks = list(_TURN_NUM_RE.finditer(text))
+    spans = {int(m.group(1)): (m.start(), marks[i + 1].start() if i + 1 < len(marks) else len(text))
+             for i, m in enumerate(marks)}
+    missing = [t for t in turns if t not in spans]
+    if missing:
+        raise KeyError(f"no turn {', '.join(map(str, missing))} in {path}")
+    previous: dict[int, str] = {}
+    for t in sorted(set(turns), reverse=True):
+        a, b = spans[t]
+        block = text[a:b]
+        m = re.search(r"\*\*Status:\*\*\s*(\w+)", block)
+        if not m:
+            new_block = block.rstrip("\n") + f"\n\n**Status:** {status}\n\n"
+            previous[t] = "none"
+        else:
+            previous[t] = m.group(1)
+            new_block = block[:m.start(1)] + status + block[m.end(1):]
+        text = text[:a] + new_block + text[b:]
+    path.write_text(text, encoding="utf-8")
+    return previous
+
+
 def render_markdown(rep: GateReport) -> str:
     lines = [f"# Ready for the author? — {rep.book}", ""]
     lines.append("**Ready.** Every whole-book review read this text and its fixes are made."

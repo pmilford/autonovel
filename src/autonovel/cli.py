@@ -358,6 +358,13 @@ def _build_parser() -> argparse.ArgumentParser:
                           "| review | full_eval")
     _sr.set_defaults(func=_cmd_stamp_report)
 
+    _ts = sub.add_parser("_turn-status", help=argparse.SUPPRESS)
+    _ts.add_argument("--book", required=True)
+    _ts.add_argument("--turns", required=True,
+                     help="Comma-separated turn numbers of briefs/conversation.md, e.g. 85,113.")
+    _ts.add_argument("--status", required=True, choices=("queued", "applied", "declined"))
+    _ts.set_defaults(func=_cmd_turn_status)
+
     _cp = sub.add_parser("_command-path", help=argparse.SUPPRESS)
     _cp.add_argument("name", help="Command name without the autonovel: prefix, e.g. evaluate.")
     _cp.set_defaults(func=_cmd_command_path)
@@ -1229,6 +1236,30 @@ def _cmd_stamp_report(args: argparse.Namespace) -> int:
         return 1
     print(f"stamped: {args.report} read chapters {', '.join(sorted(entry['chapters'], key=int))} "
           f"as they now stand")
+    return 0
+
+
+def _cmd_turn_status(args: argparse.Namespace) -> int:
+    """Hidden subcommand: mark staged turns in briefs/conversation.md
+    applied, declined or queued (`release_gate.set_turn_status`)."""
+    from .housekeeping import release_gate
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    try:
+        turns = [int(t) for t in args.turns.split(",") if t.strip()]
+    except ValueError:
+        print(f"error: --turns must be numbers, got {args.turns!r}", file=sys.stderr)
+        return 2
+    try:
+        previous = release_gate.set_turn_status(series.books / args.book, turns, args.status)
+    except (KeyError, ValueError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    for t in sorted(previous):
+        print(f"turn {t}: {previous[t]} -> {args.status}")
     return 0
 
 

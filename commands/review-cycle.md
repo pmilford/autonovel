@@ -161,8 +161,11 @@ says what is still open and why.
    every change it made (`autonovel mechanical diff-chapters --book
    {book} --from checkpoint:latest --chapters N --format hunks`) and put
    back anything it cut that a reader came for, as revise's "Account
-   for every cut" says. Flip the turns it carried out to `**Status:**
-   applied`. Revisions write `books/{book}/chapters/*.md`, their
+   for every cut" says. Then use `bash` to mark the turns it carried out:
+   `autonovel _turn-status --book {book} --turns <N,M,…> --status
+   applied`, and any the editor decided against `--status declined`
+   (the reason goes in the round notes); the gate counts only turns
+   still `queued`. Revisions write `books/{book}/chapters/*.md`, their
    summaries, eval logs, briefs under `books/{book}/briefs/*.md`, edit
    logs under `books/{book}/edit_logs/*.md` and
    `books/{book}/edit_logs/*.json`, and canon: after the last chapter of
