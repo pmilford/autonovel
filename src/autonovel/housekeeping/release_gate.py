@@ -388,6 +388,37 @@ def first_read_state(book_root: Path, chapter: int) -> str:
     return "light" if changed / max(len(old), len(now), 1) <= CHAPTER_CHANGE_LIMIT else "older"
 
 
+def read_changes(book_root: Path) -> dict:
+    """How much each report's text has changed since it was read: for every
+    chapter's cold read, the share of its words changed (None when the
+    stamp kept no copy) and its state; for every whole-book report, the
+    share of the book's words changed and its state."""
+    chapters = _numbered_chapters(book_root)
+    cold = {}
+    for n, path in chapters.items():
+        snap = _snapshot_path(book_root, FIRST_READ_KEY, n)
+        share = (word_change(snap.read_text(encoding="utf-8"), _body_of(path))
+                 if snap.is_file() else None)
+        cold[n] = {"state": first_read_state(book_root, n), "changed": share}
+    books = {}
+    for key in REPORTS:
+        state, _changed = report_state(book_root, key)
+        total = moved = 0.0
+        kept = True
+        for n, path in chapters.items():
+            snap = _snapshot_path(book_root, key, n)
+            if not snap.is_file():
+                kept = False
+                break
+            old = snap.read_text(encoding="utf-8")
+            total += len(old.split())
+            moved += word_change(old, _body_of(path)) * len(old.split())
+        books[key] = {"state": state, "changed": (moved / total if total else 0.0) if kept else None}
+    return {"cold_reads": cold, "reports": books,
+            "limits": {"cold_read": FIRST_READ_CHANGE_LIMIT, "chapter": CHAPTER_CHANGE_LIMIT,
+                       "book": BOOK_CHANGE_LIMIT}}
+
+
 def _first_read_when(book_root: Path, chapter: int) -> float | None:
     reads = load_stamps(book_root).get(FIRST_READ_KEY)
     entry = reads.get(str(chapter)) if isinstance(reads, dict) else None

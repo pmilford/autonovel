@@ -181,6 +181,22 @@ def test_a_clause_in_every_paragraph_is_still_a_light_fix(book: Path) -> None:
     assert release_gate.word_change("a b c d", "a b x d") == 0.25
 
 
+def test_read_change_reports_the_share_changed_since_each_read(book: Path) -> None:
+    for n in (1, 2, 3):
+        _first_read(book, n)
+    _write_reports(book)
+    release_gate.stamp_report(book, "said_once")
+    ch2 = book / "chapters" / "ch_02.md"
+    ch2.write_text(ch2.read_text().replace("Ana counts", "Ana weighs"))
+    data = release_gate.read_changes(book)
+    assert data["cold_reads"][1]["changed"] == 0.0 and data["cold_reads"][1]["state"] == "current"
+    assert 0 < data["cold_reads"][2]["changed"] < 0.15 and data["cold_reads"][2]["state"] == "light"
+    assert data["reports"]["said_once"]["state"] == "light"
+    assert data["reports"]["review"]["changed"] is None   # never stamped: no copy kept
+    r = _run(book.parent.parent, "mechanical", "read-change", "books/one", "--chapter", "2")
+    assert r.returncode == 0 and "ch 2:" in r.stdout and "light" in r.stdout
+
+
 def test_a_stamp_without_a_kept_text_falls_back_to_paragraphs(book: Path) -> None:
     for n in (1, 2, 3):
         _first_read(book, n)

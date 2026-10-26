@@ -13,6 +13,7 @@ Subcommands:
   chapter-summary <book> [--format] One-line-per-chapter overview (date/POV/score/cast/plot).
   summary-check <book> [--chapters] Is each continuity summary still a summary of its chapter (fresh/stale/unverified/missing)?
   release-check <book>              Is this version ready for the author? (scores current, whole-book reviews current, fixes made)
+  read-change <book>                How much of the text each review read has changed since (against release-check's limits)
   structure-dossier <book>         Pack outline + summaries + word counts + story_time + scores for structure-review.
   structure-validate <book|json>   Validate structure_review.json + compute the book-level stop-revising gate.
   design-validate <book> [--outline] Check design.md's shape (DESIGN.md Part II); --outline also checks outline.md carries it.
@@ -686,6 +687,34 @@ def _cmd_release_check(args: argparse.Namespace) -> int:
     else:
         sys.stdout.write(release_gate.render_markdown(rep))
     return 0 if rep.passes else 1
+
+
+def _cmd_read_change(args: argparse.Namespace) -> int:
+    """How much of the text each review read has changed since
+    (`release_gate.read_changes`)."""
+    from ..housekeeping import release_gate
+    book_root = Path(args.book_root)
+    if not (book_root / "chapters").is_dir():
+        print(f"read-change: no chapters/ under {book_root}", file=sys.stderr)
+        return 2
+    data = release_gate.read_changes(book_root)
+    if args.format == "json":
+        json.dump(data, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+    lim = data["limits"]
+    pct = lambda v: "no copy kept" if v is None else f"{v * 100:.1f}%"
+    print(f"Cold reads (stand while no more than {lim['cold_read'] * 100:.0f}% of the chapter's words have changed):")
+    for n, d in sorted(data["cold_reads"].items()):
+        if args.chapter and n not in args.chapter:
+            continue
+        print(f"  ch {n}: {pct(d['changed'])} changed, {d['state']}")
+    if not args.chapter:
+        print(f"Whole-book reports (stand while no chapter has changed more than "
+              f"{lim['chapter'] * 100:.0f}% and the book no more than {lim['book'] * 100:.0f}%):")
+        for key, d in data["reports"].items():
+            print(f"  {key}: {pct(d['changed'])} of the book changed, {d['state']}")
+    return 0
 
 
 def _project_floor(book_root: Path) -> float:
@@ -2493,6 +2522,17 @@ def main(argv: list[str] | None = None) -> int:
     rc.add_argument("--format", choices=("json", "markdown"), default="markdown",
                     help="Output format (default: markdown).")
     rc.set_defaults(func=_cmd_release_check)
+
+    rch = sub.add_parser("read-change",
+                         help="How much of the text each review read has changed since: every "
+                              "chapter's cold read and every whole-book report, against the copy "
+                              "kept when it was stamped, with release-check's limits.")
+    rch.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    rch.add_argument("--chapter", type=int, action="append",
+                     help="Only this chapter's cold read (repeatable).")
+    rch.add_argument("--format", choices=("json", "markdown"), default="markdown",
+                     help="Output format (default: markdown).")
+    rch.set_defaults(func=_cmd_read_change)
 
     plp = sub.add_parser("prolepsis",
                          help="Candidate narrator flash-forwards per chapter (sentences that reach "
