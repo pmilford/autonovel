@@ -3003,7 +3003,24 @@ general, not the book's:
   a keyed "no new facts" note (7cd19e3: a false conflict).
 +3 tests.
 
+### 2026-10-25 — a revision supersedes the canon entry it names
+
+Round 2 of the review cycle on kingmaker2 parked eleven canon conflicts,
+ten of them a worker's entry that said in its own words what it was
+("[The slate, 19 May 1519] Refreshes the entry of that name: …";
+"Retire this entry: chapter 10 no longer shows …"). The FUTURE-TODOS
+item of 2026-10-23 named the gap. Now a chapter-derived entry under the
+same `[key]` that starts *Replaces / Amends / Refreshes / Supersedes* or
+*Retire this entry* moves the old line out of the canon body into
+`## Superseded`, contradiction or not; a retiring entry promotes nothing
+(d265969). Only the same key counts: an entry can't retire one it
+doesn't name. revise step 10 and promote-canon step 4 tell the form.
+Found on the re-run: a conflict parked twice was wrapped in its
+`**New candidate:**` label twice, because the parser kept the labelled
+line as the candidate (b8539fb). +2 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (a revision supersedes the canon entry it names; a conflict parked twice) — **2346 passing, 1 skipped** (+2; the earlier 2343 line predates one test added with the release gate's book floor).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (review cycle's first run: turn status, UTC eval names, promote-canon note) — **2343 passing, 1 skipped** (+2 since the scorecard; +1 assertion).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (whole-book scorecard) — **2341 passing, 1 skipped** (+4).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (release-check, report stamps, review-cycle, strict scoring, draft notice) — **2337 passing, 1 skipped** (+17).
