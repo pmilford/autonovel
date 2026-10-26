@@ -95,7 +95,12 @@ says what is still open and why.
    scored before this round's fixes would have to be scored again.
    Start `books/{book}/edit_logs/review_cycle_round<N>.md` now with the
    release check's open items and every correction the last chapter
-   scores asked for that is not yet made. Change no chapter while a
+   scores asked for that is not yet made, and the round's starting
+   point: the series' git commit when it is a git repository (commit
+   first if the tree has changes), otherwise `checkpoint:latest`. Every
+   cut check this round (step 5b) diffs from that point, and nothing is
+   committed while a fix worker is writing: a commit in the middle hid
+   half of one worker's cuts from its own check. Change no chapter while a
    whole-book review is reading the book (its line numbers and quotes
    would stop matching the text); note any fix you find meanwhile in the
    round notes and make it in step 5.
@@ -174,8 +179,8 @@ says what is still open and why.
       and not to edit `briefs/conversation.md`: this command marks the
       turns and promotes once, after the round.
    b. **Check the cuts.** Read every change each one made (`autonovel
-      mechanical diff-chapters --book {book} --from checkpoint:latest
-      --chapters N --format hunks`) and put back anything it cut that a
+      mechanical diff-chapters --book {book} --from <the round's
+      starting point> --chapters N --format hunks`) and put back anything it cut that a
       reader came for, as revise's "Account for every cut" says. Then use
       `bash` to mark the turns it carried out: `autonovel _turn-status
       --book {book} --turns <N,M,…> --status applied`, and any the editor
