@@ -141,7 +141,13 @@ says what is still open and why.
    a clause, and check the chapters before and after for an earlier
    telling: staged one per chapter without that, each worker tells it in
    full, and on one book the fix made a third telling a scorer then marked
-   down (`shared/craft/PROSE.md` §7 rule 9). A finding that needs a cross-chapter move (merge, cut,
+   down (`shared/craft/PROSE.md` §7 rule 9). Moving a scene or a
+   passage from one chapter to another (an episode that belongs at the
+   end of the chapter before; an explanation that belongs where it is at
+   stake) is not a merge, cut, reorder or split of chapters: stage it as
+   a pair of turns, one per chapter, and in step 5 give both chapters to
+   one worker, the giving chapter's side first, so the passage arrives
+   whole and isn't told in both. A finding that needs a cross-chapter move (merge, cut,
    reorder, split) or an author's decision is not staged: list it for the
    author in the round notes and in the final report.
 
