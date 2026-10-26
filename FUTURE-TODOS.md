@@ -240,7 +240,12 @@ to start.
   chapter, then touch only its frontmatter; the summary is not stale.
 
 - **A revision can't retire the canon entry it supersedes (opened
-  2026-10-23, found on the kingmaker2 revision pass).** When a revised
+  2026-10-23, found on the kingmaker2 revision pass). Done 2026-10-25:**
+  a chapter-derived entry under the same `[key]` that starts "Replaces /
+  Amends / Refreshes / Supersedes" or "Retire this entry" now moves the
+  old line to `## Superseded` (`promote_canon._revision_supersedes`;
+  revise step 10 tells writers the form). Entries that don't name the
+  same key still need a hand. The original note: When a revised
   chapter changes a fact it had established (chapter 7 moved the Pope's
   briefs from Thursday 24 March to Monday 21 March; chapter 15 moved the
   French messenger's expulsion), revise writes a new pending entry whose

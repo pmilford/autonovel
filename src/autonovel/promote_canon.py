@@ -218,6 +218,7 @@ def promote(
     #   key "book:<name>" → books/<name>/canon.md
     survivors_by_target: dict[str, list[tuple[str, PendingEntry]]] = {}
     supersedures_by_target: dict[str, list[SupersedureRecord]] = {}
+    removals_by_target: dict[str, list[str]] = {}
 
     def _add_survivor(target_key: str, book_name: str, entry: PendingEntry) -> None:
         survivors_by_target.setdefault(target_key, []).append((book_name, entry))
@@ -251,7 +252,33 @@ def promote(
             )
             target = _target_for(entry, scope=scope)
             target_key = "shared" if target == "shared" else f"book:{book_name}"
-            if classification["kind"] == "duplicate":
+            # A revision that says it replaces, amends or retires the
+            # entry of the same key: the chapter was changed on purpose,
+            # so the old line leaves the canon body and is kept under
+            # `## Superseded`, whether or not the two read as a
+            # contradiction. Before this, such entries parked as conflicts
+            # for the author (eleven in one round of one book) or sat in
+            # canon beside the line they replaced.
+            keyed = _keyed_line(entry, (own_canon_text, own_canon_rel), (canon_text, "shared/canon.md"))
+            revision = _revision_supersedes(entry, keyed[0]) if keyed else None
+            if revision:
+                old_line, old_file = keyed
+                sup = SupersedureRecord(
+                    new_entry=entry,
+                    superseded_line=old_line,
+                    superseded_file=old_file,
+                    rationale=f"revised chapter ({revision})",
+                )
+                sup_key = f"book:{book_name}" if old_file == own_canon_rel else "shared"
+                supersedures_by_target.setdefault(sup_key, []).append(sup)
+                removals_by_target.setdefault(sup_key, []).append(old_line)
+                book_report.supersedure_records.append(sup)
+                book_report.supersedures += 1
+                if revision != "retire":
+                    _add_survivor(target_key, book_name, entry)
+                    book_report.promoted += 1
+                    _count_target(book_report, target)
+            elif classification["kind"] == "duplicate":
                 book_report.duplicates += 1
             elif classification["kind"] == "contradiction":
                 if entry.research_slug:
@@ -323,6 +350,8 @@ def promote(
             path = book_canon_path(series, target_key.split(":", 1)[1])
             header = "# Book canon"
         existing = path.read_text(encoding="utf-8") if path.is_file() else ""
+        for old in removals_by_target.get(target_key, []):
+            existing = existing.replace(old.rstrip() + "\n", "", 1)
         appended = _render_canon_appendage(
             survivors=survivors,
             supersedures=supersedures,
@@ -336,6 +365,45 @@ def promote(
         path.write_text(new_text, encoding="utf-8")
 
     return report
+
+
+_KEY_RE = re.compile(r"^\s*(?:-\s+)?\[([^\]]+)\]")
+_REVISION_RE = re.compile(
+    r"^\[[^\]]+\]\s*(?:this\s+)?(replaces|amends|refreshes|supersedes|retire|retires)\b",
+    re.IGNORECASE)
+
+
+def _keyed_line(entry: PendingEntry, *sources: tuple[str, str]) -> tuple[str, str] | None:
+    """The canon line, and its file, under the same `[key]` as `entry`
+    (the book's own canon first, then shared)."""
+    body = (entry.display_text or entry.fact_text or "").strip()
+    m = _KEY_RE.match(body)
+    if not m:
+        return None
+    key = m.group(1).strip().lower()
+    for text, rel in sources:
+        for line in text.splitlines():
+            km = _KEY_RE.match(line)
+            if km and km.group(1).strip().lower() == key and line.lstrip().startswith("-"):
+                return line, rel
+    return None
+
+
+def _revision_supersedes(entry: PendingEntry, existing_line: str) -> str | None:
+    """`"retire"` or `"replace"` when a chapter-derived candidate says it
+    replaces, amends, refreshes or retires the canon entry under the same
+    `[key]` ("[The slate, 19 May] Refreshes the entry of that name: …");
+    None otherwise. Only the same key counts: a revision can't retire an
+    entry it doesn't name."""
+    body = (entry.display_text or entry.fact_text or "").strip()
+    m = _REVISION_RE.match(body)
+    if not m:
+        return None
+    new_key = _KEY_RE.match(body)
+    old_key = _KEY_RE.match(existing_line)
+    if not new_key or not old_key or new_key.group(1).strip().lower() != old_key.group(1).strip().lower():
+        return None
+    return "retire" if m.group(1).lower().startswith("retire") else "replace"
 
 
 def _count_target(book_report: BookReport, target: str) -> None:

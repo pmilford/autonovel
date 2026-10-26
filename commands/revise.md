@@ -320,7 +320,12 @@ file blocked a full revision-pass.
 
 10. Use `file_write` to append any new candidate canon facts to
     `books/{book}/pending_canon.md` (or add a single `no new facts`
-    line if the rewrite established nothing new). Never edit
+    line if the rewrite established nothing new). When the rewrite
+    changes a fact a canon entry records, write the new entry under the
+    same `[key]`, starting `Replaces the entry of that name:` (or
+    `Amends`, `Refreshes`), or `Retire this entry:` when the fact is gone;
+    `/autonovel:promote-canon` then moves the old line to `## Superseded`
+    instead of leaving both in canon or parking a conflict. Never edit
     `shared/canon.md` directly — that is what `/autonovel:promote-canon`
     is for.
 

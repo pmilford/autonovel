@@ -358,6 +358,33 @@ def test_contradiction_against_own_book_canon_names_that_file(tmp_path: Path) ->
     assert "**Existing canon (in: books/one/canon.md):**" in pending_text
 
 
+def test_a_revision_replaces_or_retires_the_entry_it_names(tmp_path: Path) -> None:
+    """A chapter revised on purpose names the entry it replaces; every such
+    entry used to park as a conflict for the author (eleven in one round
+    of one book, 2026-10-25)."""
+    series = _make_series(tmp_path)
+    (series.books / "one" / "canon.md").write_text(
+        "# Book canon\n\n"
+        "- [The slate, 19 May] Charles counts four votes on 19 May (from one ch_11)\n"
+        "- [Konrad looks east, 1514] Konrad looks east in 1514 (from one ch_10)\n"
+        "- [Fugger in Venice] Fugger arrived in Venice 1473 (from one ch_03)\n",
+        encoding="utf-8")
+    _seed_pending(series, "one", [
+        "- [The slate, 19 May] Refreshes the entry of that name: Charles counts one vote on 19 May, Mainz's (from one ch_11, round 2)",
+        "- [Konrad looks east, 1514] Retire this entry: chapter 10 no longer shows it in 1514 (from one ch_10, round 2)",
+        "- [Fugger in Venice, later] Fugger arrived in Venice 1478 (from one ch_05)",
+    ])
+    report = pc.promote(series, book="one")
+    canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
+    body, _, superseded = canon.partition("## Superseded")
+    assert "Charles counts four votes" not in body and "Charles counts four votes" in superseded
+    assert "Charles counts one vote" in body
+    assert "Konrad looks east in 1514" not in body and "Retire this entry" not in body
+    # Only the entry of the same key is touched: a different key is left alone.
+    assert report.books[0].supersedures == 2
+    assert "Fugger arrived in Venice 1473" in body
+
+
 def test_sibling_book_canon_is_not_a_constraint(tmp_path: Path) -> None:
     """A rewrite (book `two`) may contradict book `one`'s own canon
     freely — only shared/ and its OWN canon bind it."""

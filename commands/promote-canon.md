@@ -144,7 +144,12 @@ files, so `autonovel rollback` undoes the whole promotion.
      held the prior line
      listing the prior canonical line and a one-sentence rationale
      ("research note `<slug>` cites [<shortname>] for <new value>;
-     prior value was <old value>"). The user reviewing
+     prior value was <old value>"). A chapter-derived entry under the
+     same `[key]` as a canon line that starts "Replaces the entry of that
+     name", "Amends", "Refreshes", "Supersedes" or "Retire this entry"
+     (revise step 10) supersedes it the same way, contradiction or not:
+     the old line leaves the canon body for the `## Superseded` block,
+     and a retiring entry promotes nothing. The user reviewing
      `shared/canon.md` then sees both the new fact and the old one
      with a clear paper trail. This is what makes
      `/autonovel:research --from-seed` → `/autonovel:promote-canon`
