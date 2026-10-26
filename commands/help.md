@@ -642,7 +642,9 @@ After research adds new facts that conflict with existing canon:
   /autonovel:promote-canon
 
 Promotes pending entries; research-tagged entries beat existing
-canon facts with the citation recorded in a `## Superseded` block.
+canon facts with the citation recorded in a `## Superseded` block. A
+revised chapter's entry that replaces or retires the entry of the same
+`[key]` supersedes it the same way.
 
 Then which chapters need revising?
 

@@ -472,7 +472,9 @@ sequence that catches the things a sweep can silently break:
    after editing.
 
    **After `/autonovel:promote-canon` runs cleanly**, if any facts
-   were superseded (research-tagged entries that beat prior canon),
+   were superseded (research-tagged entries that beat prior canon, or a
+   revised chapter's entry that replaces or retires the entry of the
+   same `[key]`),
    the question "which chapters reference the now-wrong fact?"
    used to require manual `ls` + `grep`. It doesn't anymore:
 
