@@ -713,7 +713,8 @@ def _cmd_read_change(args: argparse.Namespace) -> int:
         print(f"Whole-book reports (stand while no chapter has changed more than "
               f"{lim['chapter'] * 100:.0f}% and the book no more than {lim['book'] * 100:.0f}%):")
         for key, d in data["reports"].items():
-            print(f"  {key}: {pct(d['changed'])} of the book changed, {d['state']}")
+            amount = "no copy kept" if d["changed"] is None else f"{d['changed'] * 100:.1f}% of the book changed"
+            print(f"  {key}: {amount}, {d['state']}")
     return 0
 
 
