@@ -139,39 +139,46 @@ says what is still open and why.
    reorder, split) or an author's decision is not staged: list it for the
    author in the round notes and in the final report.
 
-5. **Make the fixes, then score.** For every chapter with a queued turn, a dimension
-   under the floor, or an open cold-reader item: one subagent per
-   chapter, following `autonovel _command-path revision-pass` step 3's
-   per-chapter sequence for that chapter (brief from the queued turns
-   and the eval log, then revise, then evaluate, then `_stamp-summary`
-   and `_stamp-eval`), skipping its anachronism check unless the
-   chapter's dateline or period content changed. Run them in chapter
-   order, or up to three at a time when no chapter's turns depend on
-   another's (a line edit, a cut, a clause: revision-pass's `--parallel`
-   trade-off); a chapter whose fix plants or pays something in another
-   chapter runs after that chapter. Tell each subagent not to run
-   `_promote-canon` and not to edit `briefs/conversation.md`: this
-   command flips the turns and promotes once, after the round. Then,
-   for every chapter `release-check` still lists under `chapter_scores`
-   (changed by no fix but scored on an older text), one subagent per
-   chapter, up to four at a time: `evaluate --chapter N --book {book}`.
-   Each returns its overall score, every dimension, the weakest,
-   `top_3_revisions`, the cold reader's open items and its repeats;
-   judge them as step 4 does before the next round. Read
-   every change it made (`autonovel mechanical diff-chapters --book
-   {book} --from checkpoint:latest --chapters N --format hunks`) and put
-   back anything it cut that a reader came for, as revise's "Account
-   for every cut" says. Then use `bash` to mark the turns it carried out:
-   `autonovel _turn-status --book {book} --turns <N,M,…> --status
-   applied`, and any the editor decided against `--status declined`
-   (the reason goes in the round notes); the gate counts only turns
-   still `queued`. Revisions write `books/{book}/chapters/*.md`, their
-   summaries, eval logs, briefs under `books/{book}/briefs/*.md`, edit
-   logs under `books/{book}/edit_logs/*.md` and
-   `books/{book}/edit_logs/*.json`, and canon: after the last chapter of
-   the round, use `bash` to run `autonovel _promote-canon --book {book}
-   --no-lock`, which moves `books/{book}/pending_canon.md` into
-   `books/{book}/canon.md` and `shared/canon.md`.
+5. **Make the fixes, then score.**
+   a. **Fix.** For every chapter with a queued turn, a dimension under
+      the floor, or an open cold-reader item: one subagent per chapter,
+      following `autonovel _command-path revision-pass` step 3's
+      per-chapter sequence for that chapter (brief from the queued turns
+      and the latest eval log's top revisions and open cold-reader items,
+      then revise, then `_stamp-summary`), skipping its anachronism check
+      unless the chapter's dateline or period content changed, and
+      **skipping its evaluate**. Run them in chapter order, or up to
+      three at a time when no chapter's turns depend on another's (a line
+      edit, a cut, a clause: revision-pass's `--parallel` trade-off); a
+      chapter whose fix plants or pays something in another chapter runs
+      after that chapter. Tell each subagent not to run `_promote-canon`
+      and not to edit `briefs/conversation.md`: this command marks the
+      turns and promotes once, after the round.
+   b. **Check the cuts.** Read every change each one made (`autonovel
+      mechanical diff-chapters --book {book} --from checkpoint:latest
+      --chapters N --format hunks`) and put back anything it cut that a
+      reader came for, as revise's "Account for every cut" says. Then use
+      `bash` to mark the turns it carried out: `autonovel _turn-status
+      --book {book} --turns <N,M,…> --status applied`, and any the editor
+      decided against `--status declined` (the reason goes in the round
+      notes); the gate counts only turns still `queued`.
+   c. **Score, by a reader who didn't write it.** For every chapter
+      `release-check` lists under `chapter_scores` (every chapter just
+      fixed, and any scored on an older text), one fresh subagent per
+      chapter, up to four at a time: `evaluate --chapter N --book
+      {book}`, then `_stamp-eval`. Never let the subagent that revised a
+      chapter score it: a writer judging its own text favours it
+      (EDITING.md §5), and a score the author can't trust is no gate.
+      Each returns its overall score, every dimension, the weakest,
+      `top_3_revisions`, the cold reader's open items and its repeats;
+      judge them as step 4 does before the next round.
+   Revisions write `books/{book}/chapters/*.md`, their summaries, eval
+   logs, briefs under `books/{book}/briefs/*.md`, edit logs under
+   `books/{book}/edit_logs/*.md` and `books/{book}/edit_logs/*.json`,
+   and canon: after the last chapter of the round, use `bash` to run
+   `autonovel _promote-canon --book {book} --no-lock`, which moves
+   `books/{book}/pending_canon.md` into `books/{book}/canon.md` and
+   `shared/canon.md`.
 
 6. Run `release-check` again. If it passes, go to step 7. If it doesn't
    and rounds remain, start the next round at step 3 with what is still
