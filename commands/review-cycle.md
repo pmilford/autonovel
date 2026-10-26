@@ -141,11 +141,17 @@ says what is still open and why.
 
 5. **Make the fixes, then score.** For every chapter with a queued turn, a dimension
    under the floor, or an open cold-reader item: one subagent per
-   chapter, in chapter order, following `autonovel _command-path
-   revision-pass` step 3's per-chapter sequence for that chapter (brief
-   from the queued turns and the eval log, then revise, then evaluate,
-   then `_stamp-summary` and `_stamp-eval`), skipping its anachronism
-   check unless the chapter's dateline or period content changed. Then,
+   chapter, following `autonovel _command-path revision-pass` step 3's
+   per-chapter sequence for that chapter (brief from the queued turns
+   and the eval log, then revise, then evaluate, then `_stamp-summary`
+   and `_stamp-eval`), skipping its anachronism check unless the
+   chapter's dateline or period content changed. Run them in chapter
+   order, or up to three at a time when no chapter's turns depend on
+   another's (a line edit, a cut, a clause: revision-pass's `--parallel`
+   trade-off); a chapter whose fix plants or pays something in another
+   chapter runs after that chapter. Tell each subagent not to run
+   `_promote-canon` and not to edit `briefs/conversation.md`: this
+   command flips the turns and promotes once, after the round. Then,
    for every chapter `release-check` still lists under `chapter_scores`
    (changed by no fix but scored on an older text), one subagent per
    chapter, up to four at a time: `evaluate --chapter N --book {book}`.
