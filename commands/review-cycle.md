@@ -120,7 +120,12 @@ says what is still open and why.
    `books/{book}/edit_logs/reader_panel.json`;
    `books/{book}/edit_logs/review.json` and `books/{book}/edit_logs/review.md`;
    the book score; the cold readers' reports,
-   `books/{book}/edit_logs/first_read_ch*.md`; and
+   `books/{book}/edit_logs/first_read_ch*.md` (judge every serious item
+   as you judge a finding; one that doesn't hold, a deliberate mystery
+   or a fact an earlier chapter gave, goes under the report's `## Editor's
+   calls` heading as **declined**, with why, as
+   `shared/craft/FIRST-READER.md` says, so no scorer counts it open
+   again); and
    `books/{book}/edit_logs/report_stamps.json` for which text each read. Check a finding against the chapter itself
    (`books/{book}/chapters/*.md`, and its summary
    `books/{book}/chapters/ch_*.summary.md` for context) before you

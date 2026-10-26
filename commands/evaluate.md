@@ -303,7 +303,13 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
    open_items: [...], all_fixed: true|false}`. `open_items` is your
    check of the chapter as it stands: each serious item of the last
    report whose quoted passage is not yet gone, explained or clear,
-   one short line each; `[]` when every one is. `all_fixed` is true
+   one short line each; `[]` when every one is. An item the report's
+   `## Editor's calls` section lists as **declined** (the editor's
+   judgement that the reader was wrong about the book,
+   `shared/craft/FIRST-READER.md`) is not open: record it under
+   `declined_items` (one short line each, with the editor's reason) and
+   leave it out of `open_items`, unless the passage it points at has
+   since changed so that the reason no longer holds. `all_fixed` is true
    only when `open_items` is empty. Omit the block when no report
    exists. (The dashboard, `/autonovel:next` and the brief count
    `open_items`, not the last report's length: a revised chapter can

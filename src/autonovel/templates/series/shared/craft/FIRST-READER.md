@@ -126,3 +126,18 @@ Fix them all, then — when anything under Lost, Didn't know, Read twice,
 Too many at once, Forgot who or Told again, or the page-turn answer, was
 serious — have a fresh reader read the fixed chapter. Keep the report beside the chapter at
 `books/<book>/edit_logs/first_read_chNN.md`.
+
+An item can be wrong about the book: the reader asks to have explained
+what the book withholds on purpose and pays later (a secret the
+protagonist keeps, a mystery the next chapters answer), takes for a gap
+what an earlier chapter told and they read past, or wants cut what the
+genre's reader came for. The editor, not the writer, decides that, and
+writes it under a `## Editor's calls` heading at the end of the report
+(the reader's text above it stays as written): one line per item, the
+item quoted, **declined**, and why, with the chapter and line that
+answers it where there is one. A declined item is not an open item: the
+evaluator records it with its reason and doesn't count it, and the brief
+doesn't stage it. Decline sparingly: if a first reader was lost, a real
+reader will be too, and the usual answer to "this is a deliberate
+mystery" is to make it read as one (Jakob keeps a thing to himself, and
+the sentence says so).

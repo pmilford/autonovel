@@ -3034,7 +3034,15 @@ read (so the scorer checked its items), and no item is open. The review
 cycle reads cold after the fixes and before the scorers (step 5c). Also:
 the whole-book score is taken again after a round fixes for a dimension
 under the floor (step 5e); a light fix let the old score stand for ever.
-+4 tests.
+Earlier reports move to `edit_logs/first_read_archive/` before a new
+read (`_archive-first-read`): an old second reader's `_2` report was
+otherwise read as the latest. And an item the editor judges wrong about
+the book (a deliberate mystery; a fact an earlier chapter gave, which a
+late chapter's reader saw only as a summary) goes under the report's
+`## Editor's calls` as declined (FIRST-READER.md); evaluate records it
+as `declined_items` and doesn't count it open, brief doesn't stage it.
+Without that, a scorer would count it open in every round and the gate
+could never pass. +7 tests.
 
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (cold readers stamped with the text they read; whole-book re-take) — **2348 passing, 1 skipped** (+2).

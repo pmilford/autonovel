@@ -218,7 +218,8 @@ the file `_begin`'s `genre:` line names (`autonovel genre show --book
      and score, the judge's `weakest_moment` quoted, and its `fix`
      sharpened into an instruction on the page (which passage, what
      changes). Then every serious cold-reader item the `first_reader`
-     block lists as not fixed, quoted from the report, each with the
+     block lists as not fixed (never one the report's `## Editor's
+     calls` declines), quoted from the report, each with the
      fix (`shared/craft/FIRST-READER.md` "What the writer does with
      it"). This section leads the prose sections: the revise is judged
      on whether the weakest dimension rose, not whether the mean did.
