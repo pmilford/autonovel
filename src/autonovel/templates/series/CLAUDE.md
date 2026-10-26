@@ -230,7 +230,8 @@ each of these and the workaround is in the codebase:
   `autonovel mechanical release-check books/<name>` passes (every chapter
   scored strictly on its current text with no dimension under the floor
   and no cold-reader item open, every whole-book report stamped on this
-  text, no staged fix still queued). Until it passes, `/autonovel:next`
+  text, no dimension of the whole-book score under the floor either, no
+  staged fix still queued). Until it passes, `/autonovel:next`
   lists it first and `/autonovel:typeset` prints a draft notice in the
   book; never hand that build to the author as a version to read. One
   author was sent four versions whose reviews had never read them.

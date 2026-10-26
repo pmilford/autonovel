@@ -124,6 +124,15 @@ def test_floor_cold_readers_and_queued_fixes_hold_the_gate(book: Path) -> None:
     assert not checks["fixes_acted_on"].ok and "ch 3" in checks["fixes_acted_on"].detail
 
 
+def test_a_whole_book_dimension_under_the_floor_holds_the_gate(book: Path) -> None:
+    (book / "eval_logs" / "20261026_031244_full.json").write_text(json.dumps({
+        "dimensions": {"overall_engagement": {"score": 6.5}, "causal_chain": {"score": 9.0},
+                       "pace_distribution": {"score": 6.5}}}))
+    check = _by_key(release_gate.check(book, floor=7.0))["book_floor"]
+    assert not check.ok and "overall_engagement 6.5" in check.detail
+    assert "causal_chain" not in check.detail
+
+
 def test_a_light_fix_pass_keeps_a_report_and_a_rewrite_does_not(book: Path) -> None:
     _write_reports(book)
     release_gate.stamp_report(book, "said_once")

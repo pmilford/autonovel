@@ -22,7 +22,8 @@ author, in the order `/autonovel:review-cycle` makes it hold:
   8. reader panel     the reader panel read this text
   9. review           the dual review read this text
  10. book score       `evaluate --full` read this text
- 11. fixes acted on   no staged fix in briefs/conversation.md still queued
+ 11. book floor       no dimension of that score under the floor
+ 12. fixes acted on   no staged fix in briefs/conversation.md still queued
 
 A whole-book report "read this text" when it was stamped
 (`autonovel _stamp-report`) with the fingerprint of every chapter as it
@@ -288,6 +289,12 @@ def check(book_root: Path, *, floor: float = 7.0) -> GateReport:
         rep.checks.append(Check(key, ok, f"{what} read this text", detail,
                                 None if ok else cmd.format(book=book)))
 
+    under = _book_dimensions_under(book_root, floor)
+    rep.checks.append(Check(
+        "book_floor", not under, f"no whole-book dimension under the {floor:.1f} floor",
+        "; ".join(f"{name} {score:.1f}" for name, score in under),
+        f"/autonovel:review-cycle --book {book}" if under else None))
+
     queued = _queued_turns(book_root)
     rep.checks.append(Check(
         "fixes_acted_on", not queued, "every staged fix carried out",
@@ -296,6 +303,28 @@ def check(book_root: Path, *, floor: float = 7.0) -> GateReport:
         f"/autonovel:revision-pass --chapters {','.join(map(str, sorted(set(queued))))} --book {book}"
         if queued else None))
     return rep
+
+
+def _book_dimensions_under(book_root: Path, floor: float) -> list[tuple[str, float]]:
+    """Dimensions of the latest whole-book score (`evaluate --full`) under
+    the floor, lowest first. A book scored once and found slow in the
+    whole (engagement 6.5) passed every chapter's floor; the scorecard's
+    own floor is a release condition too."""
+    logs = sorted((book_root / "eval_logs").glob("*_full.json")) if (book_root / "eval_logs").is_dir() else []
+    if not logs:
+        return []
+    try:
+        data = json.loads(logs[-1].read_text(encoding="utf-8"))
+    except ValueError:
+        return []
+    dims = data.get("dimensions") if isinstance(data, dict) else None
+    out: list[tuple[str, float]] = []
+    if isinstance(dims, dict):
+        for name, body in dims.items():
+            score = body.get("score") if isinstance(body, dict) else body
+            if isinstance(score, (int, float)) and not isinstance(score, bool) and score < floor:
+                out.append((name, float(score)))
+    return sorted(out, key=lambda x: x[1])
 
 
 _TURN_RE = re.compile(r"^## .*?turn", re.MULTILINE)
