@@ -131,8 +131,12 @@ signal; the scored structural judgement is `/autonovel:structure-review`.
 
 6. After all four have responded, compute disagreements. For each of
    `momentum_loss`, `cut_candidate`, `thinnest_character`,
-   `worst_scene`, `felt_like_episodes`, `chapter_to_cut`, extract any
-   `Ch N` references. A chapter flagged by some personas but not
+   `worst_scene`, `felt_like_episodes`, `chapter_to_cut`, write down the
+   chapters each answer *flags*: the chapter the reader names as the
+   loss, the cut, the thin character's scene, and so on. A chapter cited
+   only as context ("Ch 9 ends with…", "as in Ch 3") is not a flag; a
+   plain search for `Ch N` counts those too, and on one book it produced
+   56 false disagreements. A chapter flagged by some personas but not
    others is a disagreement — record
    `{question, chapter, flagged_by, not_flagged}`.
 
