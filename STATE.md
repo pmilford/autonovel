@@ -2969,7 +2969,42 @@ judged, and revelation design. Now:
 - **`developmental-edit`**'s measurement pass counts the same evidence.
 +4 tests.
 
+### 2026-10-25 — the review cycle's first run: what it taught the tool
+
+The first full run of `/autonovel:review-cycle` (kingmaker2, round 1:
+six whole-book reviews, 49 staged turns, every chapter fixed, ch 1–11
+scored independently) changed the command as it ran, each change
+general, not the book's:
+- **Reviews first, scores last, developmental edit after the
+  instruments** (ab957e2): a score describes one text, so scoring before
+  the fixes paid twice; the letter weighs every other review.
+- **Genre-neutral wording** (44acb56): what the genre guide's `## Cutting`
+  protects is moved, never removed (not "history"); round notes open
+  with the check's open items; no chapter changes while a whole-book
+  review is reading the book.
+- **Fixes three at a time when independent; workers leave turns and canon
+  to the cycle** (011207f); **`autonovel _turn-status`** marks turns
+  applied, declined or queued by number (48c4714), the one writer in a
+  parallel sweep.
+- **A chapter is scored by a fresh reader, never by its reviser**
+  (647133d): the first worker said plainly that it had scored its own
+  revision; EDITING §5.
+- **Eval logs are named by UTC** (1ba3726): a scorer's local-time name
+  sorted early and `_stamp-eval` stamped an older score as current;
+  names now parse as UTC and the stamp refuses an out-of-order log.
+- **Scorers take three or four chapters each, once per round** (3763c2e):
+  the shared files read once, about half the cost.
+- **A finding across several chapters says which chapter tells it**
+  (9110ede): staged one per chapter, the protagonist's recognition was
+  told in full in two chapters on top of an earlier one, and the scorer
+  marked the third telling down.
+- **reader-panel** counts the chapters an answer flags, not every chapter
+  it mentions (3437346: 56 false disagreements); **promote-canon** skips
+  a keyed "no new facts" note (7cd19e3: a false conflict).
++3 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (review cycle's first run: turn status, UTC eval names, promote-canon note) — **2343 passing, 1 skipped** (+2 since the scorecard; +1 assertion).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (whole-book scorecard) — **2341 passing, 1 skipped** (+4).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (release-check, report stamps, review-cycle, strict scoring, draft notice) — **2337 passing, 1 skipped** (+17).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (scores record the text they scored; reader column counts open items; redesign keeps the preface; names are the author's; two-page spreads; framed cover) — **2320 passing, 1 skipped** (+13).
