@@ -400,6 +400,11 @@ def _parse_pending(text: str) -> list[PendingEntry]:
         # fact opens with its `[key]`; a note without one is skipped.
         if _NO_NEW_FACTS_ANYWHERE_RE.search(body) and not body.startswith("["):
             continue
+        # The same note under a key ("[Höchst …] no new facts: …") is
+        # still a note: promoted, it parked as a conflict with the entry
+        # of the same key (kingmaker2, 2026-10-25).
+        if re.match(r"^\[[^\]]+\]\s*no new facts\s*(?:[:(—–-]|$)", body, re.IGNORECASE):
+            continue
         research_slug_match = _RESEARCH_TAG_RE.search(body)
         research_slug = research_slug_match.group(1) if research_slug_match else None
         shortnames = [

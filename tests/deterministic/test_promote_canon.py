@@ -116,6 +116,8 @@ def test_parse_skips_a_no_new_facts_note_in_a_bullet() -> None:
     the parser promoted it into canon as a fact (kingmaker2, 2026-10-24)."""
     text = ("- ch 6 (revise 2026-10-24, R11 turn 39): no new facts "
             "(two frames removed; no fact changed)\n"
+            "- [Höchst and Frankfurt as Jakob knows them] no new facts: the shut gates "
+            "are now given in Jakob's answer (from kingmaker2 ch_13, review cycle round 1)\n"
             "- [Real fact] No new facts were ever kept in this ledger (invented)\n")
     entries = pc._parse_pending(text)
     assert len(entries) == 1
