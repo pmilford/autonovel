@@ -360,6 +360,12 @@ def _build_parser() -> argparse.ArgumentParser:
                      help="first_read only: the chapter the cold reader read (repeatable).")
     _sr.set_defaults(func=_cmd_stamp_report)
 
+    _af = sub.add_parser("_archive-first-read", help=argparse.SUPPRESS)
+    _af.add_argument("--book", required=True)
+    _af.add_argument("--chapter", type=int, action="append", required=True,
+                     help="Chapter about to be read cold again (repeatable).")
+    _af.set_defaults(func=_cmd_archive_first_read)
+
     _ts = sub.add_parser("_turn-status", help=argparse.SUPPRESS)
     _ts.add_argument("--book", required=True)
     _ts.add_argument("--turns", required=True,
@@ -1251,6 +1257,23 @@ def _cmd_stamp_report(args: argparse.Namespace) -> int:
         return 1
     print(f"stamped: {args.report} read chapters {', '.join(sorted(entry['chapters'], key=int))} "
           f"as they now stand")
+    return 0
+
+
+def _cmd_archive_first_read(args: argparse.Namespace) -> int:
+    """Hidden subcommand: move a chapter's earlier cold-reader reports into
+    edit_logs/first_read_archive/ before a new reader reads it
+    (`release_gate.archive_first_reads`)."""
+    from .housekeeping import release_gate
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    for n in args.chapter:
+        moved = release_gate.archive_first_reads(series.books / args.book, n)
+        print(f"ch {n}: " + (", ".join(m.name for m in moved) + " -> first_read_archive/"
+                             if moved else "no earlier report"))
     return 0
 
 

@@ -422,7 +422,9 @@ required reads — surface the error and stop, don't retry.
    chapter and the earlier chapters (the last three in full and the
    rest as summaries when the book is long) — never the outline,
    design, research, voice file or your notes — and it reports in the
-   brief's eleven sections, quoting the text. Save its report at
+   brief's eleven sections, quoting the text. When the chapter has
+   earlier reports (a redraft), first run `autonovel _archive-first-read
+   --book {book} --chapter {chapter}` with `bash`. Save its report at
    `books/{book}/edit_logs/first_read_ch{chapter}.md` and use `bash` to
    run `autonovel _stamp-report --book {book} --report first_read
    --chapter {chapter}` (the text it read; `release-check` counts a

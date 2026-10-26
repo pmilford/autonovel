@@ -18,6 +18,7 @@ reads:
   - shared/genres/*.md
 writes:
   - books/{book}/edit_logs/first_read_ch{chapter}.md
+  - books/{book}/edit_logs/first_read_archive/*.md
 context_mode: book
 ---
 
@@ -67,7 +68,12 @@ file. `shared/craft/FIRST-READER.md` is its brief.
    chapters and the chapter. It must not be given anything else, and
    it must answer in the brief's eleven sections, quoting the text.
 
-5. Use `file_write` to save its report, unedited, at
+5. Use `bash` to run `autonovel _archive-first-read --book {book}
+   --chapter {chapter}`, which moves the chapter's earlier reports (and a
+   second reader's `_2` report on an older text, which evaluate would
+   otherwise read as the latest) into
+   `books/{book}/edit_logs/first_read_archive/*.md`, dated. Then use
+   `file_write` to save the new report, unedited, at
    `books/{book}/edit_logs/first_read_ch{chapter}.md`, headed with the
    date and one count line: `lost N · didn't know N · read twice N ·
    too many N · forgot N · told again N · couldn't picture N · types N ·

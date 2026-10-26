@@ -162,6 +162,22 @@ def test_a_cold_reader_must_have_read_the_text_as_it_stands(book: Path) -> None:
     assert release_gate.first_read_state(book, 2) == "older"
 
 
+def test_earlier_cold_reads_are_archived_before_a_new_one(book: Path) -> None:
+    """An old second reader's report left in place is read by evaluate as
+    the latest report on the new text."""
+    (book / "edit_logs" / "first_read_ch01.md").write_text("# old first\n")
+    (book / "edit_logs" / "first_read_ch01_2.md").write_text("# old second\n")
+    (book / "edit_logs" / "first_read_ch10.md").write_text("# chapter 10\n")
+    series_root = book.parent.parent
+    r = _run(series_root, "_archive-first-read", "--book", "one", "--chapter", "1")
+    assert r.returncode == 0, r.stderr
+    assert release_gate.first_read_reports(book, 1) == []
+    assert (book / "edit_logs" / "first_read_ch10.md").exists()
+    archived = sorted(p.name for p in (book / "edit_logs" / "first_read_archive").iterdir())
+    assert len(archived) == 2 and archived[0].startswith("first_read_ch01_")
+    assert release_gate.first_read_state(book, 1) == "missing"
+
+
 def test_a_chapter_scored_before_its_cold_read_is_not_checked(book: Path) -> None:
     for n in (1, 2, 3):
         _first_read(book, n)

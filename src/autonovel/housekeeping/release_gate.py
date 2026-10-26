@@ -244,6 +244,28 @@ def first_read_reports(book_root: Path, chapter: int) -> list[Path]:
     return sorted(p for p in edit.iterdir() if pat.match(p.name))
 
 
+def archive_first_reads(book_root: Path, chapter: int) -> list[Path]:
+    """Move the chapter's earlier cold-reader reports into
+    `edit_logs/first_read_archive/`, each named with its date, before a new
+    reader reads the chapter. Left in place, an old second reader's
+    `first_read_chNN_2.md` is read by evaluate as the latest report on
+    the new text."""
+    from datetime import date
+    moved: list[Path] = []
+    archive = book_root / "edit_logs" / "first_read_archive"
+    for path in first_read_reports(book_root, chapter):
+        day = date.fromtimestamp(path.stat().st_mtime).strftime("%Y%m%d")
+        archive.mkdir(parents=True, exist_ok=True)
+        target = archive / f"{path.stem}_{day}{path.suffix}"
+        i = 2
+        while target.exists():
+            target = archive / f"{path.stem}_{day}_{i}{path.suffix}"
+            i += 1
+        path.rename(target)
+        moved.append(target)
+    return moved
+
+
 def stamp_first_read(book_root: Path, chapter: int) -> dict:
     """Record that the cold reader's report on `chapter` read the chapter
     as it now stands. `/autonovel:first-read` runs it after saving."""

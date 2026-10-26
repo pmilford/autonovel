@@ -179,7 +179,8 @@ says what is still open and why.
    c. **Read cold.** For every chapter `release-check` lists under
       `cold_readers` as not read on the text as it stands (a rewrite, or a
       report older than the text; a light fix leaves the last read
-      standing), after its last fix: `first-read N --book {book}`, one
+      standing), after its last fix: `first-read N --book {book}` (it
+      archives the chapter's earlier reports first), one
       fresh subagent per chapter, several at a time (each spawns its own
       reader, who sees only the book up to that chapter, and stamps the
       report). Run them before the scorers, so each scorer checks the new
