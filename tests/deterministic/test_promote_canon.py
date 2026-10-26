@@ -385,6 +385,17 @@ def test_a_revision_replaces_or_retires_the_entry_it_names(tmp_path: Path) -> No
     assert "Fugger arrived in Venice 1473" in body
 
 
+def test_a_conflict_parked_twice_is_wrapped_once(tmp_path: Path) -> None:
+    series = _make_series(tmp_path)
+    (series.books / "one" / "canon.md").write_text(
+        "# Book canon\n\n- Fugger arrived in Venice 1473 (from one ch_03)\n", encoding="utf-8")
+    _seed_pending(series, "one", ["- Fugger arrived in Venice 1478 (from one ch_05)"])
+    pc.promote(series, book="one")
+    pc.promote(series, book="one")
+    pending = (series.books / "one" / "pending_canon.md").read_text(encoding="utf-8")
+    assert pending.count("**New candidate:**") == 1
+
+
 def test_sibling_book_canon_is_not_a_constraint(tmp_path: Path) -> None:
     """A rewrite (book `two`) may contradict book `one`'s own canon
     freely — only shared/ and its OWN canon bind it."""

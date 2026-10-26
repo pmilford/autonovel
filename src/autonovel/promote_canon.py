@@ -501,7 +501,9 @@ def _parse_pending(text: str) -> list[PendingEntry]:
             fact_text = fact_text.replace(provenance_match.group(0), "")
         fact_text = fact_text.strip().rstrip(".").strip()
         out.append(PendingEntry(
-            raw_line=raw,
+            # The unwrapped line: a conflict parked a second time kept its
+            # `**New candidate:**` label and was wrapped in it twice.
+            raw_line=line,
             fact_text=fact_text,
             research_slug=research_slug,
             shortnames=shortnames,
