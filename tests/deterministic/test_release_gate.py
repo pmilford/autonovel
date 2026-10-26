@@ -131,6 +131,9 @@ def test_a_whole_book_dimension_under_the_floor_holds_the_gate(book: Path) -> No
     check = _by_key(release_gate.check(book, floor=7.0))["book_floor"]
     assert not check.ok and "overall_engagement 6.5" in check.detail
     assert "causal_chain" not in check.detail
+    # A light fix lets the score stand but doesn't lift it: the gate says
+    # to take it again.
+    assert "evaluate --full" in check.detail
 
 
 def test_a_light_fix_pass_keeps_a_report_and_a_rewrite_does_not(book: Path) -> None:

@@ -292,7 +292,10 @@ def check(book_root: Path, *, floor: float = 7.0) -> GateReport:
     under = _book_dimensions_under(book_root, floor)
     rep.checks.append(Check(
         "book_floor", not under, f"no whole-book dimension under the {floor:.1f} floor",
-        "; ".join(f"{name} {score:.1f}" for name, score in under),
+        ("; ".join(f"{name} {score:.1f}" for name, score in under)
+         + f" — fix where the score names, then take it again "
+           f"(`/autonovel:evaluate --full --book {book}`); a light fix lets "
+           f"the score stand but doesn't lift it") if under else "",
         f"/autonovel:review-cycle --book {book}" if under else None))
 
     queued = _queued_turns(book_root)

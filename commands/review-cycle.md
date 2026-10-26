@@ -187,6 +187,14 @@ says what is still open and why.
       Each returns its overall score, every dimension, the weakest,
       `top_3_revisions`, the cold reader's open items and its repeats;
       judge them as step 4 does before the next round.
+   d. **Re-take the whole-book score** when `release-check`'s
+      `book_floor` check was open at the round's start and this round
+      fixed for it: once the chapters are scored, one fresh subagent
+      runs `evaluate --full --book {book}` on the fixed text and stamps
+      it. A light fix lets the other whole-book reviews stand, but the
+      score whose floor the fixes were meant to lift is only known
+      lifted when it is taken again; without this step the gate reads
+      the old score for ever.
    Revisions write `books/{book}/chapters/*.md`, their summaries, eval
    logs, briefs under `books/{book}/briefs/*.md`, edit logs under
    `books/{book}/edit_logs/*.md` and `books/{book}/edit_logs/*.json`,
