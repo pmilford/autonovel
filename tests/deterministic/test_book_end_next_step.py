@@ -69,3 +69,31 @@ def test_end_syncs_book_state(review_phase_book: tuple[Path, str]) -> None:
     state_path.write_text(json.dumps(state))
     lifecycle._sync_book_state(SeriesLayout(root=series), book)
     assert json.loads(state_path.read_text())["phase"] == "review"
+
+
+def test_a_book_that_passes_the_release_gate_goes_to_its_build() -> None:
+    """Bug class (2026-10-28): after the release gate passed, the footer's
+    Next sent one book back to the structure review, because a light fix had
+    made the review file older than the chapters; the gate, which measures
+    the change, said the review still stood."""
+    from autonovel.housekeeping.whole_book import WholeBookState, next_whole_book_step
+    s = WholeBookState(letter="stale", structure="stale", panel="stale", review="stale",
+                       release_ready=True)
+    step = next_whole_book_step("b", s)
+    assert step.command == "/autonovel:typeset --book b"
+    assert "diff --book b --annotate" in step.rationale
+    s.release_ready = False
+    assert next_whole_book_step("b", s).command == "/autonovel:structure-review --book b"
+
+
+def test_a_stamped_review_stands_through_a_light_fix(tmp_path: Path, monkeypatch) -> None:
+    from autonovel.housekeeping import release_gate, whole_book
+    path = tmp_path / "edit_logs" / "reader_panel.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(release_gate, "report_state", lambda root, key: ("light", [3]))
+    assert whole_book._stamped_freshness(tmp_path, "reader_panel", path, newest=9e12) == "fresh"
+    monkeypatch.setattr(release_gate, "report_state", lambda root, key: ("older", [3]))
+    assert whole_book._stamped_freshness(tmp_path, "reader_panel", path, newest=0) == "stale"
+    monkeypatch.setattr(release_gate, "report_state", lambda root, key: ("unstamped", []))
+    assert whole_book._stamped_freshness(tmp_path, "reader_panel", path, newest=9e12) == "stale"

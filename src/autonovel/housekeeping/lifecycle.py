@@ -783,7 +783,8 @@ def _next_step_for(series: SeriesLayout, book: str) -> object:
         # a 19-chapter outline was finished).
         chapters_total=len(outline_chapter_numbers(book_root / "outline.md")),
         editor_letter_done=(book_root / "edit_logs" / "editor_letter.md").is_file(),
-        whole_book=_whole_book_state(book_root),
+        whole_book=_whole_book_state(book_root, floor=float(
+            cfg.defaults.get("dimension_floor", cfg.defaults.get("chapter_threshold", 7.0)))),
         foundation_threshold=cfg.defaults.get("foundation_threshold", 7.5),
         chapter_threshold=cfg.defaults.get("chapter_threshold", 7.0),
         dimension_floor=cfg.defaults.get("dimension_floor"),
@@ -817,11 +818,11 @@ def _next_step_for(series: SeriesLayout, book: str) -> object:
     return next_step(state)
 
 
-def _whole_book_state(book_root: Path) -> object | None:
+def _whole_book_state(book_root: Path, *, floor: float = 7.0) -> object | None:
     """The whole-book reviewers' state, or None if it can't be read."""
     try:
         from .whole_book import gather
-        return gather(book_root)
+        return gather(book_root, floor=floor)
     except Exception:  # noqa: BLE001 — never fail a footer over this
         return None
 

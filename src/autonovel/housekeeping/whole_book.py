@@ -42,6 +42,10 @@ class WholeBookState:
     structure_reasons: list[str] = field(default_factory=list)
     panel: str = "missing"               # missing | stale | fresh
     review: str = "missing"              # missing | stale | fresh
+    # `release-check` passes: every whole-book review read this text (or
+    # a light fix of it) and its fixes are made; the next step is the
+    # author's build, whatever a file's date says.
+    release_ready: bool = False
 
 
 @dataclass
@@ -53,6 +57,11 @@ class Step:
 def next_whole_book_step(book: str, s: WholeBookState) -> Step:
     """The next whole-book step for a drafted book, in the order above."""
     b = book
+    if s.release_ready:
+        return Step(f"/autonovel:typeset --book {b}",
+                    "release-check passes: every whole-book review read this text and its "
+                    f"fixes are made; build it, then `/autonovel:diff --book {b} --annotate` "
+                    "for the author's change page")
     if s.letter == "missing":
         return Step(f"/autonovel:developmental-edit --book {b}",
                     "the book is drafted; the editor's whole-book read comes first")
@@ -147,13 +156,30 @@ def _freshness(path: Path, newest: float | None) -> str:
     return "fresh"
 
 
-def gather(book_root: Path) -> WholeBookState:
+def _stamped_freshness(book_root: Path, key: str, path: Path, newest: float | None) -> str:
+    """A report stamped with the text it read stands through a light fix
+    (`release_gate.report_state`): judged by file dates instead, every
+    light fix sent the footer back to a review the gate still counted
+    as read (2026-10-28). Unstamped reports fall back to the dates."""
+    from . import release_gate
+    try:
+        state, _ = release_gate.report_state(book_root, key)
+    except Exception:  # noqa: BLE001
+        state = "unstamped"
+    if state in ("current", "light"):
+        return "fresh"
+    if state == "older":
+        return "stale"
+    return _freshness(path, newest)
+
+
+def gather(book_root: Path, *, floor: float = 7.0) -> WholeBookState:
     """Read the book's whole-book reports into a WholeBookState."""
     s = WholeBookState()
     newest = _newest_chapter_mtime(book_root)
     logs = book_root / "edit_logs"
     letter = logs / "editor_letter.md"
-    s.letter = _freshness(letter, newest)
+    s.letter = _stamped_freshness(book_root, "developmental_edit", letter, newest)
     if letter.is_file():
         try:
             s.letter_open_chapters = ledger_open_chapters(letter.read_text(encoding="utf-8"))
@@ -168,21 +194,32 @@ def gather(book_root: Path) -> WholeBookState:
             s.structure = "invalid"
         else:
             gate = rep.gate
+            # The validator's own staleness test reads file times; a review
+            # stamped with the text it read stands through a light fix, and
+            # then only its other reasons block (as release-check judges it).
+            stamped_fresh = _stamped_freshness(book_root, "structure_review", sr_path, newest) == "fresh"
+            reasons = [str(r) for r in gate.get("reasons") or []
+                       if not (stamped_fresh and str(r).startswith("stale"))]
             if not rep.valid:
                 s.structure = "invalid"
-            elif gate.get("stale"):
+            elif gate.get("stale") and not stamped_fresh:
                 s.structure = "stale"
-            elif gate.get("passes"):
+            elif gate.get("passes") or (gate.get("stale") and stamped_fresh and not reasons):
                 s.structure = "passes"
             else:
                 s.structure = "blocks"
-            s.structure_reasons = list(gate.get("reasons") or [])
+            s.structure_reasons = reasons
             s.structure_chapters = _candidate_chapters(sr_path)
-    s.panel = _freshness(logs / "reader_panel.json", newest)
+    s.panel = _stamped_freshness(book_root, "reader_panel", logs / "reader_panel.json", newest)
     review = logs / "review.md"
     if not review.is_file() and (logs / "opus_review.md").is_file():
         review = logs / "opus_review.md"
-    s.review = _freshness(review, newest)
+    s.review = _stamped_freshness(book_root, "review", review, newest)
+    try:
+        from . import release_gate
+        s.release_ready = release_gate.check(book_root, floor=floor).passes
+    except Exception:  # noqa: BLE001 — never fail a footer over this
+        s.release_ready = False
     return s
 
 

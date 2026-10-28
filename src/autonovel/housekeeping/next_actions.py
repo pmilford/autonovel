@@ -342,11 +342,21 @@ def _chapter_regression_actions(book_root: Path, book: str) -> list[NextAction]:
     eval score for the same chapter — those are regressions worth
     re-running.
 
-    Only flags real regressions (drop ≥0.3) to filter eval-noise.
+    Only flags real regressions (drop ≥0.3) to filter eval-noise. Not
+    once `release-check` passes: every chapter is then scored on its own
+    text with nothing under the floor, and a lower score from a stricter
+    or fresh judge than the last is not a revise that made the chapter
+    worse (one book was told to revise 18 chapters after its gate passed).
     """
     eval_dir = book_root / "eval_logs"
     if not eval_dir.is_dir():
         return []
+    try:
+        from . import release_gate
+        if len(iter_chapter_files(book_root / "chapters")) >= 3 and release_gate.check(book_root).passes:
+            return []
+    except Exception:  # noqa: BLE001
+        pass
     by_chapter: dict[int, list[tuple[str, float]]] = {}
     for path in eval_dir.iterdir():
         if not path.is_file() or path.suffix != ".json":

@@ -3152,7 +3152,25 @@ and has fix workers append canon replacements for what their change makes
 untrue; revise checks a clarification against every other chapter that
 tells the same point. +2 tests.
 
+### 2026-10-28 — the footer's Next follows release-check
+
+When kingmaker2's release-check passed, `_end`'s footer said "Next:
+/autonovel:structure-review (chapters changed since the structure review)"
+and "Maybe try: revision-pass on 18 regressed chapters". Both were wrong:
+the whole-book state read report freshness from file times, so a light fix
+made every review "stale" though the gate (which measures the change
+against a kept copy of the text) counted it as read, and the regression
+hint compared a fresh strict judge's score with an older, more lenient one.
+Now the whole-book state takes each review's freshness from its stamp
+(`release_gate.report_state`; current or light is fresh, file times only
+for unstamped reports), judges the structure gate as release-check does,
+and a book whose release-check passes goes to `/autonovel:typeset` and
+`/autonovel:diff --annotate`; the regression hint is silent once the gate
+passes. A footer's Next is an order, so it may not disagree with the gate.
++2 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the footer's Next follows release-check) — **2359 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a canon revision supersedes every live copy; last revision wins; stale copies cleared) — **2357 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (separate full-text cold readers by default, measured against one whole-book reader and summaries) — **2355 passing, 1 skipped**.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (the cold reader reads the earlier chapters in full; one reader for the whole book) — **2355 passing, 1 skipped** (+1).
