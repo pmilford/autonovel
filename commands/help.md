@@ -70,6 +70,7 @@ workflow. Topics:
                  review-cycle: every whole-book review on the text as
                  it stands, acted on, until release-check passes —
                  run it before any version goes to the author.
+                 fix-read: every changed passage read where it sits.
   reading      — see the book's shape without re-reading it:
                  story-map (one HTML page: synopsis, plot-thread
                  grid + score/tension curve, characters, timeline,
@@ -407,6 +408,10 @@ well while the book is a string of episodes):
                                                  can't follow; draft runs it;
                                                  --chapters all: one reader,
                                                  the whole book in order)
+  /autonovel:fix-read --chapters <N,…> --book <name>  (every passage changed
+                                                 since the cold read, read
+                                                 where it sits; release-check
+                                                 asks for it)
   /autonovel:structure-review --book <name>
   /autonovel:revision-pass --chapters structural --book <name>
 

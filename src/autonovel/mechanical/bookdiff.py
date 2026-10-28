@@ -1417,6 +1417,18 @@ def _foundation_targets(book: str) -> list[tuple[str, str, str]]:
     ]
 
 
+def _chapter_titles(snap, rels: list[str]) -> dict[str, str]:
+    """{rel: frontmatter title} for the chapter files of one version."""
+    out: dict[str, str] = {}
+    for rel, text in snap.read_many(rels).items():
+        if text:
+            fm, _body = split_frontmatter(text)
+            t = str(fm.get("title") or "").strip()
+            if t:
+                out[rel] = t
+    return out
+
+
 def build_diff(series_root: Path, book: str, *, from_spec: str = "last-tag",
                to_spec: str = "worktree", chapters: set[int] | None = None,
                foundation: bool | None = None,
@@ -1441,6 +1453,28 @@ def build_diff(series_root: Path, book: str, *, from_spec: str = "last-tag",
         n = _chapter_number(rel)
         if n is not None:
             by_num[n] = (by_num.get(n, (None, None))[0], rel)
+    # A chapter moved by a reorder keeps its title and changes its number:
+    # pair each new chapter with the old one of the same title when the
+    # title is unique on both sides, so a swap shows what changed in each
+    # chapter, not one chapter rewritten as another (2026-10-28).
+    was: dict[int, int] = {}
+    old_rels = {n: o for n, (o, _w) in by_num.items() if o}
+    new_rels = {n: w for n, (_o, w) in by_num.items() if w}
+    if old_rels and new_rels and set(old_rels) == set(new_rels):
+        o_titles = _chapter_titles(old, list(old_rels.values()))
+        n_titles = _chapter_titles(new, list(new_rels.values()))
+        o_by_title = {t: n for n, t in ((n, o_titles.get(r)) for n, r in old_rels.items())
+                      if t and list(o_titles.values()).count(t) == 1}
+        for n, rel in new_rels.items():
+            t = n_titles.get(rel)
+            m = o_by_title.get(t) if t and list(n_titles.values()).count(t) == 1 else None
+            if m is not None and m != n:
+                was[n] = m
+        if was and sorted(was) == sorted(was.values()):
+            by_num = {n: ((old_rels[was[n]] if n in was else old_rels.get(n)), new_rels.get(n))
+                      for n in by_num}
+        else:
+            was = {}
     nums = sorted(n for n in by_num if chapters is None or n in chapters)
 
     wanted: list[str] = []
@@ -1466,7 +1500,8 @@ def build_diff(series_root: Path, book: str, *, from_spec: str = "last-tag",
         new_t = new_texts.get(w) if w else None
         chapter_diffs.append(diff_file(
             old_t, new_t, key=key, file=rel, kind="chapter",
-            label=f"Chapter {n}", chapter=n, threshold=threshold,
+            label=f"Chapter {n}" + (f" (was {was[n]})" if n in was else ""),
+            chapter=n, threshold=threshold,
         ))
         s_old = old_texts.get(o[:-3] + ".summary.md") if o and foundation else None
         s_new = new_texts.get(w[:-3] + ".summary.md") if w and foundation else None

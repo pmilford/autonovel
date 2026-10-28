@@ -3237,7 +3237,31 @@ and stories resumed across a gap (the next chapter told whose
 needs brought back. The author: "the adjacent chapter checks should be
 part of the chapter swap tools". +1 test.
 
+### 2026-10-28 — every changed passage is read where it sits before release; the change page follows a moved chapter
+
+The author, listening to an audiobook sample, found a scene where a
+character came into a room from nowhere: "that seems like something that
+both autonovel and you should have found and fixed." The cold reader had
+found it; the editor's fix put the man in the room in the scene's first
+sentence, which made the next paragraph's "He was a slight young man"
+point at him; the scorer that checked the fix asked only whether the
+reported fault was gone. Nobody read changed passages in context. Now
+`/autonovel:fix-read` reads every passage changed since a chapter's cold
+read (`autonovel mechanical fix-context`, from the copy of the text the
+cold reader read) with the paragraph before and after it, as a line
+editor (reference, flow, told twice, sense and fact, voice), stages a turn
+per chapter with a fault and stamps each chapter read clean;
+`release-check` gains `fixes_read`; `/autonovel:review-cycle` runs it
+after each round's fixes and before their scores (step 5c2). On the book
+in hand the gate then flagged every chapter: the previous round's light
+pass had never been read in context either.
+
+`build_diff` paired chapters by number, so after a reorder the change page
+diffed each moved chapter against another. It now pairs by title when
+titles are unique on both sides ("Chapter 10 (was 11)"). +2 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (fix-read; the change page follows a moved chapter) — **2380 passing, 1 skipped** (+8 incl. the seams test).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (reorder reads every seam it changed) — **2372 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (regression = the last revise made it worse; ranges stay on one line) — **2371 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (renumber by one map; canon history out; wide plates paginate in the ePub) — **2370 passing, 1 skipped** (+9).

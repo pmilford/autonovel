@@ -355,9 +355,9 @@ def _build_parser() -> argparse.ArgumentParser:
     _sr.add_argument("--book", required=True)
     _sr.add_argument("--report", required=True,
                      help="said_once | structure_review | developmental_edit | reader_panel "
-                          "| review | full_eval | first_read (with --chapter)")
+                          "| review | full_eval | first_read or fix_read (with --chapter)")
     _sr.add_argument("--chapter", type=int, action="append",
-                     help="first_read only: the chapter the cold reader read (repeatable).")
+                     help="first_read / fix_read only: the chapter read (repeatable).")
     _sr.set_defaults(func=_cmd_stamp_report)
 
     _af = sub.add_parser("_archive-first-read", help=argparse.SUPPRESS)
@@ -1261,6 +1261,19 @@ def _cmd_stamp_report(args: argparse.Namespace) -> int:
             return 1
         print(f"stamped: the cold reader read ch {', '.join(map(str, args.chapter))} "
               f"as it now stands")
+        return 0
+    if args.report == release_gate.FIX_READ_KEY:
+        if not args.chapter:
+            print("error: --report fix_read needs --chapter N", file=sys.stderr)
+            return 1
+        try:
+            for n in args.chapter:
+                release_gate.stamp_fix_read(series.books / args.book, n)
+        except KeyError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 1
+        print(f"stamped: every change since the cold read of ch {', '.join(map(str, args.chapter))} "
+              f"was read in context")
         return 0
     try:
         entry = release_gate.stamp_report(series.books / args.book, args.report)

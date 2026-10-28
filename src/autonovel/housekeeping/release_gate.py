@@ -18,6 +18,9 @@ author, in the order `/autonovel:review-cycle` makes it hold:
   4. cold readers     a cold reader read every chapter as it stands
                       (within a light fix), the chapter was scored
                       after that read, and no item it found is open
+  4b. fixes read      every passage changed since its chapter's cold read
+                      was read in context, with the paragraphs around it
+                      (`/autonovel:fix-read`), on the text as it stands
   5. said-once        the whole-book repetition ledger read this text
   6. structure        the structure review read this text, and passes
   7. letter           the developmental edit read this text
@@ -416,6 +419,84 @@ def first_read_state(book_root: Path, chapter: int) -> str:
     return "light" if changed / max(len(old), len(now), 1) <= CHAPTER_CHANGE_LIMIT else "older"
 
 
+# ------------------------------------------------------------ fixes read in context
+#
+# A cold reader reads a chapter whole; every change made after that read
+# is read by nobody unless someone reads it where it sits. One author,
+# listening to a scene, caught a fix that had made "He was a slight young
+# man" point at the wrong man: the cold reader had found the original
+# fault, the editor fixed it by replacing a sentence, and the scorer that
+# checked the fix asked only whether the reported fault was gone
+# (2026-10-28). `/autonovel:fix-read` reads every passage changed since the
+# chapter's cold read, with the paragraph before and after it, and is
+# stamped with the text it read; the gate asks for it on every chapter
+# changed since its cold read.
+
+FIX_READ_KEY = "fix_read"
+
+
+def _paragraphs(text: str) -> list[str]:
+    return [p.strip() for p in text.split("\n\n") if p.strip()]
+
+
+def changed_passages(book_root: Path, chapter: int) -> list[dict]:
+    """Every run of paragraphs that differs from the text the chapter's cold
+    reader read, as {"chapter", "para" (1-based, current text), "old",
+    "new", "before", "after"}; [] when the chapter is unchanged since, or
+    has no kept copy of its cold read."""
+    import difflib
+    snap = _snapshot_path(book_root, FIRST_READ_KEY, chapter)
+    path = _chapter_file(book_root, chapter)
+    if not snap.is_file() or path is None:
+        return []
+    old = _paragraphs(snap.read_text(encoding="utf-8"))
+    new = _paragraphs(_body_of(path))
+    out: list[dict] = []
+    sm = difflib.SequenceMatcher(None, old, new, autojunk=False)
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            continue
+        out.append({"chapter": chapter, "para": j1 + 1, "old": old[i1:i2], "new": new[j1:j2],
+                    "before": new[j1 - 1] if j1 > 0 else None,
+                    "after": new[j2] if j2 < len(new) else None})
+    return out
+
+
+def stamp_fix_read(book_root: Path, chapter: int) -> dict:
+    """Record that every passage of `chapter` changed since its cold read
+    was read in context, on the chapter as it now stands."""
+    path = _chapter_file(book_root, chapter)
+    if path is None:
+        raise KeyError(f"no chapter {chapter} in {book_root.name}")
+    stamps = load_stamps(book_root)
+    reads = stamps.get(FIX_READ_KEY) if isinstance(stamps.get(FIX_READ_KEY), dict) else {}
+    entry = {"when": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+             "chapter": summaries.body_hash(path.read_text(encoding="utf-8")),
+             "passages": len(changed_passages(book_root, chapter))}
+    reads[str(chapter)] = entry
+    stamps[FIX_READ_KEY] = reads
+    out = _stamps_path(book_root)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(stamps, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return entry
+
+
+def fixes_unread(book_root: Path) -> list[int]:
+    """Chapters changed since their cold read whose changes nobody has read
+    in context on the text as it now stands."""
+    reads = load_stamps(book_root).get(FIX_READ_KEY)
+    reads = reads if isinstance(reads, dict) else {}
+    out = []
+    for n, path in _numbered_chapters(book_root).items():
+        if not changed_passages(book_root, n):
+            continue
+        entry = reads.get(str(n))
+        if not isinstance(entry, dict) or entry.get("chapter") != summaries.body_hash(
+                path.read_text(encoding="utf-8")):
+            out.append(n)
+    return sorted(out)
+
+
 def read_changes(book_root: Path) -> dict:
     """How much each report's text has changed since it was read: for every
     chapter's cold read, the share of its words changed (None when the
@@ -552,6 +633,15 @@ def check(book_root: Path, *, floor: float = 7.0) -> GateReport:
         "cold_readers", not parts,
         "a cold reader read every chapter as it stands, and no item it found is open",
         "; ".join(parts), reader_cmd))
+
+    unread_fixes = [n for n in fixes_unread(book_root) if n not in unread]
+    rep.checks.append(Check(
+        "fixes_read", not unread_fixes,
+        "every passage changed since its chapter's cold read was read in context",
+        f"changed since the cold read and not yet read where they sit: ch {_ranges(unread_fixes)}"
+        if unread_fixes else "",
+        f"/autonovel:fix-read --chapters {','.join(map(str, unread_fixes))} --book {book}"
+        if unread_fixes else None))
 
     for key, (what, _rel, cmd) in REPORTS.items():
         state, changed = report_state(book_root, key)

@@ -158,3 +158,24 @@ def test_seams_include_neighbours_and_stories_resumed_across_a_gap(tmp_path: Pat
     assert (4, 6) in pairs   # May resumed across the 1514 chapter
     assert (2, 5) in pairs   # the past strand resumed across two chapters
 
+
+
+def test_fixes_changed_since_the_cold_read_must_be_read_in_context(tmp_path: Path) -> None:
+    """The author found by ear a fix that made "He was a slight young man"
+    point at the wrong man (2026-10-28): every passage changed since a
+    chapter's cold read is read where it sits before release."""
+    b = _book(tmp_path)
+    ch = b / "chapters" / "ch_02.md"
+    ch.write_text(ch.read_text(encoding="utf-8").replace("Paragraph two of 2.",
+                                                         "The priest stood by the stove.\n\nParagraph two of 2."),
+                  encoding="utf-8")
+    passages = release_gate.changed_passages(b, 2)
+    assert len(passages) == 1 and passages[0]["new"] == ["The priest stood by the stove."]
+    assert passages[0]["before"].startswith("Chapter 2 prose") and passages[0]["after"] == "Paragraph two of 2."
+    assert release_gate.fixes_unread(b) == [2]
+    gate = {c.key: c for c in release_gate.check(b).checks}
+    assert not gate["fixes_read"].ok and "fix-read" in gate["fixes_read"].command
+    release_gate.stamp_fix_read(b, 2)
+    assert release_gate.fixes_unread(b) == []
+    ch.write_text(ch.read_text(encoding="utf-8") + "\nOne more line.\n", encoding="utf-8")
+    assert release_gate.fixes_unread(b) == [2]  # a later fix is read again

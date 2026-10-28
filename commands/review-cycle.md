@@ -236,6 +236,21 @@ says what is still open and why.
       items against the chapter as it stands (`open_items`). On one book every report predated
       two versions and two review rounds, and the gate had been counting
       items no reader had looked for in the text the author would read.
+   c2. **Read every fix where it sits.** For every chapter `release-check`
+      lists under `fixes_read` (changed since its cold read, by this
+      round's fixes or an earlier round's), after its last fix and before
+      its score: `fix-read --chapters <them> --book {book}`, one fresh
+      subagent, given the command's path (`autonovel _command-path
+      fix-read`). It reads every changed passage with the paragraph before
+      and after it, as a line editor, and stages a turn for each fault a
+      change made: a pronoun now pointing at the wrong person, someone in a
+      scene before they are placed in it, a line that no longer follows, a
+      point now told twice, an explanation pasted in. Fix those as in 5a,
+      then run `fix-read` again on those chapters, until each is read clean
+      and stamped. A scorer doesn't do this: when it checks a cold reader's
+      item it asks whether the reported fault is gone, not whether the fix
+      made a new one, and one author found such a fault by ear in an
+      audiobook sample after every score had passed.
    d. **Score, by a reader who didn't write it.** For every chapter
       `release-check` lists under `chapter_scores` (every chapter just
       fixed, and any scored on an older text), fresh subagents, each

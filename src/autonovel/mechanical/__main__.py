@@ -14,6 +14,7 @@ Subcommands:
   summary-check <book> [--chapters] Is each continuity summary still a summary of its chapter (fresh/stale/unverified/missing)?
   release-check <book>              Is this version ready for the author? (scores current, whole-book reviews current, fixes made)
   read-change <book>                How much of the text each review read has changed since (against release-check's limits)
+  fix-context <book>                Every passage changed since each chapter's cold read, with the paragraphs around it
   structure-dossier <book>         Pack outline + summaries + word counts + story_time + scores for structure-review.
   structure-validate <book|json>   Validate structure_review.json + compute the book-level stop-revising gate.
   design-validate <book> [--outline] Check design.md's shape (DESIGN.md Part II); --outline also checks outline.md carries it.
@@ -715,6 +716,38 @@ def _cmd_read_change(args: argparse.Namespace) -> int:
         for key, d in data["reports"].items():
             amount = "no copy kept" if d["changed"] is None else f"{d['changed'] * 100:.1f}% of the book changed"
             print(f"  {key}: {amount}, {d['state']}")
+    return 0
+
+
+def _cmd_fix_context(args: argparse.Namespace) -> int:
+    """Every passage changed since each chapter's cold read, with the
+    paragraph before and after it (`release_gate.changed_passages`): the
+    input to `/autonovel:fix-read`."""
+    from ..housekeeping import release_gate
+    book_root = Path(args.book_root)
+    if not (book_root / "chapters").is_dir():
+        print(f"fix-context: no chapters/ under {book_root}", file=sys.stderr)
+        return 2
+    chapters = args.chapter or sorted(release_gate._numbered_chapters(book_root))
+    data = {n: release_gate.changed_passages(book_root, n) for n in chapters}
+    if args.format == "json":
+        json.dump({str(k): v for k, v in data.items()}, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+    total = sum(len(v) for v in data.values())
+    print(f"# Passages changed since each chapter's cold read ({total})\n")
+    for n, passages in data.items():
+        if not passages:
+            continue
+        print(f"## Chapter {n} ({len(passages)} changed)\n")
+        for k, p in enumerate(passages, 1):
+            print(f"### ch{n:02d}-{k} at paragraph {p['para']}\n")
+            if p["before"]:
+                print(f"Before: {p['before']}\n")
+            print("Was:\n" + ("\n\n".join(f"> {x}" for x in p["old"]) or "> (nothing: new text)") + "\n")
+            print("Now:\n" + ("\n\n".join(f"> {x}" for x in p["new"]) or "> (cut)") + "\n")
+            if p["after"]:
+                print(f"After: {p['after']}\n")
     return 0
 
 
@@ -2534,6 +2567,14 @@ def main(argv: list[str] | None = None) -> int:
     rch.add_argument("--format", choices=("json", "markdown"), default="markdown",
                      help="Output format (default: markdown).")
     rch.set_defaults(func=_cmd_read_change)
+
+    fxc = sub.add_parser("fix-context",
+                         help="Every passage changed since each chapter's cold read, with the "
+                              "paragraph before and after it: what /autonovel:fix-read reads.")
+    fxc.add_argument("book_root", help="Path to the book dir (parent of chapters/).")
+    fxc.add_argument("--chapter", type=int, action="append", help="Only this chapter (repeatable).")
+    fxc.add_argument("--format", choices=("json", "markdown"), default="markdown")
+    fxc.set_defaults(func=_cmd_fix_context)
 
     plp = sub.add_parser("prolepsis",
                          help="Candidate narrator flash-forwards per chapter (sentences that reach "
