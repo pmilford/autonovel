@@ -25,6 +25,22 @@ consider a structured per-chapter labels file the evaluator reads only for
 the chapter it scores, and a consolidation pass that folds a chapter's
 small entries into one.
 
+### Naming a person the prose called by a role: a command that reads each mention (2026-10-28)
+
+When an author decides a role-labelled person gets a name back ("the knight
+with an army for hire" becomes Sickingen), `/autonovel:rename-character`
+can't help: it replaces a name word for word, and a role label is shared.
+On one book "the knight" meant Sickingen in five chapters and the
+Margrave's household knight in a sixth; a search-and-replace by hand named
+the wrong man, and only a strict scorer caught it (canon_compliance and
+continuity fell to 7.0–7.2). Wanted: `/autonovel:name-role --label "<the
+label>" --name "<Name>" --book <b>` that lists every mention with its
+paragraph, has the model judge each one against the cast entry (who is
+on stage, who the sentence's subject is), names the person at first
+mention and once per chapter after a long gap, and leaves the rest of the
+label alone; then updates cast.md, design.md, the appendix and the
+chapter labels entries in canon, and stages nothing it isn't sure of.
+
 ### merge-chapters, split-chapter and remove-chapter: renumber through `_renumber` (2026-10-28)
 
 `/autonovel:reorder` now runs `autonovel _renumber`, which moves every
