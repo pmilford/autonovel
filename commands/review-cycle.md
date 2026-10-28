@@ -188,7 +188,13 @@ says what is still open and why.
       chapter whose fix plants or pays something in another chapter runs
       after that chapter. Tell each subagent not to run `_promote-canon`
       and not to edit `briefs/conversation.md`: this command marks the
-      turns and promotes once, after the round.
+      turns and promotes once, after the round. But each one appends to
+      `books/{book}/pending_canon.md` (never rewriting the file, since
+      others append beside it) a replacement, written whole, or a
+      retirement for every canon entry its change makes untrue, as
+      revise step 10 says: a light pass that rewords a line a canon entry
+      quotes leaves the canon describing a book that no longer exists,
+      and the next draft or revise reads the canon.
    b. **Check the cuts.** Read every change each one made (`autonovel
       mechanical diff-chapters --book {book} --from <the round's
       starting point> --chapters N --format hunks`) and put back anything it cut that a
