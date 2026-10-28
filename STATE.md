@@ -3077,6 +3077,22 @@ L93-97", where neither the town nor the sentence is; a `book_checks` flag's
 evidence now quotes the words with chapter and line, checked against the
 chapter before it is written.
 
+### 2026-10-27 — a late chapter's cold reader saw the early chapters as summaries
+
+Round 4's reader panel (four readers of the whole book) all reported the
+book as saying things twice: the Teutonic Knights glossed in three
+chapters, Armstorff and Madame introduced again, the écu, the Diet and the
+Burgundian cross explained again. Several of those second glosses were
+put in by round 3, answering cold readers of late chapters who reported
+"Didn't know" about what an early chapter tells in full. `first-read`
+gives a long book's early chapters to the reader as summaries, so those
+items are about the context, not the book. FIRST-READER.md's Editor's
+calls and review-cycle step 4 now decline them every time (or answer with
+a few words of reminder, never the explanation again), and a repeat that
+two of the panel's readers report holds even where the said-once ledger
+kept it. The same paragraph named one book's hero as its example; it no
+longer does (prompt material never names a book).
+
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (review reads the said-once ledger; quoted book-check evidence) — **2354 passing, 1 skipped** (+1 since 2353, the read-change test).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-26 (light measured in words; same-round cold-read fixes; round starting point) — **2353 passing, 1 skipped** (+5 since 2348).

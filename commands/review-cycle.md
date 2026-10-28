@@ -130,8 +130,17 @@ says what is still open and why.
    or a fact an earlier chapter gave, goes under the report's `## Editor's
    calls` heading as **declined**, with why, as
    `shared/craft/FIRST-READER.md` says, so no scorer counts it open
-   again); and
-   `books/{book}/edit_logs/report_stamps.json` for which text each read. Check a finding against the chapter itself
+   again. A late chapter's reader saw the early chapters as summaries:
+   an item asking to be told what an earlier chapter tells in full is
+   declined every time, with that chapter and line, or at most answered
+   with a reminder of a few words. One round that fixed them as asked
+   put a second gloss in every late chapter, and all four of the next
+   panel's readers reported the book as saying everything twice); and
+   `books/{book}/edit_logs/report_stamps.json` for which text each read.
+   A point told again that two or more of the panel's readers report, or
+   the panel and the dual review both, holds even where the said-once
+   ledger kept it: readers of the whole book noticing it is the evidence
+   that the mention is a repeat, not a reminder. Check a finding against the chapter itself
    (`books/{book}/chapters/*.md`, and its summary
    `books/{book}/chapters/ch_*.summary.md` for context) before you
    believe it. For each

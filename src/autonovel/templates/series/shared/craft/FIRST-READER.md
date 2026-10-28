@@ -139,5 +139,18 @@ answers it where there is one. A declined item is not an open item: the
 evaluator records it with its reason and doesn't count it, and the brief
 doesn't stage it. Decline sparingly: if a first reader was lost, a real
 reader will be too, and the usual answer to "this is a deliberate
-mystery" is to make it read as one (Jakob keeps a thing to himself, and
-the sentence says so).
+mystery" is to make it read as one (the protagonist keeps a thing to
+himself or herself, and the sentence says so).
+
+One kind of item is declined every time. In a long book the reader of a
+late chapter is given the early chapters as summaries, not in full, so
+they report as unknown (Didn't know, Forgot who, Lost) a person, term or
+fact that an earlier chapter tells in full, and a real reader of the book
+will have read it. Check it against that chapter (the said-once ledger,
+`edit_logs/said_once_ledger.md`, says where each recurring point is
+told) and decline it with the chapter and line. At most, when the
+earlier telling is three or more chapters back and the scene turns on
+it, a reminder of a few words where it comes up: never the explanation
+again. Fixing these items as asked puts a second explanation in every
+late chapter, and the readers of the whole book then report the book as
+saying everything twice.
