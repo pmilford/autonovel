@@ -46,6 +46,10 @@ class WholeBookState:
     # a light fix of it) and its fixes are made; the next step is the
     # author's build, whatever a file's date says.
     release_ready: bool = False
+    # The latest PDF build is newer than every chapter, and the newest
+    # change page (`edit_logs/diff_*.html`) is newer than that build.
+    built: bool = False
+    change_page: bool = False
 
 
 @dataclass
@@ -57,6 +61,16 @@ class Step:
 def next_whole_book_step(book: str, s: WholeBookState) -> Step:
     """The next whole-book step for a drafted book, in the order above."""
     b = book
+    if s.release_ready and s.built and s.change_page:
+        return Step(f"/autonovel:diff --book {b} --from last-read --mark-read",
+                    "this version passed release-check, is built and has its change page: it "
+                    "is ready to send to the author; once they have read it, record it as "
+                    "read with this command so the next change page starts from it")
+    if s.release_ready and s.built:
+        return Step(f"/autonovel:diff --book {b} --annotate",
+                    "the build is current and passed release-check; the author's change page "
+                    "(what changed since the version they read, each change with a plain note) "
+                    "goes with it")
     if s.release_ready:
         return Step(f"/autonovel:typeset --book {b}",
                     "release-check passes: every whole-book review read this text and its "
@@ -220,6 +234,11 @@ def gather(book_root: Path, *, floor: float = 7.0) -> WholeBookState:
         s.release_ready = release_gate.check(book_root, floor=floor).passes
     except Exception:  # noqa: BLE001 — never fail a footer over this
         s.release_ready = False
+    pdf = book_root / "typeset" / f"{book_root.name}_latest.pdf"
+    if pdf.is_file() and (newest is None or pdf.stat().st_mtime >= newest):
+        s.built = True
+        pages = list(logs.glob("diff_*.html"))
+        s.change_page = any(p.stat().st_mtime >= pdf.stat().st_mtime for p in pages)
     return s
 
 

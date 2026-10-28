@@ -119,3 +119,13 @@ def test_the_stale_report_hint_respects_the_stamp(tmp_path: Path, monkeypatch) -
     assert next_actions._staleness_check(**kw) == []
     monkeypatch.setattr(release_gate, "report_state", lambda r, k: ("older", [1]))
     assert next_actions._staleness_check(**kw)
+
+
+def test_after_the_gate_the_build_then_the_change_page_then_send() -> None:
+    from autonovel.housekeeping.whole_book import WholeBookState, next_whole_book_step
+    s = WholeBookState(release_ready=True, built=True)
+    assert next_whole_book_step("b", s).command == "/autonovel:diff --book b --annotate"
+    s.change_page = True
+    step = next_whole_book_step("b", s)
+    assert step.command.startswith("/autonovel:diff --book b") and "--mark-read" in step.command
+    assert "ready to send" in step.rationale

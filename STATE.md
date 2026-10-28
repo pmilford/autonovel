@@ -3166,11 +3166,11 @@ Now the whole-book state takes each review's freshness from its stamp
 for unstamped reports), judges the structure gate as release-check does,
 and a book whose release-check passes goes to `/autonovel:typeset` and
 `/autonovel:diff --annotate`; the regression hint is silent once the gate
-passes, and the stale-report hint ("Maybe try: re-run reader-panel") reads the stamp too. A footer's Next is an order, so it may not disagree with the gate.
-+3 tests.
+passes, and the stale-report hint ("Maybe try: re-run reader-panel") reads the stamp too. The structure validator's own staleness (read by the footer, `next`, `review`'s stop-revising gate and release-check) is judged by the review's stamp at the source. After the gate: typeset, then the change page (`diff --annotate`), then the version is ready to send and `diff --from last-read --mark-read` records it read. A footer's Next is an order, so it may not disagree with the gate.
++4 tests.
 
 ## Tests last known green
-- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the footer's Next follows release-check) — **2360 passing, 1 skipped** (+3).
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the footer's Next follows release-check) — **2361 passing, 1 skipped** (+4).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a canon revision supersedes every live copy; last revision wins; stale copies cleared) — **2357 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (separate full-text cold readers by default, measured against one whole-book reader and summaries) — **2355 passing, 1 skipped**.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (the cold reader reads the earlier chapters in full; one reader for the whole book) — **2355 passing, 1 skipped** (+1).

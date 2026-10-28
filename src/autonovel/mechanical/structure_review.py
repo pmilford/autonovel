@@ -518,8 +518,24 @@ def validate(data: object, *, chapter_numbers: list[int] | None = None) -> Valid
 
 
 def _stale_chapters(path: Path, book_root: Path | None) -> list[int]:
+    """Chapters changed since the review read them. A review stamped with
+    the text it read (`autonovel _stamp-report`) is judged by the stamp: it
+    stands through a light fix (`release_gate.report_state`), which file
+    times can't tell from a rewrite. Unstamped reviews fall back to file
+    times. Every consumer reads this one answer: the footer, `/autonovel:next`,
+    `review`'s stop-revising gate and release-check."""
     if book_root is None or not path.is_file():
         return []
+    if path.name == "structure_review.json":
+        try:
+            from ..housekeeping import release_gate
+            state, changed = release_gate.report_state(book_root, "structure_review")
+        except Exception:  # noqa: BLE001
+            state, changed = "unstamped", []
+        if state in ("current", "light"):
+            return []
+        if state == "older":
+            return changed
     from ..paths import iter_chapter_files
     mtime = path.stat().st_mtime
     out: list[int] = []
