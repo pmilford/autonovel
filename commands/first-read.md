@@ -1,7 +1,7 @@
 ---
 name: autonovel:first-read
-description: A cold first reader for one chapter — someone who knows nothing about the subject and has read only the earlier chapters — reports every word, name or sentence they didn't understand, what they were told again, where they got lost, crowded or bored, and whether they'd turn the page. Draft runs it on every new chapter; run it yourself on any chapter you've changed.
-argument-hint: "<chapter-number> --book <short-name>"
+description: A cold first reader — someone who knows nothing about the subject and has read the earlier chapters in full — reports every word, name or sentence they didn't understand, what they were told again, where they got lost, crowded or bored, and whether they'd turn the page. One chapter, or with --chapters one reader reads the book in order and reports on each chapter as it reaches it. Draft runs it on every new chapter; run it yourself on any chapter you've changed.
+argument-hint: "<chapter-number> | --chapters <N,M,…|all> --book <short-name>"
 model_tier: heavy
 allowed-tools:
   - file_read
@@ -18,6 +18,7 @@ reads:
   - shared/genres/*.md
 writes:
   - books/{book}/edit_logs/first_read_ch{chapter}.md
+  - books/{book}/edit_logs/first_read_ch*.md
   - books/{book}/edit_logs/first_read_archive/*.md
 context_mode: book
 ---
@@ -36,11 +37,30 @@ the first reader.
 The reader is a separate agent that sees only the book — the chapter
 and what came before it — never the outline, design, research or voice
 file. `shared/craft/FIRST-READER.md` is its brief.
+
+The reader is given the earlier chapters **in full**, not as summaries,
+whenever they fit. Half of what it judges is whether the book has
+already told it something: a term glossed, a person introduced, a fact
+explained. A 250-word summary keeps the plot and drops exactly those, so
+a reader given summaries reports as unknown what the book told in full.
+On one book a review round answered those items, and the next reader
+panel found the book saying everything twice. A 120,000-word book is
+about 180,000 tokens, which a heavy-tier reader holds.
+
+When several chapters need a cold read (a finished book in its review
+cycle), `--chapters` gives them all to **one** reader, who reads the
+book from chapter 1 in order and writes each listed chapter's report
+before turning to the next, as a reader meets the book. It reads the
+opening chapters once instead of once per chapter: about 180,000 tokens
+for a 120,000-word book where nineteen separate readers re-reading it
+would take about 1.8 million.
 </purpose>
 
 <workflow>
-1. Parse `$ARGUMENTS`: `<chapter-number>` and `--book`. Missing either →
-   stop with a one-line usage reminder.
+1. Parse `$ARGUMENTS`: `<chapter-number>`, or `--chapters <N,M,…|all>`
+   (`all` is every drafted chapter), and `--book`. Missing a chapter or
+   the book → stop with a one-line usage reminder. One chapter follows
+   steps 3–5; `--chapters` follows step 4a instead.
 
 2. Use `file_read` on `shared/craft/FIRST-READER.md` and on
    `books/{book}/voice.md` (Part 1's **Reader** line, if present, names
@@ -55,11 +75,15 @@ file. `shared/craft/FIRST-READER.md` is its brief.
    file's Reader line still wins.
 
 3. Gather what the reader may see: `books/{book}/chapters/ch_{chapter}.md`
-   and the chapters before it. If the earlier chapters together run
-   under about 60,000 words, give them in full; otherwise give the last
-   three in full and `books/{book}/chapters/ch_*.summary.md` for the
-   rest. Strip YAML frontmatter except each chapter's title and
-   `dateline`.
+   and every chapter before it, **in full**. Only when the earlier
+   chapters together run over about 150,000 words (about 200,000 tokens)
+   give the earliest ones as `books/{book}/chapters/ch_*.summary.md`,
+   keeping in full as many of the nearest as fit, and head the report
+   (step 5) with a line naming the chapters the reader had only as
+   summaries: its "didn't know" items about those chapters are the
+   context's, not the book's, and the editor declines them
+   (`shared/craft/FIRST-READER.md`, the Editor's calls). Strip YAML
+   frontmatter except each chapter's title and `dateline`.
 
 4. Use `task` to spawn **one** fresh heavy-tier reader. Its prompt is
    the brief's "Who the reader is", "What the reader reports" sections
@@ -67,6 +91,29 @@ file. `shared/craft/FIRST-READER.md` is its brief.
    (verbatim) when there is one, the reader line from voice.md if any, then the earlier
    chapters and the chapter. It must not be given anything else, and
    it must answer in the brief's eleven sections, quoting the text.
+
+4a. **`--chapters`: one reader for the book.** First use `bash` to run
+   `autonovel _archive-first-read --book {book} --chapter N` for each
+   listed chapter (step 5's archive). Then use `task` to spawn **one**
+   fresh heavy-tier reader with the same brief sections, genre section
+   and reader line as step 4, and these instructions: read the book in
+   order, from `books/{book}/chapters/ch_01.md` to the last listed
+   chapter, one chapter at a time with `file_read`, ignoring each
+   chapter's YAML frontmatter except its title and `dateline`, and open
+   nothing else (no summary, outline, design, research, voice file, edit
+   log or earlier report); after reading each listed chapter, and before
+   opening the next, use `file_write` to save that chapter's report at
+   `books/{book}/edit_logs/first_read_chNN.md` in the eleven sections,
+   quoting the text, headed as step 5 says plus the line `Read as one
+   reader of the whole book, in order.`; report on what it knew at that
+   page and never go back to change an earlier report. A chapter not
+   listed is read but not reported on. When the book up to the last
+   listed chapter runs over about 150,000 words, run step 4 per chapter
+   instead. When the reader has finished, check each report has the
+   count line and the eleven sections, then use `bash` to run
+   `autonovel _stamp-report --book {book} --report first_read --chapter
+   N`, with one `--chapter N` for every listed chapter, and go to step
+   6.
 
 5. Use `bash` to run `autonovel _archive-first-read --book {book}
    --chapter {chapter}`, which moves the chapter's earlier reports (and a
@@ -86,7 +133,7 @@ file. `shared/craft/FIRST-READER.md` is its brief.
    while the chapter is that text or within a light fix of it, so a
    report on an older version never stands in for a reader of this one.
 
-6. Report the count line, the three most serious items (quoted), and
+6. Report the count line (one per chapter with `--chapters`), the three most serious items (quoted), and
    **Next:** when there are items under Lost, Didn't know, Read twice,
    Too many at once, Forgot who, Told again, Couldn't picture or Who
    felt real, a
@@ -99,8 +146,11 @@ file. `shared/craft/FIRST-READER.md` is its brief.
 
 <acceptance>
 - `books/{book}/edit_logs/first_read_ch{chapter}.md` exists with the
-  eleven sections and the count line.
-- The reader was given only chapter text and summaries — never the
-  outline, design, research or voice file.
+  eleven sections and the count line (with `--chapters`, one for every
+  listed chapter, each stamped).
+- The reader was given the earlier chapters in full (summaries only for
+  the earliest chapters of a book over about 150,000 words, named in the
+  report's header) and never the outline, design, research or voice
+  file.
 - The chapter is unchanged.
 </acceptance>

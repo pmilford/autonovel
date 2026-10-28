@@ -559,7 +559,8 @@ Three categories. Full reference: [`docs/commands.md`](docs/commands.md).
   per chapter and a 1–5 structure score kept separate from prose;
   `review`'s stop-revising verdict waits on it, and
   `revision-pass --chapters structural` acts on its candidates.
-  `first-read` is a cold reader for one chapter — someone who knows
+  `first-read` is a cold reader for one chapter (or, with `--chapters`,
+  one reader who reads the whole book in order) — someone who knows
   nothing about the subject reports every word, name and sentence they
   couldn't follow, anyone they'd forgotten when they came back, what
   they were told again, places they couldn't picture, who felt like a

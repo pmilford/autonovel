@@ -35,3 +35,20 @@ def test_the_editors_calls_are_honoured_by_every_reader_of_the_report() -> None:
     assert "Editor's calls" in _flat("commands/brief.md")
     cycle = _flat("commands/review-cycle.md")
     assert "Editor's calls" in cycle and "first-read N --book {book}" in cycle
+
+
+def test_the_cold_reader_reads_the_earlier_chapters_in_full() -> None:
+    """Bug class (2026-10-27): a reader given 250-word summaries of the early
+    chapters reported as unknown what the book told in full; a round answered
+    those items and the next panel found the book saying everything twice."""
+    body = _flat("commands/first-read.md")
+    assert "**in full**" in body and "150,000 words" in body
+    assert "60,000 words" not in body
+    # one reader for several chapters, reading in order, reporting as it goes
+    assert "--chapters" in body and "before turning to the next" in body
+    assert "never go back to change an earlier report" in body
+    cycle = _flat("commands/review-cycle.md")
+    assert "first-read --chapters <them> --book {book}" in cycle
+    assert "summaries of the rest" not in _flat(
+        "src/autonovel/templates/series/shared/craft/FIRST-READER.md")
+    assert "the rest as summaries when the book is long" not in _flat("commands/draft.md")

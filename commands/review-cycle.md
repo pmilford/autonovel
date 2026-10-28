@@ -130,8 +130,10 @@ says what is still open and why.
    or a fact an earlier chapter gave, goes under the report's `## Editor's
    calls` heading as **declined**, with why, as
    `shared/craft/FIRST-READER.md` says, so no scorer counts it open
-   again. A late chapter's reader saw the early chapters as summaries:
-   an item asking to be told what an earlier chapter tells in full is
+   again. A reader given the early chapters as summaries (a report made
+   before readers were given the full text, or a book too long to hold;
+   the report's header says which) reports as unknown what an earlier
+   chapter tells in full: that item is
    declined every time, with that chapter and line, or at most answered
    with a reminder of a few words. One round that fixed them as asked
    put a second gloss in every late chapter, and all four of the next
@@ -198,11 +200,16 @@ says what is still open and why.
    c. **Read cold.** For every chapter `release-check` lists under
       `cold_readers` as not read on the text as it stands (a rewrite, or a
       report older than the text; a light fix leaves the last read
-      standing), after its last fix: `first-read N --book {book}` (it
-      archives the chapter's earlier reports first), one
-      fresh subagent per chapter, several at a time (each spawns its own
-      reader, who sees only the book up to that chapter, and stamps the
-      report). Then, in the same round, judge each report's serious items
+      standing), after its last fix. For three or more chapters, run
+      `first-read --chapters <them> --book {book}` once, as one subagent:
+      one reader reads the book in order, every chapter in full, and
+      writes each listed chapter's report as it reaches it (it archives
+      the earlier reports and stamps the new ones). That is how a reader
+      meets the book, and it reads the opening chapters once instead of
+      once per chapter. For one or two chapters, `first-read N --book
+      {book}` per chapter, one fresh subagent each (each spawns its own
+      reader, who sees the book up to that chapter in full, and stamps
+      the report). Then, in the same round, judge each report's serious items
       as step 4 says (the declines go under the report's `## Editor's
       calls`) and fix the ones that hold as a light pass, one subagent per
       chapter as in step 5a, with `shared/craft/FIRST-READER.md` "What the

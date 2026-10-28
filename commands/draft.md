@@ -419,8 +419,8 @@ required reads — surface the error and stop, don't retry.
    heavy-tier reader exactly as that brief says, amended by the guide's
    section (it says who this genre's reader is and adds report sections,
    such as historical fiction's "What I learned"): it is given only this
-   chapter and the earlier chapters (the last three in full and the
-   rest as summaries when the book is long) — never the outline,
+   chapter and the earlier chapters, in full (as `/autonovel:first-read`
+   step 3 gives them) — never the outline,
    design, research, voice file or your notes — and it reports in the
    brief's eleven sections, quoting the text. When the chapter has
    earlier reports (a redraft), first run `autonovel _archive-first-read

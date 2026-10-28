@@ -3093,7 +3093,30 @@ two of the panel's readers report holds even where the said-once ledger
 kept it. The same paragraph named one book's hero as its example; it no
 longer does (prompt material never names a book).
 
+### 2026-10-27 — the cold reader reads the earlier chapters in full; one reader for the whole book
+
+The author asked why cold readers saw only summaries of earlier chapters,
+when a nearly finished book most needs readers of the whole thing. No
+reason had been recorded: the rule (in full under 60,000 words, otherwise
+the last three in full and summaries for the rest) came in with the cold
+reader on 2026-10-18, most likely for cost, since nineteen readers each
+re-read the opening chapters. It cost more than it saved. Half of what the
+reader judges is whether the book already told it something, and a
+250-word summary drops which terms were glossed and which people were
+introduced; round 3 answered the resulting "didn't know" items, and round
+4's panel found the book saying everything twice. Now `first-read` gives
+every earlier chapter in full (summaries only past about 150,000 words,
+named in the report), and `--chapters` gives several chapters to one reader
+who reads the book in order and writes each report before turning to the
+next: about 180,000 tokens for a 120,000-word book against about 1.8
+million for nineteen separate full-text readers. The review cycle uses it
+for three or more chapters; draft keeps one reader per new chapter. A
+reader holding the whole text never forgets, so it under-reports "forgot
+who" after a long gap; the book's rule (a few words of reminder after
+three or more chapters) covers that. +1 test.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (the cold reader reads the earlier chapters in full; one reader for the whole book) — **2355 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (review reads the said-once ledger; quoted book-check evidence) — **2354 passing, 1 skipped** (+1 since 2353, the read-change test).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-26 (light measured in words; same-round cold-read fixes; round starting point) — **2353 passing, 1 skipped** (+5 since 2348).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (cold readers stamped with the text they read; whole-book re-take) — **2348 passing, 1 skipped** (+2).

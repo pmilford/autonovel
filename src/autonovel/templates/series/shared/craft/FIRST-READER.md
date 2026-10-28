@@ -41,10 +41,16 @@ the reader, not the book.
 
 ## What the reader is given
 
-Only the book: the chapter, and the chapters before it (in full, or the
-last few in full and summaries of the rest when the book is long). Never
-the outline, the design, the research, the voice file or the drafter's
-notes. A reader who has seen the plan reads the plan into the page.
+Only the book: the chapter, and every chapter before it, in full. Half
+of what the reader judges is whether the book has already told them
+something, and a summary drops exactly that (which terms were glossed,
+which people introduced). Only a book too long for the reader to hold
+gives its earliest chapters as summaries, and then the report says
+which. When several chapters are read at once, one reader reads the
+book in order and writes each chapter's report before turning to the
+next. Never the outline, the design, the research, the voice file or
+the drafter's notes. A reader who has seen the plan reads the plan into
+the page.
 
 ## What the reader reports
 
@@ -142,11 +148,11 @@ reader will be too, and the usual answer to "this is a deliberate
 mystery" is to make it read as one (the protagonist keeps a thing to
 himself or herself, and the sentence says so).
 
-One kind of item is declined every time. In a long book the reader of a
-late chapter is given the early chapters as summaries, not in full, so
-they report as unknown (Didn't know, Forgot who, Lost) a person, term or
-fact that an earlier chapter tells in full, and a real reader of the book
-will have read it. Check it against that chapter (the said-once ledger,
+One kind of item is declined every time. A reader given early chapters
+as summaries (a book too long to hold, or a report made before readers
+were given the full text) reports as unknown (Didn't know, Forgot who,
+Lost) a person, term or fact that an earlier chapter tells in full, and
+a real reader of the book will have read it. Check it against that chapter (the said-once ledger,
 `edit_logs/said_once_ledger.md`, says where each recurring point is
 told) and decline it with the chapter and line. At most, when the
 earlier telling is three or more chapters back and the scene turns on
