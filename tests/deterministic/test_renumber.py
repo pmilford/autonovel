@@ -79,6 +79,9 @@ def test_rewrite_refs_follows_the_text() -> None:
     assert renumber.rewrite_refs("see first_read_ch10.md", m) == "see first_read_ch11.md"
     assert renumber.rewrite_refs("ch 10, 1514", m) == "ch 11, 1514"
     assert renumber.rewrite_refs("- 11 because 9: x", m) == "- 10 because 9: x"
+    # A list item on the next line is not a range.
+    assert renumber.rewrite_refs("copied since ch 1\n- 10 because 8: x", m) == \
+        "copied since ch 1\n- 11 because 8: x"
     # A range whose chapters change is written out again.
     assert renumber.rewrite_refs("ch 8-10", {10: 12, 12: 10}) == "ch 8-9, 12"
 

@@ -357,24 +357,18 @@ def _chapter_regression_actions(book_root: Path, book: str) -> list[NextAction]:
             return []
     except Exception:  # noqa: BLE001
         pass
-    by_chapter: dict[int, list[tuple[str, float]]] = {}
-    for path in eval_dir.iterdir():
-        if not path.is_file() or path.suffix != ".json":
-            continue
-        # Tolerate the same three filename shapes as
-        # mechanical/chapter_summary.py: `<ts>_chNN_eval.json`,
-        # `<ts>_chNN.json`, plain `chNN_eval.json`. Plain shape has no
-        # timestamp prefix → fall back to mtime so we can still order.
-        m = re.match(r"^(?P<ts>\d{8}_\d{6})_ch(?P<ch>\d+)(_eval)?\.json$", path.name)
-        if m:
-            ts = m.group("ts")
-            ch = int(m.group("ch"))
-        else:
-            plain = re.match(r"^ch(?P<ch>\d+)_eval\.json$", path.name)
-            if not plain:
-                continue
-            ts = f"mtime_{path.stat().st_mtime:.0f}"
-            ch = int(plain.group("ch"))
+    # Ordered as every score column orders them (a log's UTC name, or the
+    # mtime of a plain `chNN_eval.json`): sorting names as strings put
+    # every plain log after every dated one. The latest score is compared
+    # with the one before it, not with the best of all earlier ones, and a
+    # second score of the same text (both record `scored_text`, and it
+    # matches) is a stricter or fresh judge, not a revise that made the
+    # chapter worse: comparing with the best of every earlier, more
+    # lenient judge told one book 18 of its 19 chapters had regressed.
+    from ..mechanical.chapter_summary import _iter_chapter_eval_files
+    from ..summaries import EVAL_KEY
+    by_chapter: dict[int, list[tuple[float, float, str | None]]] = {}
+    for ch, when, path in _iter_chapter_eval_files(eval_dir):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001
@@ -382,19 +376,21 @@ def _chapter_regression_actions(book_root: Path, book: str) -> list[NextAction]:
         if not isinstance(data, dict):
             continue
         score = data.get("overall_score")
-        if not isinstance(score, (int, float)):
+        if not isinstance(score, (int, float)) or isinstance(score, bool):
             continue
-        by_chapter.setdefault(ch, []).append((ts, float(score)))
+        text = data.get(EVAL_KEY) or data.get(f"{EVAL_KEY}_before_reorder")
+        by_chapter.setdefault(ch, []).append((when, float(score), text))
 
     regressed: list[tuple[int, float, float]] = []
     for ch, entries in by_chapter.items():
         entries.sort(key=lambda x: x[0])
         if len(entries) < 2:
             continue
-        prior_max = max(s for _, s in entries[:-1])
-        latest = entries[-1][1]
-        if prior_max - latest >= 0.3:
-            regressed.append((ch, prior_max, latest))
+        (_w0, before, text0), (_w1, latest, text1) = entries[-2], entries[-1]
+        if text0 and text1 and text0 == text1:
+            continue
+        if before - latest >= 0.3:
+            regressed.append((ch, before, latest))
 
     if not regressed:
         return []
@@ -407,8 +403,8 @@ def _chapter_regression_actions(book_root: Path, book: str) -> list[NextAction]:
         title=f"Re-run regressed chapter(s): {chapters_str}",
         command=f"/autonovel:revision-pass --chapters {chapters_str} --book {book}",
         rationale=(
-            f"{len(regressed)} chapter(s) ended below their prior best "
-            f"by ≥0.3 ({deltas}). The latest revise made them worse, "
+            f"{len(regressed)} chapter(s) scored ≥0.3 below their score "
+            f"before ({deltas}). The latest revise made them worse, "
             f"not better. Re-run the brief→revise cycle (without "
             f"--enrich-with this time) so the brief reconsiders from "
             f"cuts/eval evidence alone."

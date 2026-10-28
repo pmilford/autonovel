@@ -106,6 +106,25 @@ def test_chapter_regression_ignores_small_drops(late_stage_book: tuple[Path, str
     assert not any("regressed" in a.title.lower() for a in actions)
 
 
+def test_a_second_score_of_the_same_text_is_not_a_regression(
+    late_stage_book: tuple[Path, str],
+) -> None:
+    """A stricter or fresh judge scoring the same text lower is not a
+    revise that made the chapter worse; nor is a score lower than the best
+    of every earlier judge (one book was told 18 of 19 chapters had
+    regressed, 2026-10-28)."""
+    series, book = late_stage_book
+    eval_dir = series / "books" / book / "eval_logs"
+    (eval_dir / "20260101_120000_ch07_eval.json").write_text(
+        json.dumps({"overall_score": 8.9, "scored_text": "aaa"}), encoding="utf-8")
+    (eval_dir / "20260102_120000_ch07_eval.json").write_text(
+        json.dumps({"overall_score": 8.2, "scored_text": "bbb"}), encoding="utf-8")
+    (eval_dir / "20260103_120000_ch07_eval.json").write_text(
+        json.dumps({"overall_score": 7.6, "scored_text": "bbb"}), encoding="utf-8")
+    actions = next_actions.enumerate_actions(_layout(series), book=book)
+    assert not any("regressed" in a.title.lower() for a in actions)
+
+
 def test_chapter_regression_handles_timestamped_naming(series_root: Path) -> None:
     """Timestamped `<ts>_chNN_eval.json` shape (the production
     naming) — flag a regression on chapter 9."""

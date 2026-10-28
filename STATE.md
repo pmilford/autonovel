@@ -3208,7 +3208,21 @@ as wide as it is tall is cut into upright parts (`typeset/epub_plates/`),
 a page each, overlapping 3% at each cut, the caption under the last.
 +9 tests.
 
+### 2026-10-28 — a regression is the last revise making a chapter worse
+
+After kingmaker2's swap the footer said "Maybe try: revision-pass on 18
+regressed chapters". The hint compared each chapter's latest score with the
+best of every earlier one, from older and more lenient judges, and sorted
+plain `chNN_eval.json` logs after every dated one by comparing names as
+strings. Now it orders logs as every score column does and compares the
+latest score with the one before it; a second score of the same text (both
+record `scored_text`, and it matches) is a stricter judge, not a
+regression. A renumber's tool also had a range cross a line ("ch 1" and a
+"- 10 because" list item under it read as "ch 1-10"); ranges stay on one
+line. +2 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (regression = the last revise made it worse; ranges stay on one line) — **2371 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (renumber by one map; canon history out; wide plates paginate in the ePub) — **2370 passing, 1 skipped** (+9).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the footer's Next follows release-check) — **2361 passing, 1 skipped** (+4).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a canon revision supersedes every live copy; last revision wins; stale copies cleared) — **2357 passing, 1 skipped** (+2).

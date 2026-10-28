@@ -84,12 +84,14 @@ _DATED_RE = re.compile(r"(?:_\d{4}-\d{2}-\d{2}|_\d{8})")
 # "ch 10", "ch. 10", "chs 10-12", "chapter 10", "Chapters 7 and 8",
 # "ch 2, 6 and 8"; or a file name, "first_read_ch10.md", "ch_10.md".
 _NUM = r"\d{1,3}(?!\d)"
-_SEP = r"(?:\s*[-–—]\s*|\s+to\s+|\s*,\s*(?:and\s+|or\s+)?|\s+and\s+|\s*&\s*|\s+or\s+)"
+# A range never crosses a line: "ch 1" at a line's end and a "- 10 because"
+# list item under it once read as "ch 1-10" and merged two lines.
+_SEP = r"(?:[ \t]*[-–—][ \t]*|[ \t]+to[ \t]+|\s*,\s*(?:and\s+|or\s+)?|\s+and\s+|\s*&\s*|\s+or\s+)"
 _REF_RE = re.compile(
     rf"(?P<file>(?<![A-Za-z])ch_?(?P<fnum>\d{{2}})(?=[._-]))"
     rf"|(?P<word>\b(?:[Cc]hapters?|CHAPTERS?|[Cc]hs?\.?)[ \t]*)(?P<nums>{_NUM}(?:{_SEP}{_NUM})*)"
 )
-_RANGE_SEP_RE = re.compile(r"^\s*(?:[-–—]|to)\s*$")
+_RANGE_SEP_RE = re.compile(r"^[ \t]*(?:[-–—]|to)[ \t]*$")
 _SPINE_RE = re.compile(r"^(\s*-\s*)(\d+)( because )(\d+)", re.MULTILINE)
 _YAML_CHAPTER_RE = re.compile(r"^(\s*-?\s*chapter:\s*)(\d+)(\s*)$", re.MULTILINE)
 _HEADING_RE = re.compile(r"^(#{2,4}) Chapter (\d+)\b", re.MULTILINE)
