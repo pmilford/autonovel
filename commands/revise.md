@@ -216,7 +216,12 @@ file blocked a full revision-pass.
    telling that does the most (usually the one in a person's mouth, or the
    one where it is at stake) and cut the rest. Every clarification you add
    for a reader who was lost replaces the unclear sentence; it never sits
-   beside it. Then count once more: if any point is still told three or
+   beside it. A clarification states what the unclear sentence left
+   open, so check it against every other chapter that tells the same
+   point (the said-once ledger names them; search the chapters for the
+   key word) before you keep it: on one book "another boy would have the
+   rest of it", made plain as "his stall, his room and his prebend",
+   contradicted a later chapter where the prebend was still his. Then count once more: if any point is still told three or
    more times in the chapter, cut again before you go on.
    **Account for every cut.** Then use `bash` to run `autonovel mechanical
    diff-chapters --book {book} --from checkpoint:latest --chapters {chapter}
