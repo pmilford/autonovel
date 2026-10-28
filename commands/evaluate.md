@@ -703,7 +703,11 @@ or `.autonovel/eval_logs/<timestamp>_series.json` for `--phase series`.
    timeline, stakes stated plainly, dialogue at book scale, the content
    genre's obligatory moments, appeal profile, originality, length
    against the market), each `{finding, evidence, verdict: ok|flag}`.
-   They are not scored; every `flag` goes in the report. Count from
+   A flag's `evidence` quotes the words it rests on, with chapter and
+   line (a count names its tool); check the quote against the chapter
+   before you write it, because a flag nobody can find is acted on or
+   argued over for nothing. They are not scored; every `flag` goes in
+   the report. Count from
    the tools before judging: the structure dossier (positions, words,
    story-time gaps), `autonovel mechanical entity-track books/{book}`
    (new names per chapter), `/autonovel:dashboard`'s data (dialogue

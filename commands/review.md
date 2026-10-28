@@ -12,6 +12,7 @@ reads:
   - books/{book}/outline.md
   - books/{book}/chapters/*.md
   - books/{book}/edit_logs/structure_review.json
+  - books/{book}/edit_logs/said_once_ledger.md
   - shared/craft/genres/*.md
   - shared/genres/*.md
 writes:
@@ -83,6 +84,19 @@ Stop revising only when BOTH hold:
    the book against what its reader came for, report where the payload
    is badly placed or delivered, and recommend moving or dramatising
    it, never cutting it.
+
+   When `books/{book}/edit_logs/said_once_ledger.md` exists (the
+   whole-book read of what the book tells more than once,
+   `/autonovel:said-once`), give the professor its `## Points`: a term,
+   fact or person told again where the ledger already rules on that
+   mention (*a clause*, a few words after a gap of three or more
+   chapters; *keep, deliberate*, a payoff or a line thrown back) is not
+   an item. Report it only when you disagree with the ledger's verdict,
+   quoting the mention and saying why it is more than a reminder. A
+   repeat the ledger doesn't list is an item as usual. Without this the
+   review raises again, every round, reminders the book's own rule
+   allows (`shared/craft/PROSE.md` §7 rule 9), and the cycle never
+   settles.
 
    Add these instructions to the professor stage, verbatim in spirit:
    - "Strong prose is not evidence of structure. If you say the book

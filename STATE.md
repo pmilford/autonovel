@@ -3063,7 +3063,22 @@ Also this round: the round's starting point is recorded and every cut
 check diffs from it (c141a6b); an amend is written whole (revise step 10);
 a limit is met by moving the extra, never deleting it (d9584d5). +2 tests.
 
+### 2026-10-27 — reviewers know what said-once already ruled; a flag quotes its words
+
+Round 4 of the review cycle re-read the book after round 3. The dual review
+raised again, as an item, four reminders the said-once ledger had already
+ruled on (a few words after a gap of four or more chapters, or a Latin
+saying thrown back as a payoff), which the book's rule allows; the editor
+declined them, as round 3's editor had, and the next round would have
+raised them again. `review` now reads the ledger: a mention the ledger rules
+on is not an item unless the professor disagrees and says why. The
+whole-book score flagged "Höchstetter and Höchst … in one sentence at ch 17
+L93-97", where neither the town nor the sentence is; a `book_checks` flag's
+evidence now quotes the words with chapter and line, checked against the
+chapter before it is written.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (review reads the said-once ledger; quoted book-check evidence) — **2354 passing, 1 skipped** (+1 since 2353, the read-change test).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-26 (light measured in words; same-round cold-read fixes; round starting point) — **2353 passing, 1 skipped** (+5 since 2348).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (cold readers stamped with the text they read; whole-book re-take) — **2348 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-25 (a revision supersedes the canon entry it names; a conflict parked twice) — **2346 passing, 1 skipped** (+2; the earlier 2343 line predates one test added with the release gate's book floor).
