@@ -858,3 +858,19 @@ def test_argument_hint_lists_rename_and_renumber_sources(impact_of_cmd) -> None:
     hint = impact_of_cmd.argument_hint or ""
     for src in ("rename-character", "merge-chapters", "reorder", "remove-chapter"):
         assert src in hint, f"missing source {src!r} in argument-hint"
+
+
+def test_build_impact_report_reads_the_canon_history(tmp_path: Path) -> None:
+    """promote-canon writes `## Superseded` blocks to `canon_history.md`
+    beside the canon (2026-10-28); impact-of still finds the old value."""
+    series, book_root = _build_series(tmp_path)
+    canon = series / "shared" / "canon.md"
+    text = canon.read_text(encoding="utf-8")
+    body, _, history = text.partition("## Superseded")
+    canon.write_text(body, encoding="utf-8")
+    (series / "shared" / "canon_history.md").write_text(
+        "# Canon history\n\n## Superseded" + history, encoding="utf-8")
+    (book_root / "chapters" / "ch_02.md").write_text(
+        "---\nchapter: 2\n---\n\nFugger had arrived in 1473, full of plans.\n", encoding="utf-8")
+    report = impact_mod.build_impact_report(book_root, series_root=series)
+    assert report.chapters_with_matches == [2]

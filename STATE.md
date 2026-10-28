@@ -3169,7 +3169,47 @@ and a book whose release-check passes goes to `/autonovel:typeset` and
 passes, and the stale-report hint ("Maybe try: re-run reader-panel") reads the stamp too. The structure validator's own staleness (read by the footer, `next`, `review`'s stop-revising gate and release-check) is judged by the review's stamp at the source. After the gate: typeset, then the change page (`diff --annotate`), then the version is ready to send and `diff --from last-read --mark-read` records it read. A footer's Next is an order, so it may not disagree with the gate.
 +4 tests.
 
+### 2026-10-28 — chapters renumber by one map; canon history moves out; wide plates paginate in the ePub
+
+**Renumber.** The author asked to swap kingmaker2's chapters 10 and 11.
+`/autonovel:reorder` renamed only `ch_NN.md`, so each chapter would have
+kept the other's summary, brief, eval logs, cold read and stamped copies,
+the Tetzel plate would have stayed before the wrong chapter, and the
+release gate would have counted the whole book as rewritten and sent all
+six whole-book reviews back. `housekeeping/renumber.py` (`autonovel
+_renumber --from A --to B | --map old:new,…`) moves every file named for
+a chapter (two-phase), rewrites every chapter reference in the working
+files (outline, put back in reading order with act headings in place;
+design, cast, canon, appendix, briefs, summaries, eval logs, the current
+reports, plates.yaml; dated and archived files are history), keeps each
+rewritten file's mtime (a rewritten eval log made newer became the
+"latest" score in testing), and moves the stamps with the text. Then it
+sends back only what the order changed: chapters whose previous chapter
+changed are scored again (`scored_text` moved aside), chapters whose
+earlier set changed are read cold again (`order_changed` on the stamp),
+the structure review and the whole-book score are marked `reordered`
+(`release_gate.ORDER_JUDGED`; a fresh stamp clears it), and the said-once
+ledger only when a point's first telling now follows a later one. The
+reader panel, dual review and editor's letter stand. `reorder.md` now also
+reads each new seam and stages a turn for an opening that re-sets a scene
+the reader just left or leans on a chapter not yet reached. merge / split /
+remove still renumber by hand (FUTURE-TODOS).
+
+**Canon history.** promote-canon writes `## Superseded` blocks to
+`canon_history.md` beside each canon and moves old ones there on every
+run; impact-of reads the history. kingmaker2's canon went from 1.35 MB to
+625 KB, which every draft, revise and score reads whole.
+
+**Wide plates in the ePub.** The author asked on 2026-10-18 for the
+Venice view on two pages ("way too small to be of interest"); the PDF got
+a spread and the ePub still squeezed it onto one page. Every ePub plate
+is now a page of its own, and a `spread` or a picture more than 1.8 times
+as wide as it is tall is cut into upright parts (`typeset/epub_plates/`),
+a page each, overlapping 3% at each cut, the caption under the last.
++9 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (renumber by one map; canon history out; wide plates paginate in the ePub) — **2370 passing, 1 skipped** (+9).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the footer's Next follows release-check) — **2361 passing, 1 skipped** (+4).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a canon revision supersedes every live copy; last revision wins; stale copies cleared) — **2357 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (separate full-text cold readers by default, measured against one whole-book reader and summaries) — **2355 passing, 1 skipped**.

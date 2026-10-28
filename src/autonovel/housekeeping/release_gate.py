@@ -66,6 +66,15 @@ REPORTS: dict[str, tuple[str, str, str]] = {
 
 _CHAPTER_RE = re.compile(r"^ch_(\d+)\.md$")
 
+# The whole-book reports that judge the order itself: the chain from
+# chapter to chapter and the act ladder (the structure review), the pace
+# (the whole-book score). When chapters are renumbered (`renumber.py`),
+# these read the book again; the reader panel, the dual review and the
+# editor's letter judge what is on the page, so their references follow
+# the text and they stand. The said-once ledger reads it again only when a
+# point's first telling now comes after a later one.
+ORDER_JUDGED = ("structure_review", "full_eval")
+
 
 @dataclass
 class Check:
@@ -219,10 +228,22 @@ def stamp_report(book_root: Path, key: str) -> dict:
     return entry
 
 
+def _reordered_chapters(entry: dict) -> list[int]:
+    """Chapters a renumbering moved since the report was stamped, when
+    the move changed what the report judges (`ORDER_JUDGED`); the mark is
+    written by `renumber.py` and cleared by stamping the report again."""
+    mark = entry.get("reordered")
+    if not isinstance(mark, dict):
+        return []
+    return sorted(int(n) for n in mark.get("chapters", []) if str(n).isdigit())
+
+
 def report_state(book_root: Path, key: str) -> tuple[str, list[int]]:
-    """(`current` | `light` | `older` | `unstamped` | `missing`, chapters
-    changed since the report read them). `light`: changed, but within
-    the limits above, so the report still stands."""
+    """(`current` | `light` | `reordered` | `older` | `unstamped` |
+    `missing`, chapters changed since the report read them). `light`:
+    changed, but within the limits above, so the report still stands.
+    `reordered`: chapters were renumbered since, and this report judges
+    the order (`ORDER_JUDGED`)."""
     _what, rel, _cmd = REPORTS[key]
     target = book_root / rel
     if key == "full_eval":
@@ -234,6 +255,9 @@ def report_state(book_root: Path, key: str) -> tuple[str, list[int]]:
     entry = load_stamps(book_root).get(key)
     if not isinstance(entry, dict) or not isinstance(entry.get("chapters"), dict):
         return "unstamped", []
+    reordered = _reordered_chapters(entry)
+    if reordered:
+        return "reordered", reordered
     then = entry["chapters"]
     now = chapter_fingerprints(book_root)
     changed = sorted(int(n) for n in set(now) | set(then) if now.get(n) != then.get(n))
@@ -373,6 +397,10 @@ def first_read_state(book_root: Path, chapter: int) -> str:
     path = _chapter_file(book_root, chapter)
     if not isinstance(entry, dict) or path is None:
         return "unstamped"
+    if entry.get("order_changed"):
+        # The chapters before this one changed in a renumbering, and a cold
+        # reader's "I didn't know" depends on what came before.
+        return "older"
     text = path.read_text(encoding="utf-8")
     if entry.get("chapter") == summaries.body_hash(text):
         return "current"
@@ -531,6 +559,8 @@ def check(book_root: Path, *, floor: float = 7.0) -> GateReport:
         detail = {"missing": "never run on this book",
                   "unstamped": "doesn't record which text it read",
                   "older": f"read an older text (ch {_ranges(changed)} rewritten since)",
+                  "reordered": f"read the chapters in an older order (ch {_ranges(changed)} "
+                               f"renumbered since), and it judges the order",
                   "light": f"light fixes since in ch {_ranges(changed)}; still stands",
                   "current": ""}[state]
         if key == "structure_review" and ok:

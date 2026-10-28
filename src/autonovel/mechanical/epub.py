@@ -159,14 +159,26 @@ def build_epub_md(
 
         # User-imported plates from plates.yaml — placed before the
         # chapter heading, between heading and prose, or after prose,
-        # matching the PDF's behaviour.
-        # A wide plate (`landscape`, or a two-page `spread` in the PDF)
-        # fills the screen's width; a reader zooms in for the detail.
+        # matching the PDF's behaviour. Each plate is a page of its own.
+        # A wide plate (`landscape`) fills the screen's width; one much
+        # wider than it is tall, or a two-page `spread` in the PDF, is
+        # cut into upright parts, a page each (`split_wide_plate`).
         def _plate(p: tuple) -> str:
+            parts = split_wide_plate(chapters_dir.parent, p[0], p[3])
+            if len(parts) > 1:
+                n = len(parts)
+                return "".join(
+                    _epub_image_block(
+                        src=part, width_pct=100, max_px=1400, page=True,
+                        caption=p[1] if i == n - 1 else "",
+                        attribution=p[2] if i == n - 1 else "",
+                        note=(f"{i + 1} of {n}; the picture continues on the next page"
+                              if i < n - 1 else f"{n} of {n}"))
+                    for i, part in enumerate(parts))
             wide = p[3] in ("landscape", "spread")
             return _epub_image_block(src=p[0], caption=p[1], attribution=p[2],
                                      width_pct=100 if wide else 80,
-                                     max_px=1400 if wide else 600)
+                                     max_px=1400 if wide else 600, page=True)
 
         before_md = "".join(_plate(p) for p in plates_index.get((num, "before-chapter"), []))
         start_md = "".join(_plate(p) for p in plates_index.get((num, "chapter-start"), []))
@@ -245,18 +257,83 @@ def _extract_chapter_title(body: str, *, default: str,
     return default
 
 
+# A picture much wider than it is tall shrinks to a strip on a reader's
+# upright screen. One author found the view of Venice "way too small to
+# be of interest" and asked for "landscape 2 pages?"; the PDF got a
+# two-page spread, and the next ePub still squeezed the whole view onto
+# one page (2026-10-18, again 2026-10-28). An ePub has no facing pages,
+# so such a picture is cut into upright parts, each a page of its own at
+# the screen's full width, overlapping a little at each cut, with the
+# caption under the last.
+SPLIT_ASPECT = 1.8   # wider than this (width / height) is cut
+PART_ASPECT = 1.1    # about this shape per part
+SPLIT_OVERLAP = 0.03  # share of the width repeated at each cut
+EPUB_PLATES_DIR = "typeset/epub_plates"
+
+
+def split_wide_plate(book_root: Path, rel: str, layout: str) -> list[str]:
+    """The image's parts, as paths relative to `book_root`, cut into
+    `EPUB_PLATES_DIR`; `[rel]` when the plate is not to be cut or the
+    image can't be read (Pillow missing, file missing)."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return [rel]
+    src = Path(rel) if Path(rel).is_absolute() else book_root / rel
+    if not src.is_file():
+        return [rel]
+    try:
+        with Image.open(src) as im:
+            w, h = im.size
+            aspect = w / h if h else 0
+            if layout != "spread" and aspect < SPLIT_ASPECT:
+                return [rel]
+            n = max(2, round(aspect / PART_ASPECT))
+            out_dir = book_root / EPUB_PLATES_DIR
+            out_dir.mkdir(parents=True, exist_ok=True)
+            pad = int(w * SPLIT_OVERLAP / 2)
+            parts: list[str] = []
+            for i in range(n):
+                left = max(0, int(i * w / n) - pad)
+                right = min(w, int((i + 1) * w / n) + pad)
+                dest = out_dir / f"{src.stem}_part{i + 1}of{n}{src.suffix}"
+                if not dest.is_file() or dest.stat().st_mtime < src.stat().st_mtime:
+                    piece = im.crop((left, 0, right, h))
+                    if src.suffix.lower() in (".jpg", ".jpeg"):
+                        if piece.mode not in ("RGB", "L"):
+                            piece = piece.convert("RGB")
+                        piece.save(dest, quality=92)
+                    else:
+                        piece.save(dest)
+                parts.append(str(dest.relative_to(book_root)))
+            return parts
+    except OSError:
+        return [rel]
+
+
 def _epub_image_block(*, src: str, caption: str, attribution: str,
-                       width_pct: int, max_px: int = 600) -> str:
+                       width_pct: int, max_px: int = 600, page: bool = False,
+                       note: str = "") -> str:
     """Render one centered image with optional caption + attribution
     as inline HTML — pandoc passes inline HTML through to the ePub
     XHTML untouched. Caption and attribution are italicised and
     sized smaller, matching the LaTeX layout in
-    `mechanical/latex.py::_render_plate_block`."""
+    `mechanical/latex.py::_render_plate_block`. `page`: the image is a
+    page of its own, kept to the screen's height."""
+    if page:
+        opening = ('\n<div class="plate" style="page-break-before: always; break-before: page; '
+                   'page-break-after: always; break-after: page; text-align: center; margin: 0;">\n'
+                   '<p style="text-align: center; margin: 0;">')
+        size = f"width: {width_pct}%; max-width: {max_px}px; max-height: 88vh; object-fit: contain;"
+    else:
+        opening = '\n<p style="text-align: center; margin: 1em 0;">'
+        size = f"width: {width_pct}%; max-width: {max_px}px;"
     parts = [
-        f'\n<p style="text-align: center; margin: 1em 0;">',
-        f'<img src="{src}" alt="{_html_escape(caption)}" '
-        f'style="width: {width_pct}%; max-width: {max_px}px;" />',
+        opening,
+        f'<img src="{src}" alt="{_html_escape(caption or note)}" style="{size}" />',
     ]
+    if note:
+        parts.append(f'<br/><small>{_html_escape(note)}</small>')
     if caption:
         parts.append(
             f'<br/><em>{_html_escape(caption)}</em>'
@@ -265,7 +342,7 @@ def _epub_image_block(*, src: str, caption: str, attribution: str,
         parts.append(
             f'<br/><small>{_html_escape(attribution)}</small>'
         )
-    parts.append("</p>\n\n")
+    parts.append("</p>\n</div>\n\n" if page else "</p>\n\n")
     return "".join(parts)
 
 

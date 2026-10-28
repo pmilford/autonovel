@@ -333,8 +333,9 @@ file blocked a full revision-pass.
     changes a fact a canon entry records, write the new entry under the
     same `[key]`, starting `Replaces the entry of that name:` (or
     `Amends`, `Refreshes`), or `Retire this entry:` when the fact is gone;
-    `/autonovel:promote-canon` then moves the old line to `## Superseded`
-    instead of leaving both in canon or parking a conflict. Because the
+    `/autonovel:promote-canon` then moves the old line to a `## Superseded`
+    block in `canon_history.md` instead of leaving both in canon or
+    parking a conflict. Because the
     old line leaves canon whole, write the new entry whole: everything
     the old one said that still holds, with the change, never only the
     part that changed ("amends … in four labels only" lost the rest). Never edit

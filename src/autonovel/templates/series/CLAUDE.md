@@ -280,8 +280,8 @@ each of these and the workaround is in the codebase:
   from chapter N" with the remaining chapter list.
 - Run `/autonovel:impact-of --book <name>` after any foundation
   mutation to get a per-chapter action checklist of revises.
-  `--source promote-canon` (default) parses `## Superseded`
-  blocks; `--source rename-character` greps stragglers of the
+  `--source promote-canon` (default) parses the `## Superseded`
+  blocks in `canon_history.md` beside each canon; `--source rename-character` greps stragglers of the
   OLD name from the most recent rename in `command-log.jsonl`;
   `--source merge-chapters|reorder|remove-chapter` greps prose
   for now-stale chapter-number cross-references; mtime sources

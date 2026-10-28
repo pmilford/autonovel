@@ -31,7 +31,8 @@ This command splits the file:
 - `shared/canon.md` keeps what is true in ANY book set in this world —
   verifiable history, world rules, fixed biography, geography,
   institutions, every research-cited entry, and every `## Superseded`
-  audit block.
+  audit block still in it (promote-canon now writes them to
+  `shared/canon_history.md`, which partition leaves alone).
 - `books/{book}/canon.md` receives what exists only because THAT
   book's outline or chapters chose it.
 

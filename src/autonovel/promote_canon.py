@@ -375,7 +375,11 @@ def promote(
         for old in removals_by_target.get(target_key, []):
             existing = existing.replace(old.rstrip() + "\n", "", 1)
         existing, stale = _drop_stale_copies(existing)
-        if not survivors and not supersedures and not stale:
+        # Superseded blocks written into the canon by older runs move to
+        # the history file, so every run leaves the canon holding only
+        # what is true now.
+        existing, migrated = split_history(existing)
+        if not survivors and not supersedures and not stale and not migrated.strip():
             continue
         report.stale_copies_removed += len(stale)
         appended = _render_canon_appendage(
@@ -390,14 +394,58 @@ def promote(
                 "earlier promotion removed only one line under the key"
                 for line in stale
             ) + "\n"
-        if existing.strip():
+        appended, history = split_history(appended)
+        history = (migrated.rstrip() + "\n\n" + history) if migrated.strip() else history
+        if not appended.strip():
+            new_text = existing.rstrip() + "\n"
+        elif existing.strip():
             new_text = existing.rstrip() + "\n\n" + appended
         else:
             new_text = f"{header}\n\n" + appended
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(new_text, encoding="utf-8")
+        if history.strip():
+            _append_history(history_path_for(path), history)
 
     return report
+
+
+# The canon is what every chapter is held to, and every draft, revise and
+# score reads all of it. What an entry said before a later promotion
+# replaced it is history: on one book the `## Superseded` blocks had grown
+# to more than half of a 1.35 MB canon, read again by every scorer
+# (2026-10-28). They live beside the canon in `canon_history.md`, which
+# `/autonovel:impact-of` reads to find chapters still using an old value.
+HISTORY_FILE = "canon_history.md"
+_HISTORY_HEADER = (
+    "# Canon history\n\n"
+    "What each canon entry said before a later promotion replaced it, newest at the end. "
+    "The canon beside this file holds only what is true now; "
+    "`/autonovel:impact-of --source promote-canon` reads these blocks to find chapters "
+    "that still use an old value.\n")
+
+
+def history_path_for(canon_path: Path) -> Path:
+    return canon_path.with_name(HISTORY_FILE)
+
+
+def split_history(text: str) -> tuple[str, str]:
+    """(`text` without its `## Superseded …` blocks, those blocks). A block
+    runs from its heading to the next `## ` heading."""
+    keep: list[str] = []
+    moved: list[str] = []
+    cur = keep
+    for line in text.splitlines(keepends=True):
+        if line.startswith("## "):
+            cur = moved if line.startswith("## Superseded") else keep
+        cur.append(line)
+    canon = re.sub(r"\n{3,}", "\n\n", "".join(keep))
+    return canon, "".join(moved)
+
+
+def _append_history(path: Path, blocks: str) -> None:
+    existing = path.read_text(encoding="utf-8") if path.is_file() else _HISTORY_HEADER
+    path.write_text(existing.rstrip() + "\n\n" + blocks.strip() + "\n", encoding="utf-8")
 
 
 _KEY_RE = re.compile(r"^\s*(?:-\s+)?\[([^\]]+)\]")

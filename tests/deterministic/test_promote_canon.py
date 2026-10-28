@@ -376,13 +376,37 @@ def test_a_revision_replaces_or_retires_the_entry_it_names(tmp_path: Path) -> No
     ])
     report = pc.promote(series, book="one")
     canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
-    body, _, superseded = canon.partition("## Superseded")
+    body, superseded = canon, _history(series.books / "one")
     assert "Charles counts four votes" not in body and "Charles counts four votes" in superseded
     assert "Charles counts one vote" in body
     assert "Konrad looks east in 1514" not in body and "Retire this entry" not in body
     # Only the entry of the same key is touched: a different key is left alone.
     assert report.books[0].supersedures == 2
     assert "Fugger arrived in Venice 1473" in body
+
+
+def _history(folder: Path) -> str:
+    path = folder / "canon_history.md"
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def test_superseded_blocks_move_out_of_the_canon(tmp_path: Path) -> None:
+    """A canon whose `## Superseded` blocks had grown past half its size
+    was read whole by every scorer (2026-10-28): the history now lives in
+    `canon_history.md`, and the next run moves any old blocks there."""
+    series = _make_series(tmp_path)
+    (series.books / "one" / "canon.md").write_text(
+        "# Book canon\n\n- [A] a (from one ch_01)\n\n"
+        "## Superseded 2026-10-01\n\n- Prior canon line: `- [A] old a`\n  - Rationale: r\n\n"
+        "## Promoted 2026-10-02\n\n- [B] b (from one ch_02)\n", encoding="utf-8")
+    pc.promote(series, book="one")
+    canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
+    assert "Superseded" not in canon and "- [A] a" in canon and "- [B] b" in canon
+    history = _history(series.books / "one")
+    assert history.startswith("# Canon history") and "old a" in history
+    pc.promote(series, book="one")  # idempotent
+    assert (series.books / "one" / "canon.md").read_text(encoding="utf-8") == canon
+    assert _history(series.books / "one") == history
 
 
 def test_a_revision_replaces_every_live_copy_and_the_last_revision_wins(tmp_path: Path) -> None:
@@ -403,7 +427,7 @@ def test_a_revision_replaces_every_live_copy_and_the_last_revision_wins(tmp_path
     ])
     report = pc.promote(series, book="one")
     canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
-    body, _, superseded = canon.partition("## Superseded")
+    body, superseded = canon, _history(series.books / "one")
     assert "counts seven" not in body and "counts five" not in body
     assert "counts seven" in superseded and "counts five" in superseded
     # the last revision in the run is the one promoted, once
@@ -424,7 +448,7 @@ def test_older_copies_of_a_revised_entry_are_cleared_on_any_run(tmp_path: Path) 
         encoding="utf-8")
     report = pc.promote(series, book="one")
     canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
-    body, _, superseded = canon.partition("## Superseded")
+    body, superseded = canon, _history(series.books / "one")
     assert body.count("[v3 ch5 labels]") == 1 and "Aragon glossed" in body
     assert "the knight is unnamed (from one ch_05)" in superseded
     assert report.stale_copies_removed == 1
@@ -469,10 +493,11 @@ def test_research_supersedes_line_in_book_canon_writes_block_there(tmp_path: Pat
     report = pc.promote(series, book="one")
     assert report.books[0].supersedures == 1
     book_canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
-    assert "## Superseded" in book_canon            # audit trail where the old line lived
+    assert "## Superseded" not in book_canon          # the canon holds only what is true now
+    assert "## Superseded" in _history(series.books / "one")  # audit trail beside the old line
     shared_text = (series.shared / "canon.md").read_text(encoding="utf-8")
     assert "1478" in shared_text                     # the cited fact itself is series-wide
-    assert "## Superseded" not in shared_text
+    assert "## Superseded" not in _history(series.shared)
 
 
 def test_research_tagged_entry_supersedes_existing_canon(tmp_path: Path) -> None:
@@ -490,10 +515,11 @@ def test_research_tagged_entry_supersedes_existing_canon(tmp_path: Path) -> None
     assert br.supersedures == 1
     assert br.conflicts == 0
     canon_text = (series.shared / "canon.md").read_text(encoding="utf-8")
+    history = _history(series.shared)
     assert "## Promoted" in canon_text
-    assert "## Superseded" in canon_text
+    assert "## Superseded" in history and "## Superseded" not in canon_text
     assert "1478" in canon_text
-    assert "Fugger arrived in Venice 1473" in canon_text  # prior preserved
+    assert "Fugger arrived in Venice 1473" in history  # prior preserved
     assert "venice-1479-1500" in canon_text  # research note attribution
 
 

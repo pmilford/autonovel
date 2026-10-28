@@ -377,6 +377,18 @@ def _build_parser() -> argparse.ArgumentParser:
     _cp.add_argument("name", help="Command name without the autonovel: prefix, e.g. evaluate.")
     _cp.set_defaults(func=_cmd_command_path)
 
+    _rn = sub.add_parser("_renumber", help=argparse.SUPPRESS)
+    _rn.add_argument("--book", required=True)
+    _rn.add_argument("--from", dest="frm", type=int,
+                     help="Move this chapter (with --to); the chapters between shift by one.")
+    _rn.add_argument("--to", type=int, help="The position it moves to.")
+    _rn.add_argument("--map", default=None,
+                     help="Or a full permutation, old:new pairs, e.g. 10:11,11:10.")
+    _rn.add_argument("--dry-run", action="store_true",
+                     help="Print what would move and be rewritten; change nothing.")
+    _rn.add_argument("--format", choices=("text", "json"), default="text")
+    _rn.set_defaults(func=_cmd_renumber)
+
     _sb = sub.add_parser("_stamp-brief", help=argparse.SUPPRESS)
     _sb.add_argument("--book", required=True)
     _sb.add_argument("--chapter", type=int, action="append", required=True,
@@ -1312,6 +1324,35 @@ def _cmd_command_path(args: argparse.Namespace) -> int:
         print(f"error: no command {name!r}", file=sys.stderr)
         return 1
     print(path)
+    return 0
+
+
+def _cmd_renumber(args: argparse.Namespace) -> int:
+    """Hidden subcommand: give chapters new numbers and move everything
+    keyed by a chapter's number with them (`housekeeping/renumber.py`).
+    `/autonovel:reorder` runs it."""
+    import json as _json
+    from .housekeeping import renumber
+    try:
+        series = load_series()
+    except SeriesNotFound as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    book_root = series.books / args.book
+    numbers = renumber.chapter_numbers(book_root)
+    try:
+        if args.map:
+            mapping = renumber.parse_map(args.map, numbers)
+        elif args.frm is not None and args.to is not None:
+            mapping = renumber.move_map(numbers, args.frm, args.to)
+        else:
+            print("error: give --from A --to B, or --map old:new,...", file=sys.stderr)
+            return 2
+        rep = renumber.renumber(book_root, mapping, dry_run=args.dry_run)
+    except renumber.RenumberError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    print(_json.dumps(rep.to_dict(), indent=2) if args.format == "json" else renumber.render_text(rep))
     return 0
 
 

@@ -11,25 +11,31 @@ to start.
 
 ## Near-term — pull into the next PR
 
-### Canon is too big to read: move the superseded history out, and keep labels entries short (2026-10-28)
+### Canon is too big to read: keep labels entries short (2026-10-28; the history half done)
 
-After four review rounds one book's `canon.md` is 1.35 MB: about 730,000
-characters of `## Superseded` audit blocks and 617,000 of live entries,
-many of them long "labels" entries written whole. Every draft, revise and
-chapter score reads it (a scorer reported it couldn't search a file that
-size and checked only the entries it could find), and it is a large part of
-the ~400k tokens a strict chapter score now costs. Two changes:
-- promote-canon writes `## Superseded` blocks to a sibling file
-  (`canon_superseded.md`) and moves existing ones there, idempotently. The
-  consumers to change together: `mechanical/impact.py` (impact-of parses the
-  blocks), `housekeeping/canon_partition.py` (keeps them in shared), the CLI
-  help text, `commands/promote-canon.md`, `impact-of.md`, `canon-partition.md`,
-  `revise.md`, `help.md`, `docs/commands.md`, `operating-guide.md`,
-  `multi-book.md`, and the promote-canon tests that read the blocks from
-  `canon.md`.
-- A per-chapter "labels" entry written whole every round grows without
-  bound; consider a structured per-chapter labels file the evaluator reads
-  only for the chapter it scores.
+After four review rounds one book's `canon.md` was 1.35 MB: about 730,000
+characters of `## Superseded` audit blocks and 617,000 of live entries.
+Every draft, revise and chapter score reads it whole. **Done 2026-10-28:**
+promote-canon writes `## Superseded` blocks to `canon_history.md` beside
+each canon and moves old ones there on every run (that book's canon went to
+625 KB). **Still open:** the 1,102 live entries, many of them per-chapter
+"labels" entries ("[v3 ch10 labels] Replaces the entry of that name,
+written whole: …") rewritten whole every round, grow without bound;
+consider a structured per-chapter labels file the evaluator reads only for
+the chapter it scores, and a consolidation pass that folds a chapter's
+small entries into one.
+
+### merge-chapters, split-chapter and remove-chapter: renumber through `_renumber` (2026-10-28)
+
+`/autonovel:reorder` now runs `autonovel _renumber`, which moves every
+record keyed by a chapter's number with its text and sends back only what
+the order changed (`housekeeping/renumber.py`). The other three still
+rename `ch_NN.md` by hand and leave summaries, briefs, eval logs, cold
+reads, stamps and plates on the old numbers. `renumber` takes only a
+permutation; extend it to a map that drops or adds numbers (merge: two old
+chapters to one new; split: one to two; remove: one to none), with the
+merged or split chapter's records sent back as rewritten, then route the
+three commands through it.
 
 - **The review cycle: measure it on a real run (opened 2026-10-25).**
   `/autonovel:review-cycle` and `release-check` shipped the same day

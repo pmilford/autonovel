@@ -534,7 +534,7 @@ def _stale_chapters(path: Path, book_root: Path | None) -> list[int]:
             state, changed = "unstamped", []
         if state in ("current", "light"):
             return []
-        if state == "older":
+        if state in ("older", "reordered"):
             return changed
     from ..paths import iter_chapter_files
     mtime = path.stat().st_mtime

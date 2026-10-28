@@ -15,7 +15,9 @@ reads:
   - books/*/pending_canon.md
 writes:
   - books/*/canon.md
+  - books/*/canon_history.md
   - shared/canon.md
+  - shared/canon_history.md
   - books/*/pending_canon.md
 context_mode: series
 ---
@@ -79,8 +81,12 @@ files, so `autonovel rollback` undoes the whole promotion.
 
    The CLI does steps 3–8 inline (parse pending, classify against
    shared canon / the book's own canon / world / characters, emit
-   `## Promoted` and `## Superseded` blocks in the target canon file,
-   rewrite `pending_canon.md` with
+   `## Promoted` blocks in the target canon file and `## Superseded`
+   blocks in the history beside it (`books/*/canon_history.md`,
+   `shared/canon_history.md`; the canon holds only what is true now,
+   and every run moves any `## Superseded` block an older run left in a
+   canon into its history; one book's history had grown past half of a
+   1.35 MB canon that every scorer read whole), rewrite `pending_canon.md` with
    either the structured `# Conflicts` block or `no new facts`).
    The JSON report carries `promoted_to_book` / `promoted_to_shared`
    per book.
@@ -140,8 +146,8 @@ files, so `autonovel rollback` undoes the whole promotion.
      `shared/sources.bib`). When such an entry contradicts existing
      canon, prefer the research entry: promote it (to
      `shared/canon.md`), AND additionally
-     emit a `## Superseded <UTC-date>` block in the canon file that
-     held the prior line
+     emit a `## Superseded <UTC-date>` block in the history beside the
+     canon file that held the prior line (`canon_history.md`)
      listing the prior canonical line and a one-sentence rationale
      ("research note `<slug>` cites [<shortname>] for <new value>;
      prior value was <old value>"). A chapter-derived entry under the

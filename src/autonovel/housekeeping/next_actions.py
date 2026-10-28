@@ -949,11 +949,13 @@ def _staleness_check(*, report_path: Path, book_root: Path, book: str,
                  "said_once_ledger.md": "said_once"}.get(report_path.name)
     if stamp_key:
         try:
-            state, _ = release_gate.report_state(book_root, stamp_key)
+            state, changed = release_gate.report_state(book_root, stamp_key)
         except Exception:  # noqa: BLE001
-            state = "unstamped"
+            state, changed = "unstamped", []
         if state in ("current", "light"):
             return []
+        if state == "reordered":
+            return list(changed)
     report_mtime = report_path.stat().st_mtime
     newer_chapters: list[int] = []
     for ch_path in iter_chapter_files(book_root / "chapters"):

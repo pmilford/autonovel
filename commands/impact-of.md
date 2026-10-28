@@ -8,7 +8,9 @@ allowed-tools:
   - file_read
 reads:
   - shared/canon.md
+  - shared/canon_history.md
   - books/{book}/canon.md
+  - books/{book}/canon_history.md
   - shared/research/notes/*.md
   - books/{book}/chapters/ch_*.md
 writes: []
@@ -26,7 +28,9 @@ that investigation into one command.
 Five mechanical detection shapes, plus an LLM augmentation:
 
   - **Canon-driven** (`--source promote-canon`, `--source gen-canon`).
-    Parses `## Superseded` blocks in `shared/canon.md`, computes
+    Parses `## Superseded` blocks in `shared/canon_history.md` and
+    `books/{book}/canon_history.md` (and in the canons themselves, for
+    a series promoted before the history moved out), computes
     tokens unique to each prior_value, greps every chapter for
     them. Fast, free, no LLM. Same logic for both — gen-canon is
     the regenerate-from-foundation variant of promote-canon and

@@ -282,11 +282,14 @@ def build_impact_report(book_root: Path, *, series_root: Path | None = None,
     if source_command not in canon_sources:
         return ImpactReport(source_command=source_command, supersedures=[])
     series_root = series_root or book_root.parent.parent
-    # Supersedure audit blocks live in whichever canon file held the
-    # superseded line: series-wide `shared/canon.md` or this book's
-    # own `books/<book>/canon.md` (book-scoped canon, 2026-10-12).
+    # Supersedure audit blocks live beside whichever canon file held the
+    # superseded line: series-wide `shared/` or this book's own
+    # `books/<book>/` (book-scoped canon, 2026-10-12).
+    # Since 2026-10-28 promote-canon writes them to `canon_history.md`
+    # beside each canon; older series still carry them in the canon.
     supersedures: list[Supersedure] = []
-    for canon_path in (series_root / "shared" / "canon.md", book_root / "canon.md"):
+    for canon_path in (series_root / "shared" / "canon.md", series_root / "shared" / "canon_history.md",
+                       book_root / "canon.md", book_root / "canon_history.md"):
         if canon_path.is_file():
             supersedures.extend(
                 parse_canon_supersedures(canon_path.read_text(encoding="utf-8")))

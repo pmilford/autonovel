@@ -182,7 +182,7 @@ def _stamped_freshness(book_root: Path, key: str, path: Path, newest: float | No
         state = "unstamped"
     if state in ("current", "light"):
         return "fresh"
-    if state == "older":
+    if state in ("older", "reordered"):
         return "stale"
     return _freshness(path, newest)
 

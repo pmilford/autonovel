@@ -146,8 +146,8 @@ characters:
    `# Conflicts` header in `books/<name>/pending_canon.md` for human
    resolution (the conflict block names which file holds the existing
    line). Never merged optimistically. A research-cited entry instead
-   wins and leaves a `## Superseded` audit block in the file that held
-   the old line.
+   wins and leaves a `## Superseded` audit block in the history beside
+   the file that held the old line (`canon_history.md`).
 
 A series created before book-scoped canon has every fact in
 `shared/canon.md`. `/autonovel:canon-partition --to-book <old-book>`

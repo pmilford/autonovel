@@ -482,7 +482,8 @@ sequence that catches the things a sweep can silently break:
    /autonovel:impact-of --book <book>
    ```
 
-   parses every `## Superseded <date>` block in `shared/canon.md`,
+   parses every `## Superseded <date>` block in `shared/canon_history.md`
+   and the book's `canon_history.md`,
    greps each chapter for tokens unique to the prior value, and
    prints a per-chapter action checklist of `/autonovel:revise
    --chapter N` calls with line-snippet evidence. Mechanical
@@ -575,8 +576,10 @@ fixes:
                                       # (the [research:slug] tag does this automatically)
 ```
 
-`shared/canon.md` now has the corrected fact plus a
-`## Superseded <UTC-date>` block recording what changed.
+`shared/canon.md` now has the corrected fact, and
+`shared/canon_history.md` a `## Superseded <UTC-date>` block recording
+what changed (the canon holds only what is true now, so the scorers
+that read it whole don't read its history too).
 
 **For the affected chapters:**
 
