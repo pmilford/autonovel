@@ -47,13 +47,20 @@ On one book a review round answered those items, and the next reader
 panel found the book saying everything twice. A 120,000-word book is
 about 180,000 tokens, which a heavy-tier reader holds.
 
-When several chapters need a cold read (a finished book in its review
-cycle), `--chapters` gives them all to **one** reader, who reads the
-book from chapter 1 in order and writes each listed chapter's report
-before turning to the next, as a reader meets the book. It reads the
-opening chapters once instead of once per chapter: about 180,000 tokens
-for a 120,000-word book where nineteen separate readers re-reading it
-would take about 1.8 million.
+`--chapters` is the cheaper way to read many chapters: **one** reader
+reads the book from chapter 1 in order and writes each listed chapter's
+report before turning to the next. It reads the opening chapters once
+instead of once per chapter (a separate full-text reader of a late
+chapter costs 250,000–300,000 tokens), but it reports less. Measured on
+one book, on the same text: for two late chapters, a separate reader
+with the full text found 15 and 13 points told again where the one
+reader found 8 and 4, and the one reader's Lost, Couldn't picture and
+Skimmed fell to none after the first few chapters (it settles into the
+book). A reader given summaries did worst both ways: 8 of its 9
+"didn't know" items were told plainly in chapters it saw only as
+summaries, and it found 4 told-again points where the full-text reader
+found 15. So the default is a separate reader per chapter, with the
+full text; `--chapters` when the cost matters more than the last repeats.
 </purpose>
 
 <workflow>

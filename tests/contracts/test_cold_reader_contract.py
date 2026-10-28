@@ -48,7 +48,10 @@ def test_the_cold_reader_reads_the_earlier_chapters_in_full() -> None:
     assert "--chapters" in body and "before turning to the next" in body
     assert "never go back to change an earlier report" in body
     cycle = _flat("commands/review-cycle.md")
-    assert "first-read --chapters <them> --book {book}" in cycle
+    # a separate full-text reader per chapter by default; one reader for the
+    # whole book only as the cheaper option (it reports less)
+    assert "first-read N --book {book}" in cycle and "first-read --chapters <them> --book {book}" in cycle
+    assert "reports less" in body
     assert "summaries of the rest" not in _flat(
         "src/autonovel/templates/series/shared/craft/FIRST-READER.md")
     assert "the rest as summaries when the book is long" not in _flat("commands/draft.md")

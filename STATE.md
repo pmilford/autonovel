@@ -3115,7 +3115,28 @@ reader holding the whole text never forgets, so it under-reports "forgot
 who" after a long gap; the book's rule (a few words of reminder after
 three or more chapters) covers that. +1 test.
 
+### 2026-10-28 — three cold readers compared on the same text: separate full-text readers by default
+
+At the author's request the cycle compared the three ways to give a cold
+reader the book, on the same text of two late chapters (13 and 17 of 19):
+the old rule (early chapters as summaries, the last three in full), a
+separate reader with every earlier chapter in full, and one reader going
+through the whole book in order. Lost / didn't know / read twice / forgot /
+told again: ch 13 — summaries 3/3/5/2/4, separate full 1/2/3/1/15, one
+reader 0/0/1/0/8; ch 17 — summaries 2/9/8/3/10, separate full 3/1/5/1/13,
+one reader 0/1/2/0/4. Eight of the summary reader's nine "didn't know"
+items in ch 17 were told plainly in chapters it had only as summaries, and
+all three of its "forgot" items; it also sees a repeat only when the first
+telling is in the last three chapters. The one reader settles into the
+book: half to a third of the separate reader's told-again points, and its
+lost / couldn't picture / skimmed sections empty after the first chapters.
+The separate full-text reader found the most real items, and a continuity
+slip the others missed. So `review-cycle` uses a separate full-text reader
+per chapter (only the chapters that need a read), and `first-read
+--chapters` stays as the cheaper option, about a tenth of the cost.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (separate full-text cold readers by default, measured against one whole-book reader and summaries) — **2355 passing, 1 skipped**.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (the cold reader reads the earlier chapters in full; one reader for the whole book) — **2355 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (review reads the said-once ledger; quoted book-check evidence) — **2354 passing, 1 skipped** (+1 since 2353, the read-change test).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-26 (light measured in words; same-round cold-read fixes; round starting point) — **2353 passing, 1 skipped** (+5 since 2348).

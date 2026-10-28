@@ -200,16 +200,17 @@ says what is still open and why.
    c. **Read cold.** For every chapter `release-check` lists under
       `cold_readers` as not read on the text as it stands (a rewrite, or a
       report older than the text; a light fix leaves the last read
-      standing), after its last fix. For three or more chapters, run
-      `first-read --chapters <them> --book {book}` once, as one subagent:
-      one reader reads the book in order, every chapter in full, and
-      writes each listed chapter's report as it reaches it (it archives
-      the earlier reports and stamps the new ones). That is how a reader
-      meets the book, and it reads the opening chapters once instead of
-      once per chapter. For one or two chapters, `first-read N --book
-      {book}` per chapter, one fresh subagent each (each spawns its own
-      reader, who sees the book up to that chapter in full, and stamps
-      the report). Then, in the same round, judge each report's serious items
+      standing), after its last fix: `first-read N --book {book}`, one
+      fresh subagent per chapter, several at a time (each spawns its own
+      reader, who reads the book up to that chapter in full, and archives
+      and stamps the report). A separate full-text reader finds the most:
+      on one book, two to three times the told-again points of one reader
+      going through the whole book, and none of the false "didn't know"
+      items a reader given summaries invents. When every chapter needs a
+      read and the cost matters more, `first-read --chapters <them> --book
+      {book}` gives them to one reader who reads the book in order (about
+      a tenth of the cost); the reader panel and said-once then carry
+      more of the repeats. Then, in the same round, judge each report's serious items
       as step 4 says (the declines go under the report's `## Editor's
       calls`) and fix the ones that hold as a light pass, one subagent per
       chapter as in step 5a, with `shared/craft/FIRST-READER.md` "What the
