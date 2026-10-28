@@ -93,30 +93,51 @@ operation.
    `order_reports` (the whole-book reviews to run again) and
    `said_once_inverted`. On an error, stop and show it.
 
-4. **Read every new seam.** For each chapter in `rescore`, use `bash` to
-   run `autonovel _tail-chapter --book {book} --chapter <N-1> --words 600`
-   and `file_read` the first ~600 words of
-   `books/{book}/chapters/ch_<N>.md` (and `books/{book}/voice.md` once,
-   for the register; `books/{book}/edit_logs/said_once_ledger.md` says where
-   each point an opening repeats is first told). Read them as a reader now meets them, the one after
-   the other, and judge the opening:
+4. **Read every seam the new order changed.** The renumber's JSON lists
+   them as `seams`, pairs of (earlier, later) chapters in the new
+   numbering, and there are two kinds:
+   - **neighbours** (`B` = `A` + 1): every chapter whose previous chapter
+     is now another, read after it. These include the chapter just before
+     the moved block and the one just after it, not only the moved
+     chapters;
+   - **across a gap** (`B` > `A` + 1): a chapter that takes up a story
+     where an earlier one left it (by `story_time`), now at a different
+     distance. In a book with two timelines, a reorder can put an extra
+     chapter, and an extra time jump, between a story and the chapter that
+     resumes it. The reader then needs a few more words to pick it up, or
+     a few fewer.
+   For each pair, use `bash` to run `autonovel _tail-chapter --book {book}
+   --chapter A --words 600`, and `file_read` the first ~600 words of
+   `books/{book}/chapters/ch_<B>.md` and its frontmatter `dateline`. Read
+   `books/{book}/voice.md` once, for the register, and
+   `books/{book}/edit_logs/said_once_ledger.md`, which says where each
+   point an opening repeats is first told. For a pair across a gap, also
+   read the end of chapter `B` - 1, which is what the reader has just
+   finished. Then judge the later chapter's opening as a reader now meets
+   it:
    - it **continues**: the chapter before ends where this one picks up.
      Does it re-set a scene, a date or a year the reader has just left,
      or explain again what the last page told? Then the first line should
      carry on, not start over;
-   - it **jumps** in time or place: does the dateline and first sentence
+   - it **jumps** in time or place: do the dateline and first sentence
      say where and when plainly enough, and does anything in the opening
      lean on a chapter the reader has not reached yet?
+   - it **resumes after a gap**: which threads, people and counts from
+     chapter `A` must the reader have in mind, and does the opening bring
+     each back in a few words (who is waiting for what, where the vote or
+     the money stood)?
    - it **recaps**: a reminder after a gap is a few words, never a second
      explanation (`shared/craft/PROSE.md` §7 rule 9). A recap the old
      order needed and the new one doesn't is cut.
-   Judge the moved chapters' endings the same way against what now
-   follows them. For each seam that needs work, use `file_write` to
-   append one turn to `books/{book}/briefs/conversation.md` in the shape
-   `/autonovel:talk` writes (`**Mode:** suggest`, `**Target:** chapter N`,
-   the quoted opening or ending, the fix in a sentence or two, the rule
-   that the chapter ends no longer than it began, `**Status:** queued`).
-   A seam that reads well gets no turn; say so in the report.
+   Judge the earlier chapter's ending the same way: does it still hand on
+   to what now follows it?
+
+   For each seam that needs work, use `file_write` to append one turn to
+   `books/{book}/briefs/conversation.md` in the shape `/autonovel:talk`
+   writes: `**Mode:** suggest`; `**Target:** chapter N`; the quoted
+   opening or ending; the fix in a sentence or two; the rule that the
+   chapter ends no longer than it began; `**Status:** queued`. A seam that
+   reads well gets no turn; say so in the report, seam by seam.
 
 5. Print the renumber (`ch A → ch B; shifted N chapters by ±1`), the
    seams read and the turns staged, and what the new order sent back: the
@@ -137,8 +158,8 @@ operation.
 - `autonovel mechanical release-check books/{book}` lists exactly the
   chapters in `rescore` under chapter scores, the chapters in `reread`
   under cold readers, and the reviews in `order_reports`.
-- Every seam between a moved chapter and its new neighbours was read,
-  and each one that needs work has a queued turn.
+- Every pair in the renumber's `seams` was read, neighbours and across
+  a gap, and each one that needs work has a queued turn.
 - The command stopped without writing if a `rendered_in` row in
   `shared/events.md` pinned a moved chapter and the user had not
   confirmed.

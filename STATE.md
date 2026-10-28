@@ -3221,7 +3221,24 @@ regression. A renumber's tool also had a range cross a line ("ch 1" and a
 "- 10 because" list item under it read as "ch 1-10"); ranges stay on one
 line. +2 tests.
 
+### 2026-10-28 — a reorder reads every seam it changed, not only the moved chapters'
+
+After kingmaker2's swap of chapters 10 and 11, `/autonovel:reorder` read
+the seams of the chapters whose previous chapter changed (10, 11, 12). The
+author asked about 9 and 12 and about time jumps, and the swap had also put
+two chapters and two time jumps between the May 1519 chapter and the one
+that takes May up again (13), and between the 1490 chapter and the 1514
+one. `renumber.seam_pairs` now lists every join a reader meets
+differently: neighbours (each chapter whose previous chapter changed, read
+after it, which includes the chapters on either side of the moved block)
+and stories resumed across a gap (the next chapter told whose
+`story_time` starts after another's ends, when its distance changed).
+`reorder.md` reads all of them, with a check for what a resumed story
+needs brought back. The author: "the adjacent chapter checks should be
+part of the chapter swap tools". +1 test.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (reorder reads every seam it changed) — **2372 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (regression = the last revise made it worse; ranges stay on one line) — **2371 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (renumber by one map; canon history out; wide plates paginate in the ePub) — **2370 passing, 1 skipped** (+9).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the footer's Next follows release-check) — **2361 passing, 1 skipped** (+4).

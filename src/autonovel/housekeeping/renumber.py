@@ -109,6 +109,7 @@ class RenumberReport:
     rewritten: list[str] = field(default_factory=list)
     rescore: list[int] = field(default_factory=list)
     reread: list[int] = field(default_factory=list)
+    seams: list[tuple[int, int]] = field(default_factory=list)
     order_reports: list[str] = field(default_factory=list)
     said_once_inverted: list[str] = field(default_factory=list)
     dry_run: bool = False
@@ -118,6 +119,7 @@ class RenumberReport:
                 "mapping": {str(k): v for k, v in sorted(self.mapping.items())},
                 "moved": [list(m) for m in self.moved], "rewritten": self.rewritten,
                 "rescore": self.rescore, "reread": self.reread,
+                "seams": [list(x) for x in self.seams],
                 "order_reports": self.order_reports,
                 "said_once_inverted": self.said_once_inverted}
 
@@ -346,6 +348,56 @@ def _earlier_set_changed(numbers: list[int], mapping: dict[int, int]) -> list[in
     return out
 
 
+_DATE_RE = re.compile(r"\d{4}(?:-\d{2}(?:-\d{2})?)?")
+
+
+def _story_span(path: Path) -> tuple[tuple[int, ...], tuple[int, ...]] | None:
+    """(start, end) of a chapter's frontmatter `story_time`, as
+    (year, month, day) tuples padded with 0 and 99, or None."""
+    from ..mechanical.latex import frontmatter_value
+    try:
+        value = frontmatter_value(path.read_text(encoding="utf-8"), "story_time")
+    except OSError:
+        return None
+    dates = _DATE_RE.findall(value or "")
+    if not dates:
+        return None
+
+    def parse(d: str, pad: int) -> tuple[int, ...]:
+        parts = [int(x) for x in d.split("-")]
+        return tuple(parts + [pad] * (3 - len(parts)))
+    return parse(dates[0], 0), parse(dates[-1], 99)
+
+
+def seam_pairs(book_root: Path, numbers: list[int], mapping: dict[int, int]) -> list[tuple[int, int]]:
+    """Every join a reader now meets differently, as (earlier, later) in
+    the new numbering: each chapter whose previous chapter changed, read
+    after that previous chapter; and each chapter that takes up a story
+    where another left it (the next chapter told whose `story_time`
+    starts after the other's ends) at a different distance than before,
+    read across the gap. One reorder of two chapters moved a book's May
+    story two chapters and two time jumps away from the chapter that
+    resumes it; reading only the moved chapters' own seams missed it."""
+    full = {n: mapping.get(n, n) for n in numbers}
+    pairs: set[tuple[int, int]] = set()
+    for n in _predecessor_changed(numbers, mapping):
+        if n > numbers[0]:
+            pairs.add((numbers[numbers.index(n) - 1], n))
+    spans = {n: _story_span(book_root / "chapters" / f"ch_{n:02d}.md") for n in numbers}
+    for x in numbers:
+        if not spans.get(x):
+            continue
+        end = spans[x][1]
+        later = [c for c in numbers if c != x and spans.get(c) and spans[c][0] >= end[:2] + (0,)
+                 and full[c] > full[x]]
+        if not later:
+            continue
+        c = min(later, key=lambda c: (spans[c][0], full[c]))
+        if full[c] - full[x] != c - x:
+            pairs.add((full[x], full[c]))
+    return sorted(pairs, key=lambda p: (p[1], p[0]))
+
+
 _POINT_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.+?)\*\*", re.MULTILINE)
 _TOLD_RE = re.compile(r"\*\*Told:\*\*\s*ch\.?\s*(\d+)")
 _MENTION_RE = re.compile(r"\bch\.?\s*(\d+)\s+L\d+")
@@ -417,6 +469,7 @@ def renumber(book_root: Path, mapping: dict[int, int], *, dry_run: bool = False)
 
     rep.rescore = _predecessor_changed(numbers, mapping)
     rep.reread = _earlier_set_changed(numbers, mapping)
+    rep.seams = seam_pairs(book_root, numbers, mapping)
     ledger = book_root / "edit_logs" / "said_once_ledger.md"
     if ledger.is_file():
         rep.said_once_inverted = said_once_inversions(ledger.read_text(encoding="utf-8"), mapping)
@@ -548,6 +601,11 @@ def render_text(rep: RenumberReport) -> str:
     if rep.reread:
         lines.append(f"read cold again (the chapters before each are now others): ch "
                      f"{', '.join(map(str, rep.reread))}")
+    if rep.seams:
+        lines.append("read these seams, the later chapter's opening after the earlier one's "
+                     "ending: " + ", ".join(f"{a}→{b}" if b == a + 1 else f"{a}…{b} (across "
+                                            f"{b - a - 1} chapter{'s' if b - a > 2 else ''})"
+                                            for a, b in rep.seams))
     if rep.order_reports:
         lines.append("read the book again (they judge the order): " + ", ".join(rep.order_reports))
     if rep.said_once_inverted:

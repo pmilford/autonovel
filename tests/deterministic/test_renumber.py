@@ -137,3 +137,24 @@ def test_a_rewritten_eval_log_keeps_its_time(tmp_path: Path) -> None:
     os.utime(plain, (1_000_000, 1_000_000))
     renumber.renumber(b, {2: 3, 3: 2})
     assert (b / "eval_logs" / "ch02_eval.json").stat().st_mtime == 1_000_000
+
+
+def test_seams_include_neighbours_and_stories_resumed_across_a_gap(tmp_path: Path) -> None:
+    """A swap of a past and a present chapter in a two-timeline book: the
+    reader meets the chapters around the moved block differently, and the
+    chapter that resumes the present story is now further from it
+    (kingmaker2, 2026-10-28: ch 13 resumed ch 10's May two chapters later,
+    and only the moved chapters' own seams had been read)."""
+    b = _book(tmp_path, n=6)
+    times = {1: "1519-01-01 to 1519-01-10", 2: "1473-06 to 1473-10",
+             3: "1519-04-01 to 1519-04-30", 4: "1514-03 to 1514-07",
+             5: "1519-05-01 to 1519-05-26", 6: "1519-05-27 to 1519-06-02"}
+    for n, t in times.items():
+        ch = b / "chapters" / f"ch_{n:02d}.md"
+        ch.write_text(ch.read_text(encoding="utf-8").replace("---\n\n", f"story_time: {t}\n---\n\n", 1),
+                      encoding="utf-8")
+    pairs = renumber.seam_pairs(b, renumber.chapter_numbers(b), {4: 5, 5: 4})
+    assert (3, 4) in pairs and (4, 5) in pairs and (5, 6) in pairs  # neighbours
+    assert (4, 6) in pairs   # May resumed across the 1514 chapter
+    assert (2, 5) in pairs   # the past strand resumed across two chapters
+
