@@ -3260,7 +3260,17 @@ pass had never been read in context either.
 diffed each moved chapter against another. It now pairs by title when
 titles are unique on both sides ("Chapter 10 (was 11)"). +2 tests.
 
+### 2026-10-28 — a renumber moves source tags too
+
+The swap of two chapters left 74 canon entries tagged with the old
+chapter's number: `(from <book> ch_10)` was never matched, because a file
+reference had to end in `.`, `_` or `-` and a source tag ends in a bracket.
+A scorer caught it on a stale fact. A file reference now ends at any
+non-digit ("ch_10)", "ch_10 ", "ch_10.md"); "ch_100" stays whole. +3
+assertions in `test_rewrite_refs_follows_the_text`.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a renumber moves source tags) — **2380 passing, 1 skipped** (+3 assertions).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (fix-read; the change page follows a moved chapter) — **2380 passing, 1 skipped** (+8 incl. the seams test).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (reorder reads every seam it changed) — **2372 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (regression = the last revise made it worse; ranges stay on one line) — **2371 passing, 1 skipped** (+1).

@@ -82,13 +82,15 @@ _REF_GLOBS = [
 _DATED_RE = re.compile(r"(?:_\d{4}-\d{2}-\d{2}|_\d{8})")
 
 # "ch 10", "ch. 10", "chs 10-12", "chapter 10", "Chapters 7 and 8",
-# "ch 2, 6 and 8"; or a file name, "first_read_ch10.md", "ch_10.md".
+# "ch 2, 6 and 8"; a file name, "first_read_ch10.md", "ch_10.md"; or a
+# source tag, "(from kingmaker ch_10)", which ends in a bracket, a space or
+# the line's end, not a dot.
 _NUM = r"\d{1,3}(?!\d)"
 # A range never crosses a line: "ch 1" at a line's end and a "- 10 because"
 # list item under it once read as "ch 1-10" and merged two lines.
 _SEP = r"(?:[ \t]*[-–—][ \t]*|[ \t]+to[ \t]+|\s*,\s*(?:and\s+|or\s+)?|\s+and\s+|\s*&\s*|\s+or\s+)"
 _REF_RE = re.compile(
-    rf"(?P<file>(?<![A-Za-z])ch_?(?P<fnum>\d{{2}})(?=[._-]))"
+    rf"(?P<file>(?<![A-Za-z])ch_?(?P<fnum>\d{{2}})(?!\d))"
     rf"|(?P<word>\b(?:[Cc]hapters?|CHAPTERS?|[Cc]hs?\.?)[ \t]*)(?P<nums>{_NUM}(?:{_SEP}{_NUM})*)"
 )
 _RANGE_SEP_RE = re.compile(r"^[ \t]*(?:[-–—]|to)[ \t]*$")

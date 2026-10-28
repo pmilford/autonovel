@@ -84,6 +84,11 @@ def test_rewrite_refs_follows_the_text() -> None:
         "copied since ch 1\n- 11 because 8: x"
     # A range whose chapters change is written out again.
     assert renumber.rewrite_refs("ch 8-10", {10: 12, 12: 10}) == "ch 8-9, 12"
+    # A canon entry's source tag follows its chapter, whatever ends it.
+    assert renumber.rewrite_refs("- [Ages] Albrecht is 23 (from book ch_10)", m) == \
+        "- [Ages] Albrecht is 23 (from book ch_11)"
+    assert renumber.rewrite_refs("drafted in ch_11, revised", m) == "drafted in ch_10, revised"
+    assert renumber.rewrite_refs("ch_100.md", m) == "ch_100.md"
 
 
 def test_swap_moves_records_and_sends_back_only_what_order_changed(tmp_path: Path) -> None:
