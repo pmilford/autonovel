@@ -97,3 +97,25 @@ def test_a_stamped_review_stands_through_a_light_fix(tmp_path: Path, monkeypatch
     assert whole_book._stamped_freshness(tmp_path, "reader_panel", path, newest=0) == "stale"
     monkeypatch.setattr(release_gate, "report_state", lambda root, key: ("unstamped", []))
     assert whole_book._stamped_freshness(tmp_path, "reader_panel", path, newest=9e12) == "stale"
+
+
+def test_the_stale_report_hint_respects_the_stamp(tmp_path: Path, monkeypatch) -> None:
+    """A reader panel stamped with the text it read stands through a light
+    fix: no "re-run the reader panel" hint just because a chapter file is
+    newer than the report (2026-10-28, right after the gate passed)."""
+    import os, time
+    from autonovel.housekeeping import next_actions, release_gate
+    root = tmp_path / "books" / "b"
+    (root / "edit_logs").mkdir(parents=True)
+    (root / "chapters").mkdir()
+    report = root / "edit_logs" / "reader_panel.json"
+    report.write_text("{}", encoding="utf-8")
+    old = time.time() - 1000
+    os.utime(report, (old, old))
+    (root / "chapters" / "ch_01.md").write_text("text", encoding="utf-8")
+    kw = dict(report_path=report, book_root=root, book="b", report_label="reader-panel report",
+              rerun_command="/autonovel:reader-panel --book b", priority="LOW")
+    monkeypatch.setattr(release_gate, "report_state", lambda r, k: ("light", [1]))
+    assert next_actions._staleness_check(**kw) == []
+    monkeypatch.setattr(release_gate, "report_state", lambda r, k: ("older", [1]))
+    assert next_actions._staleness_check(**kw)

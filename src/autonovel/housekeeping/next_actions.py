@@ -926,9 +926,25 @@ def _staleness_check(*, report_path: Path, book_root: Path, book: str,
                       report_label: str, rerun_command: str,
                       priority: str) -> list[NextAction]:
     """Generic mtime check: if the report exists but a chapter has
-    been touched since, the report is stale."""
+    been touched since, the report is stale. A whole-book report stamped
+    with the text it read is judged by its stamp instead
+    (`release_gate.report_state`): it stands through a light fix, which
+    file times can't see (one book was told to re-run its reader panel
+    right after its release gate passed)."""
     if not report_path.is_file():
         return []
+    from . import release_gate
+    stamp_key = {"reader_panel.json": "reader_panel", "review.md": "review",
+                 "review.json": "review", "editor_letter.md": "developmental_edit",
+                 "structure_review.json": "structure_review",
+                 "said_once_ledger.md": "said_once"}.get(report_path.name)
+    if stamp_key:
+        try:
+            state, _ = release_gate.report_state(book_root, stamp_key)
+        except Exception:  # noqa: BLE001
+            state = "unstamped"
+        if state in ("current", "light"):
+            return []
     report_mtime = report_path.stat().st_mtime
     newer_chapters: list[int] = []
     for ch_path in iter_chapter_files(book_root / "chapters"):
