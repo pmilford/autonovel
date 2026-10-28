@@ -25,6 +25,23 @@ consider a structured per-chapter labels file the evaluator reads only for
 the chapter it scores, and a consolidation pass that folds a chapter's
 small entries into one.
 
+### Film: the plan, and five teaser-path faults found surveying it (2026-10-28)
+
+`docs/film-pipeline-plan.md` is the long-term plan from a finished novel to
+a screenplay and a film (stages F0–F10, a free/local tier and a paid tier,
+milestones M1–M8; the first is a screenplay pilot of one sequence, $0, 2–3
+days). Surveying the teaser path for it found, not yet fixed:
+- the `veo` backend calls `veo-3.1-fast-generate-preview`, which Google shut
+  on 2026-10-22;
+- `grok` is documented as the free default video backend; xAI's API now has
+  per-second prices and no free tier, and the live call failed with a 403;
+- edge-tts is the default free narration voice; it is not an official API
+  and commercial use without Azure may breach Microsoft's terms (VoxCPM2,
+  Chatterbox or Kokoro instead, as the audiobook now uses);
+- `music.py`'s MusicGen host is retired;
+- `art-curate` still calls Pollinations "no-API-key"; it now needs a key.
+Also: `--dry-run` shows no dollar estimate and nothing records spend.
+
 ### Naming a person the prose called by a role: a command that reads each mention (2026-10-28)
 
 When an author decides a role-labelled person gets a name back ("the knight
