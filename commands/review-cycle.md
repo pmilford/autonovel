@@ -248,7 +248,15 @@ says what is still open and why.
       (EDITING.md §5), and a score the author can't trust is no gate.
       Each returns its overall score, every dimension, the weakest,
       `top_3_revisions`, the cold reader's open items and its repeats;
-      judge them as step 4 does before the next round.
+      judge them as step 4 does before the next round. **What the scores
+      send back this round:** only a dimension under the floor, an open
+      cold-reader item, and a fault a reader is stopped by (a continuity
+      slip, a historical error, a reference left pointing at nothing,
+      often by this round's own cuts). Make those as the lightest edits
+      that fix them and score those chapters again; every scorer finds
+      something, and each fix sends its chapter back to a scorer, so
+      prose polish (a gloss inside a speech, a long turn, a sum too many)
+      goes in the round notes for the next round, not into this one.
    e. **Re-take the whole-book score** when `release-check`'s
       `book_floor` check was open at the round's start and this round
       fixed for it: once the round's last fix is made, one fresh
