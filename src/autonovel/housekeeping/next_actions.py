@@ -795,6 +795,15 @@ def _developmental_edit_actions(book_root: Path, book: str) -> list[NextAction]:
                 f"first."),
             book=book,
         )]
+    # A letter stamped with the text it read stands through a light fix,
+    # which file times can't see (`release_gate.report_state`).
+    from . import release_gate
+    try:
+        state, _ = release_gate.report_state(book_root, "developmental_edit")
+    except Exception:  # noqa: BLE001
+        state = "unstamped"
+    if state in ("current", "light"):
+        return []
     newer = [p for p in chapters if p.stat().st_mtime > letter.stat().st_mtime]
     if not newer:
         return []
