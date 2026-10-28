@@ -144,6 +144,7 @@ class PromotionReport:
     dry_run: bool = False
     no_lock: bool = False
     scope: str = "auto"
+    stale_copies_removed: int = 0
 
     def to_dict(self) -> dict:
         out = asdict(self)
@@ -241,6 +242,21 @@ def promote(
         own_canon_rel = f"books/{book_name}/canon.md"
 
         kept_after_classify: list[ConflictRecord] = []
+        # Two revisions of one key in one run (two workers each rewrote
+        # the entry): only the last is promoted. Before, both were, and
+        # both removed the same old line.
+        last_revision: dict[str, int] = {}
+        for entry in entries:
+            key = _entry_key(entry)
+            body = (entry.display_text or entry.fact_text or "").strip()
+            if key and _REVISION_RE.match(body):
+                last_revision[key] = id(entry)
+        overtaken = {
+            id(entry) for entry in entries
+            if (key := _entry_key(entry)) in last_revision
+            and _REVISION_RE.match((entry.display_text or entry.fact_text or "").strip())
+            and last_revision[key] != id(entry)
+        }
         for entry in entries:
             classification = _classify(
                 entry,
@@ -259,20 +275,25 @@ def promote(
             # contradiction. Before this, such entries parked as conflicts
             # for the author (eleven in one round of one book) or sat in
             # canon beside the line they replaced.
-            keyed = _keyed_line(entry, (own_canon_text, own_canon_rel), (canon_text, "shared/canon.md"))
-            revision = _revision_supersedes(entry, keyed[0]) if keyed else None
-            if revision:
-                old_line, old_file = keyed
-                sup = SupersedureRecord(
-                    new_entry=entry,
-                    superseded_line=old_line,
-                    superseded_file=old_file,
-                    rationale=f"revised chapter ({revision})",
-                )
+            keyed = _keyed_lines(entry, (own_canon_text, own_canon_rel), (canon_text, "shared/canon.md"))
+            revision = _revision_supersedes(entry, keyed[0][0]) if keyed else None
+            if revision and id(entry) in overtaken:
+                # A later revision of the same key in this same run wins;
+                # this one never reaches the canon.
+                book_report.duplicates += 1
+            elif revision:
+                old_lines, old_file = keyed
                 sup_key = f"book:{book_name}" if old_file == own_canon_rel else "shared"
-                supersedures_by_target.setdefault(sup_key, []).append(sup)
-                removals_by_target.setdefault(sup_key, []).append(old_line)
-                book_report.supersedure_records.append(sup)
+                for old_line in old_lines:
+                    sup = SupersedureRecord(
+                        new_entry=entry,
+                        superseded_line=old_line,
+                        superseded_file=old_file,
+                        rationale=f"revised chapter ({revision})",
+                    )
+                    supersedures_by_target.setdefault(sup_key, []).append(sup)
+                    removals_by_target.setdefault(sup_key, []).append(old_line)
+                    book_report.supersedure_records.append(sup)
                 book_report.supersedures += 1
                 if revision != "retire":
                     _add_survivor(target_key, book_name, entry)
@@ -337,12 +358,13 @@ def promote(
     if dry_run:
         return report
 
-    # Append survivors + supersedures to each target canon file.
-    for target_key in sorted(set(survivors_by_target) | set(supersedures_by_target)):
+    # Append survivors + supersedures to each target canon file, and
+    # clear older copies of revised entries from every canon touched.
+    targets = set(survivors_by_target) | set(supersedures_by_target)
+    targets |= {f"book:{name}" for name in book_names} | {"shared"}
+    for target_key in sorted(targets):
         survivors = survivors_by_target.get(target_key, [])
         supersedures = supersedures_by_target.get(target_key, [])
-        if not survivors and not supersedures:
-            continue
         if target_key == "shared":
             path = canon_path
             header = "# Canon"
@@ -352,11 +374,22 @@ def promote(
         existing = path.read_text(encoding="utf-8") if path.is_file() else ""
         for old in removals_by_target.get(target_key, []):
             existing = existing.replace(old.rstrip() + "\n", "", 1)
+        existing, stale = _drop_stale_copies(existing)
+        if not survivors and not supersedures and not stale:
+            continue
+        report.stale_copies_removed += len(stale)
         appended = _render_canon_appendage(
             survivors=survivors,
             supersedures=supersedures,
             timestamp=timestamp,
         )
+        if stale:
+            appended = appended.rstrip() + "\n\n" if appended.strip() else ""
+            appended += f"## Superseded {timestamp} (older copies of revised entries)\n\n" + "\n".join(
+                f"- Prior canon line: `{line}`\n  - Rationale: a later revision of the same key replaced it; an "
+                "earlier promotion removed only one line under the key"
+                for line in stale
+            ) + "\n"
         if existing.strip():
             new_text = existing.rstrip() + "\n\n" + appended
         else:
@@ -373,20 +406,49 @@ _REVISION_RE = re.compile(
     re.IGNORECASE)
 
 
-def _keyed_line(entry: PendingEntry, *sources: tuple[str, str]) -> tuple[str, str] | None:
-    """The canon line, and its file, under the same `[key]` as `entry`
-    (the book's own canon first, then shared)."""
+def _entry_key(entry: PendingEntry) -> str | None:
     body = (entry.display_text or entry.fact_text or "").strip()
     m = _KEY_RE.match(body)
-    if not m:
+    return m.group(1).strip().lower() if m else None
+
+
+def _keyed_lines(entry: PendingEntry, *sources: tuple[str, str]) -> tuple[list[str], str] | None:
+    """Every live canon line under the same `[key]` as `entry`, and their
+    file (the book's own canon first, then shared). All of them: a
+    revision that took only the first left older copies standing beside
+    the new entry, and the next revision of the key took only one again."""
+    key = _entry_key(entry)
+    if not key:
         return None
-    key = m.group(1).strip().lower()
     for text, rel in sources:
-        for line in text.splitlines():
-            km = _KEY_RE.match(line)
-            if km and km.group(1).strip().lower() == key and line.lstrip().startswith("-"):
-                return line, rel
+        lines = [
+            line for line in text.splitlines()
+            if (km := _KEY_RE.match(line)) and km.group(1).strip().lower() == key
+            and line.lstrip().startswith("-")
+        ]
+        if lines:
+            return lines, rel
     return None
+
+
+def _drop_stale_copies(text: str) -> tuple[str, list[str]]:
+    """Remove live lines that a later revision of the same `[key]` has
+    replaced but an older one-line removal left behind. Only when the
+    last live line under the key is itself a revision ("Replaces the
+    entry of that name…"): two unrelated facts that happen to share a
+    key are left alone."""
+    by_key: dict[str, list[str]] = {}
+    for line in text.splitlines():
+        km = _KEY_RE.match(line)
+        if km and line.lstrip().startswith("-"):
+            by_key.setdefault(km.group(1).strip().lower(), []).append(line)
+    stale: list[str] = []
+    for lines in by_key.values():
+        if len(lines) > 1 and _REVISION_RE.match(lines[-1].lstrip()[1:].strip()):
+            stale.extend(lines[:-1])
+    for old in stale:
+        text = text.replace(old.rstrip() + "\n", "", 1)
+    return text, stale
 
 
 def _revision_supersedes(entry: PendingEntry, existing_line: str) -> str | None:

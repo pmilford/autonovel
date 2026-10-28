@@ -1655,6 +1655,8 @@ def _cmd_promote_canon(args: argparse.Namespace) -> int:
                 print(f"  superseded:  `{sup.superseded_line}` ← `{sup.new_entry.fact_text}` ({sup.rationale})")
             for cr in br.conflict_records:
                 print(f"  conflict:    `{cr.candidate.fact_text}` vs `{cr.existing_line}` in {cr.existing_file}")
+        if report.stale_copies_removed:
+            print(f"older copies of revised entries cleared: {report.stale_copies_removed}")
         if args.dry_run:
             print("(dry-run — no files written)")
     return 0

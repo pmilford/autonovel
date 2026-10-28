@@ -3135,7 +3135,25 @@ slip the others missed. So `review-cycle` uses a separate full-text reader
 per chapter (only the chapters that need a read), and `first-read
 --chapters` stays as the cheaper option, about a tenth of the cost.
 
+### 2026-10-28 — a canon revision supersedes every live copy of its key
+
+A revision ("[key] Replaces the entry of that name…") removed only the
+first live line under its key, and when two workers rewrote one entry in
+one round both revisions were promoted and both removed the same old line.
+One book's canon reached 62 keys with two live copies each, the older one
+stale, and drafts and revisions read canon. Now a revision supersedes every
+live line under the key, the last revision of a key in a run is the only
+one promoted, and every run clears older copies a revision left standing
+(only where the key's last live line is a revision, so unrelated facts that
+share a key are untouched); the CLI reports the count. Cleared 60 on that
+book. Also this round: review-cycle marks a turn applied only when the
+hand-back accounts for every numbered item, never adds to a started turn,
+and has fix workers append canon replacements for what their change makes
+untrue; revise checks a clarification against every other chapter that
+tells the same point. +2 tests.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a canon revision supersedes every live copy; last revision wins; stale copies cleared) — **2357 passing, 1 skipped** (+2).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (separate full-text cold readers by default, measured against one whole-book reader and summaries) — **2355 passing, 1 skipped**.
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (the cold reader reads the earlier chapters in full; one reader for the whole book) — **2355 passing, 1 skipped** (+1).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-27 (review reads the said-once ledger; quoted book-check evidence) — **2354 passing, 1 skipped** (+1 since 2353, the read-change test).

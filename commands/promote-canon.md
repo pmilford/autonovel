@@ -148,8 +148,14 @@ files, so `autonovel rollback` undoes the whole promotion.
      same `[key]` as a canon line that starts "Replaces the entry of that
      name", "Amends", "Refreshes", "Supersedes" or "Retire this entry"
      (revise step 10) supersedes it the same way, contradiction or not:
-     the old line leaves the canon body for the `## Superseded` block,
-     and a retiring entry promotes nothing. The new entry must carry
+     every live line under that key leaves the canon body for the
+     `## Superseded` block (not only the first: one book reached 62 keys
+     with two live copies each), a retiring entry promotes nothing, and
+     when one run carries two revisions of the same key only the last is
+     promoted. Every run also clears older copies a revision left
+     standing: under a key whose last live line is a revision, the
+     earlier lines move to `## Superseded` (two unrelated facts that
+     merely share a key are left alone). The new entry must carry
      everything the old one said that still holds (revise step 10): an
      entry that names only its change would drop the rest from canon. The user reviewing
      `shared/canon.md` then sees both the new fact and the old one

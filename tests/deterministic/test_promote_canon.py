@@ -385,6 +385,54 @@ def test_a_revision_replaces_or_retires_the_entry_it_names(tmp_path: Path) -> No
     assert "Fugger arrived in Venice 1473" in body
 
 
+def test_a_revision_replaces_every_live_copy_and_the_last_revision_wins(tmp_path: Path) -> None:
+    """Bug class (2026-10-28): a revision removed only the first live line
+    under its key, so two workers rewriting one entry in one round left two
+    live copies, and one book's canon reached 62 keys with two each."""
+    series = _make_series(tmp_path)
+    (series.books / "one" / "canon.md").write_text(
+        "# Book canon\n\n"
+        "- [The slate] Jakob counts seven on Easter Monday (from one ch_09)\n"
+        "- [The slate] Replaces the entry of that name: Jakob counts five (from one ch_09, round 3)\n"
+        "- [Tucher's seat] Tucher sits by the door (from one ch_04)\n"
+        "- [Tucher's seat] Tucher keeps a second seat at the Rialto (from one ch_06)\n",
+        encoding="utf-8")
+    _seed_pending(series, "one", [
+        "- [The slate] Replaces the entry of that name, written whole: Jakob writes one line (from one ch_09, round 4)",
+        "- [The slate] Replaces the entry of that name, written whole: Jakob writes one line, no count (from one ch_09, round 4b)",
+    ])
+    report = pc.promote(series, book="one")
+    canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
+    body, _, superseded = canon.partition("## Superseded")
+    assert "counts seven" not in body and "counts five" not in body
+    assert "counts seven" in superseded and "counts five" in superseded
+    # the last revision in the run is the one promoted, once
+    assert body.count("[The slate]") == 1 and "no count" in body
+    # two facts that merely share a key, neither a revision, are left alone
+    assert "sits by the door" in body and "second seat" in body
+    assert report.books[0].supersedures == 1
+
+
+def test_older_copies_of_a_revised_entry_are_cleared_on_any_run(tmp_path: Path) -> None:
+    """A canon already holding an older copy beside its revision is cleaned
+    the next time promote runs, even with nothing new pending."""
+    series = _make_series(tmp_path)
+    (series.books / "one" / "canon.md").write_text(
+        "# Book canon\n\n"
+        "- [v3 ch5 labels] the knight is unnamed (from one ch_05)\n"
+        "- [v3 ch5 labels] Replaces the entry of that name, written whole: the knight is unnamed; Aragon glossed (from one ch_05, round 4)\n",
+        encoding="utf-8")
+    report = pc.promote(series, book="one")
+    canon = (series.books / "one" / "canon.md").read_text(encoding="utf-8")
+    body, _, superseded = canon.partition("## Superseded")
+    assert body.count("[v3 ch5 labels]") == 1 and "Aragon glossed" in body
+    assert "the knight is unnamed (from one ch_05)" in superseded
+    assert report.stale_copies_removed == 1
+    # idempotent
+    pc.promote(series, book="one")
+    assert (series.books / "one" / "canon.md").read_text(encoding="utf-8") == canon
+
+
 def test_a_conflict_parked_twice_is_wrapped_once(tmp_path: Path) -> None:
     series = _make_series(tmp_path)
     (series.books / "one" / "canon.md").write_text(
