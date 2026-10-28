@@ -11,6 +11,26 @@ to start.
 
 ## Near-term — pull into the next PR
 
+### Canon is too big to read: move the superseded history out, and keep labels entries short (2026-10-28)
+
+After four review rounds one book's `canon.md` is 1.35 MB: about 730,000
+characters of `## Superseded` audit blocks and 617,000 of live entries,
+many of them long "labels" entries written whole. Every draft, revise and
+chapter score reads it (a scorer reported it couldn't search a file that
+size and checked only the entries it could find), and it is a large part of
+the ~400k tokens a strict chapter score now costs. Two changes:
+- promote-canon writes `## Superseded` blocks to a sibling file
+  (`canon_superseded.md`) and moves existing ones there, idempotently. The
+  consumers to change together: `mechanical/impact.py` (impact-of parses the
+  blocks), `housekeeping/canon_partition.py` (keeps them in shared), the CLI
+  help text, `commands/promote-canon.md`, `impact-of.md`, `canon-partition.md`,
+  `revise.md`, `help.md`, `docs/commands.md`, `operating-guide.md`,
+  `multi-book.md`, and the promote-canon tests that read the blocks from
+  `canon.md`.
+- A per-chapter "labels" entry written whole every round grows without
+  bound; consider a structured per-chapter labels file the evaluator reads
+  only for the chapter it scores.
+
 - **The review cycle: measure it on a real run (opened 2026-10-25).**
   `/autonovel:review-cycle` and `release-check` shipped the same day
   (STATE.md, "the review cycle"); the first full run is kingmaker2's.
