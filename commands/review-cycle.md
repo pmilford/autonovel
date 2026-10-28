@@ -192,7 +192,12 @@ says what is still open and why.
    b. **Check the cuts.** Read every change each one made (`autonovel
       mechanical diff-chapters --book {book} --from <the round's
       starting point> --chapters N --format hunks`) and put back anything it cut that a
-      reader came for, as revise's "Account for every cut" says. Then use
+      reader came for, as revise's "Account for every cut" says. Mark a
+      turn applied only when the worker's hand-back accounts for every
+      numbered item in it (done, or skipped with a reason) and the diff
+      shows the done ones; an item it doesn't mention wasn't made. Never
+      add to a turn once its worker has started (the worker read it
+      already): stage a new turn instead. Then use
       `bash` to mark the turns it carried out: `autonovel _turn-status
       --book {book} --turns <N,M,…> --status applied`, and any the editor
       decided against `--status declined` (the reason goes in the round
