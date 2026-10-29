@@ -360,6 +360,32 @@ def test_export_pdf_and_fdx(tmp_path: Path) -> None:
     assert check["paragraphs"]["Character"] == 4
 
 
+@pytest.mark.skipif(not _have_screenplain(),
+                    reason="screenplain not installed; pip install autonovel[export]")
+def test_pdf_keeps_each_speech_whole_and_restores_screenplain(tmp_path: Path) -> None:
+    """A speech must not break across a page with no (MORE): the export
+    keeps each speech together, and leaves screenplain as it found it."""
+    from screenplain.export import pdf as sp_pdf
+    before = sp_pdf.add_dialog
+    speeches = "\n".join(f"ANA\n(quietly)\nLine {i} of a long night.\n" for i in range(40))
+    _, path = _book(tmp_path, GOOD + "\nINT. HALL - NIGHT\n\n= S0103 | ch_01:7 | a -> b\n\n" + speeches)
+    seen: list = []
+    real_to_pdf = sp_pdf.to_pdf
+
+    def spy(screenplay, out, **kw):
+        seen.append(sp_pdf.add_dialog)
+        return real_to_pdf(screenplay, out, **kw)
+
+    sp_pdf.to_pdf = spy
+    try:
+        rep = fm.run(path)
+    finally:
+        sp_pdf.to_pdf = real_to_pdf
+    assert rep.exports["pdf_pages"] >= 3
+    assert seen and seen[0] is not before          # the whole-speech version ran
+    assert sp_pdf.add_dialog is before              # and was put back
+
+
 # ------------------------------------------------------------------ CLI
 
 def test_cli_exit_codes_and_formats(tmp_path: Path, capsys) -> None:

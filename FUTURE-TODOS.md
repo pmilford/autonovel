@@ -72,7 +72,10 @@ fountain-check`. Left for M2 and after:
 - **Pagination:** eighths come from line counts on the standard page; the
   screenplain PDF runs about 5–10% longer because it breaks pages (keep a
   heading with what follows it, never split a short speech). Simulate the
-  page breaks, with `(MORE)` / `(CONT'D)`, so the two agree.
+  page breaks, with `(MORE)` / `(CONT'D)`, so the two agree. (screenplain
+  itself split a speech across pages with neither, so a page opened on a
+  bare parenthetical; the export now keeps each speech whole, which is
+  allowed but costs a few lines a page.)
 - **The FDX** from screenplain has no title page and is checked only as
   well-formed Final Draft XML; open it in a screenwriting app (Final Draft,
   Fade In, WriterDuet) and record what survives. screenplain also measures

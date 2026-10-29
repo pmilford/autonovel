@@ -738,8 +738,22 @@ def export(path: Path, out_dir: Path, formats: tuple[str, ...] = ("pdf", "fdx"),
             out["pdf_skipped"] = f"PDF needs reportlab ({e}); {EXPORT_HINT}"
         else:
             pdf = out_dir / f"{stem}.pdf"
-            with pdf.open("wb") as fh:
-                sp_pdf.to_pdf(screenplay, fh)
+            # screenplain lets a speech break across a page with no (MORE)
+            # and no (CONT'D), so a page can open on a bare parenthetical.
+            # Keep each speech whole instead (a speech longer than a page
+            # still splits).
+            from reportlab.platypus import KeepTogether  # type: ignore
+            original = sp_pdf.add_dialog
+
+            def add_dialog_whole(story, dialog, settings):
+                story.append(KeepTogether(sp_pdf._dialog_to_flowables(dialog, settings)))
+
+            sp_pdf.add_dialog = add_dialog_whole
+            try:
+                with pdf.open("wb") as fh:
+                    sp_pdf.to_pdf(screenplay, fh)
+            finally:
+                sp_pdf.add_dialog = original
             out["pdf"] = str(pdf)
             out["pdf_pages"] = pdf_page_count(pdf)
     return out
