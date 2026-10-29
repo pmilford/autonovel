@@ -139,6 +139,14 @@ revision, evaluation and editing commands:
   rehearsals, sequences, place, voice, earned outcomes, and the design
   tests D1–D14. `/autonovel:design` reads it in full every run;
   `/autonovel:gen-outline` reads §8–§10.
+- `shared/craft/SCREEN.md` — how a passage of the book becomes pages of
+  a screenplay: Fountain and the spec page, the scene as a unit of
+  change, visual storytelling, dialogue on screen, adapting prose (every
+  change from the book recorded with its reason, no new named people),
+  period dialogue register, a page a minute counted in eighths, the
+  screen rubric and tests SC1–SC12, and the script's cold reader.
+  `/autonovel:screenplay` reads it in full every run, with the genre
+  guide's `## On screen`.
 
 They are package-owned: `autonovel refresh-templates` overwrites them
 with the installed version (and `autonovel doctor` warns when they are
@@ -500,6 +508,20 @@ Validate the pipeline free with `stub`, then render real video with
 `grok` (or another backend). Put provider keys in a gitignored `.env` at
 the series root. Backend/key map: `docs/teaser-render-providers.md`; the
 creative how-to lives in `docs/teaser-craft.md`.
+
+**The screenplay (film pipeline, milestone M1).**
+`/autonovel:screenplay --chapters <range> [--from "<quote>"] [--to
+"<quote>"] --book <name>` adapts one passage into a screenplay sequence:
+`film/screenplay/seq_NN.fountain` (the source), its adaptation note
+`film/screenplay/seq_NN_adaptation.md` (every change from the book, with
+its reason), `film/scenes.json` (scene IDs, sluglines, characters, the
+book lines each scene comes from, length in eighths of a page), and the
+PDF and Final Draft `.fdx` in `film/export/`. A screen critic scores it
+against `shared/craft/SCREEN.md` and it is revised until it passes; a cold
+reader who hasn't read the book checks it can be followed. `autonovel
+mechanical fountain-check <file>` checks the Fountain and builds the
+exports (`pip install 'autonovel[export]'` for the PDF and FDX). The plan
+for the stages after it is `docs/film-pipeline-plan.md`.
 
 ## Where to find more
 
