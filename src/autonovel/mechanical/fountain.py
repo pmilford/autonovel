@@ -750,8 +750,14 @@ def export(path: Path, out_dir: Path, formats: tuple[str, ...] = ("pdf", "fdx"),
                 story.append(KeepTogether(sp_pdf._dialog_to_flowables(dialog, settings)))
 
             def add_paragraph_whole(story, para, style):
+                # A paragraph that refuses to split moves to the next page
+                # whole. (Wrapping it in KeepTogether instead breaks the
+                # heading's keep-with-next and strands a heading at a
+                # page's foot.)
                 html = "<br/>".join(line.to_html() for line in para.lines)
-                story.append(KeepTogether([Paragraph(html, style)]))
+                flow = Paragraph(html, style)
+                flow.split = lambda *args, **kwargs: []
+                story.append(flow)
 
             sp_pdf.add_dialog, sp_pdf.add_paragraph = add_dialog_whole, add_paragraph_whole
             try:
@@ -761,6 +767,33 @@ def export(path: Path, out_dir: Path, formats: tuple[str, ...] = ("pdf", "fdx"),
                 sp_pdf.add_dialog, sp_pdf.add_paragraph = originals
             out["pdf"] = str(pdf)
             out["pdf_pages"] = pdf_page_count(pdf)
+            breaks = pdf_page_breaks(pdf)
+            if breaks is not None:
+                out["pdf_page_breaks"] = breaks or "ok"
+    return out
+
+
+_PRINTED_HEADING_RE = re.compile(r"^(INT\.|EXT\.|INT\./EXT\.|EST\.|I/E)")
+
+
+def pdf_page_breaks(pdf: Path) -> list[str] | None:
+    """Pages that end on a scene heading or open on a parenthetical cut
+    from its speaker, read back from the PDF with pypdf when it is
+    installed (None when it isn't)."""
+    try:
+        from pypdf import PdfReader  # type: ignore
+    except ImportError:
+        return None
+    out: list[str] = []
+    for n, page in enumerate(PdfReader(str(pdf)).pages, 1):
+        lines = [ln.strip() for ln in (page.extract_text() or "").splitlines() if ln.strip()]
+        lines = [ln for ln in lines if not re.fullmatch(r"\d+\.", ln)]
+        if not lines:
+            continue
+        if _PRINTED_HEADING_RE.match(lines[-1]):
+            out.append(f"PDF page {n} ends on a scene heading ({lines[-1]})")
+        if n > 1 and lines[0].startswith("("):
+            out.append(f"PDF page {n} opens on a parenthetical cut from its speaker ({lines[0]})")
     return out
 
 
@@ -950,6 +983,9 @@ def run(path: Path, *, book_root: Path | None = None, cast_paths: list[Path] | N
         fdx_check = rep.exports.get("fdx_check")
         if fdx_check and not fdx_check.get("ok"):
             rep.errors.append(f"the FDX is not a usable Final Draft file: {fdx_check}")
+        breaks = rep.exports.get("pdf_page_breaks")
+        if isinstance(breaks, list):
+            rep.advisories.extend(breaks)
     if scenes_json is None:
         scenes_json = (film / "scenes.json") if film else False
     if scenes_json:

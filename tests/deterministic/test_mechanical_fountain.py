@@ -383,6 +383,11 @@ def test_pdf_keeps_each_speech_whole_and_restores_screenplain(tmp_path: Path) ->
     finally:
         sp_pdf.to_pdf = real_to_pdf
     assert rep.exports["pdf_pages"] >= 3
+    try:
+        import pypdf  # noqa: F401
+        assert rep.exports["pdf_page_breaks"] == "ok"   # no stranded heading
+    except ImportError:
+        pass
     assert seen and seen[0][0] is not before        # whole speeches
     assert seen[0][1] is not before_para            # and whole paragraphs
     assert sp_pdf.add_dialog is before and sp_pdf.add_paragraph is before_para  # put back
