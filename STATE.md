@@ -3400,9 +3400,12 @@ time. Sheets: 5 subjects, 17 views; the first vision pass failed all twelve
 nine kept on the second, the rest on their last take. Storyboard: 13 frames
 in up to three takes; 10 kept with retouch and grade notes, 3 to the author
 with their best take. The judge caught a planted wrong face (M4's
-acceptance). Sound: Stable Audio 3, its first run on this machine. The
-joined animatic runs 69.1 s against 60 s of page time (S0104 109%, S0105
-133%, the notes say why). GPU: about 19 minutes in all; peak system RAM
+acceptance). Sound: Stable Audio 3, its first run on this machine. A
+viewer who saw only the frames and the transcript followed the place and
+the arrival but not the boy's want, age or the carter's role, read the bars
+in the face shot as locking him in, and found two shots too short; those two
+were given holds. The joined animatic runs 70.7 s against 60 s of page time
+(S0104 112%, S0105 136%, the notes say why). GPU: about 19 minutes in all; peak system RAM
 11.5 GB (the table read), 5.7 GB in the image session.
 
 ## Tests last known green
