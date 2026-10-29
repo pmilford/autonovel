@@ -6,6 +6,13 @@
 > Parent entries: FUTURE-TODOS "Movie script + theater play output
 > formats" and "ULTRA-LONG-TERM: Script → full video pipeline"; the teaser
 > PRD is [`prd-movie-teaser-mode.md`](prd-movie-teaser-mode.md).
+>
+> **M1 built, 2026-10-28:** the screen craft reference
+> `shared/craft/SCREEN.md`, `/autonovel:screenplay` (stage F1 for one
+> passage: Fountain, adaptation note, `film/scenes.json`, PDF and FDX, a
+> screen critic in rounds and a cold reader) and `autonovel mechanical
+> fountain-check`; the genre guides gained `## On screen`. What M1 leaves
+> for later is in FUTURE-TODOS ("Film pipeline after M1").
 
 ## 1. Where we are
 

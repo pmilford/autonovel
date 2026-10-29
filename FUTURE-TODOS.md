@@ -42,6 +42,50 @@ days). Surveying the teaser path for it found, not yet fixed:
 - `art-curate` still calls Pollinations "no-API-key"; it now needs a key.
 Also: `--dry-run` shows no dollar estimate and nothing records spend.
 
+### Film pipeline after M1: what the screenplay pilot leaves (2026-10-28)
+
+M1 shipped `shared/craft/SCREEN.md`, `/autonovel:screenplay` (one passage
+to a Fountain sequence, adaptation note, `film/scenes.json`, PDF and FDX, a
+screen critic in rounds, a cold reader) and `autonovel mechanical
+fountain-check`. Left for M2 and after:
+- **F0, the adaptation plan** (`/autonovel:adapt`): the whole film's
+  `film/adaptation.md` and `scene_plan.json` (what merges or goes, a page
+  budget per sequence). `screenplay` reads it when present; until then each
+  sequence sets its own budget, and scene IDs are per sequence
+  (`S<seq><nn>`), not film-wide.
+- **The whole script:** joining `seq_NN.fountain` files into
+  `screenplay.fountain` with one title page and one export; scene numbers
+  for a shooting draft.
+- **The author's notes on a script** have no command: a `screen-revise`
+  (or `talk` for the film) that stages and applies them, and shows each new
+  draft as a diff against the last (the novel's `/autonovel:diff` rule).
+- **Book beside script:** a page that sets each scene beside the chapter
+  lines it cites (scenes.json already has them), so the author can check
+  the adaptation without hunting.
+- **`screenplay-check` / `film-status`:** a release gate (every sequence's
+  critic gate passed, no cold-read item open, no chapter changed since its
+  `adapted_from` fingerprint) and `/autonovel:next` suggesting the next
+  sequence or flagging a stale one. `fountain-check` warns about a changed
+  chapter; nothing gathers it yet.
+- **A table read** with the free local voices (VoxCPM2, Kokoro) per cue, to
+  hear the dialogue and time each scene against its eighths.
+- **Pagination:** eighths come from line counts on the standard page; the
+  screenplain PDF runs about 5–10% longer because it breaks pages (keep a
+  heading with what follows it, never split a short speech). Simulate the
+  page breaks, with `(MORE)` / `(CONT'D)`, so the two agree.
+- **The FDX** from screenplain has no title page and is checked only as
+  well-formed Final Draft XML; open it in a screenwriting app (Final Draft,
+  Fade In, WriterDuet) and record what survives. screenplain also measures
+  the title page at 61 characters and prints it at 55, so a long title-page
+  line spills the draft date onto a page of its own (fountain-check warns;
+  report it upstream).
+- **`autonovel doctor`** doesn't report a missing screenplain: under pipx
+  it lives inside autonovel's own environment with no command on PATH, so
+  the check must be an import, not a `which`.
+- **Existing series** get `SCREEN.md` and the genre guide's `## On screen`
+  only after `autonovel refresh-templates`; only the historical guide has
+  an `## On screen` section so far.
+
 ### Naming a person the prose called by a role: a command that reads each mention (2026-10-28)
 
 When an author decides a role-labelled person gets a name back ("the knight
@@ -2493,7 +2537,10 @@ prose ≈ 8 / 10, with investigation-heavy plots).
 ## Adjacent output formats
 
 - **Movie script + theater play output formats — both from a finished
-  manuscript and from-scratch.** Surfaced 2026-05-01. autonovel today
+  manuscript and from-scratch.** Surfaced 2026-05-01. *(The screenplay
+  half began 2026-10-28 as milestone M1 of `docs/film-pipeline-plan.md`:
+  `/autonovel:screenplay`, one passage at a time; the stage play and the
+  from-scratch mode are still open.)* autonovel today
   produces novels (PDF + ePub + audiobook). A natural adjacent direction
   is screenplay / stage-play output — same foundation (world / cast /
   outline / canon / voice fingerprints) drives a different leaf-shape.

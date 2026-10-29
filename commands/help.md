@@ -1,7 +1,7 @@
 ---
 name: autonovel:help
 description: Discoverability layer over every autonovel command. Zero-arg shows category-grouped overview; `<topic>` shows in-depth guide for a workflow.
-argument-hint: "[<topic>]   topics: art, foundation, drafting, revising, structure, reading, typeset, research, front-matter, sweeps, tui, cli, next-steps"
+argument-hint: "[<topic>]   topics: art, foundation, drafting, revising, structure, reading, typeset, movie, research, rewrite, front-matter, sweeps, tui, cli, next-steps"
 model_tier: light
 allowed-tools: []
 reads: []
@@ -27,7 +27,7 @@ per-topic. Both are needed.
 Parse `$ARGUMENTS` to one of: empty (overview), or one of the
 canonical topics below. Anything else: print "no help topic
 `<input>`; pick from: art, foundation, drafting, revising, structure, reading,
-typeset, research, rewrite, front-matter, sweeps, tui, cli, next-steps"
+typeset, movie, research, rewrite, front-matter, sweeps, tui, cli, next-steps"
 and stop.
 
 For each mode, print a self-contained chat block matching the
@@ -98,6 +98,10 @@ workflow. Topics:
                  legible) — "boring" AND "who is this?" are blocked. Built in
                  the book's genre, people not objects. X-Prize-shaped. See
                  docs/teaser-craft.md + docs/teaser-render-providers.md.
+                 screenplay: one passage of the book to a screenplay
+                 sequence (Fountain, PDF, Final Draft), every change
+                 from the book written down, a screen critic and a
+                 cold reader. The film plan: docs/film-pipeline-plan.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   rewrite      — a second version of a story a finished book
@@ -615,6 +619,60 @@ For a typography-only cover (no AI art at all):
 
   /autonovel:cover-print --book <name> --pages <N> \
       --typographic-only [--bg-color "#1a3b5c"]
+```
+
+============================== TOPIC: movie =======================
+
+```
+# Movie — from the finished book to the screen
+
+Two paths, both free until you choose to render.
+
+(1) THE TEASER (a 45-60 second trailer of AI video):
+
+      /autonovel:treatment --book <name>      # film treatment + 2-page brief
+      /autonovel:teaser --book <name>         # brief -> beats -> shot prompts,
+                                              # critique <-> revise to READY
+      /autonovel:teaser-refs --book <name>    # approve faces before spending
+      /autonovel:teaser-render --book <name> --provider stub   # $0 dry run
+      /autonovel:teaser-assemble --book <name>
+
+    docs/teaser-craft.md and docs/teaser-render-providers.md.
+
+(2) THE SCREENPLAY (film pipeline stage F1), one sequence at a time:
+
+      /autonovel:screenplay --chapters 2 \
+          --from "<the passage's first line>" [--to "<its last line>"] \
+          --book <name>
+
+    It reads shared/craft/SCREEN.md (the screen craft, each rule
+    sourced) and the genre guide's "On screen", breaks the passage
+    down, and writes under books/<name>/film/:
+      screenplay/seq_NN.fountain        the script (plain text)
+      screenplay/seq_NN_adaptation.md   every change from the book,
+                                        quoted, with its reason
+      scenes.json                       scene IDs, headings, people,
+                                        book lines, length in eighths
+      export/seq_NN.pdf, .fdx           the printed script and a
+                                        Final Draft file
+      reviews/seq_NN_critic.md          the screen critic's scores,
+                                        round by round, and what changed
+      reviews/seq_NN_cold_read.md       a reader who never saw the book
+
+    No new named people; in historical fiction the period is carried
+    on screen, never cut for pace. The title page marks the best first
+    minute to render.
+
+    The check on its own (after editing the .fountain by hand):
+
+      autonovel mechanical fountain-check \
+          books/<name>/film/screenplay/seq_01.fountain --format markdown
+
+    The PDF and FDX need screenplain: pip install 'autonovel[export]'
+    (under pipx: pipx inject autonovel screenplain).
+
+    Shot lists, storyboards, voices and the render come later:
+    docs/film-pipeline-plan.md.
 ```
 
 ============================== TOPIC: research ====================

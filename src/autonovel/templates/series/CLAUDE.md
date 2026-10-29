@@ -197,8 +197,8 @@ each of these and the workaround is in the codebase:
   command sequence — `/autonovel:help art`, `/autonovel:help
   typeset`, `/autonovel:help foundation`, `/autonovel:help
   drafting`, `/autonovel:help revising`, `/autonovel:help
-  research`, `/autonovel:help front-matter`, `/autonovel:help
-  sweeps`, `/autonovel:help tui`, `/autonovel:help cli`,
+  research`, `/autonovel:help movie`, `/autonovel:help front-matter`,
+  `/autonovel:help sweeps`, `/autonovel:help tui`, `/autonovel:help cli`,
   `/autonovel:help next-steps`. The right place to start when a
   set of commands feels opaque (the 10 art-* / cover-* commands
   in particular).

@@ -158,7 +158,9 @@ terminal is open with `git` and `pipx` available.
    `pipx install '.[export]'` reads the `pyproject.toml` here,
    installs autonovel as a tool you can run from anywhere, and
    pulls in the Python image + audio libraries (`Pillow`, `pydub`)
-   that the export commands (cover art, audiobook) need. Quotes
+   that the export commands (cover art, audiobook) need, and
+   `screenplain`, which turns a screenplay into a PDF and a Final
+   Draft file (`/autonovel:screenplay`). Quotes
    around `'.[export]'` matter — your shell will otherwise try to
    glob the brackets. The optional `tui` extra pulls in `textual`
    for `autonovel tui` (long-running terminal browser); skip it if
@@ -168,7 +170,7 @@ terminal is open with `git` and `pipx` available.
    If you only ever plan to draft and revise (no PDF / cover /
    audiobook export), `pipx install .` without the extras works
    too and is faster. You can add the extras later with
-   `pipx inject autonovel Pillow pydub`.
+   `pipx inject autonovel Pillow pydub screenplain`.
 
    **If pipx complains about Python version** ("requires Python
    3.11 or newer; default python3 is 3.10.X"): your default
@@ -678,6 +680,19 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   [`docs/prd-movie-teaser-mode.md`](docs/prd-movie-teaser-mode.md), the
   creative guide [`docs/teaser-craft.md`](docs/teaser-craft.md), and the
   backend/key map [`docs/teaser-render-providers.md`](docs/teaser-render-providers.md).
+- **Screenplay (film pipeline, first stage):** `screenplay --chapters <range>
+  [--from "<quote>"] [--to "<quote>"]` adapts one passage of the book into a
+  screenplay sequence: a Fountain file, an adaptation note giving every change
+  from the book and its reason (no new named people; the genre's payload,
+  in historical fiction the period, carried on screen rather than cut),
+  `film/scenes.json` (scene IDs, sluglines, characters, the book lines each
+  scene comes from, length in eighths of a page) and a PDF and Final Draft
+  `.fdx`. A screen critic scores it against `shared/craft/SCREEN.md` in fresh
+  rounds until it passes, and a cold reader who hasn't read the book checks
+  it can be followed. `autonovel mechanical fountain-check` is the check and
+  the exporter (`pip install 'autonovel[export]'` adds screenplain for the
+  PDF and FDX). The plan for the stages after it, from shot lists to a cut,
+  is [`docs/film-pipeline-plan.md`](docs/film-pipeline-plan.md).
 
 > **Confused which one to run when?** The drafting/revision commands
 > have a layered relationship — `draft-pass` and `revision-pass`
@@ -738,6 +753,7 @@ this section.
 | AI-generated cover | (above) + `fontconfig`, `potrace` | `Pillow` |
 | Vector ornaments in PDF | (above) + `rsvg-convert` | `Pillow` |
 | Audiobook (m4b) | `ffmpeg` (+ `ELEVENLABS_API_KEY`) | `pydub` |
+| Screenplay PDF + Final Draft (.fdx) | — | `screenplain` |
 
 #### Install the OS tools
 
@@ -810,7 +826,8 @@ autonovel/
     fixtures/
       tiny-series-{historical,scifi,literary,mystery,thriller,romance,fantasy,horror}/
       bells-reference/      # Tier-4 regression — populated from the autonovel/bells branch
-  CRAFT.md, PROSE.md, ANTI-SLOP.md, ANTI-PATTERNS.md, EDITING.md, DESIGN.md, FIRST-READER.md
+  CRAFT.md, PROSE.md, ANTI-SLOP.md, ANTI-PATTERNS.md, EDITING.md, DESIGN.md, FIRST-READER.md,
+  CHARACTER.md, SCREEN.md
                             # prompt material consumed by writer/judge — symlinks to
                             # src/autonovel/templates/series/shared/craft/, which
                             # new-series / refresh-templates copy into every series
