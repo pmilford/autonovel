@@ -161,6 +161,21 @@ def test_table_row_names_count_as_cast(tmp_path: Path) -> None:
     assert rep.voice_over_lines == 1
 
 
+def test_a_table_cell_listing_several_people_is_split(tmp_path: Path) -> None:
+    cast = CAST + "\n| Kaspar the weaver, Melem, Utz the carter | each by what he is |\n"
+    _, path = _book(tmp_path, GOOD + "\nCARTER\nHold the mule.\n", cast)
+    rep = fm.check(path)
+    assert rep.speakers["CARTER"]["match"].startswith("Utz the carter")
+
+
+def test_long_title_page_line_is_flagged(tmp_path: Path) -> None:
+    script = GOOD.replace("Credit: Sequence 1",
+                          "Credit: Sequence 1 of a screenplay adapted from a very long novel indeed")
+    _, path = _book(tmp_path, script)
+    rep = fm.check(path)
+    assert any("title page Credit" in a and "55" in a for a in rep.advisories)
+
+
 def test_one_person_two_cues_warns(tmp_path: Path) -> None:
     _, path = _book(tmp_path, GOOD + "\nZUAN VIANELLO\nDeclare your coin.\n")
     rep = fm.check(path)

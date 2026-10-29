@@ -47,6 +47,11 @@ WIDTHS = {
     "lyric": 61,
 }
 ACTION_BLOCK_MAX_LINES = 4      # NFI: break action blocks over 3-4 lines
+# The title-page keys a PDF prints, and the width it prints them at (the
+# page less two 1.5-inch margins, in Courier's 10 characters an inch).
+TITLE_PAGE_PRINTED = ("Title", "Credit", "Author", "Authors", "Source", "Draft date",
+                      "Contact", "Copyright")
+TITLE_PAGE_WIDTH = 55
 SPEECH_MAX_LINES = 4            # SCREEN.md §4.2
 VO_LINES_PER_PAGE = 0.5         # SCREEN.md §4.7 [pipeline heuristic]
 
@@ -418,11 +423,15 @@ def load_cast(paths: list[Path]) -> list[CastEntry]:
                 cell = m.group(1)
                 if rx is row_re and (set(cell) <= set("-: ") or cell.lower() in ("in the record", "name")):
                     continue
-                name = _name_part(cell)
-                toks = tokens(name)
-                if toks:
-                    kind = "heading" if rx is head_re else "table" if rx is row_re else "bold"
-                    out.append(CastEntry(name=name, where=f"{p.name}:{i}", tokens=toks, kind=kind))
+                kind = "heading" if rx is head_re else "table" if rx is row_re else "bold"
+                # A table cell can list several people ("Kaspar the weaver,
+                # Melem, Utz the carter"): each is its own entry.
+                parts = re.split(r"\s*[;,]\s*|\s+and\s+", cell) if kind == "table" else [cell]
+                for part in parts:
+                    name = _name_part(part)
+                    toks = tokens(name)
+                    if toks:
+                        out.append(CastEntry(name=name, where=f"{p.name}:{i}", tokens=toks, kind=kind))
                 break
     return out
 
@@ -504,6 +513,13 @@ def check(path: Path, *, cast_paths: list[Path] | None = None,
     rep.title_page = title
     rep.errors.extend(problems)
     rep.roles = role_names(title)
+    for key in TITLE_PAGE_PRINTED:
+        for value in title.get(key, []):
+            if len(plain(value)) > TITLE_PAGE_WIDTH:
+                rep.advisories.append(
+                    f"title page {key}: {value[:30]!r}... is over {TITLE_PAGE_WIDTH} characters; "
+                    "screenplain measures the title page at 61 and prints it at 55, so a long line "
+                    "pushes the draft date onto a page of its own. Shorten it or split it")
 
     if book_root is None:
         book_root = find_book_root(path)
