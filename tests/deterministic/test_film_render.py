@@ -155,6 +155,9 @@ def test_takes_are_never_overwritten_and_verdicts_limit_regeneration(film: Path)
     front = data["frames"][0]
     assert front["prompt"] == "a woman, try 2" and front["seed"] == 3
     sb.verdict(p, "profile", "keep", "fine", take=1)
+    best = sb.verdict(p, "front", "author", "the model cannot draw it; take 2 is the best", take=2)
+    assert best["status"] == "author"
+    assert (film / "bible/sheets/ana/front.png").read_bytes() == (film / "bible/sheets/ana/takes/front_t02.png").read_bytes()
     st = sb.status(p)
     assert st["ready"] and st["counts"] == {"author": 1, "keep": 1}
 

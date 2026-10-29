@@ -228,6 +228,13 @@ def verdict(manifest: Path, frame_id: str, decision: str, note: str, *, prompt: 
             f["seed"] = int(seed) if seed is not None else int(f.get("seed") or 0) + 1
     else:
         f["status"] = "author"
+        if take is not None:   # the take the check thinks best, shown to the author
+            chosen = next((t for t in takes if t["take"] == take), None)
+            if chosen is None:
+                raise ValueError(f"{frame_id} has no take {take}")
+            sel = out_dir(manifest) / f"{frame_id}{Path(chosen['file']).suffix}"
+            shutil.copyfile(film / chosen["file"], sel)
+            f["select"] = str(sel.relative_to(film))
     f.setdefault("verdicts", []).append(rec)
     save(manifest, data)
     return {"frame": frame_id, "status": f["status"], "regenerations": f.get("regenerations", 0), **rec}

@@ -3347,7 +3347,9 @@ def main(argv: list[str] | None = None) -> int:
     kfv.add_argument("--prompt", default=None, help="The revised prompt (regenerate).")
     kfv.add_argument("--prompt-file", default=None, help="Read the revised prompt from a file.")
     kfv.add_argument("--seed", type=int, default=None, help="A new seed (default: the last one plus one).")
-    kfv.add_argument("--take", type=int, default=None, help="Keep this take instead of the latest.")
+    kfv.add_argument("--take", type=int, default=None,
+                     help="Keep this take instead of the latest; with --verdict author, the best take, shown "
+                          "to the author as the select.")
     kfv.set_defaults(func=_cmd_keyframe_verdict)
 
     kfs = sub.add_parser("keyframe-status", help="Each frame's status, takes, regenerations and last verdict.")
