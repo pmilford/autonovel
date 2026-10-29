@@ -59,6 +59,7 @@ Subcommands:
   keyframe-verdict <frames.json>   Record the vision check's verdict on a frame (keep / regenerate, at most twice / author).
   keyframe-status <frames.json>    Each frame's status, takes and last verdict.
   table-read <seq.fountain> --scene ID  Voice each line in its cast voice (TTS engine in its own env), Whisper-checked.
+  animatic <film/shots/ID.json>... Stills timed to the read with the shot list's moves and the scene's sound (ffmpeg).
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -2452,6 +2453,44 @@ def _cmd_table_read(args: argparse.Namespace) -> int:
     return 0 if res.get("ok") else 1
 
 
+def _cmd_animatic(args: argparse.Namespace) -> int:
+    """Build each scene's animatic, and optionally join them. Exit 0 = all
+    built, 1 = a scene could not be built, 2 = a shot list is missing."""
+    from ..film import animatic as an
+    paths = [Path(p) for p in args.shots]
+    for p in paths:
+        if not p.is_file():
+            print(f"animatic: no file at {p}", file=sys.stderr)
+            return 2
+    if args.dry_run:
+        plans = [an.plan_scene(p) for p in paths]
+        json.dump([{"scene": pl.scene_id, "duration_s": pl.duration_s, "page_time_s": pl.page_time_s,
+                    "shots": [(s["id"], s["dur"], bool(s["still"])) for s in pl.shots],
+                    "lines": [(l["id"], l["start"]) for l in pl.lines], "sound": [c["id"] for c in pl.cues],
+                    "problems": pl.problems} for pl in plans], sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+    results = []
+    for p in paths:
+        try:
+            results.append(an.build_scene(p, labels=not args.no_labels, subtitles=not args.no_subtitles,
+                                          frames=args.frames,
+                                          progress=lambda m: print(m, file=sys.stderr, flush=True)))
+        except RuntimeError as e:
+            results.append({"ok": False, "scene": p.stem, "problems": [str(e)]})
+    joined = None
+    if args.join and all(r.get("ok") for r in results):
+        from ..film.shots import film_dir_of
+        out = film_dir_of(paths[0]) / "animatic" / f"{args.join}.mp4"
+        joined = an.join([Path(r["file"]) for r in results], out)
+    if args.format == "markdown":
+        sys.stdout.write(an.summary_markdown(results, joined))
+    else:
+        json.dump({"scenes": results, "joined": joined}, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+    return 0 if all(r.get("ok") for r in results) else 1
+
+
 def _teaser_audio_modes() -> tuple[str, ...]:
     from ..teaser.assemble import AUDIO_MODES
     return AUDIO_MODES
@@ -3333,6 +3372,20 @@ def main(argv: list[str] | None = None) -> int:
     trd.add_argument("--report", action="store_true", help="Print the manifest as a table and stop.")
     trd.add_argument("--format", choices=("json", "markdown"), default="json")
     trd.set_defaults(func=_cmd_table_read)
+
+    ani = sub.add_parser("animatic",
+                         help="Build each scene's animatic (film/animatic/<scene>.mp4): its storyboard stills held "
+                              "for the shot list's durations with the shots' camera moves, the table read's lines "
+                              "where the shot list places them, the scene's sound cues under them, letterboxed to "
+                              "1.85:1; a cut list beside it. --join concatenates the scenes.")
+    ani.add_argument("shots", nargs="+", help="Shot lists (film/shots/<scene>.json), in screen order.")
+    ani.add_argument("--join", default=None, help="Also join the scenes into film/animatic/<NAME>.mp4.")
+    ani.add_argument("--frames", action="store_true", help="Save one still per shot from the cut, for the viewer check.")
+    ani.add_argument("--no-labels", action="store_true", help="No shot IDs in the frame.")
+    ani.add_argument("--no-subtitles", action="store_true", help="No dialogue burned in.")
+    ani.add_argument("--dry-run", action="store_true", help="Print the timeline; build nothing.")
+    ani.add_argument("--format", choices=("json", "markdown"), default="json")
+    ani.set_defaults(func=_cmd_animatic)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):
