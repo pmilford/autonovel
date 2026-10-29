@@ -53,6 +53,8 @@ Subcommands:
   teaser-archive-script <file>     Timestamp-archive a script before a --force re-run (Phase 6).
   teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
   fountain-check <file.fountain>   Check a screenplay (headings, speakers vs cast, scene lines), length in eighths; PDF + FDX.
+  scene-lines <file.fountain> --scene ID  One scene's numbered lines and action paragraphs, with estimated times.
+  shot-check <film/shots/ID.json>  Check a shot list: coverage, the 180-degree line, eyelines, continuity, timing, the look.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -2320,6 +2322,39 @@ def _cmd_fountain_check(args: argparse.Namespace) -> int:
     return 0 if rep.ok else 1
 
 
+def _cmd_scene_lines(args: argparse.Namespace) -> int:
+    """One scene's numbered speeches and action paragraphs (exit 2 when the
+    file or the scene is missing)."""
+    from . import fountain as fountain_mod
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"scene-lines: no file at {path}", file=sys.stderr)
+        return 2
+    bd = fountain_mod.scene_breakdown(path, args.scene,
+                                      book_root=Path(args.book_root) if args.book_root else None)
+    if bd is None:
+        print(f"scene-lines: no scene {args.scene} in {path}", file=sys.stderr)
+        return 2
+    if args.format == "markdown":
+        sys.stdout.write(fountain_mod.render_breakdown_markdown(bd))
+    else:
+        json.dump(bd, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_shot_check(args: argparse.Namespace) -> int:
+    """Check a shot list. Exit 0 = no errors, 1 = errors, 2 = missing file."""
+    from ..film import shots as shots_mod
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"shot-check: no file at {path}", file=sys.stderr)
+        return 2
+    rep = shots_mod.check(path, retime=args.retime, stamp=args.stamp)
+    sys.stdout.write(shots_mod.render_markdown(rep) if args.format == "markdown" else shots_mod.to_json(rep))
+    return 0 if rep.ok else 1
+
+
 def _teaser_audio_modes() -> tuple[str, ...]:
     from ..teaser.assemble import AUDIO_MODES
     return AUDIO_MODES
@@ -3117,6 +3152,31 @@ def main(argv: list[str] | None = None) -> int:
                           "the chapters as they now stand.")
     fck.add_argument("--format", choices=("json", "markdown"), default="json")
     fck.set_defaults(func=_cmd_fountain_check)
+
+    scl = sub.add_parser("scene-lines",
+                         help="One scene of a Fountain script as the film stages use it: every speech "
+                              "numbered <ID>-L01, every action paragraph <ID>-A01, each with its estimated "
+                              "screen time; the scene's page time and fingerprint.")
+    scl.add_argument("path", help="The .fountain file.")
+    scl.add_argument("--scene", required=True, help="Scene ID, e.g. S0104.")
+    scl.add_argument("--book-root", default=None)
+    scl.add_argument("--format", choices=("json", "markdown"), default="json")
+    scl.set_defaults(func=_cmd_scene_lines)
+
+    shc = sub.add_parser("shot-check",
+                         help="Check a shot list (film/shots/<scene>.json): schema, every line and action "
+                              "paragraph covered, the 180-degree line and screen direction, eyelines, "
+                              "continuity shot to shot, durations from the lines and action, the look's "
+                              "lenses, frame rate and forbidden moves.")
+    shc.add_argument("path", help="The shot list JSON.")
+    shc.add_argument("--retime", action="store_true",
+                     help="Write each shot's duration_s from its lines (the table read's recordings when "
+                          "current, else estimates) and its action.")
+    shc.add_argument("--stamp", action="store_true",
+                     help="Record the scene's and look.yaml's fingerprints: the shot list was made from them "
+                          "as they now stand.")
+    shc.add_argument("--format", choices=("json", "markdown"), default="json")
+    shc.set_defaults(func=_cmd_shot_check)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

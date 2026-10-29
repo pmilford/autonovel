@@ -54,6 +54,14 @@ TITLE_PAGE_PRINTED = ("Title", "Credit", "Author", "Authors", "Source", "Draft d
 TITLE_PAGE_WIDTH = 55
 SPEECH_MAX_LINES = 4            # SCREEN.md §4.2
 VO_LINES_PER_PAGE = 0.5         # SCREEN.md §4.7 [pipeline heuristic]
+# Estimated screen time before anything is recorded (CAMERA.md §6
+# [pipeline heuristic]): screen dialogue at about 150 words a minute with a
+# short breath at each sentence end; an action paragraph at the page's own
+# rate, a printed line of a 55-line page that plays in a minute.
+SPEECH_WORDS_PER_S = 2.5
+SPEECH_SENTENCE_PAUSE_S = 0.25
+SPEECH_MIN_S = 0.8
+SECONDS_PER_PAGE_LINE = 60 / LINES_PER_PAGE
 
 EXPORT_HINT = ("pip install 'autonovel[export]' (or: pip install screenplain) "
                "for the PDF and FDX")
@@ -109,6 +117,8 @@ class Speech:
     line: int
     extensions: list[str]
     lines: int         # wrapped dialogue + parenthetical lines
+    text: list[str] = field(default_factory=list)     # the spoken words, one entry per dialogue line
+    parens: list[str] = field(default_factory=list)   # its parentheticals, in order
 
 
 @dataclass
@@ -128,6 +138,8 @@ class Scene:
     speaking: list[str] = field(default_factory=list)
     characters: list[str] = field(default_factory=list)
     voice_over: int = 0
+    lines: list[dict] = field(default_factory=list)   # each speech: id, cue, text, est_s (scene_breakdown)
+    beats: list[dict] = field(default_factory=list)   # each action paragraph: id, text, est_s
 
 
 @dataclass
@@ -184,6 +196,16 @@ def eighths_label(eighths: int) -> str:
     if whole:
         return str(whole)
     return f"{rest}/8"
+
+
+def speech_seconds(text: str) -> float:
+    """Estimated time to speak a line on screen, before it is recorded
+    (CAMERA.md §6 [pipeline heuristic]); a table read replaces it."""
+    words = len(text.split())
+    if not words:
+        return 0.0
+    sentences = max(1, len(re.findall(r"[.!?]+(?:\s|$)", text.strip())))
+    return round(max(SPEECH_MIN_S, words / SPEECH_WORDS_PER_S + SPEECH_SENTENCE_PAUSE_S * (sentences - 1)), 1)
 
 
 # --------------------------------------------------------------- parsing
@@ -566,6 +588,10 @@ def check(path: Path, *, cast_paths: list[Path] | None = None,
                     cur.voice_over += 1
         elif el.kind in ("paren", "dialogue") and cur_speech is not None:
             cur_speech.lines += element_lines(el, prev)
+            if el.kind == "dialogue" and el.text:
+                cur_speech.text.append(plain(el.text))
+            elif el.kind == "paren":
+                cur_speech.parens.append(el.text)
         elif el.kind not in ("synopsis", "section"):
             cur_speech = None
         if el.kind == "action":
@@ -581,6 +607,8 @@ def check(path: Path, *, cast_paths: list[Path] | None = None,
                     "story depends on it (SCREEN.md §1.6)")
             if cur is not None:
                 action_text.setdefault(cur.index, []).append(el.text)
+                cur.beats.append({"text": plain(el.text).replace("\n", " "), "line": el.line,
+                                  "est_s": round((wl + 1) * SECONDS_PER_PAGE_LINE, 1)})
         if cur is None:
             pre_lines += n
         else:
@@ -631,7 +659,8 @@ def check(path: Path, *, cast_paths: list[Path] | None = None,
         chars = list(sc.speaking)
         body = " ".join(action_text.get(sc.index, []))
         for nm in names:
-            if nm not in chars and re.search(rf"(?<![\w']){re.escape(nm)}(?![\w'])", body, re.I):
+            # A name in the action, possessive included ("the carter's boots").
+            if nm not in chars and re.search(rf"(?<![\w']){re.escape(nm)}(?!\w)(?!['\u2019](?![sS]\b))", body, re.I):
                 chars.append(nm)
         sc.characters = chars
 
@@ -650,6 +679,21 @@ def check(path: Path, *, cast_paths: list[Path] | None = None,
         if s.id in seen:
             rep.errors.append(f"line {s.line}: scene ID {s.id} repeats the one at line {seen[s.id]}")
         seen.setdefault(s.id, s.line)
+
+    # Each scene's speeches and action paragraphs, numbered for the shot list
+    # (S0104-L01, S0104-A01): the IDs every later film stage keys on.
+    for scene, sp in speeches:
+        if scene is not None:
+            text = " ".join(sp.text).strip()
+            scene.lines.append({"cue": sp.cue, "raw_cue": sp.raw_cue, "text": text, "parens": sp.parens,
+                                "line": sp.line, "words": len(text.split()), "est_s": speech_seconds(text)})
+    seq_guess = seq_of(path, rep) if scenes else ""
+    for s in scenes:
+        sid = s.id or f"{seq_guess}-{s.index:02d}"
+        for k, ln in enumerate(s.lines, 1):
+            ln["id"] = f"{sid}-L{k:02d}"
+        for k, b in enumerate(s.beats, 1):
+            b["id"] = f"{sid}-A{k:02d}"
 
     # Length.
     for s in scenes:
@@ -910,12 +954,87 @@ def update_scenes_json(json_path: Path, path: Path, rep: Report, *, book_root: P
             "eighths": s.eighths,
             "length": eighths_label(s.eighths),
             "line": s.line,
+            "lines": [{"id": ln["id"], "cue": ln["cue"], "text": ln["text"], "est_s": ln["est_s"]}
+                      for ln in s.lines],
         })
     data["scenes"] = sorted(others + mine, key=lambda s: (s.get("seq", ""), s.get("id", "")))
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     rep.scenes_json = str(json_path)
     return data
+
+
+# --------------------------------------------------------------- one scene
+
+def scene_text(path: Path, scene_id: str, rep: Report | None = None) -> str:
+    """The scene's own lines of the Fountain file, from its heading to the
+    next heading (notes and synopsis lines included): what a shot list,
+    a storyboard or a table read was made from."""
+    rep = rep or check(path, cast_paths=[])
+    lines = path.read_text(encoding="utf-8").replace("\r\n", "\n").split("\n")
+    for k, sc in enumerate(rep.scenes):
+        if sc.id == scene_id:
+            end = rep.scenes[k + 1].line - 1 if k + 1 < len(rep.scenes) else len(lines)
+            return "\n".join(lines[sc.line - 1:end]).strip() + "\n"
+    return ""
+
+
+def scene_fingerprint(path: Path, scene_id: str, rep: Report | None = None) -> str:
+    import hashlib
+    text = scene_text(path, scene_id, rep)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16] if text else ""
+
+
+def scene_breakdown(path: Path, scene_id: str, *, book_root: Path | None = None) -> dict | None:
+    """One scene as the film stages after the script use it: heading, who
+    is in it, every speech numbered (`<ID>-L01`) and every action paragraph
+    numbered (`<ID>-A01`), each with its estimated screen time, the scene's
+    length in eighths and its page time in seconds, and the fingerprint of
+    its text. None when the script has no scene of that ID."""
+    if book_root is None:
+        book_root = find_book_root(path)
+    rep = check(path, book_root=book_root)
+    for k, sc in enumerate(rep.scenes):
+        if sc.id != scene_id:
+            continue
+        prev_id = rep.scenes[k - 1].id if k else ""
+        next_id = rep.scenes[k + 1].id if k + 1 < len(rep.scenes) else ""
+        return {
+            "id": sc.id,
+            "seq": seq_of(path, rep),
+            "slugline": f"{sc.int_ext} {sc.location} - {sc.time}".strip() if sc.int_ext else sc.heading,
+            "int_ext": sc.int_ext, "location": sc.location, "time": sc.time,
+            "turn": sc.turn, "source": sc.source,
+            "characters": sc.characters, "speaking": sc.speaking,
+            "eighths": sc.eighths, "length": eighths_label(sc.eighths),
+            "page_time_s": round(sc.eighths / 8 * 60, 1),
+            "lines": sc.lines, "beats": sc.beats,
+            "est_dialogue_s": round(sum(ln["est_s"] for ln in sc.lines), 1),
+            "est_action_s": round(sum(b["est_s"] for b in sc.beats), 1),
+            "previous_scene": prev_id, "next_scene": next_id,
+            "script": str(path), "scene_sha": scene_fingerprint(path, sc.id, rep),
+            "file_line": sc.line,
+        }
+    return None
+
+
+def render_breakdown_markdown(bd: dict) -> str:
+    out = [f"# {bd['id']}: {bd['slugline']}", "",
+           f"Turn: {bd['turn'] or '—'}. Length {bd['length']} of a page, so about "
+           f"{bd['page_time_s']:g} s of screen time. Speaking: {', '.join(bd['speaking']) or 'nobody'}.", "",
+           "| ID | Kind | Who | Text | Est. s |", "|---|---|---|---|---|"]
+    items = [(b["line"], "beat", b) for b in bd["beats"]] + [(ln["line"], "line", ln) for ln in bd["lines"]]
+    for _, kind, it in sorted(items, key=lambda t: t[0]):
+        who = it.get("raw_cue", "") if kind == "line" else ""
+        text = it["text"].replace("|", "/")
+        if kind == "line" and it.get("parens"):
+            text = " ".join(it["parens"]) + " " + text
+        out.append(f"| {it['id']} | {kind} | {who} | {text} | {it['est_s']:g} |")
+    out += ["", f"Estimated dialogue {bd['est_dialogue_s']:g} s, action {bd['est_action_s']:g} s "
+            "(before any table read; CAMERA.md §6).",
+            f"Previous scene: {bd['previous_scene'] or '—'}; next: {bd['next_scene'] or '—'}. "
+            f"Scene fingerprint {bd['scene_sha']}."]
+    return "\n".join(out) + "\n"
 
 
 # --------------------------------------------------------------- reporting
