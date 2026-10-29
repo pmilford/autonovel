@@ -3386,6 +3386,25 @@ the user's own machine. Decisions:
   storyboard → table-read → animatic, the scene carried from `--scene`); it
   had suggested the novel's diff page after a shot list.
 
+**First run** (kingmaker2, S0104–S0105, the screenplay's first minute: the
+arrival by water at night and the inn's dog; written into the series'
+`books/kingmaker2/film/`). Shot lists: 9 + 4 shots after three DP-critic
+rounds each (round 1 failed both on real staging faults: a face shot no
+camera could take, the building on the wrong side of the gate, a dog that
+jumped the flight across a cut, the innkeeper unable to reach it; round 3
+passed both, lowest 7); the continuity check caught a collar change the
+writer forgot to record. Voices: three designed (boy about 214 Hz, carter
+about 85 Hz, innkeeper about 105 Hz), five lines, every take matched first
+time. Sheets: 5 subjects, 17 views; the first vision pass failed all twelve
+(heels, fedora, collars, trousers, a glass carriage lamp, a pet collar);
+nine kept on the second, the rest on their last take. Storyboard: 13 frames
+in up to three takes; 10 kept with retouch and grade notes, 3 to the author
+with their best take. The judge caught a planted wrong face (M4's
+acceptance). Sound: Stable Audio 3, its first run on this machine. The
+joined animatic runs 69.1 s against 60 s of page time (S0104 109%, S0105
+133%, the notes say why). GPU: about 19 minutes in all; peak system RAM
+11.5 GB (the table read), 5.7 GB in the image session.
+
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-29 (film M3–M4: CAMERA.md, shot-list, storyboard, table-read, animatic; the footer walks the film pipeline) — **2504 passing, 1 skipped** (+82).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the screenplay pilot: SCREEN.md, /autonovel:screenplay, fountain-check) — **2422 passing, 1 skipped** (+42).

@@ -70,6 +70,33 @@ their mechanical halves (`scene-lines`, `shot-check`, `keyframe-render` /
 - **Character sheets** hold faces well across views but the model still
   draws later things in the period's clothes (heels, collars); a LoRA per
   principal (the stack's rank-2 pick) is the next step for a long film.
+- **From the first run (kingmaker2, S0104–S0105, 13 frames, 43 images):**
+  - Every frame failed its first vision check; 10 of 13 were kept by the
+    third take, 3 went to the author. The model's period faults are
+    predictable and phrase-driven (anything "on a post" becomes a street
+    lamp; "lanterns at a few water-doors" floodlights whole façades; small
+    boats become gondolas; a "felt hat" becomes a fedora or a homburg; a
+    sheet not passed lets a person turn into someone else). CAMERA.md §8
+    could carry a short list of these traps and their positive rewordings,
+    so the first prompt avoids them.
+  - The even fill from the camera's side survived every take: a **grading
+    pass** (burn down walls, crush silhouettes, one side of a face to black)
+    is cheaper than rolls of the model. Nothing does it yet; the review
+    files list per-frame retouch and grade notes for a person or a future
+    `storyboard-grade` step (ffmpeg curves, or an image-edit model with a
+    mask).
+  - Some actions never come: an innkeeper's hand on a dog's collar failed
+    three times. A shot list could flag a two-subject contact as "insert
+    needed" up front.
+  - **A frame whose shot changed** was set back to pending by hand, and its
+    regeneration counter then disagreed with the judge's count. Give
+    `keyframe-verdict` a `reset` (the shot changed: a new frame, counter to
+    zero, old takes kept).
+  - The table read ran while the shot list's lock was held; the commands'
+    order (shot list, then storyboard, then table read) should not force the
+    table read last: the shot list's durations want the recordings first.
+    Consider running `table-read` before the shot-list critic (cheap, a
+    minute on the 3060).
 
 ### Film pipeline after M1: what the screenplay pilot leaves (2026-10-28)
 
