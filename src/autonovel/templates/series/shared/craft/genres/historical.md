@@ -42,6 +42,7 @@ came four times in its first chapter, and the reader found it slow.)
 - Cutting
 - Editing
 - Back matter
+- On screen
 - Sources
 
 ---
@@ -665,6 +666,48 @@ delivery, not removal.
 
 ---
 
+## On screen
+
+`/autonovel:screenplay` and its screen critic read this section, with
+`SCREEN.md`. The audience of a historical film comes for what the reader
+came for (The promise): the period itself. The screenplay's pressure to
+cut runs the other way, so the payload needs the same protection on the
+page of a script as on the page of a novel.
+
+1. **Carry the history; never cut it for pace.** A period fact the
+   passage gives (a law, a coin, a custom, a building as it then was) is
+   moved into action or image, given to a person who needs it, or made a
+   line; a cut is recorded in the adaptation note with its reason, and
+   pace is not a reason. Robert Rosenstone, the historian of historical
+   film, counts compression, condensation, displacement, alteration and
+   invention as film's legitimate means of telling the past, so long as
+   they serve what the record shows (*History on Film/Film on History*,
+   2006).
+2. **Shown in use.** Daily life is something done on screen: a coin
+   counted out, a weapon surrendered at a gate, water bought from a boat,
+   a payment written in a banker's book. The audience learns the period
+   by watching people manage it (`SCREEN.md` §3.5; Drafting rule 1, "in a
+   body").
+3. **Place and date on screen.** A `SUPER:` for the place and year at
+   the start of each strand and each jump in time (the novel's dateline);
+   then the place shown as it was that year, with the period traps in the
+   design's `## Places` kept out of the frame (a later building, a later
+   bridge, a later colour of boat).
+4. **The past's own words, sparingly.** A few period words stay when the
+   scene makes them clear (a coin, an office, an insult, a form of
+   address); a language the viewpoint character can't follow stays
+   unsubtitled (`SCREEN.md` §1.7, §6).
+5. **Real people as the record shows them;** invented people are marked
+   in the cast and add no new names on screen (`SCREEN.md` §5.4). The
+   historical note at the back of the book covers the film's changes too;
+   the adaptation note feeds it.
+6. **The guide character.** A newcomer shown round by someone who knows
+   the place is the historical film's oldest way to orient an audience;
+   it works when the guide wants something from the newcomer, so the tour
+   is a scene, not a lecture (`SCREEN.md` §2.5).
+
+---
+
 ## Sources
 
 - Lee, Richard. "Guide: our definition of historical fiction."
@@ -733,6 +776,10 @@ delivery, not removal.
 - Dray, Stephanie, and Laura Kamoie. "The Art of the Author's Note."
   *Writer's Digest*, 6 May 2026.
   <https://www.writersdigest.com/the-art-of-the-authors-note-honesty-magic-and-everything-you-dont-put-in-the-novel>
+- Rosenstone, Robert A. *History on Film/Film on History*. Pearson,
+  2006; its fictive techniques (compression, condensation, displacement,
+  alteration) as a film-maker used them:
+  <https://www.qub.ac.uk/sites/frankryan/Archivaldialogues>
 - `EDITING.md` Part III (Mantel, Stone, Lukács, Darwin, Harris on the
   record) and Part IV (the thriller); `DESIGN.md` §4, §8, §12, §13a, §14;
-  `CHARACTER.md` §5; `FIRST-READER.md`.
+  `CHARACTER.md` §5; `FIRST-READER.md`; `SCREEN.md` (On screen).

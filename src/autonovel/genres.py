@@ -41,6 +41,7 @@ GUIDE_SECTIONS: tuple[tuple[str, str], ...] = (
     ("Cutting", "what never counts as over-explaining: adversarial-edit, apply-cuts"),
     ("Editing", "what the developmental editor checks; typical failures: developmental-edit, structure-review"),
     ("Back matter", "notes and appendices this reader expects: appendix"),
+    ("On screen", "what the film of a book in this genre must carry: screenplay"),
     ("Sources", "every claim's source"),
 )
 

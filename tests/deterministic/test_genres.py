@@ -201,6 +201,7 @@ READERS = {
     "draft-pass": ["genre guide"],
     "revision-pass": ["genre guide"],
     "genre": ["autonovel genre show", "shared/genres/"],
+    "screenplay": ["## The promise", "## On screen"],
 }
 
 

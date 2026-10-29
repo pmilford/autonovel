@@ -36,7 +36,8 @@ they are the *prompt material*, not project documentation):
 - [`CRAFT.md`](CRAFT.md), [`PROSE.md`](PROSE.md),
   [`ANTI-SLOP.md`](ANTI-SLOP.md), [`ANTI-PATTERNS.md`](ANTI-PATTERNS.md),
   [`EDITING.md`](EDITING.md), [`DESIGN.md`](DESIGN.md),
-  [`FIRST-READER.md`](FIRST-READER.md), [`CHARACTER.md`](CHARACTER.md).
+  [`FIRST-READER.md`](FIRST-READER.md), [`CHARACTER.md`](CHARACTER.md),
+  [`SCREEN.md`](SCREEN.md).
   The repo-root files are symlinks; the source of truth is
   `src/autonovel/templates/series/shared/craft/`, which
   `autonovel new-series` copies into every series as `shared/craft/`
@@ -54,7 +55,14 @@ they are the *prompt material*, not project documentation):
   `CHARACTER.md` is how each member of the cast comes alive (the
   dossier, depth on the page, real people from the record, ensembles and
   return tags, the tests C1–C12), which `/autonovel:cast` reads every
-  run and `draft` step 3d applies. `genres/<genre>.md` (under the same
+  run and `draft` step 3d applies. `SCREEN.md` is the screen craft
+  reference: Fountain and the spec page, the scene as a unit of change,
+  visual storytelling, dialogue on screen, adapting prose (Rosenstone's
+  change ledger), period dialogue register, a page a minute in eighths,
+  the screen rubric and tests SC1–SC12, and the script's cold reader;
+  `/autonovel:screenplay` reads it every run (the film plan is
+  [`docs/film-pipeline-plan.md`](docs/film-pipeline-plan.md)).
+  `genres/<genre>.md` (under the same
   craft folder; `genres/README.md` lists its fixed sections and which
   command reads each) is what a genre's reader comes for and what every
   command does about it; `src/autonovel/genres.py` is the registry of
@@ -79,7 +87,8 @@ autonovel/
       tiny-series-{scifi,literary,mystery,thriller,romance,fantasy,horror}/
       bells-reference/           # Tier-4 regression — populates from autonovel/bells branch
   CRAFT.md, PROSE.md, ANTI-SLOP.md, ANTI-PATTERNS.md, EDITING.md, DESIGN.md,
-  FIRST-READER.md, CHARACTER.md   # symlinks → templates/series/shared/craft/
+  FIRST-READER.md, CHARACTER.md,
+  SCREEN.md                       # symlinks → templates/series/shared/craft/
   CLAUDE.md, AGENTS.md, GEMINI.md   # AGENTS/GEMINI are symlinks to CLAUDE.md
 ```
 

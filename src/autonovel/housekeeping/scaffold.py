@@ -175,7 +175,7 @@ class RefreshTemplatesResult:
 #: hand-edit: the typeset templates (PDF-header fixes land there) and
 #: the craft reference documents the writer / judge commands read
 #: (`shared/craft/`: CRAFT.md, PROSE.md, ANTI-SLOP.md, ANTI-PATTERNS.md,
-#: EDITING.md, DESIGN.md, FIRST-READER.md, CHARACTER.md).
+#: EDITING.md, DESIGN.md, FIRST-READER.md, CHARACTER.md, SCREEN.md).
 #: Register choices belong in `books/<book>/voice.md`, not in copies of
 #: these files, so refreshing them loses nothing.
 DEFAULT_REFRESH_SUBTREES: tuple[str, ...] = ("typeset", "shared/craft")
@@ -184,7 +184,7 @@ DEFAULT_REFRESH_SUBTREES: tuple[str, ...] = ("typeset", "shared/craft")
 #: `shared/craft/`. Source of truth is the template tree; the repo-root
 #: files of the same names are symlinks to it.
 CRAFT_DOCS: tuple[str, ...] = ("CRAFT.md", "PROSE.md", "ANTI-SLOP.md", "ANTI-PATTERNS.md", "EDITING.md",
-                               "DESIGN.md", "FIRST-READER.md", "CHARACTER.md")
+                               "DESIGN.md", "FIRST-READER.md", "CHARACTER.md", "SCREEN.md")
 
 #: The genre guides shipped at `shared/craft/genres/` (what each genre's
 #: reader comes for; `genres.py` is the registry). Checked by doctor with

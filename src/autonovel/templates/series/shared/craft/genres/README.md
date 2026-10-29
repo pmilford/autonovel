@@ -41,6 +41,7 @@ sections named for it, plus `## The promise` and the `###` entries under
 | Cutting | What never counts as over-explaining; the `MISPLACED` type | adversarial-edit, apply-cuts |
 | Editing | Questions for the developmental editor; typical failures | developmental-edit, structure-review, review |
 | Back matter | Notes and appendices this reader expects | appendix |
+| On screen | What the film of a book in this genre must carry, and how the payload reaches a script | screenplay |
 | Sources | Every claim's source | — |
 
 Where a guide and `books/<book>/voice.md` disagree, the voice file wins,
