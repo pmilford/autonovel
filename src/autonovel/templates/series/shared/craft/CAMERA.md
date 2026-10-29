@@ -193,7 +193,9 @@ whose base runs parallel to the line, all on one side of it.
 3. **Screen direction** (`screen_direction`) is kept per mover: a traveller
    who leaves one shot frame right enters the next frame left. A shot
    toward or away from the camera is neutral and lets the next one go
-   either way.
+   either way. A mover who turns round on screen, inside a shot (a dog
+   hauled back up the steps it came down), may leave that shot the other
+   way: the shot records the turn in `crossing`.
 4. **Eyelines meet.** From one side of the line, a person looking at
    another looks the same way in every shot (`eyeline.looks` frame_left or
    frame_right), and two people looking at each other look opposite ways.

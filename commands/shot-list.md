@@ -150,7 +150,7 @@ and `shared/craft/SCREEN.md` are best-effort: note a gap in the shot list's
      neutral, static) of the shot's `mover` (who it describes; leave it out
      for the scene's traveller) and `line_side` (`A`, `B` or `on_line`);
      `crossing` when the camera or a person carries the view across the
-     line inside the shot; `eyeline` as `{who, looks, at}` with `looks` one
+     line inside the shot, or a mover turns round on screen inside it; `eyeline` as `{who, looks, at}` with `looks` one
      of frame_left, frame_right, camera, up, down, neutral, off;
    - `light`: the sources that light this frame and where they are (in
      frame or just off it), from the look's rules for the hour;
