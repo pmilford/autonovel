@@ -42,6 +42,35 @@ days). Surveying the teaser path for it found, not yet fixed:
 - `art-curate` still calls Pollinations "no-API-key"; it now needs a key.
 Also: `--dry-run` shows no dollar estimate and nothing records spend.
 
+### Film pipeline after M3–M4: what the first animatic leaves (2026-10-29)
+
+M3–M4 shipped `shared/craft/CAMERA.md`, `/autonovel:shot-list`,
+`/autonovel:storyboard`, `/autonovel:table-read`, `/autonovel:animatic` and
+their mechanical halves (`scene-lines`, `shot-check`, `keyframe-render` /
+`-verdict` / `-status`, `table-read`, `animatic`). Left open:
+- **`/autonovel:film-bible` (F2)** doesn't exist: the bible was written by
+  hand, and the storyboard makes the character sheets. The sheets'
+  `approved` flag has no command to set it, and nothing refuses a frame drawn
+  from an unapproved sheet.
+- **Staleness across stages**: shot lists, storyboards and the animatic's cut
+  list record their inputs' fingerprints, but nothing gathers them
+  (`film-status`); a script edit is reported by `shot-check` only.
+- **The ComfyUI server** is the user's to start and stop; the command can't
+  check that the server's GPU is the free one, and only `keyframe-render`'s
+  own job is under the RAM limit (the model load is not).
+- **Line timing across cuts**: a line belongs to one shot, so a speech that
+  should run over a cut (a J- or L-cut) makes its shot as long as the
+  speech; the animatic can't overlap them yet.
+- **Voices** carry age and manner but no direction: the parentheticals
+  (`(a whisper)`) don't reach the voice model; VoxCPM2's voice design takes a
+  description only when there is no reference clip.
+- **Sound** is Stable Audio 3 beds and effects (no Foley synced to action,
+  no score); its generated "voices" (touts shouting) are gibberish by
+  design; a listening check is the author's.
+- **Character sheets** hold faces well across views but the model still
+  draws later things in the period's clothes (heels, collars); a LoRA per
+  principal (the stack's rank-2 pick) is the next step for a long film.
+
 ### Film pipeline after M1: what the screenplay pilot leaves (2026-10-28)
 
 M1 shipped `shared/craft/SCREEN.md`, `/autonovel:screenplay` (one passage
@@ -68,7 +97,9 @@ fountain-check`. Left for M2 and after:
   sequence or flagging a stale one. `fountain-check` warns about a changed
   chapter; nothing gathers it yet.
 - **A table read** with the free local voices (VoxCPM2, Kokoro) per cue, to
-  hear the dialogue and time each scene against its eighths.
+  hear the dialogue and time each scene against its eighths. **Done
+  2026-10-29** per scene (`/autonovel:table-read`); a whole-sequence read
+  for the screenplay stage is the same command with every scene ID.
 - **Pagination:** eighths come from line counts on the standard page; the
   screenplain PDF runs about 5–10% longer because it breaks pages (keep a
   heading with what follows it, never split a short speech). Simulate the
