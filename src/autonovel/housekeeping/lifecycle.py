@@ -175,7 +175,7 @@ def end(command_name: str, arg_string: str, *, status: str, wrote: list[str],
     # the next step during teaser/movie work (flow clarity, Phase 6+).
     ns = None
     if book:
-        ns = _teaser_next_step(command_name, book) or _next_step_for(series, book)
+        ns = _teaser_next_step(command_name, book, arg_string) or _next_step_for(series, book)
     if next_standard_step_override is not None:
         # Sweep commands writing a custom multi-line closer. Use
         # provided rationale, or fall back to the auto-computed one
@@ -725,19 +725,49 @@ _TEASER_NEXT: dict[str, tuple[str, str]] = {
     "autonovel:teaser-take-pick": (
         "/autonovel:teaser-assemble --book {book}",
         "Take promoted — re-assemble to use it."),
+    # The film pipeline (docs/film-pipeline-plan.md): script, then per scene
+    # shot list -> storyboard -> table read -> animatic. `{scene}` is the
+    # command's own --scene (or the placeholder <ID>).
+    "autonovel:screenplay": (
+        "/autonovel:shot-list --scene <ID> --book {book}",
+        "Sequence written and checked — read the PDF beside the chapter; then "
+        "break a scene into shots, starting with the one scenes.json marks as "
+        "the first minute to render."),
+    "autonovel:shot-list": (
+        "/autonovel:storyboard --scene {scene} --book {book}",
+        "Shot list passed its critic — draw a keyframe for every shot (character "
+        "sheets first) on the local image server."),
+    "autonovel:storyboard": (
+        "/autonovel:table-read --scene {scene} --book {book}",
+        "Every frame has a verdict — voice the scene's lines, then cut the "
+        "animatic."),
+    "autonovel:table-read": (
+        "/autonovel:animatic --scene {scene} --book {book}",
+        "Lines voiced and checked — time the shots from the recordings and cut "
+        "the stills to the read."),
+    "autonovel:animatic": (
+        "/autonovel:shot-list --scene <next ID> --book {book}",
+        "Animatic built — watch it and say what happens, what is slow and what "
+        "is unclear; then the next scene."),
 }
 
 
-def _teaser_next_step(command_name: str, book: str) -> object | None:
-    """Teaser-flow next step for a movie-mode command (else None so the
-    caller falls back to the chapter pipeline). Keeps the postamble from
-    suggesting "draft chapter N+1" in the middle of teaser work."""
+def _teaser_next_step(command_name: str, book: str, arg_string: str = "") -> object | None:
+    """Teaser- and film-flow next step for a movie-mode command (else None so
+    the caller falls back to the chapter pipeline). Keeps the postamble from
+    suggesting "draft chapter N+1" in the middle of teaser or film work."""
     entry = _TEASER_NEXT.get(command_name)
     if entry is None:
         return None
     from .next_step import NextStep
     cmd, rationale = entry
-    return NextStep(command=cmd.format(book=book), rationale=rationale)
+    try:
+        argv = shlex.split(arg_string or "")
+    except ValueError:
+        argv = []
+    scenes = [argv[i + 1] for i, a in enumerate(argv[:-1]) if a == "--scene"]
+    scene = " --scene ".join(scenes) if scenes else "<ID>"
+    return NextStep(command=cmd.format(book=book, scene=scene), rationale=rationale)
 
 
 def _next_step_for(series: SeriesLayout, book: str) -> object:

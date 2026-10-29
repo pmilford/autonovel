@@ -398,3 +398,13 @@ def test_screen_direction_is_kept_per_mover(film: Path) -> None:
     assert not any("reverses" in e for e in run(film, d).errors)
     d["shots"].append(shot("S0101-05", screen_direction="left_to_right", mover="the dog", timing={"action_s": 2}))
     assert any("the dog seems to turn back" in e for e in run(film, d).errors)
+
+
+def test_footer_next_step_walks_the_film_pipeline() -> None:
+    from autonovel.housekeeping.lifecycle import _teaser_next_step
+    assert _teaser_next_step("autonovel:shot-list", "b", "--scene S0104 --book b").command == \
+        "/autonovel:storyboard --scene S0104 --book b"
+    assert _teaser_next_step("autonovel:table-read", "b", "--scene S0104 --scene S0105 --book b").command == \
+        "/autonovel:animatic --scene S0104 --scene S0105 --book b"
+    assert "shot-list --scene <ID>" in _teaser_next_step("autonovel:screenplay", "b", "--chapters 2").command
+    assert _teaser_next_step("autonovel:storyboard", "b").command == "/autonovel:table-read --scene <ID> --book b"
