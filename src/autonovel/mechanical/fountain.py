@@ -104,8 +104,8 @@ class Element:
 
 @dataclass
 class Speech:
-    cue: str           # normalised name, e.g. "VIANELLO"
-    raw_cue: str       # as written, e.g. "VIANELLO (V.O.)"
+    cue: str           # normalised name, e.g. "ANNA"
+    raw_cue: str       # as written, e.g. "ANNA (V.O.)"
     line: int
     extensions: list[str]
     lines: int         # wrapped dialogue + parenthetical lines
@@ -379,7 +379,7 @@ def element_lines(el: Element, prev: Element | None) -> int:
 
 
 def cue_name(raw: str) -> tuple[str, list[str]]:
-    """'VIANELLO (V.O.)' -> ('VIANELLO', ['V.O.'])."""
+    """'ANNA (V.O.)' -> ('ANNA', ['V.O.'])."""
     exts = [e.strip() for e in re.findall(r"\(([^)]*)\)", raw)]
     name = re.sub(r"\([^)]*\)", " ", raw)
     name = re.sub(r"\s+", " ", name).strip().upper()
