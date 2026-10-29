@@ -1,4 +1,4 @@
-"""Keyframes: the frame manifest, its render loop and each frame's verdict.
+"""Keyframes (and sound cues): the frame manifest, its render loop and verdicts.
 
 One manifest per scene's storyboard (`film/storyboard/<scene>.json`) and
 one per character sheet (`film/bible/sheets/<slug>.json`), both in the same
@@ -10,6 +10,9 @@ three-quarter view is made from its front view), a seed and a status.
 local ComfyUI server, writing each take to `<manifest stem>/takes/` (takes
 are never overwritten) and the current select to `<manifest stem>/<id>.png`;
 the manifest is saved after every frame, so a crash loses at most one.
+A manifest of `kind: sound` holds sound cues instead of pictures (each
+with `seconds`), rendered by Stable Audio 3 into `.flac` takes the same way:
+a scene's ambience bed and its effects (`film/audio/ambience/<scene>.json`).
 `verdict()` records the vision check's verdict on a frame: `keep`,
 `regenerate` (with a revised prompt or seed; at most `MAX_REGENERATIONS`
 times, after which the frame goes to the author) or `author`.
@@ -118,7 +121,9 @@ def render(manifest: Path, *, client: comfy.Client, only: list[str] | None = Non
     if stats is None:
         return {"ok": False, "errors": [f"no ComfyUI server at {client.url}; start one (under WSL with "
                                         "--disable-pinned-memory), or pass --url"], "rendered": []}
-    m = {**comfy.KLEIN, **(models or {})}
+    sound = data.get("kind") == "sound"
+    m = {**(comfy.STABLE_AUDIO if sound else comfy.KLEIN), **(models or {})}
+    ext = ".flac" if sound else ".png"
     od = out_dir(manifest)
     (od / "takes").mkdir(parents=True, exist_ok=True)
     default_size = tuple(data.get("size") or DEFAULT_SIZE)
@@ -135,12 +140,16 @@ def render(manifest: Path, *, client: comfy.Client, only: list[str] | None = Non
             for r in f.get("refs") or []:
                 uploaded.append(client.upload_image(film / r))
             seed = int(f.get("seed") or int(_sha(f["id"]), 16) % 10**6)
-            wf = comfy.klein_workflow(f["prompt"], width=w, height=h, seed=seed, refs=uploaded,
-                                      prefix=f"autonovel/{od.name}/{f['id']}", models=models)
+            if sound:
+                wf = comfy.stable_audio_workflow(f["prompt"], seconds=float(f.get("seconds") or 20), seed=seed,
+                                                 prefix=f"autonovel/{od.name}/{f['id']}", models=models)
+            else:
+                wf = comfy.klein_workflow(f["prompt"], width=w, height=h, seed=seed, refs=uploaded,
+                                          prefix=f"autonovel/{od.name}/{f['id']}", models=models)
             t0 = time.time()
             try:
                 outputs = client.wait(client.queue(wf))
-                images = client.fetch_images(outputs)
+                images = client.fetch_images(outputs, "audio" if sound else "images")
             except comfy.RamLimitExceeded:
                 raise
             except comfy.ComfyError as e:
@@ -153,20 +162,21 @@ def render(manifest: Path, *, client: comfy.Client, only: list[str] | None = Non
                 continue
             takes = f.setdefault("takes", [])
             n = len(takes) + 1
-            take = od / "takes" / f"{f['id']}_t{n:02d}.png"
+            take = od / "takes" / f"{f['id']}_t{n:02d}{ext}"
             while take.exists():
                 n += 1
-                take = od / "takes" / f"{f['id']}_t{n:02d}.png"
+                take = od / "takes" / f"{f['id']}_t{n:02d}{ext}"
             take.write_bytes(images[0])
-            sel = od / f"{f['id']}.png"
+            sel = od / f"{f['id']}{ext}"
             shutil.copyfile(take, sel)
             takes.append({"take": n, "file": str(take.relative_to(film)), "seed": seed,
                           "prompt_sha": _sha(f["prompt"]), "refs": list(f.get("refs") or []),
-                          "size": [w, h], "wall_s": wall, "when": _now()})
+                          **({"seconds": f.get("seconds")} if sound else {"size": [w, h]}),
+                          "wall_s": wall, "when": _now()})
             f["select"] = str(sel.relative_to(film))
             f["status"] = "rendered"
             f["seed"] = seed
-            data["backend"] = {"kind": "comfyui", "url": client.url, "model": m["label"], "unet": m["unet"],
+            data["backend"] = {"kind": "comfyui", "url": client.url, "model": m["label"], "weights": m.get("unet") or m.get("ckpt"),
                                "steps": m["steps"], "licence": m["licence"]}
             save(manifest, data)
             done.append({"id": f["id"], "take": n, "wall_s": wall})
@@ -201,7 +211,7 @@ def verdict(manifest: Path, frame_id: str, decision: str, note: str, *, prompt: 
         if not takes:
             raise ValueError(f"{frame_id} has no take to keep")
         chosen = next((t for t in takes if t["take"] == rec["take"]), takes[-1])
-        sel = out_dir(manifest) / f"{frame_id}.png"
+        sel = out_dir(manifest) / f"{frame_id}{Path(chosen['file']).suffix}"
         shutil.copyfile(film / chosen["file"], sel)
         f["select"] = str(sel.relative_to(film))
         f["status"] = "keep"

@@ -58,6 +58,7 @@ Subcommands:
   keyframe-render <frames.json>    Render a storyboard's or character sheet's pending frames on a local ComfyUI server.
   keyframe-verdict <frames.json>   Record the vision check's verdict on a frame (keep / regenerate, at most twice / author).
   keyframe-status <frames.json>    Each frame's status, takes and last verdict.
+  table-read <seq.fountain> --scene ID  Voice each line in its cast voice (TTS engine in its own env), Whisper-checked.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -2419,6 +2420,38 @@ def _cmd_keyframe_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_table_read(args: argparse.Namespace) -> int:
+    """Voice the scenes' lines. Exit 0 = done (or nothing to do), 1 =
+    problems (no voice, engine failed), 2 = missing script."""
+    import os
+    from ..film import table_read as tr
+    from ..film.shots import film_dir_of
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"table-read: no file at {path}", file=sys.stderr)
+        return 2
+    film = film_dir_of(path)
+    python = args.python or os.environ.get("AUTONOVEL_TTS_PYTHON", "")
+    if not python and not args.dry_run and not args.report:
+        print("table-read: say which Python runs the TTS engine (--python, or $AUTONOVEL_TTS_PYTHON): the one "
+              "whose environment has voxcpm and faster_whisper", file=sys.stderr)
+        return 1
+    if args.report:
+        sys.stdout.write(tr.render_markdown(film))
+        return 0
+    res = tr.run(path, args.scene, film=film, python=python, gpu=args.gpu, force=args.force, tries=args.tries,
+                 remake_voices=args.remake_voices, dry_run=args.dry_run,
+                 progress=lambda m: print(m, file=sys.stderr, flush=True))
+    if args.format == "markdown" and not args.dry_run and res.get("ok"):
+        sys.stdout.write(tr.render_markdown(film, [l["id"] for l in res["lines"]]))
+        for prob in res.get("problems", []):
+            print(f"- {prob}")
+    else:
+        json.dump(res, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+    return 0 if res.get("ok") else 1
+
+
 def _teaser_audio_modes() -> tuple[str, ...]:
     from ..teaser.assemble import AUDIO_MODES
     return AUDIO_MODES
@@ -3282,6 +3315,24 @@ def main(argv: list[str] | None = None) -> int:
     kfs.add_argument("path", help="The frame manifest.")
     kfs.add_argument("--format", choices=("json", "markdown"), default="markdown")
     kfs.set_defaults(func=_cmd_keyframe_status)
+
+    trd = sub.add_parser("table-read",
+                         help="Voice every line of the scenes in its cast voice from film/audio/voices.yaml "
+                              "(a voice with no reference clip is designed from its written description, so "
+                              "no real person's voice is used), check each take with Whisper and re-take "
+                              "mismatches; writes film/audio/table_read/<line>.wav and manifest.json. The TTS "
+                              "engine runs in its own environment (--python).")
+    trd.add_argument("path", help="The sequence's .fountain file.")
+    trd.add_argument("--scene", action="append", required=True, help="Scene ID (repeatable).")
+    trd.add_argument("--python", default=None, help="Python of the TTS environment (default $AUTONOVEL_TTS_PYTHON).")
+    trd.add_argument("--gpu", type=int, default=0)
+    trd.add_argument("--tries", type=int, default=4, help="Takes per line before keeping the best.")
+    trd.add_argument("--force", action="store_true", help="Re-voice lines whose recording is current.")
+    trd.add_argument("--remake-voices", action="store_true", help="Design the voices' reference clips again.")
+    trd.add_argument("--dry-run", action="store_true", help="List what is current and what would be voiced.")
+    trd.add_argument("--report", action="store_true", help="Print the manifest as a table and stop.")
+    trd.add_argument("--format", choices=("json", "markdown"), default="json")
+    trd.set_defaults(func=_cmd_table_read)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

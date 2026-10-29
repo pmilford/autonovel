@@ -139,11 +139,13 @@ class Client:
                         return h[prompt_id].get("outputs", {})
                 time.sleep(0.5)
 
-    def fetch_images(self, outputs: dict) -> list[bytes]:
+    def fetch_images(self, outputs: dict, key: str = "images") -> list[bytes]:
+        """The files a job saved under `key` (`images`, or `audio` for a
+        sound job), in node order."""
         out = []
         with self._http() as c:
             for node in outputs.values():
-                for im in node.get("images", []) or []:
+                for im in node.get(key, []) or []:
                     r = c.get("/view", params={"filename": im["filename"], "subfolder": im.get("subfolder", ""),
                                                "type": im.get("type", "output")})
                     if r.status_code == 200:
@@ -197,6 +199,35 @@ def klein_workflow(prompt: str, *, width: int, height: int, seed: int, refs: lis
         wf["8"]["inputs"]["positive"] = ["11", 0]
         wf["8"]["inputs"]["negative"] = ["11", 1]
     return wf
+
+
+STABLE_AUDIO = {
+    "ckpt": os.environ.get("AUTONOVEL_SA_CKPT", "stable_audio_3_medium.safetensors"),
+    "clip": os.environ.get("AUTONOVEL_SA_CLIP", "t5gemma_b_b_ul2.safetensors"),
+    "steps": 8,
+    "label": "Stable Audio 3 Medium, local ComfyUI",
+    "licence": "Stability AI Community: free under US$1M revenue, outputs commercial; Gemma terms on the encoder",
+}
+
+
+def stable_audio_workflow(prompt: str, *, seconds: float, seed: int, prefix: str = "autonovel/sound",
+                          models: dict | None = None) -> dict:
+    """Stable Audio 3 Medium: text to a sound cue (ambience, effects)."""
+    m = {**STABLE_AUDIO, **(models or {})}
+    return {
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": m["ckpt"]}},
+        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": m["clip"], "type": "stable_audio",
+                                                      "device": "default"}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": prompt}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": ""}},
+        "5": {"class_type": "EmptyLatentAudio", "inputs": {"seconds": float(seconds), "batch_size": 1}},
+        "6": {"class_type": "KSampler", "inputs": {"model": ["1", 0], "positive": ["3", 0], "negative": ["4", 0],
+                                                    "latent_image": ["5", 0], "seed": int(seed),
+                                                    "steps": int(m["steps"]), "cfg": 1.0, "sampler_name": "lcm",
+                                                    "scheduler": "simple", "denoise": 1.0}},
+        "7": {"class_type": "VAEDecodeAudio", "inputs": {"samples": ["6", 0], "vae": ["1", 2]}},
+        "8": {"class_type": "SaveAudio", "inputs": {"audio": ["7", 0], "filename_prefix": prefix}},
+    }
 
 
 def dump(workflow: dict) -> str:
