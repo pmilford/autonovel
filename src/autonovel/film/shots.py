@@ -540,5 +540,44 @@ def render_markdown(rep: ShotReport) -> str:
     return "\n".join(out) + "\n"
 
 
+SIZE_WORDS = {"EWS": "extreme wide", "WS": "wide", "FS": "full figure", "MS": "medium (waist up)",
+              "MCU": "medium close (chest up)", "CU": "close-up", "ECU": "extreme close-up"}
+
+
+def render_sheet(shots_path: Path) -> str:
+    """The shot list as a page the author reads: what each shot shows, how
+    it is framed and why it moves, which lines play in it, how long it runs."""
+    data = json.loads(shots_path.read_text(encoding="utf-8"))
+    sid = data.get("scene_id", shots_path.stem)
+    out = [f"# Shot list: {sid} {data.get('slugline', '')}".rstrip(), ""]
+    for key, label in (("intent", "What the scene must do"), ("coverage_plan", "How it is covered"),
+                       ("geography", "Where everyone is")):
+        if data.get(key):
+            out += [f"**{label}.** {data[key]}", ""]
+    axis = data.get("axis")
+    if axis:
+        out += [f"**The line.** {axis.get('description') or axis if isinstance(axis, dict) else axis}", ""]
+    total = 0.0
+    out += ["| Shot | Framing | What we see | Camera | Lines | Seconds |", "|---|---|---|---|---|---|"]
+    for shot in data.get("shots") or []:
+        cam = shot.get("camera") or {}
+        move = shot.get("move") or {}
+        framing = (f"{SIZE_WORDS.get(shot.get('shot_size'), shot.get('shot_size'))}, {shot.get('angle')} angle, "
+                   f"{cam.get('lens_mm')} mm; {shot.get('coverage')}")
+        if move.get("type") and move["type"] != "static":
+            camera = f"{move['type'].replace('_', ' ')} ({move.get('speed') or 'slow'}): {move.get('motivation', '')}"
+        else:
+            camera = "still"
+        what = (shot.get("action") or shot.get("purpose") or "").replace("|", "/")
+        if shot.get("purpose") and shot.get("action"):
+            what += f" *Why: {shot['purpose'].replace('|', '/')}*"
+        lines = ", ".join(shot.get("lines") or []) or "—"
+        dur = shot.get("duration_s") or 0
+        total += float(dur)
+        out.append(f"| {shot.get('id')} | {framing} | {what} | {camera.replace('|', '/')} | {lines} | {dur:g} |")
+    out += ["", f"Total {total:.1f} s."]
+    return "\n".join(out) + "\n"
+
+
 def to_json(rep: ShotReport) -> str:
     return json.dumps(rep.to_dict(), indent=2, ensure_ascii=False) + "\n"

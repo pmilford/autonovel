@@ -55,6 +55,9 @@ Subcommands:
   fountain-check <file.fountain>   Check a screenplay (headings, speakers vs cast, scene lines), length in eighths; PDF + FDX.
   scene-lines <file.fountain> --scene ID  One scene's numbered lines and action paragraphs, with estimated times.
   shot-check <film/shots/ID.json>  Check a shot list: coverage, the 180-degree line, eyelines, continuity, timing, the look.
+  keyframe-render <frames.json>    Render a storyboard's or character sheet's pending frames on a local ComfyUI server.
+  keyframe-verdict <frames.json>   Record the vision check's verdict on a frame (keep / regenerate, at most twice / author).
+  keyframe-status <frames.json>    Each frame's status, takes and last verdict.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -2351,8 +2354,69 @@ def _cmd_shot_check(args: argparse.Namespace) -> int:
         print(f"shot-check: no file at {path}", file=sys.stderr)
         return 2
     rep = shots_mod.check(path, retime=args.retime, stamp=args.stamp)
+    if args.sheet:
+        Path(args.sheet).write_text(shots_mod.render_sheet(path), encoding="utf-8")
     sys.stdout.write(shots_mod.render_markdown(rep) if args.format == "markdown" else shots_mod.to_json(rep))
     return 0 if rep.ok else 1
+
+
+def _cmd_keyframe_render(args: argparse.Namespace) -> int:
+    """Render pending frames. Exit 0 = all rendered, 1 = some failed or the
+    server is missing, 2 = no manifest, 3 = stopped at the RAM limit."""
+    from ..film import comfy, storyboard
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"keyframe-render: no file at {path}", file=sys.stderr)
+        return 2
+    models = {k: v for k, v in (("unet", args.unet), ("clip", args.clip), ("vae", args.vae)) if v}
+    if args.steps:
+        models["steps"] = args.steps
+    client = comfy.Client(url=args.url or comfy.DEFAULT_URL, ram_limit_gb=args.ram_limit, timeout_s=args.timeout)
+    try:
+        res = storyboard.render(path, client=client, only=args.only or None, models=models or None,
+                                keep_loaded=args.keep_loaded, dry_run=args.dry_run,
+                                progress=lambda m: print(m, file=sys.stderr, flush=True))
+    except comfy.RamLimitExceeded as e:
+        print(f"keyframe-render: STOP: {e}", file=sys.stderr)
+        json.dump({"ok": False, "stopped": str(e)}, sys.stdout)
+        sys.stdout.write("\n")
+        return 3
+    json.dump(res, sys.stdout, indent=2, ensure_ascii=False)
+    sys.stdout.write("\n")
+    return 0 if res.get("ok") else 1
+
+
+def _cmd_keyframe_verdict(args: argparse.Namespace) -> int:
+    from ..film import storyboard
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"keyframe-verdict: no file at {path}", file=sys.stderr)
+        return 2
+    prompt = Path(args.prompt_file).read_text(encoding="utf-8").strip() if args.prompt_file else args.prompt
+    try:
+        res = storyboard.verdict(path, args.frame, args.verdict, args.note, prompt=prompt, seed=args.seed,
+                                 take=args.take)
+    except (KeyError, ValueError) as e:
+        print(f"keyframe-verdict: {e}", file=sys.stderr)
+        return 1
+    json.dump(res, sys.stdout, indent=2, ensure_ascii=False)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_keyframe_status(args: argparse.Namespace) -> int:
+    from ..film import storyboard
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"keyframe-status: no file at {path}", file=sys.stderr)
+        return 2
+    st = storyboard.status(path)
+    if args.format == "markdown":
+        sys.stdout.write(storyboard.render_status_markdown(st))
+    else:
+        json.dump(st, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+    return 0
 
 
 def _teaser_audio_modes() -> tuple[str, ...]:
@@ -3175,8 +3239,49 @@ def main(argv: list[str] | None = None) -> int:
     shc.add_argument("--stamp", action="store_true",
                      help="Record the scene's and look.yaml's fingerprints: the shot list was made from them "
                           "as they now stand.")
+    shc.add_argument("--sheet", default=None,
+                     help="Also write the shot list as a page for the author (markdown) to this path.")
     shc.add_argument("--format", choices=("json", "markdown"), default="json")
     shc.set_defaults(func=_cmd_shot_check)
+
+    kfr = sub.add_parser("keyframe-render",
+                         help="Render every pending or regenerate frame of a frame manifest (a scene's "
+                              "storyboard, film/storyboard/<scene>.json, or a character sheet, "
+                              "film/bible/sheets/<slug>.json) on a local ComfyUI server with FLUX 3 Klein; "
+                              "takes are never overwritten; the server's models are freed at the end.")
+    kfr.add_argument("path", help="The frame manifest.")
+    kfr.add_argument("--url", default=None, help="ComfyUI server (default $AUTONOVEL_COMFY_URL or "
+                                                 "http://127.0.0.1:8188).")
+    kfr.add_argument("--only", action="append", default=[], help="Render only this frame ID (repeatable).")
+    kfr.add_argument("--ram-limit", type=float, default=None,
+                     help="Interrupt and stop when system RAM in use passes this many GB.")
+    kfr.add_argument("--timeout", type=float, default=600.0, help="Seconds before a job is interrupted.")
+    kfr.add_argument("--keep-loaded", action="store_true", help="Don't ask the server to unload its models.")
+    kfr.add_argument("--dry-run", action="store_true", help="List what would render; touch nothing.")
+    kfr.add_argument("--unet", default=None)
+    kfr.add_argument("--clip", default=None)
+    kfr.add_argument("--vae", default=None)
+    kfr.add_argument("--steps", type=int, default=None)
+    kfr.set_defaults(func=_cmd_keyframe_render)
+
+    kfv = sub.add_parser("keyframe-verdict",
+                         help="Record the vision check's verdict on one frame: keep (a take becomes the "
+                              "select), regenerate (with a revised prompt or seed; after two the frame goes "
+                              "to the author), or author.")
+    kfv.add_argument("path", help="The frame manifest.")
+    kfv.add_argument("--frame", required=True)
+    kfv.add_argument("--verdict", required=True, choices=("keep", "regenerate", "author"))
+    kfv.add_argument("--note", required=True, help="What the check saw, in a sentence.")
+    kfv.add_argument("--prompt", default=None, help="The revised prompt (regenerate).")
+    kfv.add_argument("--prompt-file", default=None, help="Read the revised prompt from a file.")
+    kfv.add_argument("--seed", type=int, default=None, help="A new seed (default: the last one plus one).")
+    kfv.add_argument("--take", type=int, default=None, help="Keep this take instead of the latest.")
+    kfv.set_defaults(func=_cmd_keyframe_verdict)
+
+    kfs = sub.add_parser("keyframe-status", help="Each frame's status, takes, regenerations and last verdict.")
+    kfs.add_argument("path", help="The frame manifest.")
+    kfs.add_argument("--format", choices=("json", "markdown"), default="markdown")
+    kfs.set_defaults(func=_cmd_keyframe_status)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):

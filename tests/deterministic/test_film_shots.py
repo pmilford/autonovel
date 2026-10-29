@@ -376,3 +376,16 @@ def test_shot_check_cli_exit_codes(film: Path, capsys) -> None:
     p = write(film, d)
     assert mech_main(["shot-check", str(p)]) == 1
     assert mech_main(["shot-check", str(film / "shots" / "nope.json")]) == 2
+
+
+def test_sheet_for_the_author(film: Path, capsys) -> None:
+    d = good_shots()
+    d["intent"] = "she gets across"
+    p = write(film, d)
+    sheet = film / "shots" / "S0101.md"
+    assert mech_main(["shot-check", str(p), "--retime", "--sheet", str(sheet)]) == 0
+    text = sheet.read_text()
+    assert "| S0101-01 | wide, high angle" not in text  # angle is eye in the fixture
+    assert "wide, eye angle, 25 mm; establishing" in text
+    assert "pan (slow): follows the ferry in" in text
+    assert "What the scene must do" in text and "Total " in text
