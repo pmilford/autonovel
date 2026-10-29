@@ -3310,7 +3310,31 @@ Decisions:
   minute:` title-page keys (ignored by screenplain), the scene lines as
   synopses.
 
+**First run** (kingmaker2, chapter 2 from "It took them fifteen days to
+reach Venice." to the end, 4,423 words; written into the series'
+`books/kingmaker2/film/`): "Thirty-One Ducats", 15 scenes, 13 1/8 pages by
+eighths, 14 printed pages, first minute S0104 (the arrival by water at
+night). Three critic rounds: round 1 scene_turns and pace 6 (the walk gave
+Jakob no want; period facts lost; the note's lengths stale), round 2 pace
+6, round 3 passes (lowest 7). Two cold reads: the first found four
+must-fixes (the two coins read as spent, not hidden; why he is in Venice;
+"house" meaning both the firm and the Fondaco; the steward's hold didn't
+add up), the second confirmed them fixed and added three one-line ones,
+all answered. The runs fixed the tool too: the PDF now keeps speeches and
+action paragraphs whole and reads its page breaks back (a heading stranded
+at a page's foot, a page opening on a bare parenthetical); a cue matches a
+person's own cast heading before a passing bold name; cast table cells
+listing several people split; long title-page lines flagged (screenplain
+measures 61, prints 55); the cold reader reads the PDF, not the Fountain
+(whose scene lines would tell it what each scene means); the note's
+lengths come from the final check. The length is the author's call: a
+passage adapted with every event and period fact kept ran about 340 words
+a page, against 500–700 for a feature (SCREEN.md §5.8 now says so).
+Tier 1+2 2380 → 2422 (+42: 28 fountain-check, 9 screenplay contract, the
+craft-doc and genre checks picking up SCREEN.md and `## On screen`).
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the screenplay pilot: SCREEN.md, /autonovel:screenplay, fountain-check) — **2422 passing, 1 skipped** (+42).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a renumber moves source tags) — **2380 passing, 1 skipped** (+3 assertions).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (fix-read; the change page follows a moved chapter) — **2380 passing, 1 skipped** (+8 incl. the seams test).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (reorder reads every seam it changed) — **2372 passing, 1 skipped** (+1).
