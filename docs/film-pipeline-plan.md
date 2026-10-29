@@ -13,6 +13,17 @@
 > screen critic in rounds and a cold reader) and `autonovel mechanical
 > fountain-check`; the genre guides gained `## On screen`. What M1 leaves
 > for later is in FUTURE-TODOS ("Film pipeline after M1").
+>
+> **M3–M4 built, 2026-10-29:** the camera craft reference
+> `shared/craft/CAMERA.md`; `/autonovel:shot-list` (F3: the extended schema
+> below, checked by `autonovel mechanical shot-check` for coverage, the 180°
+> line, eyelines, continuity and computed durations, with a DP critic in
+> rounds); `/autonovel:storyboard` (character sheets, then a keyframe per
+> shot on a local ComfyUI server with FLUX 3 Klein, a vision check, at most
+> two regenerations); `/autonovel:table-read` (VoxCPM2 voices designed from
+> descriptions, Whisper-checked); `/autonovel:animatic` (stills timed to the
+> read, ffmpeg). First run: the first minute of kingmaker2 (S0104–S0105).
+> What they leave is in FUTURE-TODOS ("Film pipeline after M3–M4").
 
 ## 1. Where we are
 
