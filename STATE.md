@@ -3269,6 +3269,47 @@ A scorer caught it on a stale fact. A file reference now ends at any
 non-digit ("ch_10)", "ch_10 ", "ch_10.md"); "ch_100" stays whole. +3
 assertions in `test_rewrite_refs_follows_the_text`.
 
+### 2026-10-28 — the screenplay pilot (film pipeline M1): SCREEN.md, `/autonovel:screenplay`, `fountain-check`
+
+The first stage of `docs/film-pipeline-plan.md`. The author has never
+written a script, so the craft lives in a sourced reference, like PROSE.md
+and DESIGN.md: `shared/craft/SCREEN.md` (format and Fountain; the scene as
+a unit of change, McKee and Mamet; visual storytelling, Hitchcock,
+Bluestone, Mackendrick; dialogue as action; adapting prose, McFarlane's
+cardinal functions, Seger, and Rosenstone's moves as the change ledger:
+CUT, CONDENSE, COMPRESS, DISPLACE, ALTER, INVENT, EXTERNALISE; period
+register, Liberman and Stevenson's "tushery"; a page a minute, John
+August, in eighths; the rubric of ten dimensions and tests SC1–SC12; the
+script's cold reader, after studio coverage). It ships as a craft doc
+(CRAFT_DOCS, root symlink). The genre guides gain a fixed `## On screen`
+section (historical: carry the period, never cut it for pace; shown in use;
+a SUPER for place and date; the guide character), read by `screenplay`.
+
+Decisions:
+- **Fountain is the source; the exports are built.** `autonovel mechanical
+  fountain-check` parses with the same rules screenplain renders by (a
+  heading with no blank line after it, or a title page whose inline key
+  takes indented lines, prints wrong, so both are errors), checks every
+  heading for `INT./EXT.`, a place and a time, every speaker against the
+  book's `cast.md` / `shared/characters.md` or the title page's `Roles:`
+  (no new named people), one cue per person, the scene line `= <ID> |
+  ch_NN:a-b | before -> after` under every heading, and measures each scene
+  in eighths on the standard page. screenplain (MIT) is optional, in
+  `[export]` (and the reserved `[scripts]`); without it the check runs and
+  says how to get the PDF and FDX.
+- **Derived data carries its source's fingerprint.** `film/scenes.json` is
+  written by the check from the script (never by hand), and `--stamp`
+  records each cited chapter's `body_hash`; a later edit to the chapter
+  flags the sequence, the summaries rule applied to the film.
+- **The critic is independent and the cold reader sees only the script.**
+  Both run in fresh subagents; the critic scores SCREEN.md §8 in rounds
+  (gate: no dimension below 7, every test passing or n/a) and the writer
+  answers every note under `### Response`; the cold reader gets the script
+  and §9's questions, nothing else, and a material fix earns a second read.
+- **Metadata stays in the Fountain, off the page:** `Roles:` and `First
+  minute:` title-page keys (ignored by screenplain), the scene lines as
+  synopses.
+
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a renumber moves source tags) — **2380 passing, 1 skipped** (+3 assertions).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (fix-read; the change page follows a moved chapter) — **2380 passing, 1 skipped** (+8 incl. the seams test).
