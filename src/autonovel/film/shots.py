@@ -464,17 +464,21 @@ def check(shots_path: Path, *, retime: bool = False, stamp: bool = False) -> Sho
 
 
 def _check_line(rep: ShotReport, shots: list[dict]) -> None:
-    """The 180-degree rule and screen direction, shot to shot."""
+    """The 180-degree rule, and screen direction per mover, shot to shot.
+    `mover` names whose direction `screen_direction` gives (default: the
+    scene's traveller); a person going up the stairs and a dog coming down
+    them move opposite ways without anyone turning back."""
     last_side: tuple[str, str] | None = None
-    last_dir: tuple[str, str] | None = None
+    last_dir: dict[str, tuple[str, str]] = {}
     for shot in shots:
         sid = shot.get("id", "?")
         side = shot.get("line_side")
         direction = shot.get("screen_direction")
+        mover = (shot.get("mover") or "").strip().casefold() or "_"
         reset = bool(shot.get("crossing")) or shot.get("coverage") == "cutaway"
         if reset:
             last_side = (side, sid) if side in ("A", "B") else None
-            last_dir = (direction, sid) if direction in ("left_to_right", "right_to_left") else None
+            last_dir = {mover: (direction, sid)} if direction in ("left_to_right", "right_to_left") else {}
             continue
         if side == "on_line":
             last_side = None
@@ -486,13 +490,15 @@ def _check_line(rep: ShotReport, shots: list[dict]) -> None:
                     "keep the side, add one, or record how the cross is made in `crossing`")
             last_side = (side, sid)
         if direction in ("toward", "away", "neutral"):
-            last_dir = None
+            last_dir.pop(mover, None)
         elif direction in ("left_to_right", "right_to_left"):
-            if last_dir and last_dir[0] != direction:
+            prev = last_dir.get(mover)
+            if prev and prev[0] != direction:
+                who = "the traveller" if mover == "_" else shot.get("mover")
                 rep.errors.append(
-                    f"{sid}: screen direction reverses: {last_dir[1]} moves {last_dir[0].replace('_', ' ')}, "
-                    f"{sid} {direction.replace('_', ' ')}; the traveller seems to turn back (CAMERA.md §4)")
-            last_dir = (direction, sid)
+                    f"{sid}: screen direction reverses: {prev[1]} moves {prev[0].replace('_', ' ')}, "
+                    f"{sid} {direction.replace('_', ' ')}; {who} seems to turn back (CAMERA.md §4)")
+            last_dir[mover] = (direction, sid)
 
 
 def _check_eyelines(rep: ShotReport, shots: list[dict]) -> None:

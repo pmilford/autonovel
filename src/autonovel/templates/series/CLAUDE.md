@@ -147,6 +147,15 @@ revision, evaluation and editing commands:
   screen rubric and tests SC1–SC12, and the script's cold reader.
   `/autonovel:screenplay` reads it in full every run, with the genre
   guide's `## On screen`.
+- `shared/craft/CAMERA.md` — how a scene of the screenplay becomes
+  shots: size, angle, lens and height, coverage and the viewpoint, a
+  motivation for every camera move, the 180° line, screen direction and
+  eyelines, continuity declared shot by shot, how long a shot runs (from
+  the lines and the action), motivated period light, keyframe prompts an
+  image model can follow, the storyboard's vision check and the animatic,
+  and the director/DP rubric and tests CT1–CT12. `/autonovel:shot-list`
+  reads it in full every run; `storyboard` and `animatic` read the
+  sections they name.
 
 They are package-owned: `autonovel refresh-templates` overwrites them
 with the installed version (and `autonovel doctor` warns when they are

@@ -389,3 +389,12 @@ def test_sheet_for_the_author(film: Path, capsys) -> None:
     assert "wide, eye angle, 25 mm; establishing" in text
     assert "pan (slow): follows the ferry in" in text
     assert "What the scene must do" in text and "Total " in text
+
+
+def test_screen_direction_is_kept_per_mover(film: Path) -> None:
+    d = good_shots()
+    d["shots"][3]["screen_direction"] = "right_to_left"
+    d["shots"][3]["mover"] = "the dog"
+    assert not any("reverses" in e for e in run(film, d).errors)
+    d["shots"].append(shot("S0101-05", screen_direction="left_to_right", mover="the dog", timing={"action_s": 2}))
+    assert any("the dog seems to turn back" in e for e in run(film, d).errors)

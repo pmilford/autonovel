@@ -193,7 +193,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "page-header fixes live) and `shared/craft/` (the craft "
             "reference documents the design / draft / revise / evaluate / edit "
             "commands read: CRAFT.md, PROSE.md, ANTI-SLOP.md, "
-            "ANTI-PATTERNS.md, EDITING.md, DESIGN.md, FIRST-READER.md, CHARACTER.md, SCREEN.md, "
+            "ANTI-PATTERNS.md, EDITING.md, DESIGN.md, FIRST-READER.md, CHARACTER.md, SCREEN.md, CAMERA.md, "
             "and the genre guides in genres/; a series' own guides in "
             "shared/genres/ are never touched). "
             "Neither is meant to be hand-edited; register choices go in "

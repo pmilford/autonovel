@@ -37,7 +37,7 @@ they are the *prompt material*, not project documentation):
   [`ANTI-SLOP.md`](ANTI-SLOP.md), [`ANTI-PATTERNS.md`](ANTI-PATTERNS.md),
   [`EDITING.md`](EDITING.md), [`DESIGN.md`](DESIGN.md),
   [`FIRST-READER.md`](FIRST-READER.md), [`CHARACTER.md`](CHARACTER.md),
-  [`SCREEN.md`](SCREEN.md).
+  [`SCREEN.md`](SCREEN.md), [`CAMERA.md`](CAMERA.md).
   The repo-root files are symlinks; the source of truth is
   `src/autonovel/templates/series/shared/craft/`, which
   `autonovel new-series` copies into every series as `shared/craft/`
@@ -62,6 +62,13 @@ they are the *prompt material*, not project documentation):
   the screen rubric and tests SC1–SC12, and the script's cold reader;
   `/autonovel:screenplay` reads it every run (the film plan is
   [`docs/film-pipeline-plan.md`](docs/film-pipeline-plan.md)).
+  `CAMERA.md` is the director's and DP's half: shot grammar, coverage
+  and the viewpoint, motivated moves, the 180° line, screen direction
+  and eyelines, continuity, how long a shot runs, motivated period
+  light, keyframe prompts for an image model, the storyboard's vision
+  check and the animatic, and the rubric and tests CT1–CT12;
+  `/autonovel:shot-list` reads it every run, `storyboard` and
+  `animatic` the sections they name.
   `genres/<genre>.md` (under the same
   craft folder; `genres/README.md` lists its fixed sections and which
   command reads each) is what a genre's reader comes for and what every
@@ -88,7 +95,7 @@ autonovel/
       bells-reference/           # Tier-4 regression — populates from autonovel/bells branch
   CRAFT.md, PROSE.md, ANTI-SLOP.md, ANTI-PATTERNS.md, EDITING.md, DESIGN.md,
   FIRST-READER.md, CHARACTER.md,
-  SCREEN.md                       # symlinks → templates/series/shared/craft/
+  SCREEN.md, CAMERA.md            # symlinks → templates/series/shared/craft/
   CLAUDE.md, AGENTS.md, GEMINI.md   # AGENTS/GEMINI are symlinks to CLAUDE.md
 ```
 
