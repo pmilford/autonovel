@@ -3330,8 +3330,8 @@ measures 61, prints 55); the cold reader reads the PDF, not the Fountain
 lengths come from the final check. The length is the author's call: a
 passage adapted with every event and period fact kept ran about 340 words
 a page, against 500–700 for a feature (SCREEN.md §5.8 now says so).
-Tier 1+2 2380 → 2422 (+42: 28 fountain-check, 9 screenplay contract, the
-craft-doc and genre checks picking up SCREEN.md and `## On screen`).
+Tier 1+2 2380 → 2422 (+42: 27 fountain-check tests, 8 screenplay contract tests,
+and the per-command and genre checks picking up the new command).
 
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the screenplay pilot: SCREEN.md, /autonovel:screenplay, fountain-check) — **2422 passing, 1 skipped** (+42).
