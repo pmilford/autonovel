@@ -41,6 +41,10 @@ test = [
 #   cover-composite, cover-print       → Pillow
 #   audiobook-assemble                 → pydub (plus ffmpeg on PATH)
 #   landing                            → (no extra Python — stdlib only)
+#   screenplay (fountain-check)        → screenplain (MIT; pulls reportlab):
+#                                        Fountain → PDF + Final Draft FDX.
+#                                        Without it the check still runs and
+#                                        says how to get the exports.
 # External CLI tools the commands shell out to (install via OS package
 # manager; `autonovel doctor` enumerates what's missing):
 #   tectonic     — PDF (typeset)
@@ -52,6 +56,7 @@ test = [
 export = [
     "Pillow>=10.0",
     "pydub>=0.25",
+    "screenplain>=0.12",
 ]
 # `autonovel tui` — read-only terminal UI for browsing series state
 # (chapters / scores / research / reviews / next actions / lock /
@@ -80,7 +85,12 @@ tui = [
 video = [
     "edge-tts>=6",
 ]
-scripts = []
+# Screenplay exporters (film pipeline F1, `/autonovel:screenplay`). The
+# same package is in `[export]`; this name is kept for the movie-mode
+# install surface.
+scripts = [
+    "screenplain>=0.12",
+]
 
 [project.scripts]
 autonovel = "autonovel.cli:main"

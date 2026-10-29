@@ -52,6 +52,7 @@ Subcommands:
   teaser-music <teaser.json>       Generate a cohesive music bed from a prompt (Phase 9).
   teaser-archive-script <file>     Timestamp-archive a script before a --force re-run (Phase 6).
   teaser-ffmpeg-cmd <cut_list>     Print the ffmpeg command that stitches the cut-list to mp4.
+  fountain-check <file.fountain>   Check a screenplay (headings, speakers vs cast, scene lines), length in eighths; PDF + FDX.
 
 All subcommands print a single JSON object to stdout. Commands invoke
 this via the `bash` tool, read the JSON, and fold it into their own work.
@@ -2287,6 +2288,38 @@ def _cmd_teaser_ffmpeg_cmd(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_fountain_check(args: argparse.Namespace) -> int:
+    """Check a Fountain screenplay, export it, record its scenes. Exit 0 =
+    no errors, 1 = errors, 2 = the file is missing."""
+    from . import fountain as fountain_mod
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"fountain-check: no file at {path}", file=sys.stderr)
+        return 2
+    scenes_json: object = None
+    if args.no_scenes:
+        scenes_json = False
+    elif args.scenes_json:
+        scenes_json = Path(args.scenes_json)
+    rep = fountain_mod.run(
+        path,
+        book_root=Path(args.book_root) if args.book_root else None,
+        cast_paths=[Path(c) for c in args.cast] if args.cast else None,
+        do_export=not args.no_export,
+        export_dir=Path(args.export_dir) if args.export_dir else None,
+        scenes_json=scenes_json,
+        stamp=args.stamp,
+    )
+    if args.format == "markdown":
+        sys.stdout.write(fountain_mod.render_markdown(rep))
+    else:
+        sys.stdout.write(fountain_mod.to_json(rep))
+    skipped = rep.exports.get("skipped") or rep.exports.get("pdf_skipped")
+    if skipped:
+        print(f"fountain-check: exports skipped: {skipped}", file=sys.stderr)
+    return 0 if rep.ok else 1
+
+
 def _teaser_audio_modes() -> tuple[str, ...]:
     from ..teaser.assemble import AUDIO_MODES
     return AUDIO_MODES
@@ -3060,6 +3093,30 @@ def main(argv: list[str] | None = None) -> int:
                      help="Output mp4 (default: <dir>/<title>_teaser.mp4).")
     tfc.add_argument("--format", choices=["json", "human"], default="human")
     tfc.set_defaults(func=_cmd_teaser_ffmpeg_cmd)
+
+    fck = sub.add_parser("fountain-check",
+                         help="Check a Fountain screenplay: scene headings (INT./EXT., place, time), "
+                              "speakers against the book's cast or the title page's Roles:, the "
+                              "scene lines (= ID | source | turn), length in eighths of a page; "
+                              "export PDF + FDX (screenplain, `pip install 'autonovel[export]'`); "
+                              "record the scenes in film/scenes.json.")
+    fck.add_argument("path", help="The .fountain file.")
+    fck.add_argument("--book-root", default=None,
+                     help="Book folder (default: walk up from the file to the folder with chapters/).")
+    fck.add_argument("--cast", action="append", default=None,
+                     help="A cast file to check speakers against (repeatable; default: the book's "
+                          "cast.md and the series' shared/characters.md).")
+    fck.add_argument("--no-export", action="store_true", help="Check only; write no PDF or FDX.")
+    fck.add_argument("--export-dir", default=None,
+                     help="Where the PDF and FDX go (default: <book>/film/export/).")
+    fck.add_argument("--scenes-json", default=None,
+                     help="scenes.json to update (default: <book>/film/scenes.json for a script under film/).")
+    fck.add_argument("--no-scenes", action="store_true", help="Don't write scenes.json.")
+    fck.add_argument("--stamp", action="store_true",
+                     help="Record the cited chapters' fingerprints: the script was (re)adapted from "
+                          "the chapters as they now stand.")
+    fck.add_argument("--format", choices=("json", "markdown"), default="json")
+    fck.set_defaults(func=_cmd_fountain_check)
 
     args = p.parse_args(argv)
     if not hasattr(args, "func"):
