@@ -101,7 +101,12 @@ workflow. Topics:
                  screenplay: one passage of the book to a screenplay
                  sequence (Fountain, PDF, Final Draft), every change
                  from the book written down, a screen critic and a
-                 cold reader. The film plan: docs/film-pipeline-plan.md.
+                 cold reader. Then, per scene: shot-list (shots and a
+                 DP critic) → storyboard (character sheets, a keyframe
+                 per shot on a local image model, a vision check) →
+                 table-read (local voices, Whisper-checked) → animatic
+                 (stills timed to the read). The film plan:
+                 docs/film-pipeline-plan.md.
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   rewrite      — a second version of a story a finished book
@@ -671,7 +676,48 @@ Two paths, both free until you choose to render.
     The PDF and FDX need screenplain: pip install 'autonovel[export]'
     (under pipx: pipx inject autonovel screenplain).
 
-    Shot lists, storyboards, voices and the render come later:
+(3) THE ANIMATIC (stages F3-F4), one scene at a time, all local and free:
+
+      /autonovel:shot-list --scene S0104 --book <name>
+      /autonovel:storyboard --scene S0104 --book <name>
+      /autonovel:table-read --scene S0104 --book <name>
+      /autonovel:animatic --scene S0104 [--scene S0105] \
+          --book <name> [--join first_minute]
+
+    shot-list is the director and the director of photography: it
+    reads shared/craft/CAMERA.md (shot grammar, coverage, a reason for
+    every camera move, the 180-degree line, eyelines, continuity, how
+    long a shot runs, period light; each rule sourced) and the film
+    bible's look.yaml, and writes film/shots/<scene>.json and a page
+    you can read, film/shots/<scene>.md. A critic scores it until it
+    passes. Every shot's length is computed from its lines and its
+    action, never guessed.
+
+    storyboard first makes a character sheet for each principal
+    (front, three-quarter, profile) and then one keyframe per shot,
+    on a ComfyUI server on your own GPU (FLUX 3 Klein). A vision check
+    reads every image for the shot, the face and the period; a frame
+    is redrawn at most twice, then it is yours to decide. Start the
+    server first (under WSL with --disable-pinned-memory), one GPU job
+    at a time.
+
+    table-read speaks every line in a voice designed from a written
+    description (VoxCPM2, so no real person's voice is used), checks
+    each take with Whisper and re-takes any that says other words.
+
+    animatic holds each keyframe for its shot's length, with the shot's
+    camera move as a slow push or pan, the recorded lines where the
+    shot list puts them and the place's sound under them:
+      film/animatic/<scene>.mp4 (and <name>.mp4 for --join)
+    Watch it and say what happens, what is slow, what is unclear: it is
+    the sign-off before anything costly is rendered.
+
+    The checks on their own:
+      autonovel mechanical scene-lines <seq.fountain> --scene S0104 --format markdown
+      autonovel mechanical shot-check books/<name>/film/shots/S0104.json --format markdown
+      autonovel mechanical keyframe-status books/<name>/film/storyboard/S0104.json
+
+    Motion, lip-sync, the sound mix and the cut come later:
     docs/film-pipeline-plan.md.
 ```
 

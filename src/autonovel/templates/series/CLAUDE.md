@@ -532,6 +532,22 @@ mechanical fountain-check <file>` checks the Fountain and builds the
 exports (`pip install 'autonovel[export]'` for the PDF and FDX). The plan
 for the stages after it is `docs/film-pipeline-plan.md`.
 
+**Shot list, storyboard, table read, animatic (stages F3–F4), per scene.**
+`/autonovel:shot-list --scene <ID> --book <name>` writes
+`film/shots/<ID>.json` (and a page to read, `<ID>.md`) against
+`shared/craft/CAMERA.md` and the bible's `look.yaml`, checked by `autonovel
+mechanical shot-check` (every line covered, the 180° line, eyelines,
+continuity, durations computed from the lines and action) and a DP critic.
+`/autonovel:storyboard` makes character sheets (`film/bible/sheets/`) and
+one keyframe per shot (`film/storyboard/<ID>/`) on a local ComfyUI server,
+with a vision check and at most two regenerations a frame.
+`/autonovel:table-read` voices each line (`film/audio/table_read/`) in a
+voice designed from a description in `film/audio/voices.yaml` (no real
+person's voice), Whisper-checked. `/autonovel:animatic` cuts the stills to
+the read with simple camera moves and the scene's sound
+(`film/animatic/<ID>.mp4`). One GPU job at a time; the image server's
+models are freed after every batch.
+
 ## Where to find more
 
 - README at the series-template repo (autonovel project) — install

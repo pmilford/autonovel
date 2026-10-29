@@ -693,6 +693,21 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   the exporter (`pip install 'autonovel[export]'` adds screenplain for the
   PDF and FDX). The plan for the stages after it, from shot lists to a cut,
   is [`docs/film-pipeline-plan.md`](docs/film-pipeline-plan.md).
+- **Shot list, storyboard, table read and animatic (film stages F3–F4):**
+  for one scene at a time, `shot-list` breaks the script into shots as a
+  director and director of photography would (coverage, size, lens, a
+  reason for every camera move, the 180° line, eyelines, continuity, a
+  duration computed from the lines and the action), judged against
+  `shared/craft/CAMERA.md` by a critic in rounds; `storyboard` locks each
+  principal's look with a character sheet and draws a keyframe per shot on a
+  local image model (a ComfyUI server running FLUX 3 Klein on your own GPU),
+  each frame read by a vision check for the shot, the face and the period;
+  `table-read` voices every line with VoxCPM2 in voices designed from a
+  written description (no real person's voice), checked by Whisper; and
+  `animatic` cuts the stills to the read with simple camera moves and the
+  place's sound, so the author can judge pace and staging before anything
+  costly is rendered. All free and local; the GPU stages need a local
+  ComfyUI server and a TTS environment (`docs/commands.md` has the flags).
 
 > **Confused which one to run when?** The drafting/revision commands
 > have a layered relationship — `draft-pass` and `revision-pass`
@@ -827,7 +842,7 @@ autonovel/
       tiny-series-{historical,scifi,literary,mystery,thriller,romance,fantasy,horror}/
       bells-reference/      # Tier-4 regression — populated from the autonovel/bells branch
   CRAFT.md, PROSE.md, ANTI-SLOP.md, ANTI-PATTERNS.md, EDITING.md, DESIGN.md, FIRST-READER.md,
-  CHARACTER.md, SCREEN.md
+  CHARACTER.md, SCREEN.md, CAMERA.md
                             # prompt material consumed by writer/judge — symlinks to
                             # src/autonovel/templates/series/shared/craft/, which
                             # new-series / refresh-templates copy into every series

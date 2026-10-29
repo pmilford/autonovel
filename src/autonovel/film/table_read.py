@@ -34,7 +34,6 @@ import json
 import os
 import re
 import subprocess
-import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -125,7 +124,8 @@ def plan(script: Path, scenes: list[str], *, film: Path, force: bool = False) ->
 
 
 def run(script: Path, scenes: list[str], *, film: Path, python: str, gpu: int = 0, force: bool = False,
-        tries: int = 4, remake_voices: bool = False, dry_run: bool = False, progress=print) -> dict:
+        tries: int = 4, remake_voices: bool = False, dry_run: bool = False, progress=print,
+        engine: Path | None = None) -> dict:
     p = plan(script, scenes, film=film, force=force)
     if p["problems"] or dry_run or not p["todo"]:
         return {"ok": not p["problems"], **p, "rendered": []}
@@ -150,7 +150,7 @@ def run(script: Path, scenes: list[str], *, film: Path, python: str, gpu: int = 
         job_path = fh.name
     env = {**os.environ, "CUDA_DEVICE_ORDER": "PCI_BUS_ID"}
     try:
-        proc = subprocess.run([python, str(engine_path("voxcpm_lines")), job_path], capture_output=True,
+        proc = subprocess.run([python, str(engine or engine_path("voxcpm_lines")), job_path], capture_output=True,
                               text=True, env=env)
     finally:
         os.unlink(job_path)
