@@ -367,13 +367,14 @@ def test_pdf_keeps_each_speech_whole_and_restores_screenplain(tmp_path: Path) ->
     keeps each speech together, and leaves screenplain as it found it."""
     from screenplain.export import pdf as sp_pdf
     before = sp_pdf.add_dialog
+    before_para = sp_pdf.add_paragraph
     speeches = "\n".join(f"ANA\n(quietly)\nLine {i} of a long night.\n" for i in range(40))
     _, path = _book(tmp_path, GOOD + "\nINT. HALL - NIGHT\n\n= S0103 | ch_01:7 | a -> b\n\n" + speeches)
     seen: list = []
     real_to_pdf = sp_pdf.to_pdf
 
     def spy(screenplay, out, **kw):
-        seen.append(sp_pdf.add_dialog)
+        seen.append((sp_pdf.add_dialog, sp_pdf.add_paragraph))
         return real_to_pdf(screenplay, out, **kw)
 
     sp_pdf.to_pdf = spy
@@ -382,8 +383,9 @@ def test_pdf_keeps_each_speech_whole_and_restores_screenplain(tmp_path: Path) ->
     finally:
         sp_pdf.to_pdf = real_to_pdf
     assert rep.exports["pdf_pages"] >= 3
-    assert seen and seen[0] is not before          # the whole-speech version ran
-    assert sp_pdf.add_dialog is before              # and was put back
+    assert seen and seen[0][0] is not before        # whole speeches
+    assert seen[0][1] is not before_para            # and whole paragraphs
+    assert sp_pdf.add_dialog is before and sp_pdf.add_paragraph is before_para  # put back
 
 
 # ------------------------------------------------------------------ CLI
