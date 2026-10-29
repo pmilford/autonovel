@@ -22,6 +22,8 @@ from autonovel.mechanical.__main__ import main as mech_main
 
 CAST = """# Cast
 
+- **Ana** (ch 1) is one trait so far.
+
 ### Ana Marsh — the heroine (invented)
 
 ### Zuan Vianello — the steward of the Fondaco, the dark mentor (invented)

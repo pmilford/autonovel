@@ -130,6 +130,7 @@ class CastEntry:
     name: str
     where: str
     tokens: frozenset
+    kind: str = "heading"      # heading | table | bold: the order a match prefers
 
 
 @dataclass
@@ -420,7 +421,8 @@ def load_cast(paths: list[Path]) -> list[CastEntry]:
                 name = _name_part(cell)
                 toks = tokens(name)
                 if toks:
-                    out.append(CastEntry(name=name, where=f"{p.name}:{i}", tokens=toks))
+                    kind = "heading" if rx is head_re else "table" if rx is row_re else "bold"
+                    out.append(CastEntry(name=name, where=f"{p.name}:{i}", tokens=toks, kind=kind))
                 break
     return out
 
@@ -429,12 +431,13 @@ def match_cast(cue: str, cast: list[CastEntry]) -> CastEntry | None:
     want = tokens(cue)
     if not want:
         return None
-    best = None
-    for e in cast:
-        if want <= e.tokens:
-            if best is None or len(e.tokens) < len(best.tokens):
-                best = e
-    return best
+    # A person's own entry (a heading) beats a table row or a passing bold
+    # mention of the same name; then the closest name wins.
+    rank = {"heading": 0, "table": 1, "bold": 2}
+    hits = [e for e in cast if want <= e.tokens]
+    if not hits:
+        return None
+    return min(hits, key=lambda e: (rank.get(e.kind, 3), len(e.tokens)))
 
 
 def role_names(title: dict) -> list[str]:
