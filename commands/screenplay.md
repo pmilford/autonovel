@@ -249,10 +249,14 @@ adaptation note and go on; do not retry a failed `file_read`.
 
 10. **The cold reader.** Use `task` to spawn a reader in a **fresh
     subagent** conversation who knows nothing of the book: give it only
-    the path of the script (`books/{book}/film/screenplay/seq_NN.fountain`)
-    and the questions of SCREEN.md §9, written into the prompt, and tell it
-    not to open any other file (not the chapters, the adaptation note,
-    the critic's report, the cast, the design or SCREEN.md). Ask it to
+    the printed script, `books/{book}/film/export/seq_NN.pdf` (step 7's
+    check built it; the Fountain file's scene lines and notes are the
+    writer's and would tell the reader what each scene means), or, when
+    there is no PDF, `books/{book}/film/screenplay/seq_NN.fountain` with the
+    instruction to skip every line that begins with `=` and everything
+    inside `[[ ]]`. Write the questions of SCREEN.md §9 into the prompt, and
+    tell it not to open any other file (not the chapters, the adaptation
+    note, the critic's report, the cast, the design or SCREEN.md). Ask it to
     answer each question, end with its must-fix list, and write the
     report to `books/{book}/film/reviews/seq_NN_cold_read.md`. Then fix
     every must-fix item (or write why it is not a fault) and record what
