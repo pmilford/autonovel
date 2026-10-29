@@ -271,7 +271,11 @@ adaptation note and go on; do not retry a failed `file_read`.
     'autonovel[export]'`, or `pipx inject autonovel screenplain` under
     pipx) and that the Fountain file is complete without it. Confirm the
     report's FDX check is `ok` and that the PDF's page count is close to
-    the eighths count (title page aside).
+    the eighths count (title page aside). Then bring the adaptation note
+    up to date with the script as it now stands: copy every scene's
+    length and the total from this report into its tables (a hand-kept
+    length goes stale with every revision), and check that its scene IDs,
+    period table and change list still match the script.
 
 12. **Report to the author**, in plain sentences, worst news first:
     - what the sequence covers (chapter, first and last lines) and its

@@ -354,8 +354,13 @@ serve what the record shows.
    character with a reason to explain.
 8. **Length.** Budget pages from the adaptation plan (`film/adaptation.md`)
    when there is one; otherwise by the passage's share of the book.
-   [pipeline heuristic: a scene-rich passage runs about a page of script
-   per 500–700 words of prose; a reflective one far less.]
+   [pipeline heuristic: a page of script per 500–700 words of prose is
+   what a feature's compression asks for (120,000 words into 110 pages
+   is about 1,100 words a page). The first passage adapted with every
+   event and every period fact kept, a scene-rich one of 4,400 words, came
+   to 12 pages, about 370 words a page: a sequence that keeps everything
+   runs long, and reaching a feature's length means the adaptation plan
+   choosing which sequences go, not each sequence cutting its period.]
 
 **Checks.** Lay the cardinal-event list beside the scene list: every
 event has a scene or a `CUT` entry. Lay the adaptation note beside the
@@ -417,7 +422,9 @@ eighths is written 1 3/8.
    standard page (55 lines; 61 characters to an action line, 36 to
    dialogue, 26 to a parenthetical) and gives each scene's length in
    eighths. No scene is shorter than 1/8. The PDF's own page count is
-   reported beside it.
+   reported beside it, and runs a little longer (about 5–10%), because
+   a printed page never leaves a scene heading or a short speech alone at
+   its foot.
 2. **About a minute a page, on average;** action runs long, quick
    dialogue short (August).
 3. **Budgets.** A sequence from one chapter's passage: about 5–12 pages.
