@@ -163,7 +163,7 @@ mention and once per chapter after a long gap, and leaves the rest of the
 label alone; then updates cast.md, design.md, the appendix and the
 chapter labels entries in canon, and stages nothing it isn't sure of.
 
-### From an author's listen and look at a finished version: cover zoom, chapter pictures (2026-10-29)
+### From an author's listen and look at a finished version: cover zoom, chapter pictures, PDF pagination, contents, captions (2026-10-29)
 
 1. **`cover-composite --preset frame` can only crop, so a tall painting loses
    its top or its bottom.** `_fit_cover` (`export/cover.py`) scales the art to
@@ -191,6 +191,50 @@ chapter labels entries in canon, and stages nothing it isn't sure of.
    base is slow. The assembler should print words per minute (overall and
    while speaking) and the pause share, so the answer is one line;
    kingmaker2's VoxCPM2 narration measured 160 wpm overall, the usual pace.
+4. **Typeset: the PDF's plate pages are badly laid out, and nothing checks
+   them (the author: "I shouldn't be finding this at this stage").** In a
+   466-page build with 17 plates: a page with only the running head after
+   the contents; four blank pages among three plates before chapter 1; a
+   long caption that fell onto a page of its own; two blank pages in a row
+   before chapter 13. Causes in `build_chapters_tex`: `\cleartoverso` before
+   every plate (a blank whenever the page before is already a left-hand
+   page; plates in a row alternate with blanks; the template is `openany`,
+   so facing the chapter isn't even achieved), and a fixed image height
+   (80% of the page) whatever the caption's length. Fix:
+   - **Two builds.** A screen PDF (no blank pages; each plate on the page
+     before its chapter; a landscape plate as a sideways page; a `spread`
+     as one wide page, not split) and a print PDF (chapters on right-hand
+     pages, a plate on the facing left page, never two blanks in a row, no
+     page with only a running head). Name both in typeset's summary.
+   - **Caption with its picture.** Size the image from the space left after
+     the caption is set (measure the caption box first), so it can't
+     overflow.
+   - **A layout check after every build** (`mechanical pdf-layout`):
+     pdftotext per page for blank pages, runs of blanks, pages with only a
+     running head, pages whose only text is a caption; `pdfimages -list` for
+     plate pages without their caption; report page numbers. `release-check`
+     fails on any of them in the screen PDF.
+   - **A look.** typeset renders thumbnails of the front matter and every
+     plate page into one contact sheet and a vision check reads it (blank
+     pages, cut captions, a picture sideways that shouldn't be), the way
+     the storyboard's frames are checked.
+5. **Contents: the PDF and the ePub disagree on the back matter.** The
+   PDF's `\tableofcontents` lists the appendix as one line (its sections
+   are `\section*` with no `\addcontentsline`); the ePub's (pandoc
+   `--toc`, default depth 3) lists every `###` inside it, 34 lines. Both
+   should list the appendix's `##` sections and nothing deeper: pass
+   `--toc-depth=2` to pandoc and add `\addcontentsline{toc}{section}` (and
+   a PDF bookmark) for each back-matter `\section*`. The PDF's contents
+   links exist (`hyperref`, `hidelinks`), but one author's reader didn't
+   follow them; test the build in a few common readers and say in the docs
+   which do.
+6. **Plate captions are never checked against their pictures.** One
+   caption put the Rialto "to the left of St Mark's square", which a
+   reader took as beside it (it is halfway along the Grand Canal). When a
+   plate is imported or its caption changed, a vision check should read the
+   caption against the image and the book's own geography (every place,
+   direction and relation it states), as the storyboard check reads a frame
+   against its shot.
 
 ### merge-chapters, split-chapter and remove-chapter: renumber through `_renumber` (2026-10-28)
 
