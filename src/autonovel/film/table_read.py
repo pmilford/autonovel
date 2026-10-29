@@ -5,15 +5,15 @@ mechanical half of `/autonovel:table-read`. It reads the voice casting
 file `film/audio/voices.yaml`:
 
     voices:
-      JAKOB:                                   # the script's cue
-        character: bible/characters/jakob-fugger.yaml
-        design: "a fourteen-year-old boy, ..."  # the written voice
+      ANNA:                                    # the script's cue
+        character: bible/characters/anna.yaml
+        design: "a fourteen-year-old girl, ..."  # the written voice
         ref_text: "a neutral sentence for the reference clip"
-        ref: audio/voices/jakob.wav            # made from `design` when missing
+        ref: audio/voices/anna.wav             # made from `design` when missing
         consent: "synthetic: designed from a description; no real person's voice"
     lexicon:                                   # respellings for the voice only
-      Fondaco: FON-dah-ko
-    names: [Fondaco, Augsburgs]                # words the transcriber may misspell
+      Quai: KAY
+    names: [Quai, Marchetti]                   # words the transcriber may misspell
 
 builds a job of every line of the scenes (their IDs from the script),
 skips each line whose recording is current (same words, same voice
