@@ -163,6 +163,35 @@ mention and once per chapter after a long gap, and leaves the rest of the
 label alone; then updates cast.md, design.md, the appendix and the
 chapter labels entries in canon, and stages nothing it isn't sure of.
 
+### From an author's listen and look at a finished version: cover zoom, chapter pictures (2026-10-29)
+
+1. **`cover-composite --preset frame` can only crop, so a tall painting loses
+   its top or its bottom.** `_fit_cover` (`export/cover.py`) scales the art to
+   fill the window's width and `--focus-y` picks which band to keep; on a
+   painting about 1.5 times taller than the window that drops a third of it.
+   On one book the frame cut the title figure at the eyes and lost the name
+   painted above him. Add `--zoom <0.5–1>` (the art drawn at that fraction
+   of the window's width, the rest filled with the band colour, so more of
+   the height fits), save it in `cover_layout.json` with the preset and
+   focus, and have the command show the author two or three framings side by
+   side before saving one. Check every surface that reads the titled cover
+   (`cover-print`, typeset's ePub cover, the audiobook cover) picks it up.
+2. **The audiobook can carry a picture per chapter; `audiobook-assemble`
+   attaches only the cover.** An M4B can hold a chapter-image track (a
+   still-image track the chapter list points to, which Apple Books and
+   several audiobook apps show as each chapter plays), and an MP3's ID3
+   `CHAP` frames can each hold an `APIC` picture (podcast apps show those).
+   ffmpeg writes neither; MP4Box (gpac) or a short mutagen script would.
+   Source the pictures from `typeset/plates.yaml` (a plate placed at a
+   chapter) and the chapter ornaments, with a per-chapter override, and fall
+   back to the cover. Test in Apple Books, one Android player and VLC (which
+   ignores both) before claiming it works. Asked for by the author of
+   kingmaker2 after listening to version 6.
+3. **Narration pace: report it.** Listeners at 2× sometimes ask whether the
+   base is slow. The assembler should print words per minute (overall and
+   while speaking) and the pause share, so the answer is one line;
+   kingmaker2's VoxCPM2 narration measured 160 wpm overall, the usual pace.
+
 ### merge-chapters, split-chapter and remove-chapter: renumber through `_renumber` (2026-10-28)
 
 `/autonovel:reorder` now runs `autonovel _renumber`, which moves every
