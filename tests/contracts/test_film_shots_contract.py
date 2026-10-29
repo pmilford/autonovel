@@ -85,3 +85,81 @@ def test_shot_list_critic_in_fresh_rounds_on_camera_md() -> None:
 
 def test_shot_list_writes_nothing_outside_film() -> None:
     assert "No script, scene list, bible or book file is written" in body("shot-list")
+
+
+# --------------------------------------------------------------- storyboard
+
+def test_storyboard_sheets_first_then_frames() -> None:
+    b = body("storyboard")
+    assert "Character sheets first" in b
+    for view in ("front", "three_quarter", "profile"):
+        assert view in b, view
+    assert b.index("Character sheets first") < b.index("Write the frames")
+    assert "approved: false" in b
+
+
+def test_storyboard_prompts_positive_and_period_checked() -> None:
+    b = body("storyboard")
+    assert "positive only" in b and "no negative prompt" in b
+    assert "not-at-this-date" in b
+    assert "CAMERA.md §9" in b or "§9" in b
+
+
+def test_storyboard_vision_check_and_regeneration_limit() -> None:
+    b = body("storyboard")
+    assert "fresh subagent" in b
+    assert "autonovel mechanical keyframe-render" in b
+    assert "autonovel mechanical keyframe-verdict" in b
+    assert "autonovel mechanical keyframe-status" in b
+    assert "at most twice" in b
+    assert "Look at every frame yourself" in b or "look at every frame yourself" in b
+
+
+def test_storyboard_machine_safety() -> None:
+    b = body("storyboard")
+    assert "--disable-pinned-memory" in b
+    assert "One GPU job at a time" in b
+    assert "--ram-limit" in b
+    assert "No paid or keyed service" in b
+
+
+# --------------------------------------------------------------- table-read
+
+def test_table_read_voices_are_consent_free() -> None:
+    b = body("table-read")
+    assert "no person's recording is used" in b
+    assert "written consent" in b and "film/consent/" in b
+    assert "no real person, actor or singer is named" in b
+    assert "consent" in b
+
+
+def test_table_read_checks_every_take() -> None:
+    b = body("table-read")
+    assert "autonovel mechanical table-read" in b
+    assert "transcriber" in b and "re-taken" in b
+    assert "never matched" in b
+    assert "One GPU job at a time" in b
+
+
+# --------------------------------------------------------------- animatic
+
+def test_animatic_needs_current_inputs_and_retimes() -> None:
+    b = body("animatic")
+    assert "autonovel mechanical shot-check" in b and "--retime" in b
+    assert "line times from: table read" in b
+    assert "autonovel mechanical keyframe-status" in b
+    assert "autonovel mechanical animatic" in b
+
+
+def test_animatic_viewer_sees_frames_and_transcript_only() -> None:
+    b = body("animatic")
+    assert "fresh subagent" in b
+    assert "knows nothing of the book" in b
+    assert "not to open the shot list" in b
+    assert "±10%" in b
+
+
+def test_engine_scripts_import_nothing_from_autonovel() -> None:
+    from autonovel.film.engines import engine_path
+    src = engine_path("voxcpm_lines").read_text(encoding="utf-8")
+    assert "autonovel" not in "\n".join(l for l in src.splitlines() if l.startswith(("import", "from")))
