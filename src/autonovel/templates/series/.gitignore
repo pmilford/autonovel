@@ -59,6 +59,16 @@ books/*/edit_logs/diff_*.html
 books/*/edit_logs/diff_*.json
 !books/*/edit_logs/diff_*.why.json
 
+# Film renders (/autonovel:storyboard, /autonovel:table-read, /autonovel:animatic).
+# Every take, the frames sampled for the viewer check, the cut films and the
+# recorded lines are rebuilt from their manifests. The selected keyframes and
+# sound cues, the character sheets and the designed voice references ARE
+# committed: a model asked again does not draw the same frame or voice.
+books/*/film/**/takes/
+books/*/film/animatic/*.mp4
+books/*/film/animatic/*_frames/
+books/*/film/audio/table_read/*.wav
+
 # Editor / OS junk
 .DS_Store
 Thumbs.db

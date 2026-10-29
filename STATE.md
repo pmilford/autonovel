@@ -3408,6 +3408,23 @@ were given holds. The joined animatic runs 70.7 s against 60 s of page time
 (S0104 112%, S0105 136%, the notes say why). GPU: about 19 minutes in all; peak system RAM
 11.5 GB (the table read), 5.7 GB in the image session.
 
+### 2026-10-29 — the film branch merged; film renders kept out of git
+
+Merged `film-m3m4-animatic` into master (fast-forward). On review, the
+`voices.yaml` example in `film/table_read.py`'s docstring named the pilot
+book's boy and its places; it now uses a neutral cue (ANNA), as fountain.py's
+did the day before. The series `.gitignore` template gains a film block:
+every `takes/` folder, the animatic's `.mp4` and sampled `_frames/`, and the
+table read's recorded lines are ignored, because they are rebuilt from their
+manifests. The selected keyframes and sound cues, the character sheets and the
+designed voice references stay tracked, because a model asked again does not
+draw the same frame or make the same voice (the first minute's selects come to
+about 50 MB; its takes to about 110 MB). An existing series doesn't get the
+block from `refresh-templates` (the user owns `.gitignore`); the pilot series
+had it added by hand. One full Tier 1+2 run after the merge had a single
+failure that three further runs didn't reproduce; it is noted here in case it
+comes back.
+
 ## Tests last known green
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-29 (film M3–M4: CAMERA.md, shot-list, storyboard, table-read, animatic; the footer walks the film pipeline) — **2504 passing, 1 skipped** (+82).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the screenplay pilot: SCREEN.md, /autonovel:screenplay, fountain-check) — **2422 passing, 1 skipped** (+42).
