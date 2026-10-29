@@ -3333,7 +3333,61 @@ a page, against 500–700 for a feature (SCREEN.md §5.8 now says so).
 Tier 1+2 2380 → 2422 (+42: 27 fountain-check tests, 8 screenplay contract tests,
 and the per-command and genre checks picking up the new command).
 
+### 2026-10-29 — shot list, storyboard, table read, animatic (film pipeline M3–M4): CAMERA.md and four commands
+
+The stages after the screenplay, for one scene at a time, all free and on
+the user's own machine. Decisions:
+
+- **A separate craft file, `shared/craft/CAMERA.md`, not a section of
+  SCREEN.md.** A spec script carries no camera directions, and the
+  screenwriter reads SCREEN.md in full every run; the director's and DP's
+  craft is a different job read by different commands. Sourced like the
+  others (Mascelli's five C's, Katz, Brown 4th ed., Arijon's line of
+  interest, Murch's rule of six, Dmytryk, Bordwell's and Cutting's shot
+  lengths, Alcott on candlelight, BFL on FLUX prompting); quotations only
+  where checked at the cited page; thresholds the sources don't give are
+  marked `[pipeline heuristic]`. Rubric of ten dimensions and CT1–CT12.
+- **The shot list is the plan's extended schema, checked mechanically on
+  what it declares.** `shot-check` enforces coverage (every line in one
+  shot, every action paragraph shown or omitted with a reason), a motivation
+  for every move, the 180° line (sides A/B/on_line; a cross needs a neutral
+  shot, a cutaway or a recorded `crossing`), screen direction per mover,
+  eyelines that meet, continuity shot to shot and into a `CONTINUOUS` scene
+  (the same words every shot; a change needs `continuity_change`), and the
+  look's fps, lenses and forbidden moves. M3's acceptance (a planted
+  crossing of the line and a planted costume change are caught) is a
+  Tier-1 test. Line and paragraph IDs (`S0104-L01`, `-A01`) come from the
+  script (`scene-lines`; fountain-check writes the line IDs into
+  scenes.json), so every later stage keys on the same IDs.
+- **Durations are computed, never typed.** `--retime` sets each shot from
+  its lines (the table read's recordings while their text matches the
+  script, estimates at 150 words a minute before) plus lead and tail, or its
+  action, plus a declared hold; the scene's total is compared with its page
+  time (±10%, M4's target).
+- **Keyframes through a local ComfyUI server, takes never overwritten.** One
+  frame manifest serves storyboards, character sheets and (with `kind:
+  sound`) sound cues; `keyframe-render` saves the manifest after every frame,
+  frees the server's models at the end and interrupts a job above a RAM
+  limit; `keyframe-verdict` turns a third `regenerate` into `author`
+  (CAMERA.md §9: at most two regenerations). Sheets come before frames, and a
+  sheet's other views are made from its front by multi-reference edit.
+- **Voices are consent-free by construction.** VoxCPM2 designs each voice's
+  reference clip from a written description (no recording of anyone), then
+  clones it for every line; faster-whisper checks every take. The engine is a
+  standalone script run in the TTS environment (it imports nothing from
+  autonovel); autonovel writes the job and the manifest. A voice without a
+  `consent` line is refused.
+- **The animatic is ffmpeg on stills**: whole frames from a cumulative
+  timeline (a stream-copy concat dropped frames at `-shortest`; fixed), the
+  move on a 4×-enlarged still (no stepping), lines levelled and placed,
+  beds and effects from Stable Audio 3, -16 LUFS, 1.85:1 letterbox,
+  SUPERs and subtitles, a cut list with every source's fingerprint.
+- **The footer walks the film pipeline** (screenplay → shot-list →
+  storyboard → table-read → animatic, the scene carried from `--scene`); it
+  had suggested the novel's diff page after a shot list.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-29 (film M3–M4: CAMERA.md, shot-list, storyboard, table-read, animatic; the footer walks the film pipeline) — **2504 passing, 1 skipped** (+82).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the screenplay pilot: SCREEN.md, /autonovel:screenplay, fountain-check) — **2422 passing, 1 skipped** (+42).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a renumber moves source tags) — **2380 passing, 1 skipped** (+3 assertions).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (fix-read; the change page follows a moved chapter) — **2380 passing, 1 skipped** (+8 incl. the seams test).
