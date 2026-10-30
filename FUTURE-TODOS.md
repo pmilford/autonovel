@@ -42,6 +42,57 @@ days). Surveying the teaser path for it found, not yet fixed:
 - `art-curate` still calls Pollinations "no-API-key"; it now needs a key.
 Also: `--dry-run` shows no dollar estimate and nothing records spend.
 
+### Film M5: motion from the keyframes, the first night's run (2026-10-30)
+
+The first minute of kingmaker2 now moves (series c551e26), but by two pilot
+scripts outside autonovel: `~/film-stack/scripts/shot_render.py` (Wan 2.2
+I2V A14B Q5 + the 4-step lightx2v LoRA through ComfyUI: a motion prompt per
+shot built from `action`, `blocking`, `light` and `move`, written to
+`film/render/<scene>.json` where a person can edit it; takes in rounds, so a
+cut-short night still has one of every shot; the prompt and keyframe re-read
+before every take; `--finish` = RIFE ×2 + SeedVR2 7B to 1080p) and
+`~/film-stack/scripts/cut_from_picks.py` (the picks cut to the animatic's
+sound, each take slowed at most 1.25× to fill its slot). Fold both into
+autonovel: `autonovel mechanical shot-render` / `cut-from-picks` and a
+`/autonovel:shot-render` command (render, a fresh vision judge per take into
+`reviews/<scene>_render_vision.md` and `render/picks.json`, the cut), with
+CAMERA.md gaining a section on motion prompts. Measured on a 5060 Ti: 480p
+81 frames ~200 s, 720p ~650 s, SeedVR2 ~440 s per 5-s take, RIFE seconds; the
+Wan server holds ~24 GB of system RAM (the runbook guessed 10–14). 39 takes
+overnight (16:22–22:43, finishing to 03:17); the judge's picks: 4 good, 5
+usable, 3 poor, one shot with no usable take. What the run teaches:
+- **The keyframe must be the first frame of the action, not its key
+  instant.** CAMERA.md §8 asks the storyboard for the key instant, which suits
+  an animatic; image-to-video then starts at the end of the action and plays
+  it backwards or loses it (a hand already at the nose, a tout frozen in his
+  lean, a hand already on the dog). For a shot that will move, draw the
+  start (and, for first-and-last-frame mode, the end).
+- **Static shots creep, and moving shots overshoot.** Every "locked off" shot
+  drifted; over-the-shoulder pushes travelled past the subject until he left
+  the frame. Try first-and-last-frame mode with the same frame at both ends
+  for a static shot, Uni3C for a set path, and a shorter `--frames` for a
+  move that should stop.
+- **A camera that moves invents what it reveals:** a hurricane lamp, a
+  stable, a lit room behind shut bars, a whole house where the bridge's end
+  was, and a different boy's face when the camera pulled back. A shot whose
+  move reveals new ground needs that ground in its keyframe (or an end frame).
+- **Withheld faces are given away** (the carter turns to the lens) and
+  **actions overrun the shot** (the travellers walk into the inn, the dog
+  jumps into the boat, the innkeeper is gone before his line), so coverage
+  stops cutting together. The prompt should say when the action stops.
+- **81 frames (5.06 s) is the ceiling.** Four shots were longer; the cut
+  slowed two by up to 1.19× and the long line was split across a cut. A
+  continuation from the last frame is the next step.
+- **Two cards:** the 3060 sat idle all night, because a second Wan server
+  needs another ~24 GB. Finishing (RIFE, SeedVR2 3B) on the 3060 while the
+  5060 Ti renders needs WSL `memory=48GB`; measure it by day first.
+- **The author's eye found what the judge didn't:** a bridge drawn along the
+  canal rather than across it, houses that weren't Venetian on one bank, no
+  side canal to turn into, and an off-screen speaker heard as a narrator. The
+  cold viewer should name who speaks each line; the vision check should ask
+  whether the place's geography is right (what crosses what, where the turn
+  is), not only its period.
+
 ### Film pipeline after M3–M4: what the first animatic leaves (2026-10-29)
 
 M3–M4 shipped `shared/craft/CAMERA.md`, `/autonovel:shot-list`,

@@ -68,6 +68,12 @@ books/*/film/**/takes/
 books/*/film/animatic/*.mp4
 books/*/film/animatic/*_frames/
 books/*/film/audio/table_read/*.wav
+# Moving takes (shot_render): the takes and their smoothed, upscaled copies are
+# rebuilt from film/render/<scene>.json (prompt, seed, keyframe); the picks and
+# the manifests are committed. Cut films are rebuilt from the picks.
+books/*/film/render/*/finished/
+books/*/film/render/*.log
+books/*/film/cut/*.mp4
 
 # Editor / OS junk
 .DS_Store

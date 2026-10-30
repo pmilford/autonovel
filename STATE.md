@@ -3425,7 +3425,27 @@ had it added by hand. One full Tier 1+2 run after the merge had a single
 failure that three further runs didn't reproduce; it is noted here in case it
 comes back.
 
+### 2026-10-30 — the first minute moves (film M5 piloted outside autonovel); moving takes kept out of git
+
+kingmaker2's first minute (S0104–S0105, 13 shots) was rendered overnight as
+moving film on the local stack: Wan 2.2 image-to-video at 720p, three takes a
+shot, smoothed and upscaled to 1080p, picked by a fresh vision judge and cut
+to 59 s with the animatic's sound (series c551e26). The two scripts that did
+it live in `~/film-stack/scripts/` (`shot_render.py`, `cut_from_picks.py`),
+not in autonovel yet; folding them into a command, and what the run taught
+(keyframes must show the start of an action, static shots creep, moves invent
+what they reveal), is FUTURE-TODOS "Film M5". The series `.gitignore`
+template's film block now also ignores `film/render/*/finished/`,
+`film/render/*.log` and `film/cut/*.mp4`: the takes, their finished copies and
+the cut are rebuilt from `film/render/<scene>.json` and `render/picks.json`,
+which stay tracked. The same afternoon the author's notes on the character
+sheets (Jakob slighter and unsure; the boatman in Carpaccio's dress) went
+through the storyboard command unchanged: bible edit, `keyframe-verdict
+regenerate`, render, vision check, author's pick recorded and the sheet
+approved.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-30 (the film block of the series .gitignore template gains moving takes and cuts; docs only otherwise) — **2504 passing, 1 skipped** (+0).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-29 (film M3–M4: CAMERA.md, shot-list, storyboard, table-read, animatic; the footer walks the film pipeline) — **2504 passing, 1 skipped** (+82).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the screenplay pilot: SCREEN.md, /autonovel:screenplay, fountain-check) — **2422 passing, 1 skipped** (+42).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (a renumber moves source tags) — **2380 passing, 1 skipped** (+3 assertions).

@@ -24,6 +24,14 @@
 > descriptions, Whisper-checked); `/autonovel:animatic` (stills timed to the
 > read, ffmpeg). First run: the first minute of kingmaker2 (S0104–S0105).
 > What they leave is in FUTURE-TODOS ("Film pipeline after M3–M4").
+>
+> **M5 piloted, 2026-10-30, outside autonovel:** the same minute rendered as
+> moving film overnight on the local stack (Wan 2.2 image-to-video at 720p,
+> three takes a shot, RIFE and SeedVR2 to 1080p, a fresh vision judge's
+> picks, cut to 59 s with the animatic's sound) by two scripts in the film
+> stack (`shot_render.py`, `cut_from_picks.py`). Folding them into a command,
+> and what the run taught (draw the start of an action, static shots creep,
+> a moving camera invents what it reveals), is FUTURE-TODOS ("Film M5").
 
 ## 1. Where we are
 
