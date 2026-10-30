@@ -236,6 +236,25 @@ the staging, the prompts and the keyframes.
   exposed what a written shot list cannot know. For example, a face looking
   at the gate can only be seen from between the face and the wall.
 
+**The author's first notes on the pilot** (the series'
+`film/reviews/author_notes_pilot3d.md`):
+- The barge started too close to a building.
+- The house's lit windows all looked alike, each with a figure in it.
+- The water was too still and clean.
+- The whole place was too pristine.
+
+So a set is never new. The set kit now has an age-and-dirt layer that every
+location script should call:
+- a weed band and tide stain along every wall standing in water;
+- streaks, rust, missing bricks and fallen plaster;
+- worn and broken steps;
+- scum, floating rubbish and rubbish heaps;
+- laundry where people live.
+
+The water's ripples move with the frame. Repeated windows vary their light, and
+no prompt puts a figure in every window. Every keyframe prompt carries a
+"worn and dirty" clause.
+
 **Still to do before adoption:** sharper takes (720p, then RIFE and SeedVR2,
 as for version 1); several takes per shot with a vision pick; the S0105 inn
 sequence re-staged to the author's beat order (notes 1 and 3); a cold viewer
