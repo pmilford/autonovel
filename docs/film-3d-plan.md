@@ -85,6 +85,22 @@ The established pieces to use, not rebuild:
   about 40 s of video, and is cloud only. https://www.intangible.ai/enterprise/film
 - **Kling 3.0 Omni** keeps characters and objects as "elements" and does a
   storyboard of up to 6 cuts, from $10 a month (about 110 s of 720p).
+- **OpenArt** resells other companies' models (Kling 3.0 and Omni, Veo,
+  Seedance and more) for credits, with "Characters" built from one to four
+  pictures and reused across them; about $13–175 a month after an August
+  2026 repricing, video costing many more credits than pictures. It is a
+  painter like Kling through fal, not a set: it knows neither where the
+  boat is nor how many people stand on it.
+- **Genie 4** (Google DeepMind, research preview 27 October 2026, trusted
+  testers only; Project Genie on the $100–200 a month AI Ultra plan and the
+  Gemini API "coming soon") is a world you walk through in real time, not a
+  set you direct. You steer the camera with the keyboard and change the scene
+  by typed prompts; a world holds together for about two minutes before
+  objects drift; it can start from a picture. Nothing published offers an
+  exact camera position or lens, people on marks, a fixed head count, the
+  same face from one session to the next, a return to the same world, or an
+  export of depth or geometry, and Google says real places can't be
+  simulated accurately. At most a scouting toy for looks and angles.
 - **Award practice:** Runway's AI Film Festival winners and the best-known
   creators lock a few reference plates per location and curate heavily; the
   ones who need spatial continuity start from a primitive Blender set
