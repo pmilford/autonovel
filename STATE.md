@@ -3444,7 +3444,25 @@ through the storyboard command unchanged: bible edit, `keyframe-verdict
 regenerate`, render, vision check, author's pick recorded and the sheet
 approved.
 
+### 2026-10-30 — the 3D pilot runs: a Blender set, Blockout staging, VACE motion (outside autonovel)
+
+The author chose the hybrid of docs/film-3d-plan.md and asked for it to be run
+locally with Blockout and Blender. It ran the same day on kingmaker2's side
+canal, water-gate and inn steps (S0104-07 to S0105-01), all inside WSL: a
+Blender set built by one checked-in script and checked by a fresh vision
+reviewer, Blockout staging driven by a script (with a small patch so its
+Blender handoff carries limbs and riders), guide passes from the set, Klein
+keyframes painted over the lit pass, and Wan2.2-VACE-Fun moving each keyframe
+along the set's depth. The first takes hold the set's geometry through camera
+moves and a turning barge, which version 1 could not; the findings, timings
+and what remains before adoption are the plan's new "Pilot results" section.
+The scripts live in `~/film-stack/scripts` (now under a local git history) and
+fold into autonovel commands only once the author adopts the method. The
+series `.gitignore` template's film block gains the 3D pilot's rebuildable
+outputs (blend files, Blockout exports, layout frames, 3D takes).
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-10-30 (the 3D pilot: plan's results section; the series .gitignore template ignores the 3D outputs) — **2504 passing, 1 skipped** (+0).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-30 (the film block of the series .gitignore template gains moving takes and cuts; docs only otherwise) — **2504 passing, 1 skipped** (+0).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-29 (film M3–M4: CAMERA.md, shot-list, storyboard, table-read, animatic; the footer walks the film pipeline) — **2504 passing, 1 skipped** (+82).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-28 (the screenplay pilot: SCREEN.md, /autonovel:screenplay, fountain-check) — **2422 passing, 1 skipped** (+42).

@@ -175,6 +175,73 @@ approvals at the set and the layout animatic. The estimate after the sets
 exist is 2–4 days per finished minute, mostly machine time. Those are
 estimates, not measurements; the pilot measures them.
 
+## Pilot results (2026-10-30)
+
+The author said to run the pilot locally with Blockout and Blender. It ran the
+same day on this machine, all inside WSL, and nothing was installed or changed
+on Windows. The scripts are in `~/film-stack/scripts`, and the series holds the set,
+the staging, the prompts and the keyframes.
+
+**What was built, stage by stage:**
+1. **Set.** `film/sets/fondaco-side-canal.py` is one Blender script, using a
+   small kit (`setkit.py`: boxes, arched openings with stone surrounds, hipped
+   roofs, funnel chimneys, water, stairs, horn lanterns as real lights, boats,
+   stand-in figures). It builds the side canal, the Germans' house round two
+   courtyards, the water-gate, the inn steps, the wooden bridge and both banks
+   in about 15 seconds. A fresh vision reviewer checked the renders against the
+   book and the location files. The geography held: the turn left 42 m short
+   of the bridge, the house on the corner, the inn next door. The reviewer's
+   faults were fixed: the water now runs in under the gate's arch, the grille
+   has two leaves with a chain and padlock, the turn has markers, and there are
+   people, washing, rubbish and dimmer candle-lit windows.
+2. **Staging.** `staging.json` gives each shot's cast, marks and camera in the
+   set's own metres. `blockout_stage.mjs` drives the real Blockout app through
+   Playwright and exports Blockout's Blender handoff per shot. Blockout's
+   handoff carried only each figure's path, so a small patch (recorded in its
+   `MODIFICATIONS.md`) now bakes limb motion and riders too. Blockout has no
+   period assets and cannot show a custom set (only scans), so its role is the
+   figures, their gaits and the camera; the set is seen in Blender.
+3. **Guides.** `shot_layout.py` opens the set, imports the shot and replaces the
+   stand-in boat with the set's barge. It renders 81 frames at 16 fps of a lit
+   pass (the set's own lanterns and windows, figures in costume colours), an
+   inverse-depth pass and a normal pass. `layout_lines.py` adds outlines and
+   videos. Two fixes made it fast enough: merging the set's thousands of
+   objects into one per collection, and keeping render data between frames
+   (0.6 s per frame per pass, from 12 s).
+4. **Keyframes.** `keyframe_from_layout.py` runs FLUX 3 Klein as an
+   image-to-image pass (denoise 0.75–0.78) over the lit first frame, with the
+   character sheets as references. Each take took 33–63 s.
+5. **Motion.** `vace_render.py` runs Wan2.2-VACE-Fun-A14B (Q5_K_M GGUF) with
+   the Wan 2.2 T2V Lightning 4-step LoRAs. The control video is the keyframe
+   as frame 0, kept, then the depth frames, generated. One 81-frame take at
+   832×480 took 240–310 s on the 5060 Ti, with system RAM peaking at 22.6 GB.
+
+**What it showed (first takes, 480p):**
+- **Continuity holds.** The gate, its bars, the barred window above it, the
+  Germans' house and its lit windows, the steps, the door and the lantern stay
+  the same through every frame of every shot, including a camera push-in and a
+  barge turning across the frame. That is what version 1 could not do.
+- **People follow the staging.** The carter turns and climbs the steps, Jakob
+  follows, the boatman waits with the bags, the dog holds the landing, and
+  Jakob's head lifts to the bars.
+- **The staged pose must match the keyframe.** In S0104-09 the painted
+  keyframe pressed Jakob's hand to his coat, but the stand-in's arm hung at
+  his side, and the hand dropped to follow the depth. Klein likewise painted
+  the stand-in's raised arm when the pose was wrong. Pose the stand-ins as the
+  shot needs and check them before painting.
+- **Use depth control, not outline control.** Outline control alone turned
+  the gate shot into a flat cartoon.
+- **Joint signs:** in Blockout's figures a positive `headX` tilts the face up.
+- **Shot angles are found in the set.** Reframing in the set took minutes and
+  exposed what a written shot list cannot know. For example, a face looking
+  at the gate can only be seen from between the face and the wall.
+
+**Still to do before adoption:** sharper takes (720p, then RIFE and SeedVR2,
+as for version 1); several takes per shot with a vision pick; the S0105 inn
+sequence re-staged to the author's beat order (notes 1 and 3); a cold viewer
+and the author's verdict; then fold the scripts into autonovel commands
+(`set`, blocking in `shot-list`, the keyframe and motion stages).
+
 ## What doesn't change
 
 The screenplay, the shot lists' craft (CAMERA.md), the table read, the

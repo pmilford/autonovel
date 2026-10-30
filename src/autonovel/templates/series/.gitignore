@@ -75,6 +75,18 @@ books/*/film/render/*/finished/
 books/*/film/render/*.log
 books/*/film/cut/*.mp4
 
+# 3D sets and layouts (docs/film-3d-plan.md): the .blend files, Blockout's
+# shot handoffs and every guide frame are rebuilt from film/sets/<location>.py
+# and film/blocking/<location>/staging.json; the set's approval previews, the
+# staging, Blockout's project.json and the keyframes are committed. Moving
+# takes from the 3D layouts, like the 2D ones, are rebuilt from their records.
+books/*/film/sets/*.blend
+books/*/film/sets/*.blend1
+books/*/film/blocking/*/*.blockout/exports/
+books/*/film/layout/
+books/*/film/render3d/**/inputs/
+books/*/film/render3d/**/*.mp4
+
 # Editor / OS junk
 .DS_Store
 Thumbs.db
