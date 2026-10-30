@@ -44,6 +44,12 @@ Also: `--dry-run` shows no dollar estimate and nothing records spend.
 
 ### Film M5: motion from the keyframes, the first night's run (2026-10-30)
 
+**Superseded in direction by [`docs/film-3d-plan.md`](docs/film-3d-plan.md)
+(recommended 2026-10-30, not yet agreed):** a 3D set per location, rendered as
+control passes for the video model, which removes most of the continuity
+faults below by construction. The lessons below still hold for whatever
+stays 2D (close-ups, faces).
+
 The first minute of kingmaker2 now moves (series c551e26), but by two pilot
 scripts outside autonovel: `~/film-stack/scripts/shot_render.py` (Wan 2.2
 I2V A14B Q5 + the 4-step lightx2v LoRA through ComfyUI: a motion prompt per

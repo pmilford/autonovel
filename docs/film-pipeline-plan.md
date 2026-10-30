@@ -32,6 +32,12 @@
 > stack (`shot_render.py`, `cut_from_picks.py`). Folding them into a command,
 > and what the run taught (draw the start of an action, static shots creep,
 > a moving camera invents what it reveals), is FUTURE-TODOS ("Film M5").
+>
+> **After the first cut, 2026-10-30:** the author's notes showed the shot-by-shot
+> 2D method doesn't converge on continuity. The recommended change, sets
+> built once in 3D (Blender) that fix layout, camera and light positions,
+> with AI making the look, piloted on one location first, is
+> [`film-3d-plan.md`](film-3d-plan.md).
 
 ## 1. Where we are
 
