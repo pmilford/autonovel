@@ -123,6 +123,17 @@ usable, 3 poor, one shot with no usable take. What the run teaches:
     Augsburgs." came out as one sentence. `table-read` should check the gaps
     between sentences in the transcript's word times, and the screen critic
     should prefer lines a listener can parse at once.
+  - **A camera position the viewer can't place confuses.** The shot list
+    put the camera inside a house, on its landing, looking out at the boat
+    arriving: nobody's point of view, a place shown from inside before it
+    was known, and the "shut" gate read as open. The viewer expected the
+    look back to show where the boat came from. The shot-list critic should
+    ask of every set-up where the viewer thinks they are standing, and a
+    reverse should show the place the story just left.
+  - **Places that recur need sheets too.** The water-gate changed shape from
+    shot to shot, and the model invented an interior basin behind its bars.
+    A location element seen in several shots (a gate, a bridge, a doorway)
+    gets a reference sheet like a prop.
   - **Background voices the story leans on must be words.** The touts'
     shouts (Stable Audio walla) are babble; when a crowd's words carry the
     story (here: they're selling inns), record them as lines on the voice
