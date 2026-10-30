@@ -92,6 +92,28 @@ usable, 3 poor, one shot with no usable take. What the run teaches:
   cold viewer should name who speaks each line; the vision check should ask
   whether the place's geography is right (what crosses what, where the turn
   is), not only its period.
+- **The author's notes on the cut (2026-10-30)** name what the per-shot
+  judge can't see:
+  - **Continuity across the cut.** The lantern's design, the light's colour
+    and side, a dog that gains a leash, a tout who ends up in the wrong boat.
+    Add **prop sheets** (`bible/sheets/<prop>/`, drawn once like a
+    character's and passed as references wherever the prop is in frame) and
+    a **neighbour check** in the vision pass, comparing each shot with the
+    shots either side for light, props, wardrobe and who is where.
+  - **A beat the cut drops is a beat the story loses.** A sequence of five
+    beats (the dog greets one man, then the boy, then goes for the
+    stranger) got four shots, and the cut kept two seconds of them. The
+    shot-list critic should count beats against shots, and the cold viewer
+    should be asked who each person is and why each action happens.
+  - **"Night" made an empty city.** The look's night rules (few, small
+    flames) pushed the model to deserted streets and dark windows; a city at
+    night is lit windows, noise, washing, rubbish and people. Night rules in
+    `look.yaml` should say what is lit and who is about, not only what
+    isn't. Genre guides could carry this for their settings.
+  - **What happens to things.** A viewer asks where the cloth on the barge
+    goes. The adaptation critic should list every object and person the
+    sequence brings on and check that each is placed or dealt with when the
+    scene ends.
 
 ### Film pipeline after M3–M4: what the first animatic leaves (2026-10-29)
 
