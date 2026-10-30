@@ -114,6 +114,19 @@ usable, 3 poor, one shot with no usable take. What the run teaches:
     goes. The adaptation critic should list every object and person the
     sequence brings on and check that each is placed or dealt with when the
     scene ends.
+  - **A reference image lends everything in it.** The bridge was drawn from
+    a painting whose procession of white-robed brothers became pale
+    "mummies" on the bridge. `storyboard` should crop a reference to the
+    thing it is for, and the vision check should ask what in a frame came
+    from the reference and doesn't belong.
+  - **Fragments run together when voiced.** "A hundred thousand. Six
+    Augsburgs." came out as one sentence. `table-read` should check the gaps
+    between sentences in the transcript's word times, and the screen critic
+    should prefer lines a listener can parse at once.
+  - **Background voices the story leans on must be words.** The touts'
+    shouts (Stable Audio walla) are babble; when a crowd's words carry the
+    story (here: they're selling inns), record them as lines on the voice
+    model.
 
 ### Film pipeline after M3–M4: what the first animatic leaves (2026-10-29)
 
