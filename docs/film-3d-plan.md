@@ -60,7 +60,42 @@ film:** a splat carries the light it was made with and can't be relit for a
 lantern-lit night, close range shows holes, and HY-World's panorama model is
 far beyond 16 GB.
 
-## Recommendation: the hybrid, with Blender as the set
+## What already exists (research, 2026-10-30)
+
+No single product solves continuity across shots. The practice that has
+settled in 2025–26 among AI filmmakers splits the problem in three. A rough 3D
+set, or locked reference plates per location, holds where things are.
+Reference images or a trained LoRA hold the people. The video model only
+moves a first frame that is already right. The pure-AI platforms hold faces
+better than geography; one creator's phrase for what they lack is "No set. No
+there there."
+
+The established pieces to use, not rebuild:
+- **Blockout** (free, Apache-2.0, a Windows desktop app, early) is the
+  staging tool this plan would otherwise have to build. It does grey-box sets
+  with real sensors, focal lengths and camera moves, plus 194 character
+  motions and marks. For every shot it exports a motion-reference video, a
+  depth pass, first and last frames, a top-down diagram and a ComfyUI
+  workflow for Wan 2.2. It hands scenes to Blender and is driven over MCP.
+  Its kits are modern places, so the period set comes from Blender.
+  https://github.com/wassermanproductions/blockout
+- **Intangible** is the closest finished product: a browser studio where you
+  build a 3D set, place the cast and cameras, and render through Luma, Kling
+  or Seedance ("continuity held by the camera"). It costs $25–35 a month for
+  about 40 s of video, and is cloud only. https://www.intangible.ai/enterprise/film
+- **Kling 3.0 Omni** keeps characters and objects as "elements" and does a
+  storyboard of up to 6 cuts, from $10 a month (about 110 s of 720p).
+- **Award practice:** Runway's AI Film Festival winners and the best-known
+  creators lock a few reference plates per location and curate heavily; the
+  ones who need spatial continuity start from a primitive Blender set
+  (Flick's *Ser Loras*). Mickmumpitz's published workflow renders Blender
+  depth and outline passes through ComfyUI into Wan VACE.
+- **A risk for this film on hosted services:** developers report Google's
+  Veo refusing reference images of a fictional 17-year-old, and Adobe
+  Firefly blocks child keyframes. A 14-year-old lead is safest on the local
+  stack.
+
+## Recommendation: the hybrid, with Blockout for staging and Blender for the set
 
 The hybrid fixes exactly what failed (layout, continuity, camera, reveals)
 and keeps what worked (photoreal surfaces, the stack already installed and
@@ -117,6 +152,9 @@ face, plus weeks of costume and animation work. Splats can't be relit.
    sees it.
 
 ## Pilot before committing
+
+Stage in **Blockout** first (free, and its exports already target Wan 2.2), with the period set built in Blender and brought in. Optionally, run the same shots through **Intangible** for one month ($25–35) as the finished-product benchmark; the author would open the account, and the 14-year-old must pass its providers' filters.
+
 
 Rebuild **one location**: the side canal by the Germans' house, the
 water-gate and the inn steps, which covers shots S0104-07 to S0105-04. Then
@@ -182,4 +220,5 @@ as it does today.
 - StoryBlender: https://arxiv.org/html/2604.03315v1
 - BlenderGym: https://arxiv.org/abs/2504.01786
 - InfiniteTalk: https://comfyui-wiki.com/en/news/2025-08-20-infinitetalk-audio-driven-video-generation
+- Existing solutions: https://intangible.ai/pricing, https://kling.ai/blog/kling-video-3-multi-shot-guide, https://flick.art/blog/behind-ser-loras, https://pjace.beehiiv.com/p/gossip-goblin-s-crazy-workflow-for-building-original-worlds-200m-views, https://aif.runway.com/, https://discuss.ai.google.dev/t/human-review-requested-veo-3-1-reference-images-and-allow-adult-for-a-fictional-17-year-old-character/179169
 - De' Barbari's view (the old Fondaco): `bible/refs/venice-views/barbari-1500_detail_rialto-bridge-and-fondaco.jpg` in the series
