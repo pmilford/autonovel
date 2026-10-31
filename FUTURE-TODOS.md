@@ -42,6 +42,19 @@ days). Surveying the teaser path for it found, not yet fixed:
 - `art-curate` still calls Pollinations "no-API-key"; it now needs a key.
 Also: `--dry-run` shows no dollar estimate and nothing records spend.
 
+### Film: the critic as a gate, and render-to-real (2026-10-31)
+
+The author found round 4's faults before the system did. Built (in `~/film-stack/scripts`,
+to fold into autonovel): `critic_packet.py` (per shot a 12-frame strip, full-size crops of
+every staged person and boat, what the shot must show, the rules), `figure_sheet.py`,
+`shot_layout.py --passes boxes`, `staging_check.py` (gating `blockout_stage.mjs`), and the
+author's notes as the critic's answer key (series `film/reviews/critic_benchmark.yaml`; 6 of 7
+found on round 4). To do: make the critic a command (`/autonovel:film-critic`) that runs on
+every round before the author sees it and refuses to pass a round with high findings; score it
+on every earlier round's notes (v1's sixteen, rounds 1-3); rank wrong head counts and touching
+boats high. Test LTX render-to-real (3DREAL, Layout-to-Render) on the existing set renders; see
+[`docs/film-3d-plan.md`](docs/film-3d-plan.md), "The author on round 4".
+
 ### Film 3D: round 4 and the whole first minute (2026-10-31)
 
 The 3D pilot rendered the first minute of kingmaker2 overnight from author-approved models only

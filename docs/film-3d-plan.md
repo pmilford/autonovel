@@ -357,6 +357,56 @@ sequence re-staged to the author's beat order (notes 1 and 3); models for the to
 author's approval of their skiff; a cold viewer and the author's verdict; then fold the scripts
 into autonovel commands (`set`, blocking in `shot-list`, the keyframe and motion stages).
 
+## The author on round 4, and the tools reconsidered (2026-10-31)
+
+The author on the minute: "pretty bad". Three rowers in the opening, the touts' boats crashing,
+the Fondaco and the bridge changing between shots, "aren't these 3D models and static?", the
+people wrong, washing out at night, the streets empty; and above all: "I am the one finding these
+issues - the system should be finding almost all of them".
+
+**Why it happened.** The picture was never a render of the 3D. The image model painted each first
+frame over a near-black night render, and the video model invented whatever the depth guide did
+not pin down (anything beyond about 40 m, anything the camera turned onto). The touts' crash was
+in the staging itself: nothing checked it.
+
+**Rendering from the set** (`vace_render.py --init`: the video model starts from the set's own
+frames and only repaints): everything stays as built (one oar, the same house through the turn),
+but it looks like a plain 3D model, and a painted first frame does not carry through (by the
+third frame the look is the set's again). Photographed CC0 surfaces (`fetch_textures.py`,
+`setkit.dress_surfaces`, set once per material name), haze and depth of field help, not enough.
+
+**Automatic in the tools now:** `blockout_stage.mjs` refuses to stage or export while two boats
+come within 1 m (`staging_check.py`); surfaces are set once per material name for every set.
+
+**The critic, measured.** `critic_packet.py` gives a cold reviewer per shot a 12-frame strip,
+every staged person and boat cropped at full size (`shot_layout.py --passes boxes`,
+`figure_sheet.py`) and what the shot must show (staging, counts, the bible's people in this
+scene's dress, props, the look bible's rules, the screenplay's period notes). On round 4's
+minute it found 6 of the author's 7 faults unseen, and 50 more; the miss was our own
+instruction (the night style asked for washing). The author's notes are kept as its answer key
+(`film/reviews/critic_benchmark.yaml`); no round goes to the author before it has run and its
+high findings are fixed.
+
+**Unreal reconsidered** (research 2026-10-31): it would hold every building and person (one
+scene), with real face rigs and many lanterns (MegaLights). But MetaHuman still has no
+14-year-old (paid teen MetaHumans on Fab, Daz Genesis 9 teens or Reallusion child morphs
+instead); keyframed boats ignore collision there too; our TRELLIS figures import with a body rig
+(AccuRIG, Mixamo) but no face, and Mesh to MetaHuman would swap their faces for MetaHuman
+look-alikes; the wooden Rialto, 1473 boats, period costume (a cloth tool) and a cinematic
+mastiff are not to be had; it runs on Windows, not in WSL (no GPU Vulkan); Megascans are no
+longer free; estimate 6–10 weeks of part-time hand work. Not recommended now.
+
+**The missing piece, new in 2026:** "render-to-real" adapters for the open LTX video model
+(22B, community licence free under $10M revenue): fal's **3DREAL** IC-LoRA for LTX-2.3
+(June 2026; light and strong) and Lightricks' **Layout-to-Render** IC-LoRA for LTX-2.5 (October
+2026; gated licence click), which take a grey or plain 3D render for camera and object placement
+and a painted first (and optional mid and last) frame for the look. That is exactly the failure
+above. Risks: 16 GB VRAM (community Q4_K_M GGUFs of 13.6 GB; one 12 GB user saw 45 GB of system
+RAM), and users report Layout-to-Render's reference taking hold only near the end of a clip.
+Next: test both on S0104-06 and S0104-01 from the existing set renders. Hosted alternatives
+(Runway Aleph 2, Luma Ray3 Modify) may refuse a 14-year-old; Sora 2 is discontinued; Google's
+Flow model does not take images of minors in the UK and EEA.
+
 ## What doesn't change
 
 The screenplay, the shot lists' craft (CAMERA.md), the table read, the
@@ -374,7 +424,7 @@ as it does today.
   the keyframe reference and grade.
 - Faces in close-up remain presentable rather than seamless.
 
-## Sources (checked 2026-10-30)
+## Sources (checked 2026-10-30; 2026-10-31 additions at the end)
 
 - Unreal 5.8: https://www.unrealengine.com/news/unreal-engine-5-8-is-now-available
 - Unreal licence: https://www.unrealengine.com/en-US/blog/we-are-updating-unreal-engine-twinmotion-and-realitycapture-pricing-in-late-april
@@ -404,3 +454,11 @@ as it does today.
 - InfiniteTalk: https://comfyui-wiki.com/en/news/2025-08-20-infinitetalk-audio-driven-video-generation
 - Existing solutions: https://intangible.ai/pricing, https://kling.ai/blog/kling-video-3-multi-shot-guide, https://flick.art/blog/behind-ser-loras, https://pjace.beehiiv.com/p/gossip-goblin-s-crazy-workflow-for-building-original-worlds-200m-views, https://aif.runway.com/, https://discuss.ai.google.dev/t/human-review-requested-veo-3-1-reference-images-and-allow-adult-for-a-fictional-17-year-old-character/179169
 - De' Barbari's view (the old Fondaco): `bible/refs/venice-views/barbari-1500_detail_rialto-bridge-and-fondaco.jpg` in the series
+- LTX-2.3 3DREAL IC-LoRA (fal): https://huggingface.co/fal/LTX-2.3-3DREAL-LoRA
+- LTX-2.5 Layout-to-Render IC-LoRA: https://huggingface.co/Lightricks/LTX-2.5-22b-IC-LoRA-Layout-To-Render (reference-frame reports: discussions/5)
+- LTX-2.5 GGUFs: https://huggingface.co/unsloth/LTX-2.5-GGUF
+- Unreal MCP (5.8 docs): https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor
+- No teen MetaHuman: https://forums.unrealengine.com/t/kid-metahuman-body/2446660 ; teen MetaHuman on Fab: https://forums.unrealengine.com/t/inex-m-b-kirill-metahuman-boy-editable-character-with-groom/2731981
+- Daz teen figure: https://www.daz3d.com/teen-tyler-for-genesis-9
+- Megascans no longer free: https://80.lv/articles/megascans-no-longer-free-after-2024/
+- WSL2 Vulkan: https://forums.developer.nvidia.com/t/vulkan-fails-to-detect-nvidia-gpu-on-wsl2-ubuntu-24-04-dzn-driver-files-missing-tested-on-multiple-systems/342142
