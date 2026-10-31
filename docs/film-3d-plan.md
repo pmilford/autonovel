@@ -290,12 +290,20 @@ no prompt puts a figure in every window. Every keyframe prompt carries a
 - *The lights were steady.* The video model paints flame as steady lamps, so
   a pass after it (`flicker.py`) gives each region of the frame its own flame
   rhythm, with about four lights in ten nearly steady.
-- *Found on the way:* Blockout's person model stands facing away from the
-  heading it is given when placed by rotation alone (walkers on a path are
-  right), and its "L" arm joints move the figure's right arm. A pose is
-  checked by reading the exported limb positions, not by eye in a render of
-  round-headed stand-ins. An arm the painter is to read must be on the
-  camera's side of the body.
+- *Found on the way:* Blockout's notes give its arm sign the wrong way round: in the exported
+  figure a negative shoulder angle raises the arm toward the back. Misreading that, the
+  pilot once "turned standing people round", which made them face the opposite way from
+  walkers and sent a rigged model up the inn steps backwards. Standing and walking figures
+  share one yaw (checked against walkers' roots in the export). A pose is checked by reading
+  the exported limb positions, and a rigged model by looking at it moving, not by eye in a
+  render of round-headed stand-ins. An arm the painter is to read must be on the camera's side.
+- *People are 3D models.* The author: "why don't they use already decided 3D models,
+  including hats?" Each person in each costume is a model made from the approved character
+  sheet (TRELLIS.2, native in ComfyUI; `character_model.py`), frozen with a turnaround in the
+  film's `assets/register.yaml` (`asset.py`), approved by the author, then rigged to Blockout's
+  figure (`rig_character.py`) so the staging moves it at the person's own height. Every
+  recurring model (sets, the barge, people) is used only in the version the author approved;
+  an improvement is a new version shown before and after.
 
 **Still to do before adoption:** sharper takes (720p, then RIFE and SeedVR2,
 as for version 1); several takes per shot with a vision pick; the S0105 inn
