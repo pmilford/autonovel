@@ -42,6 +42,20 @@ days). Surveying the teaser path for it found, not yet fixed:
 - `art-curate` still calls Pollinations "no-API-key"; it now needs a key.
 Also: `--dry-run` shows no dollar estimate and nothing records spend.
 
+### Film 3D: round 4 and the whole first minute (2026-10-31)
+
+The 3D pilot rendered the first minute of kingmaker2 overnight from author-approved models only
+(lessons in [`docs/film-3d-plan.md`](docs/film-3d-plan.md), "Round 4"). Still outside autonovel,
+in `~/film-stack/scripts`: `asset.py` (the register: freeze, approve, rig, path), `setkit.py`,
+`rig_character.py` (people and four-legged animals), `shot_layout.py`, `keyframe_from_layout.py`,
+`vace_render.py`, `flicker.py`, `cut_3d.py`, and a sequential GPU job queue. To fold in once the
+author adopts the method: a `/autonovel:set` command (location script, approval views, the
+register), blocking in `shot-list` (staging.json, Blockout), a `/autonovel:shot-render` 3D path
+(layout, keyframe, motion, finish, cut) with a vision judge per take checked against the
+previous round and every author note. Open: models for the touts; the author's approval of the
+proposed tout skiff; a hand-pose tool beyond Blockout's hinge elbow; keyframes from the first
+frame (not the key moment) written into CAMERA.md §8.
+
 ### Film M5: motion from the keyframes, the first night's run (2026-10-30)
 
 **Superseded in direction by [`docs/film-3d-plan.md`](docs/film-3d-plan.md)

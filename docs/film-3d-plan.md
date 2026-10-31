@@ -305,11 +305,57 @@ no prompt puts a figure in every window. Every keyframe prompt carries a
   recurring model (sets, the barge, people) is used only in the version the author approved;
   an improvement is a new version shown before and after.
 
-**Still to do before adoption:** sharper takes (720p, then RIFE and SeedVR2,
-as for version 1); several takes per shot with a vision pick; the S0105 inn
-sequence re-staged to the author's beat order (notes 1 and 3); a cold viewer
-and the author's verdict; then fold the scripts into autonovel commands
-(`set`, blocking in `shot-list`, the keyframe and motion stages).
+**Round 4, the night of 30 October: approved models only, and the whole first minute.**
+The author approved the barge (v3) and a 3D model of each person in their arrival costume, then
+asked for the 19 seconds again and the minute after it, overnight, without them. What changed:
+- *Sets load approved files.* `setkit.approved_asset` places the register's approved version
+  (`asset.py path <name>`) at its home in the set; the kit's builder code is used only to freeze
+  a new version. The side-canal set and a new lagoon set (`film/sets/lagoon.py`: open water, the
+  channel's bricole, Venice as a low line of lights) both load barge v3 this way.
+- *Animals are rigged too.* `rig_character.py` builds a dog's bones on Blockout's `animal.dog`
+  (a body bone on the figure's own root, the legs, neck, head and tail) and fits the model by
+  its feet, not its height (`asset.py rig <name> --figure dog`).
+- *New things are proposals, flagged.* A thing first needed by a new shot (the touts' skiffs) is
+  frozen as a proposed version and loaded onto Blockout's stand-in (`"model"` on the staging's
+  cast entry); the cut's notes name it for the author's approval. A recurring thing the author
+  has approved is never replaced by a proposal.
+- *Riders keep seats.* Each person on the barge has one fixed place in every shot (Jakob at the
+  bow, the carter on the cargo's front edge to port of the mast, the boatman at the stern), so a
+  cut never moves them. Over-the-shoulder cameras are placed by measuring angles to the mast,
+  which otherwise fills the frame.
+- *Joint signs in the export, measured:* shoulder X positive brings the arm forward; shoulder Z
+  positive brings it in toward the body; a negative elbow folds the forearm forward; hips and
+  knees at +1.5 seat a figure. Blockout drops the "sit" gait for a figure riding a boat, so a
+  seated rider is posed with those joints.
+- *Blockout's elbow is a hinge with no twist,* so a forearm across the chest cannot be posed. A
+  hand on the chest seen edge-on reads to the image model as a reach (it painted a hand on the
+  wall, praying hands, a raised palm). Check a gesture from the shot's own camera, and say in
+  the prompt what the hands do not do; with that, the close-up's keyframe put the hand flat high
+  on the coat.
+- *Character sheets can multiply people.* With the layout carrying the real models, the sheet of
+  someone seen from behind made the image model add a second, front-facing copy of him on the
+  steps. Give only the sheets of faces the camera sees, and paint over a layout that carries the
+  models more lightly (denoise 0.65 rather than 0.75).
+- *A keyframe prompt describes frame 0, not the shot's key moment.* The inn shot's prompt
+  described the innkeeper already holding the dog; at frame 0 he is still in the doorway, so the
+  image model painted him twice (and a second dog). The motion prompt carries what happens next.
+- *What the image model may read wrongly from an angle:* a mastiff's ears seen from above and
+  behind read as a cap, and every take put a hat on the dog; the cure was a side-on angle, not
+  more words. A thin oar 30 m off barely shows in the depth guide, and a burchio's two blunt ends
+  look alike from above, so the video model can row from either end.
+- *The depth guide must stay at full strength.* At half strength the close-up drifted away from
+  its keyframe entirely (a tartan coat, bright light, new railings).
+- *A boat's own lantern blocks shots from its deck.* Cameras on the barge looking at the inn
+  steps put the bow lantern in front of the climbers; such shots are framed so the lantern sits
+  low at one side, or taken from the water beside the barge.
+- *720p costs three times 480p:* at 1280×720 the VACE experts' activations fill the 16 GB card
+  and the 14B weights stream from system RAM, about 14 minutes a take against 5; SeedVR2 7B to
+  1080p and RIFE to 32 fps add about 8 minutes a shot.
+
+**Still to do before adoption:** several takes per shot with a vision pick; the S0105 inn
+sequence re-staged to the author's beat order (notes 1 and 3); models for the touts and the
+author's approval of their skiff; a cold viewer and the author's verdict; then fold the scripts
+into autonovel commands (`set`, blocking in `shot-list`, the keyframe and motion stages).
 
 ## What doesn't change
 
