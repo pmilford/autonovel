@@ -271,6 +271,32 @@ The water's ripples move with the frame. Repeated windows vary their light, and
 no prompt puts a figure in every window. Every keyframe prompt carries a
 "worn and dirty" clause.
 
+**The author's second notes, and what round 3 changed:**
+- *The boat looked motorised and never turned.* A shot's subject decides the
+  angle: a turn is shown from across the water, square to the side canal's
+  mouth, the boat on a smooth curve at a walking pace with its oar sweeping
+  (`shot_layout.py --row`). Boats are modelled as boats: an open hull with
+  freeboard and separate bales, not a raft with one block of cargo, which
+  the image model paints as a floating platform of crates.
+- *The water-gate read as open water.* What lies behind an opening is built
+  and lit (here an unloading room with goods, a hoist and a lamp), or the
+  painter fills the dark with whatever it likes.
+- *The people changed between shots.* The image model invents costumes it is
+  not given. Each shot names the wardrobe scene every person wears, and their
+  words come from the character bible, the prompt_core then
+  `wardrobe.by_scene[scene]` (`film_prompt.py`). Clothes change through a
+  film, so the costume belongs to the bible's scene, never to the shot.
+  Props seen in several shots (the barge) have one shared description.
+- *The lights were steady.* The video model paints flame as steady lamps, so
+  a pass after it (`flicker.py`) gives each region of the frame its own flame
+  rhythm, with about four lights in ten nearly steady.
+- *Found on the way:* Blockout's person model stands facing away from the
+  heading it is given when placed by rotation alone (walkers on a path are
+  right), and its "L" arm joints move the figure's right arm. A pose is
+  checked by reading the exported limb positions, not by eye in a render of
+  round-headed stand-ins. An arm the painter is to read must be on the
+  camera's side of the body.
+
 **Still to do before adoption:** sharper takes (720p, then RIFE and SeedVR2,
 as for version 1); several takes per shot with a vision pick; the S0105 inn
 sequence re-staged to the author's beat order (notes 1 and 3); a cold viewer
