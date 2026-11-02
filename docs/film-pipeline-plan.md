@@ -38,6 +38,12 @@
 > built once in 3D (Blender) that fix layout, camera and light positions,
 > with AI making the look, piloted on one location first, is
 > [`film-3d-plan.md`](film-3d-plan.md).
+>
+> **Paused, 2026-11-02:** after version 1 and thirteen rounds of the first minute, none good
+> enough to show, the author stopped the film work to return to the books. The writing stages
+> (M1, M3–M4) stand as shipped commands; moving film did not reach the quality to go on. What
+> was built, what went wrong and what to do differently is
+> [`film-postmortem.md`](film-postmortem.md).
 
 ## 1. Where we are
 

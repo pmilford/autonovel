@@ -3461,7 +3461,22 @@ fold into autonovel commands only once the author adopts the method. The
 series `.gitignore` template's film block gains the 3D pilot's rebuildable
 outputs (blend files, Blockout exports, layout frames, 3D takes).
 
+### 2026-11-02 — the film work paused; the post-mortem
+
+After version 1 and thirteen rounds of kingmaker2's first minute (the 3D pilot's rounds 1–8c,
+the last rendering every rigid thing from the set and compositing only people and water), none
+was good enough to show and none was judged better than version 1. The author paused the film
+work to return to the books. `docs/film-postmortem.md` is the record: what was built (the
+writing stages M1 and M3–M4 ship as tested commands; moving film did not reach the bar), the
+rounds and their verdicts, what went wrong worst first (the tools' ceiling and the plan's stop
+point passed, a method changed every round, the whole minute rendered instead of one shot, the
+author as the quality gate, untested renders hiding bugs such as lanterns that never lit,
+documents that disagreed, people left to the models), what worked, and what to change before
+rendering resumes. The film plans, README, CLAUDE.md, help and the series template point to it.
+The writing commands are unchanged.
+
 ## Tests last known green
+- Tier 1 + Tier 2 (deterministic + contracts): 2026-11-02 (the film post-mortem; docs, help and the series template point to it) — **2504 passing, 1 skipped** (+0).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-30 (the 3D pilot: plan's results section; the series .gitignore template ignores the 3D outputs) — **2504 passing, 1 skipped** (+0).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-30 (the film block of the series .gitignore template gains moving takes and cuts; docs only otherwise) — **2504 passing, 1 skipped** (+0).
 - Tier 1 + Tier 2 (deterministic + contracts): 2026-10-29 (film M3–M4: CAMERA.md, shot-list, storyboard, table-read, animatic; the footer walks the film pipeline) — **2504 passing, 1 skipped** (+82).

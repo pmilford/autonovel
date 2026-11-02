@@ -61,7 +61,8 @@ they are the *prompt material*, not project documentation):
   change ledger), period dialogue register, a page a minute in eighths,
   the screen rubric and tests SC1–SC12, and the script's cold reader;
   `/autonovel:screenplay` reads it every run (the film plan is
-  [`docs/film-pipeline-plan.md`](docs/film-pipeline-plan.md)).
+  [`docs/film-pipeline-plan.md`](docs/film-pipeline-plan.md); moving film is paused, and
+  why is [`docs/film-postmortem.md`](docs/film-postmortem.md)).
   `CAMERA.md` is the director's and DP's half: shot grammar, coverage
   and the viewpoint, motivated moves, the 180° line, screen direction
   and eyelines, continuity, how long a shot runs, motivated period

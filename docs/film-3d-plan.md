@@ -4,6 +4,10 @@
 > moving minute of kingmaker2 (`docs/film-pipeline-plan.md` M5 pilot). Research
 > by three agents on 2026-10-30, with sources below; prices, licences and
 > versions move monthly. Nothing is built yet.
+>
+> **Paused, 2026-11-02**, after round 8c: the 3D sets held the places and props, but no round
+> was better than version 1, because the people drift and don't act. The post-mortem is
+> [`film-postmortem.md`](film-postmortem.md).
 
 ## The problem
 
@@ -406,6 +410,289 @@ RAM), and users report Layout-to-Render's reference taking hold only near the en
 Next: test both on S0104-06 and S0104-01 from the existing set renders. Hosted alternatives
 (Runway Aleph 2, Luma Ray3 Modify) may refuse a 14-year-old; Sora 2 is discontinued; Google's
 Flow model does not take images of minors in the UK and EEA.
+
+## Round 5: rendered from the set with LTX, and what the critic and the author found (2026-10-31)
+
+**The method.** Each shot is rendered from the Blender set at 24 fps (`shot_layout.py --fps 24
+--surfaces 1 --film 1`, with the boxes pass). Its first frame is painted over that render with the
+shot's reference sheets (`keyframe_from_layout.py`). LTX-2.3 with fal's 3DREAL IC-LoRA then
+renders the shot, holding the set render as its guide and the painted frame as its look
+(`ltx_render.py --ref ... --match-ref`). Geometry now holds through every shot: one oar, the same
+house and bridge, the passers-by where they are staged. Without the painted frame, LTX only
+copies the plain render.
+
+**The first pass.** The cold critic found 10 high faults, 15 medium and 17 low. The author's
+notes added six, and the critic had missed two of them:
+- **The carter looked small** (missed). His approved height was 1.70 m beside Jakob's 1.64 m.
+- **Round 4 had "a nicer feel, with debris and activity"** (missed): "I don't like it when we
+  regress rather than improving everything". The packet had no frames of the previous round to
+  compare with.
+
+Each fault was traced to a general cause, and the fix went into the tools, not the shot:
+- **Boats face their path.** The staging tool turns every moving thing to face where it's going.
+  A barge staged to drift sideways swung 90°, carrying the seated carter into frame standing.
+  Straight legs meeting at a mark turned a barge 17–22° in one frame. `staging_check.py` now
+  fails a sideways leg (over 30°) and a corner at a mark (over 10°). Turns are staged as one leg
+  bent through `via` points, which `blockout_stage.mjs` passes to Blockout as a Catmull-Rom
+  curve.
+- **Nobody rowed.** `--row` swept the oar of the set's own moored barge, which is hidden whenever
+  the approved barge model is in the shot. The boatman is now staged at the approved barge's
+  oar, with his hand on its loom; the pose is measured in Blender before rendering. In the
+  export, joint signs run opposite to Blockout's own notes for hips and shoulders, and a rider's
+  mark heading is not to be trusted.
+- **Grime floated in the air.** Wall-grime decals were placed across openings, so two slabs of
+  brick hung over the water-gate. `setkit.stains` and `damage` now take `skip` spans.
+- **The quay was hidden.** The waterline band stood 1.3 m above the edge of the Fondaco's quay.
+  `waterline(cap=...)` stops it at the quay's top.
+- **A grey stand-in read as "a white person".** A moored ferry with an unstaged grey ferryman
+  read as "a sunk boat with a white person". Sets hold no standing figures; people are staged,
+  with approved models.
+- **The water was a mirror.** The ripples were sized to the water plane, so on the 500 m Grand
+  Canal they were 55 m across. They are now sized in metres: a faint chop over a swell. A strong
+  chop seen from afar shatters every reflection into dark noise. Moving boats get a V-shaped wake
+  with foam.
+- **The lantern read as a garden light.** The approved barge (v3) carries an older plain horn
+  tube, and at the render's exposure it bleached to cold white. Its glow is now dim, deep amber
+  at render time. Fitting the new lantern needs a new barge version, for the author to approve.
+- **The dog changed colour.** Firelight on the black approved dog was painted as brown fur, then
+  turned black a second into the shot. `shot_layout.py --passes matte` and `fix_figure.py` put
+  the painted dog back to its model's colour inside its outline.
+- **The bible described actions, not looks.** The boatman's look said "carrying travel bags",
+  and the carter's dress said "sitting on the bales". Both were written into every shot's prompt.
+  A look describes the person; what they do is staged per shot.
+- **The light had been pushed too dark.** After the critic's "dusk, not night" the light went
+  darker, and the author preferred round 4's warmth. The starlight stays at 8, and the warmth
+  comes from motivated light: lanterns at the Fondaco's land gate, with goods and porters on
+  its quay.
+- **The critic's packet now:**
+  - counts only who is in frame;
+  - gives each person's approved height;
+  - lists what each person carries;
+  - shows the previous round's cut beside this one for every shot (`<shot>_vs_previous.jpg`),
+    with "what got worse" as a pass of its own. A regression is a high finding.
+- **The cut** (`cut_3d.py --head 3`) drops the painted frame's lead-in flash, and interpolates a
+  slowed 24 fps take to 32 fps instead of repeating frames.
+
+**Heights.** The author chose the carter at 1.76 m and Jakob at 1.55 m. These are new approved
+versions of the same models (carter v2, Jakob v4).
+
+**Still to do.** The look is not yet Venetian enough ("the scene doesn't look particularly
+venitian"). What makes Carpaccio's Grand Canal of 1494 read as Venice is boats with boatmen
+everywhere, Gothic tracery, roof terraces and the Rialto's shape. The boats and boatmen need
+approved models first. The travel bags the boatman carries in the book are a proposed prop,
+awaiting approval.
+
+**LTX copies the set's light, so round 5c goes back to Wan** (measured on S0104-07, the wide
+shot, against round 4 frame by frame):
+- *Why every round-5 shot was darker and colder than round 4.* LTX settles on its guide's own
+  colours within about a second. The painted first frames were as bright as round 4's (mean
+  red 40 against 36), but the set render they guide is dark and blue (22, 22, 31), and the shot
+  ends up looking like the render. Per-channel gains on the guide (`ltx_render.py --match-ref`)
+  and a histogram match of the guide to the painted frame (`--match-tones`) warmed it a little,
+  not enough.
+- *Wan VACE reading only the set's depth* (`vace_render.py --control depth`, round 4's route)
+  takes its colour from the painted frame and its geometry from the current set. From the same
+  painted frame, the wide shot is warm and lamp-lit again, with porters on the quay and people
+  on the bridge, and keeps round 5's fixes: the barge's curved turn, the boatman at the oar, no
+  ferry. LTX stays for shots whose look is the set's own.
+- *A depth guide must be ranged to its shot.* The depth pass maps 0.6–80 m, made for close
+  shots. From the high window, the barge 50 m off and the water around it came out within one
+  grey level of each other, in round 4 as now. So the guide showed no boat, and Wan invented one:
+  in both takes the barge's bow curled up into a gondola's. A shot's `depth_range` in the staging
+  (here 10–200 m) passes `--depth-near/--depth-far`. The barge, its mast, its awning and its
+  people then stand out, and nothing near the camera clips to white.
+- `vace_render.py --res 704` takes frames painted at LTX's 1280×704, and a layout pass in a
+  subfolder (`layout/<shot>/r5c`) names its takes after the shot.
+- *A prompt must name what the set holds.* The quay's bales and porters were painted as grey
+  blocks and statues until the first-frame prompt said what they are.
+- *Negative prompts do nothing here.* Wan with its 4-step Lightning LoRAs runs at cfg 1, where
+  the sampler never reads the negative prompt (the distilled Klein and LTX run the same way). So
+  every "gondola, upswept prow" in a shot's `negative` was ignored. The gate's padlock, which
+  the depth guide is too fine to carry and the motion prompt never named, vanished after the
+  first frame, and a black boat appeared at a wall the guide shows bare. What must stay, and what
+  must not appear, is said in the prompt itself: "held shut by a chain and padlock the whole
+  time", "nothing moored at the wall". `vace_render.py` now says so when given a negative.
+- *The cut drops the painted frame* (`cut_3d.py --head 2` at 32 fps). Wan keeps the keyframe as
+  frame 0 and moves away from it at once: the close-up's face, cap and background jumped between
+  frames 0 and 1 (a frame difference of 18.6, against about 1 after it).
+- *A match grade to the round the author preferred* (`grade_match.py`: per-channel tone curves
+  mapped onto the previous round's same shot, one fixed curve per shot so it cannot flicker)
+  brings back the warmth a new route loses. It cannot move light that was never there: round
+  4's painter lit the Fondaco's front, and no grade does that.
+- *The critic's packet shows only what the cut uses.* The inn shot's take runs 5 s, but the cut
+  uses 2.5 s; the critic's worst findings there (the boatman leaving the bow, the dog hidden)
+  came after the cut ends. The packet's takes are now graded like the cut and trimmed to it.
+- *Where retakes stop helping.* The cold critic read the cut four times overnight, each after
+  fixes (5c, its grade, the padlock and boots retakes, 5d's repainted frames). Each pass fixed
+  several faults, and the video model invented a few new ones in its fresh takes (a cloudy sky in
+  the water, a lamp post on the quay, a second oar). What remains needs decisions that are the
+  author's: the night level against their preference for round 4's warmth; new versions of
+  approved models (the barge's cover, awning, mast and lantern; Jakob's hair and cap; the
+  boatman's cap; the dog's build); the bridge rebuilt in the set; restaging. The critic's last
+  list, with what each fault needs, is the series' `film/reviews/critic_r5d.md`.
+- *Jakob's hair paints blond from behind,* in the gate and inn shots, though the set renders his
+  model's hair auburn, the prompt says "not blond", and painting more lightly (0.68) changes
+  nothing. A colour correction inside his outline also caught his cap and coat, which share the
+  hair's hues in lamplight. Open.
+
+## The author on round 5d, and round 6: back to version 1's method (2026-11-01)
+
+The author on round 5d: "overall the progress is very poor. grand canal water is still. there are
+now too many people around. most of the assets are worse looking. the start are too bright. the
+lights don't flicker. the bridge shops are too uniform." Then, after rewatching version 1: "we seem
+to have only regressed since then ... Almost everything looks worse."
+
+**Why.** In version 1 the image model painted each shot as a whole picture from its description
+and the character sheets, and Wan animated that picture freely (image to video). It drew Venice
+from everything it knows: Gothic palaces with tracery, true night, close and cinematic framing,
+people with character, water and flames that move. The 3D rounds made every shot from a model of
+the place, to stop the changes version 1's notes named (the gate morphing, one oar then two, the
+carter missing). The painter had to keep the model's shapes and the video model its depth, so the
+look came from the model too: box buildings with identical windows, small doll-like people, flat
+water, dusk light (the set is lit to be painted over), and no room for the video model to add
+life. Round 5 added photographed textures that read as CG, too many people and too much rubbish,
+and dropped the flicker pass (`flicker.py`), which round 4's cut had used. Each round was checked
+only against the one before it, so the slide from version 1 never showed: the comparison is now
+against the best version so far.
+
+**Round 6** is version 1's method with the checks built since, in its own workspace (`film/r6/`,
+symlinking the shot list, bible, animatic and audio; its own `storyboard/` and `render/`):
+- *Storyboard frames from the description and the sheets,* through the storyboard tool
+  (`autonovel mechanical keyframe-render`, `keyframe-verdict --take N`), with the author's notes
+  written in: the wide shot from the side canal's bank as asked in version 1's note 12 (the
+  barge turning in off the lit Grand Canal, the wooden Rialto with its shops, the Germans' house's
+  flank with merchants at supper); the gate chained and padlocked, with a landing behind it; one
+  hand on Jakob's chest; the boatman waiting on the bow, hands empty; the dog sniffing the carter
+  first. Several takes per frame, picked by eye against the notes: of fifteen wide-shot takes,
+  three drew the later stone Rialto, three put lamp posts on the quays, three lost Jakob.
+- *Image to video* (`shot_render.py --film film/r6`), with the motion prompts edited for the
+  notes. `keyframe_for` now resolves a select written relative to the book's `film/` folder
+  when the round has its own workspace.
+- *Static shots hold.* Three takes of the close-up turned Jakob away to walk to the gate beside
+  him, whatever the prompt said. `shots.<id>.hold: true` in the render manifest renders
+  first-and-last-frame (`WanFirstLastFrameToVideo`, the keyframe at both ends), so the shot ends
+  where it began; the held take keeps him at the bars, face up, one hand on his chest.
+- *Finishing* as version 1 and round 4: SeedVR2 to 1080p, RIFE to 32 fps, then `flicker.py`.
+- *The critic* compares with version 1 (`critic_packet.py --previous cut/v1_first_minute_30-49s.mp4
+  --boxes none --prompts-from film/r6`): no 3D boxes, and what each frame and motion were asked to
+  be comes from the round's own storyboard and render manifests.
+- *The look bible* now asks for a few faint stars and a few people at work, not a crowd.
+
+The author on round 6: "overall much better looking", so version 1's method stays. Their one
+note was that the inside of the water-gate "looks different again - we should design it". Behind
+the bars, every version had drawn a different place. The gate is now designed as the author
+chose, a covered dock you unload in. It has a location file that separates what the record shows
+from what is design, a `kind: sheet` manifest rendered by `keyframe-render` like a character's
+(views by day and at the scene's hour), and a plan in the set's coordinates. The author approved
+it, then found the inn on the wrong side of the gate in its first plan. The 3D set had the
+geography right: down the Grand Canal, left into the side canal short of the bridge, the Germans'
+house on the right, and the inn past it. But the shot list's inn shots, written before the set,
+were mirrored, so versions 1 and 6 drew the inn shot mirrored too, and no critic noticed. The set
+now carries the approved dock. The shot list and the location files are corrected to the set, and
+round 7's frame descriptions follow it. Two lessons for the commands: a recurring place gets a
+sheet and a plan like a person, and the critic must check which side each landmark is on against
+the set's plan, not only what is in the frame.
+
+## Round 7: one sheet per recurring thing, developed at 480p (2026-11-01, evening)
+
+The author's rules for this stage:
+- "Consistency is the most important point, once it is consistent, it is easier to correct or change as well." Every recurring person, prop and place has one approved sheet, and every frame it appears in references that sheet. Round 7's frames reference Jakob's sheet (his arrival clothes were already on it; round 6's wide shot had simply not referenced it), the water-gate's sheet and the new bow-lantern sheet. A change becomes a new version of the sheet, applied everywhere at once.
+- "We are iterating too slowly." The faults are consistency, geography, models and moving water, none of which depend on resolution, so development rounds render at 480p with no AI upscaling (`shot_render.py --res 480`, now the default; finishing is RIFE and the flicker only) and spend the time on more takes.
+
+Measured, a 5-second take: at 720p, 20 minutes on the 3060 and about 11 on the 5060 Ti, with SeedVR2 adding 19 and 7 minutes; at 480p, 5.2–5.8 minutes on the 3060 and 3.2 on the 5060 Ti, finished with RIFE in 4 seconds. Round 7, thirteen 480p takes and the cut, took about 80 minutes on the 3060, where four hours would have been needed at 720p with upscaling. It all stays on the 3060, which keeps the 5060 Ti, the card that drives the monitor, free for the author's desktop. Two video servers can't run at once inside WSL's 40 GB, because each holds about 26 GB of RAM. "Both cards" therefore means video on one and storyboard frames on the other.
+
+Round 7 also fixes the geography, as above. The wide shot now looks back from the gate down the side canal to the Grand Canal, with no bridge, because from inside the side canal the Rialto is hidden behind the Germans' house.
+
+## Design once: the method reconsidered after the barge sheet (2026-11-01, night)
+
+The author on the barge sheet painted from the approved model:
+
+> the barge looks mostly good. in the side day shot, the squared front of the barge looks missing/transparent. the oar in the back is floating and no in anytype of oarlock - your critic/you should see both. the night view and day view have different masts, lanterns and canvas deck covers. why can't they be consistent? why do I have to find the problems - I can't specify and study every artifact in every shot. we should be design once and they stay constant. review again unreal and unity and similar tools.
+
+**Two failures.**
+
+The first is a process failure. Sheets went to the author without the cold critic, so nobody compared one view with another or asked whether each part could work. Now every sheet goes through the critic first. It checks every view against every other part by part, checks that each part is physically real (attached, supported, solid, working), and checks the sheet against the approved model. Only then does the author see it.
+
+The second is the method. An image model redraws every object from scratch every time, so two drawings of one barge drift, however good the reference. All of the author's recent findings are about rigid things that must not change: the gate, the lantern, the barge, the bridge, the Germans' house, the inn steps, and the costume. In a renderer those are the same objects every time, by construction.
+
+**Why the 3D rounds still looked worse.** Two causes, both avoidable:
+- The models were untextured blockouts.
+- The AI pass (LTX, then Wan from depth) redrew every surface, so the look changed from shot to shot and fell below the paintings.
+
+**The method that keeps a design constant.**
+
+1. **A rigid thing is a 3D model, with its look designed once.** The approved painting is projected and baked onto the model as its texture. Tools for this: StableGen in Blender, through ComfyUI; Hunyuan3D-Paint's multiview bake; plain camera projection for fronts. The critic checks it from several angles, the author approves it, and it is frozen. A change is a new version.
+2. **The plate is rendered and never redrawn.** The set and props come from the renderer, with lanterns as real lights.
+3. **The AI only adds what 3D does badly:** people, moving water and flame. These are generated inside masks and composited back onto the plate, so every pixel outside a mask is the renderer's. VACE's masked inpainting alone won't keep the rest of the frame untouched; users report it redraws more than the mask. So the composite, not the model, guarantees it.
+4. **People stay consistent through a LoRA** trained on the approved sheet, with every frame referencing the hooded views. They are composited like water and flame.
+
+**The engine.** The method matters more than the engine:
+
+- **Blender** (in use) runs in WSL. Its sets are scripts a person can rerun. It renders with Cycles or EEVEE on both cards and can make water ripples and wakes (ocean modifier, dynamic paint). It already holds the barge v3 model and the side-canal set. Weaknesses: no MetaHumans, and many-light night scenes are slow in Cycles.
+- **Unreal Engine 5.8** (the last UE5; UE6 previews late 2027) has the strongest real-time realism: Lumen, MegaLights now production-ready, a water system and the path tracer. It has an official MCP server and Fab's asset market. Costs:
+  - it is Windows only, so an install the author would have to make;
+  - there are no 1473 Venice assets (the scanned Venice kits show the modern city);
+  - MetaHuman still has no 14-year-old, and close-ups read as a game;
+  - Megascans are no longer free;
+  - it takes weeks to learn.
+  It is free under $1M of revenue.
+- **Unity 6 (HDRP)** renders about as well, with weaker film tools and fewer high-end assets. Its official AI MCP needs a paid Unity AI subscription; community MCPs (Coplay) are free. No advantage here.
+- **Godot** is not film-grade. **Omniverse** is heavy and built around USD; too much for this.
+
+**The author's decision:** "we will compact then do the barge in blender and proceed - the problem is not individual objects - we should be able to change them trivially and have the scene rerender corrected. it is the process, the constant changing and morphing of objects, the incorrect geometries." So the goal is a process, not one better asset:
+- Every shot is rendered from one 3D scene per location, which references versioned assets (`film/assets/register.yaml`) with their approved looks baked on.
+- Changing an asset is one edit, a new version, and a script re-renders every shot that contains it, corrected.
+- An image model never draws rigid geometry.
+
+**Recommendation.** Keep Blender and change the method. Prove it first on the barge: bake the approved painting onto the v3 model, fix the model's bow end and give the oar an oarlock (v4), then render it by day and at night from the angles of S0104-07 and S0105-01. If it holds its look and stays identical, do the same for the lantern and the gate. Then render round 8's plates with people, water and flame composited in. Unreal stays the fallback if Blender's night light can't reach the look; the assets move to it as FBX or USD.
+
+Sources:
+- Unreal Engine 5.8: https://gamefromscratch.com/unreal-engine-5-8-released/ and https://www.guru3d.com/story/unreal-engine-58-debuts-lumen-lite-and-productionready-megalights/
+- MegaLights: https://dev.epicgames.com/documentation/unreal-engine/megalights-in-unreal-engine
+- Unity AI MCP: https://gamedev.net/news/4376-unity-ai-open-beta-how-to-get-started-with-mcp/
+- Coplay's MCP for Unity: https://docsearch.algolia.com/mcp/docs/repo/coplaydev/unity-mcp
+- VACE inpainting and its limits: https://comfyai.run/documentation/WanVACEInpaint and https://reddit.sentinel-team.org/posts/1sglz7b/snapshots/2026-04-09T15%3A42%3A50.429038Z
+- Texture baking: https://www.runcomfy.com/comfyui-nodes/ComfyUI-Hunyuan3DWrapper/hy3-d-bake-from-multiview and https://redlib.hbubli.cc/r/comfyui/comments/1kpwnx0/stablegen_released_use_comfyui_to_texture_3d/mt25uke/?context=3
+
+## Round 8: the whole first minute by the new method (2026-11-01 to 02, overnight)
+
+The author: "do a full minute with the new approach with your best object models." Every shot's plate was rendered from the 3D set: the side canal with photographed surfaces, barge v4 (unapproved, used on the author's instruction), the approved dock gate, and lanterns as real lights. The image model painted only the people over each plate's lit first frame. The video model (Wan VACE, guided by the set's depth) moved the people and the water, and `composite_plate.py` kept the plate everywhere outside the people and water mattes. Thirteen shots, cut to the minute's slots: `film/cut/seq_01_first_minute_r8.mp4`.
+
+**What the night found in the method, each fixed once for every shot:**
+- *No lantern in any set had ever lit anything.* Each lantern's light sits inside its horn panes, and the panes stopped shadow rays. The gate rendered black on black, the barge read as a black toy, and every 3D round was darker and bluer than the paintings it was compared with. `shot_layout.py` now makes the horn and flame materials transparent to shadow rays only. Once the lanterns lit their walls and water, the plates came close to the night the look bible describes.
+- *The set's map labels* ("GRAND CANAL", "RIALTO BRIDGE") came out white in the mattes and the depth; they are hidden in every pass.
+- *The video model's water* was a bright, cloudy sky reflection. The composite now levels it to the plate's own water.
+- *Its people drift to white* within two seconds. The composite holds each person's colour to their first frame, inside their own matte. One hold over all the people turned Jakob green as the boatman's red jacket grew in frame.
+- *The painter copies the 3D people models* at the usual strength (denoise 0.72). Jakob's model has a soft face, curls and an open coat with no cape, so he came out girlish and capeless. At 0.82 the painting follows his approved sheet instead.
+- *Running two kinds of job on one GPU server* breaks things. The finishing step's memory watchdog interrupts whatever the server is running. A painting run that failed left its old takes to be composited as if new. On the 3060, three reference pictures at full size exhaust its memory, and the error reads "device not ready". Each now has a guard (`keyframe_from_layout.py --ref-mp`, old takes cleared, finishing only after the motion).
+
+**The critic: worse than version 1** (`film/reviews/critic_r8.md`). The rigid things finally held: the Fondaco, the gate, the steps and the barge are the same objects in every shot, and the barge is the square-ended burchio throughout. But version 1's painted frames are warmer, richer and more alive in nearly every shot. In round 8:
+- Jakob changed costume between shots;
+- the story's actions didn't happen (the tout, the dog and the innkeeper only stand);
+- one shot still had round 2's camera.
+The people are where this method is weakest: they are painted once per shot and then moved by a model that sees only depth.
+
+**Round 8b and 8c, the same night.** Round 8b fixed:
+- the sky: blue-black, not a blue wash;
+- the gate: the white stone arch of its approved sheet;
+- the inn shots: a lower exposure;
+- S0104-07: restaged from the inn steps, as its shot list says;
+- Jakob: repainted at the higher denoise;
+- colour: each person's held separately.
+
+The critic still found it much worse than version 1 and level with round 8 (`film/reviews/critic_r8b.md`). Four shots were better: S0104-07, Jakob in S0104-09, his colour in S0105-01, and the sky. Three regressed. Its worst findings are in the people:
+- Jakob, the carter and the dog change from shot to shot;
+- nobody acts;
+- the touts are dressed wrong;
+- the bow lantern on the barge model is a box, not the approved horn lantern;
+- the bridge reads as a modern footbridge.
+
+One fault was the finishing's: the grade toward version 1 turned the inn shots' black dog and Jakob's coat blue, because those plates are warm now that their lanterns work. Round 8c keeps the inn plates' own colour at round 8b's brightness and grades the lagoon harder toward a neutral night (`film/reviews/critic_r8c_check.md`).
+
+**What the method still needs**, in order:
+1. A new version of Jakob's 3D model with his sheet's face, hair and cape, since the painter follows the model.
+2. Staging that acts: the tout leaning, the dog pushing under the hand, the innkeeper taking the collar, posed in Blockout so the depth guide carries the move.
+3. A per-person LoRA from the approved sheets, so a face holds across shots.
 
 ## What doesn't change
 

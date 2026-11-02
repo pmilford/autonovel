@@ -55,6 +55,41 @@ on every earlier round's notes (v1's sixteen, rounds 1-3); rank wrong head count
 boats high. Test LTX render-to-real (3DREAL, Layout-to-Render) on the existing set renders; see
 [`docs/film-3d-plan.md`](docs/film-3d-plan.md), "The author on round 4".
 
+Round 5 (LTX from the set, 2026-10-31) adds to the command:
+- the previous round's cut beside this one per shot, with "what got worse" as its own pass. The
+  author: "I don't like it when we regress rather than improving everything". A regression is a
+  high finding.
+- each person's approved height, since the critic missed a carter no bigger than the boy.
+- counts only of who is in frame (from the boxes pass).
+
+The staging gate also fails a boat that drifts sideways or turns at a corner; turns use `via`
+points. Open:
+- a new barge version with the new horn lantern;
+- the boatman's travel bags, as a proposed prop with a preview at their own scale (`asset.py`
+  previews are boat-scale);
+- the Venetian look: boats with boatmen (models to approve), Gothic tracery and roof terraces;
+- fold `fix_figure.py`, the matte pass and the wake into the shot-render command. See "Round 5"
+  in the plan.
+- choose the video model per shot by what carries its look: Wan VACE on depth when the look is
+  the painted frame's (night, lamplight), LTX 3DREAL when it is the set's own. LTX settles on the
+  guide's colours, which regressed round 4's warmth in every round-5 shot;
+- round 6 went back to version 1's method (painted from descriptions, image to video) after the
+  author found every 3D round worse than version 1. Fold into the commands: a round's own
+  workspace; the storyboard's several takes per frame picked against the notes; `hold` for static
+  shots in the render manifest (first-and-last-frame); `flicker.py` in finishing; the critic
+  compared with the best version so far, not only the previous round;
+- rewrite every shot's `negative` as positive statements in its prompts (Wan, Klein and LTX run
+  at cfg 1, which never reads a negative), and have the shot-prompt critic flag a must-not that
+  lives only in a negative;
+- build the critic's packet from what the cut shows (graded, trimmed to the slot, the painted
+  first frame dropped) inside `critic_packet.py`, not by hand;
+- set each shot's depth range from its own camera (nearest and farthest staged thing) in the
+  shot-render command, instead of the staging's hand-set `depth_range`; a wide shot at the
+  default 0.6–80 m gives a guide with no boat in it;
+- Jakob's hair paints blond from behind though his model's hair renders auburn; find a fix that
+  does not touch his cap and coat (a hair-only matte from the model, or a new model version with
+  darker hair, for the author to approve).
+
 ### Film 3D: round 4 and the whole first minute (2026-10-31)
 
 The 3D pilot rendered the first minute of kingmaker2 overnight from author-approved models only
@@ -68,6 +103,47 @@ register), blocking in `shot-list` (staging.json, Blockout), a `/autonovel:shot-
 previous round and every author note. Open: models for the touts; the author's approval of the
 proposed tout skiff; a hand-pose tool beyond Blockout's hinge elbow; keyframes from the first
 frame (not the key moment) written into CAMERA.md §8.
+
+### Film 3D: round 8, the plate method over the whole minute (2026-11-02)
+
+**Paused.** The author stopped the film work on 2026-11-02 to return to the books; the
+post-mortem, with what to change before rendering resumes (one shot first, one change per
+round, self-testing renders, people first, one source of truth for geography, versioned
+scripts, stop rules), is [`docs/film-postmortem.md`](docs/film-postmortem.md). The items below
+wait for that.
+
+Round 8 rendered every rigid thing from the set and composited only people and water from the
+video model ([`docs/film-3d-plan.md`](docs/film-3d-plan.md), "Round 8"). The critic still found it
+worse than version 1, and the faults left are in the people and the documents, not the set:
+- **Jakob's 3D model needs a new version.** The painter copies the model at the usual denoise
+  (0.72): its soft face, curls and capeless coat came out in every shot where he is large. The
+  model must wear his approved sheet's face, straight auburn hair and grey hooded cape. Until
+  then, paint close Jakob shots at 0.82.
+- **Staging that acts.** The tout, the dog and the innkeeper only stand, because their stand-ins
+  stand and the video model follows the depth. Pose the moves in Blockout (joints per mark):
+  the tout leaning out of his skiff alongside (S0104-05 needs restaging, its skiff lit by its
+  own lantern), the dog's head under the hand, the innkeeper's hand on the collar.
+- **A per-person LoRA** from the approved sheets, so faces hold from shot to shot.
+- **The documents disagree on sides.** geography.md and the staging differ for S0104-03, -05,
+  -06, -09 and S0105-04 (which side the carter, Jakob or the gate is on). One source must win,
+  and shot-check should compare them.
+- **Stand-ins visible in reflections.** The plate's water reflects the 3D stand-ins (a green
+  streak under the touts in S0104-04): hide them from reflection rays in the lit pass.
+- **The barge's lantern is not the approved bow lantern.** Barge v4 carries the kit's horn
+  cylinder on a post, which reads on screen as a glowing box or an electric lamp; the approved
+  sheet is a horn lantern under a pierced iron cone on an iron arm. Barge v5 with that lantern,
+  and a visible flame; the same for the set's water-door and post lanterns, which read as street
+  lamps.
+- **The set's Rialto reads as a modern cable footbridge** (a level lattice deck between masts),
+  and open sea shows beyond it: rebuild after Carpaccio with humped ramps and shops, and close
+  the view with the city.
+- **S0104-01 needs restaging closer**: version 1's boat is large and lit by its lantern; the 3D
+  barge is a small backlit silhouette at any exposure.
+- **The grade toward version 1** suits cold plates and harms warm ones (it turned the inn's black
+  dog blue): grade per shot by measuring, and keep a warm plate's own colour.
+- **Fold into the commands:** the lit-plate composite (`composite_plate.py`: water levelled to the
+  plate, each person's colour held in their own matte), the per-person mattes, the label and
+  lantern fixes in `shot_layout.py`, and the runbook's GPU rules 8–10.
 
 ### Film M5: motion from the keyframes, the first night's run (2026-10-30)
 
@@ -133,6 +209,28 @@ usable, 3 poor, one shot with no usable take. What the run teaches:
     character's and passed as references wherever the prop is in frame) and
     a **neighbour check** in the vision pass, comparing each shot with the
     shots either side for light, props, wardrobe and who is where.
+    **Places need sheets too** (the author, 2026-11-01: "the interior of the
+    water gate looks different again - we should design it"; every version
+    drew a different place behind the bars). The first is
+    `bible/sheets/fondaco-water-gate.json`: a `kind: sheet` manifest
+    rendered by `keyframe-render` like a character's, with a plan from above
+    (metres, where each shot's camera stands) and views by day and at the
+    scene's hour, from a location file that says what the record shows and
+    what is design. `/autonovel:storyboard` step 4 should make one for any
+    place or prop seen in two shots or more, put the design question to the
+    author when the book and the record leave it open, and pass the sheet's
+    views as `refs` to every frame of it.
+    **Develop at low resolution.** A film's development rounds should render at 480p with no AI
+    upscaling, keeping high resolution for a few previews and the final. The author, 2026-11-01:
+    "we are iterating too slowly"; the faults were never about resolution. The film commands
+    (`/autonovel:animatic` and the render step still to be written) should default to this and
+    say so.
+    **Check sides against the plan.** The same afternoon the author found the inn on the wrong
+    side of the gate. The shot list's inn shots had been written before the set and were
+    mirrored, two rounds were drawn from them, and no critic saw it. `shot-check` should compare
+    each shot's left and right with the set's plan when a set exists. The storyboard's vision
+    check and `critic_packet.py`'s brief should ask which side of frame each landmark is on and
+    whether that matches the plan and the neighbouring shots.
   - **A beat the cut drops is a beat the story loses.** A sequence of five
     beats (the dog greets one man, then the boy, then goes for the
     stranger) got four shots, and the cut kept two seconds of them. The

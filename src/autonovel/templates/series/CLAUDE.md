@@ -530,7 +530,9 @@ against `shared/craft/SCREEN.md` and it is revised until it passes; a cold
 reader who hasn't read the book checks it can be followed. `autonovel
 mechanical fountain-check <file>` checks the Fountain and builds the
 exports (`pip install 'autonovel[export]'` for the PDF and FDX). The plan
-for the stages after it is `docs/film-pipeline-plan.md`.
+for the stages after it is `docs/film-pipeline-plan.md`; moving film beyond
+the animatic is paused, and why is `docs/film-postmortem.md` (both in the
+autonovel repository).
 
 **Shot list, storyboard, table read, animatic (stages F3–F4), per scene.**
 `/autonovel:shot-list --scene <ID> --book <name>` writes

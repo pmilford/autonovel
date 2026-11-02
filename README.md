@@ -708,6 +708,10 @@ Plus 11 sidequests for non-standard operations (`shorten`, `lengthen`,
   place's sound, so the author can judge pace and staging before anything
   costly is rendered. All free and local; the GPU stages need a local
   ComfyUI server and a TTS environment (`docs/commands.md` has the flags).
+  Moving film beyond the animatic was piloted on one minute and is paused:
+  free local video models didn't keep people, costumes and places consistent
+  from shot to shot or make people act. What was built and what to try next
+  is [`docs/film-postmortem.md`](docs/film-postmortem.md).
 
 > **Confused which one to run when?** The drafting/revision commands
 > have a layered relationship — `draft-pass` and `revision-pass`

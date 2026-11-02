@@ -106,7 +106,8 @@ workflow. Topics:
                  per shot on a local image model, a vision check) →
                  table-read (local voices, Whisper-checked) → animatic
                  (stills timed to the read). The film plan:
-                 docs/film-pipeline-plan.md.
+                 docs/film-pipeline-plan.md; moving film is paused
+                 (docs/film-postmortem.md).
   research     — research --from-seed / promote-canon /
                  impact-of / research --query.
   rewrite      — a second version of a story a finished book
@@ -718,7 +719,8 @@ Two paths, both free until you choose to render.
       autonovel mechanical keyframe-status books/<name>/film/storyboard/S0104.json
 
     Motion, lip-sync, the sound mix and the cut come later:
-    docs/film-pipeline-plan.md.
+    docs/film-pipeline-plan.md. They were piloted on one minute and are
+    paused; what was learned is docs/film-postmortem.md.
 ```
 
 ============================== TOPIC: research ====================
